@@ -1,5 +1,6 @@
 import {
   SelectorBuilder,
+  UIElement,
   is,
   classIs,
   classIncludes,
@@ -11,6 +12,7 @@ import {
   elementIndexIs,
   firstChildTextIs,
   and,
+  setFilterLogs,
 } from './ui-element-builder';
 
 import {
@@ -37,7 +39,9 @@ import {
   AutomationInstance,
   EVENT_NAMES,
   TestSpeed,
+  ReloadPage,
   ACTION_STATUS,
+  setAutomationLogs,
 } from './automation';
 
 import {
@@ -46,6 +50,7 @@ import {
 
 export {
   SelectorBuilder,
+  UIElement,
   is,
   classIs,
   classIncludes,
@@ -57,6 +62,7 @@ export {
   elementIndexIs,
   firstChildTextIs,
   and,
+  setFilterLogs,
   Setup,
   Test,
   RunTest,
@@ -75,6 +81,7 @@ export {
   Wait,
   Pause,
   ManualTask,
+  ReloadPage,
   DateUtils,
   AutomationEvents,
   AutomationInstance,
@@ -82,4 +89,5 @@ export {
   TestSpeed,
   wait,
   ACTION_STATUS,
+  setAutomationLogs,
 };

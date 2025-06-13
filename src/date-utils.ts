@@ -20,6 +20,7 @@ const nextMonth = setMonthFromToday(1)
 const lastMonth = setMonthFromToday(-1)
 
 const DateUtils = {
+  formatDate,
   today: formatDate(new Date()),
   tomorrow,
   nextWeek,

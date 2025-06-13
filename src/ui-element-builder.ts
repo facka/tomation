@@ -121,42 +121,88 @@ const ELEMENT = (htmlTag: string) => {
   return selectorFilter(htmlTag)
 }
 
+let enableFilterLogs = false
+
+const setFilterLogs = (enabled: boolean) => {
+  enableFilterLogs = enabled
+}
+
+const filterLog = (...args: any[]) => {
+  if (enableFilterLogs) {
+    console.log('[UIElement Filter]', ...args)
+  }
+}
+
 const classIs = (className: string) => {
-  return (elem: HTMLElement) => elem.className == className
+  return (elem: HTMLElement) => {
+    const result = elem.className == className
+    filterLog(`classIs('${className}') on`, elem, '=>', result)
+    return result
+  }
 }
 
 const classIncludes = (className: string) => {
-  return (elem: HTMLElement) => elem.className.split(' ').includes(className)
+  return (elem: HTMLElement) => {
+    const result = elem.className.split(' ').includes(className)
+    filterLog(`classIncludes('${className}') on`, elem, '=>', result)
+    return result
+  }
 }
 
 const innerTextIs = (text: string) => {
   return (elem: HTMLElement) => {
-    return elem.textContent?.trim() == text
+    const result = elem.textContent?.trim() == text
+    filterLog(`innerTextIs('${text}') on`, elem, '=>', result)
+    return result
   }
 }
 
 const innerTextContains = (text: string) => {
-  return (elem: HTMLElement) => elem.innerText.trim().includes(text)
+  return (elem: HTMLElement) => {
+    const result = elem.innerText.trim().includes(text)
+    filterLog(`innerTextContains('${text}') on`, elem, '=>', result)
+    return result
+  }
 }
 
 const titleIs = (text: string) => {
-  return (elem: HTMLElement) => elem.title == text
+  return (elem: HTMLElement) => {
+    const result = elem.title == text
+    filterLog(`titleIs('${text}') on`, elem, '=>', result)
+    return result
+  }
 }
 
 const placeholderIs = (text: string) => {
-  return (elem: HTMLElement) => (elem as HTMLInputElement).placeholder === text
+  return (elem: HTMLElement) => {
+    const result = (elem as HTMLInputElement).placeholder === text
+    filterLog(`placeholderIs('${text}') on`, elem, '=>', result)
+    return result
+  }
 }
 
 const isFirstElement = () => {
-  return (elem: HTMLElement, index: number) => index === 0
+  return (elem: HTMLElement, index: number) => {
+    const result = index === 0
+    filterLog('isFirstElement on', elem, 'index', index, '=>', result)
+    return result
+  }
 }
 
 const elementIndexIs = (index: number) => {
-  return (elem: HTMLElement, elemIndex: number) => elemIndex === index
+  return (elem: HTMLElement, elemIndex: number) => {
+    const result = elemIndex === index
+    filterLog(`elementIndexIs(${index}) on`, elem, 'elemIndex', elemIndex, '=>', result)
+    return result
+  }
 }
 
 const firstChildTextIs = (text: string) => {
-  return (elem: HTMLElement) => (elem?.firstChild as HTMLInputElement).innerText.trim() === text
+  return (elem: HTMLElement) => {
+    const result = (elem?.firstChild as HTMLInputElement).innerText.trim() === text
+    filterLog(`firstChildTextIs('${text}') on`, elem, '=>', result)
+    return result
+  }
 }
 
 const and = (conditions: any[]) => {
@@ -164,9 +210,12 @@ const and = (conditions: any[]) => {
     let response = true
     let i = 0
     while (response && i < conditions.length) {
-      response = response && conditions[i](elem, elemIndex)
+      const condResult = conditions[i](elem, elemIndex)
+      filterLog(`and condition[${i}] on`, elem, 'elemIndex', elemIndex, '=>', condResult)
+      response = response && condResult
       i++
     }
+    filterLog('and final result on', elem, 'elemIndex', elemIndex, '=>', response)
     return response
   }
 }
@@ -194,5 +243,6 @@ export {
   isFirstElement,
   elementIndexIs,
   firstChildTextIs,
-  and
+  and,
+  setFilterLogs
 }

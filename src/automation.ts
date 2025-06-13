@@ -21,10 +21,50 @@ import {
   PauseAction,
   ManualAction,
   ACTION_STATUS,
+  ReloadPageAction,
 } from './actions'
 import { UIUtils } from "./ui-utils"
 import { UIElement, setDocument } from './ui-element-builder'
 import DateUtils from './date-utils'
+
+// --- LOGGING CONTROL ---
+class Logger {
+  private enabled = false;
+
+  setEnabled(enabled: boolean) {
+    this.enabled = enabled;
+  }
+
+  log(...args: any[]) {
+    if (this.enabled) {
+      console.log('[Automation]', ...args);
+    }
+  }
+
+  groupCollapsed(...args: any[]) {
+    if (this.enabled) {
+      console.groupCollapsed('[Automation]', ...args);
+    }
+  }
+
+  groupEnd() {
+    if (this.enabled) {
+      console.groupEnd();
+    }
+  }
+
+  error(...args: any[]) {
+    if (this.enabled) {
+      console.error('[Automation]', ...args);
+    }
+  }
+}
+
+const logger = new Logger();
+const setAutomationLogs = (enabled: boolean) => {
+    logger.setEnabled(enabled);
+}
+
 class AutomationCompiler {
   static currentAction: Action
   static isCompiling: boolean
@@ -37,18 +77,18 @@ class AutomationCompiler {
   }
 
   static addAction (action: AbstractAction) {
-    console.log('Add action: ', action.getDescription())
+    logger.log('Add action: ', action.getDescription())
     AutomationCompiler.currentAction.addStep(action)
   }
 
   static init (startAction: Action) {
     AutomationCompiler.currentAction = startAction
     AutomationCompiler.isCompiling = true
-    console.groupCollapsed('Compile: ' + startAction.getDescription())
+    logger.groupCollapsed('Compile: ' + startAction.getDescription())
     startAction.compileSteps()
     AutomationCompiler.isCompiling = false
-    console.log('Compilation finished')
-    console.groupEnd()
+    logger.log('Compilation finished')
+    logger.groupEnd()
   }
 }
 
@@ -125,7 +165,7 @@ class AutomationRunner {
     AutomationRunner.running = true
     AutomationInstance.status = TestPlayStatus.PLAYING
     AutomationInstance.runMode = RunMode.NORMAL
-    console.groupCollapsed('Start Action: ', startAction.getDescription())
+    logger.groupCollapsed('Start Action: ', startAction.getDescription())
     AutomationEvents.dispatch(EVENT_NAMES.START, {
       action: startAction?.getJSON(),
     })
@@ -133,10 +173,10 @@ class AutomationRunner {
       await startAction?.execute()
     } catch (e: any) {
       AutomationInstance.uiUtils.hideCheckElementContainer()
-      console.error(`🤖 Error running task ${startAction.getDescription()}. Reason: ${e.message}`)
+      logger.error(`🤖 Error running task ${startAction.getDescription()}. Reason: ${e.message}`)
       throw e
     } finally {
-      console.groupEnd()
+      logger.groupEnd()
       AutomationRunner.running = false
       AutomationEvents.dispatch(EVENT_NAMES.END, {
         action: startAction?.getJSON()
@@ -162,6 +202,7 @@ const Test = (id: string, steps: () => void) => {
         AutomationEvents.dispatch(EVENT_NAMES.TEST_END, { id })
       }
     } else {
+      logger.error('Not able to run test while other test is running.')
       throw new Error('Not able to run test while other test is running.')
     }
   }
@@ -183,17 +224,17 @@ const Task = <T>(id: string, steps: (params: T) => void) => {
     action.setParams(params)
     if (!AutomationRunner.running && !AutomationCompiler.isCompiling) {
       try {
-        console.log(`Compilation of Task ${id} starts...`)
+        logger.log(`Compilation of Task ${id} starts...`)
         AutomationCompiler.init(action)
-        console.log(`Compilation of Task ${id} Finished.`)
-        console.log(`Start running Task ${id}...`)
+        logger.log(`Compilation of Task ${id} Finished.`)
+        logger.log(`Start running Task ${id}...`)
         await AutomationRunner.start(action)
-        console.log(`End of Task ${id}: SUCCESS`)
+        logger.log(`End of Task ${id}: SUCCESS`)
       } catch (e: any) {
-        console.log('Error running task ' + id + '. ' + e.message)
+        logger.error('Error running task ' + id + '. ' + e.message)
       }
     } else {
-      console.log(`Adding action ${id} to compilation stack`)
+      logger.log(`Adding action ${id} to compilation stack`)
       AutomationCompiler.addAction(action)
       AutomationCompiler.compileAction(action)
     }
@@ -323,6 +364,10 @@ const ManualTask = (description: string) => {
   AutomationCompiler.addAction(new ManualAction(description))
 }
 
+const ReloadPage = () => {
+  AutomationCompiler.addAction(new ReloadPageAction())
+}
+
 class Automation {
   private _document: Document
   debug: Boolean
@@ -368,75 +413,77 @@ class Automation {
   }
 
   public pause() {
-    console.log('Pause Test')
+    logger.log('Pause Test')
     this.status = TestPlayStatus.PAUSED
   }
 
   public continue() {
-    console.log('Continue Test')
+    logger.log('Continue Test')
     this.status = TestPlayStatus.PLAYING
     this.runMode = RunMode.NORMAL
     if (this.currentActionCallback && this.currentAction) {
+      logger.log('Continue: Executing current action callback')
       this.currentActionCallback(this.currentAction)
       this.currentActionCallback = undefined
     }
   }
 
   public next() {
-    console.log('Continue Test to Next Step...')
+    logger.log('Continue Test to Next Step...')
     this.status = TestPlayStatus.PLAYING
     this.runMode = RunMode.STEPBYSTEP
     if (this.currentActionCallback && this.currentAction) {
+      logger.log('Next: Executing current action callback')
       this.currentActionCallback(this.currentAction)
       this.currentActionCallback = undefined
     }
   }
 
   public stop() {
-    console.log('Stop Test')
+    logger.log('Stop Test')
     this.status = TestPlayStatus.STOPPED
     if (this.currentActionCallback && this.currentAction) {
+      logger.log('Stop: Executing current action callback')
       this.currentActionCallback(this.currentAction)
       this.currentActionCallback = undefined
     }
   }
 
   public retryAction() {
-    console.log('Retry current step')
+    logger.log('Retry current step')
     this.status = TestPlayStatus.PLAYING
     if (this.currentActionCallback && this.currentAction) {
       if ((this.currentAction as ActionOnElement).resetTries) {
+        logger.log('Retry: Resetting tries for current action');
         (this.currentAction as ActionOnElement).resetTries()
       }
+      logger.log('Retry: Executing current action callback')
       this.currentActionCallback(this.currentAction)
       this.currentActionCallback = undefined
     }
   }
 
   public skipAction() {
-    console.log('Skip current step')
+    logger.log('Skip current step')
     this.status = TestPlayStatus.PLAYING
     if (this.currentActionCallback && this.currentAction) {
       this.currentAction.status = ACTION_STATUS.SKIPPED
+      logger.log('Skip: Marked current action as SKIPPED')
       AbstractAction.notifyActionUpdated(this.currentAction) // Not working
+      logger.log('Skip: Executing current action callback')
       this.currentActionCallback(this.currentAction)
       this.currentActionCallback = undefined
     }
   }
 
   public saveCurrentAction(callback: (action: AbstractAction) => {}, action: AbstractAction) {
+    logger.log('Save current action')
     this.currentActionCallback = callback
     this.currentAction = action
   }
 
-  setDebug(value: Boolean) {
-    this.debug = value
-  }
-
-  log(value: string) {
-    if (this.debug) {
-      console.log(value)
-    }
+  setDebug(value: boolean) {
+    setAutomationLogs(value)
   }
 }
 
@@ -473,9 +520,11 @@ export {
   Wait,
   Pause,
   ManualTask,
+  ReloadPage,
   DateUtils,
   AutomationEvents,
   EVENT_NAMES,
   TestSpeed,
   ACTION_STATUS,
+  setAutomationLogs,
 }

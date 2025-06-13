@@ -407,7 +407,7 @@ abstract class ActionOnElement extends AbstractAction {
         }
       }
 
-      console.group('Looking for Element: ' + elementName);
+      console.group('[Action On Element] Looking for Element: ' + elementName);
 
       let parentElement: HTMLElement | null = null
       let parentSuccess = true
@@ -1052,6 +1052,32 @@ class ManualAction extends AbstractAction {
   }
 }
 
+class ReloadPageAction extends AbstractAction {
+
+  constructor () {
+    super()
+  }
+
+  getDescription () {
+    return 'Reload page'
+  }
+
+  getJSON () {
+    return {
+      ...super.getJSON(),
+      type: 'ReloadPage',
+    }
+  }
+
+  async executeAction () {
+    await location.reload()
+  }
+
+  resetAction () {
+    // nothing to do
+  }
+}
+
 export {
   AbstractAction,
   Action,
@@ -1074,5 +1100,6 @@ export {
   WaitUntilElementRemovedAction,
   PauseAction,
   ManualAction,
+  ReloadPageAction,
   ACTION_STATUS,
 }
