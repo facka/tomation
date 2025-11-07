@@ -1,6 +1,6 @@
 {
-  "name": "ch-ext-automation-framework",
-  "version": "0.0.0",
+  "name": "tomation",
+  "version": "0.0.1",
   "type": "module",
   "exports": {
     ".": {
