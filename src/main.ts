@@ -42,13 +42,17 @@ import {
   ReloadPage,
   ACTION_STATUS,
   setAutomationLogs,
+  tomation,
 } from './automation';
 
 import {
  wait,
 } from './ui-utils';
 
+export default tomation;
+
 export {
+  tomation,
   SelectorBuilder,
   UIElement,
   is,

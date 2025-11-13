@@ -188,8 +188,10 @@ class AutomationRunner {
 const TestsMap: any = {}
 
 const Test = (id: string, steps: () => void) => {
+  console.log(`Registering Test: ${id}...`)
   const action = new Action(id, steps)
   AutomationCompiler.init(action)
+  console.log(`Compiled Test: ${id}`)
   const testCode = async () => {
     if (!AutomationRunner.running) {
       try {
@@ -207,11 +209,14 @@ const Test = (id: string, steps: () => void) => {
     }
   }
   AutomationEvents.dispatch(EVENT_NAMES.REGISTER_TEST, { id, action: action.getJSON() })
+  console.log(`Registered Test: ${id} in TestsMap`)
   TestsMap[id] = testCode
+  console.log({ TestsMap })
 }
 
 const RunTest = (id: string) => {
   if (!TestsMap[id]) {
+    console.log('Available Tests:', Object.keys(TestsMap))
     throw new Error(`Test with id ${id} not found.`)
   } else {
     TestsMap[id]()
@@ -490,14 +495,89 @@ class Automation {
 let AutomationInstance: Automation
 
 const Setup = (window: Window, tests?: Array<any>) => {
-  if (AutomationInstance) {
+  /* if (AutomationInstance) {
     throw new Error('Automation Setup already executed.')
-  }
+  } */
   AutomationInstance = new Automation(window)
   setDocument(AutomationInstance.document)
 
   tests?.forEach((installerFn) => installerFn())
   return AutomationInstance
+}
+
+interface TomationOptions {
+  matches: string | RegExp;
+  tests: any[];
+  speed?: keyof typeof TestSpeed;
+  debug?: boolean;
+}
+
+export function tomation(options: TomationOptions) {
+  const {
+    matches,
+    tests = [],
+    speed = 'NORMAL',
+    debug = false,
+  } = options;
+
+  const shouldRun =
+    typeof matches === 'string'
+      ? document.location.href.includes(matches)
+      : !!document.location.href.match(matches);
+
+  if (!shouldRun) {
+    console.log(`[tomation] URL "${document.location.href}" does not match "${matches}"`);
+    return;
+  }
+
+  try {
+    // Messaging bridge
+    // Forward framework events
+    Object.values(EVENT_NAMES).forEach((event) => {
+      AutomationEvents.on(event as EVENT_NAMES, (data: any) => {
+        window.postMessage({
+          sender: 'tomation',
+          eventId: event,
+          data,
+        });
+      });
+    });
+
+    // Listen for extension messages
+    window.addEventListener('message', (event: any) => {
+      if (event.source !== window) return;
+      if (event.data?.sender !== 'web-extension') return;
+      const { cmd, args } = event.data || {};
+
+      const commands: Record<string, () => void> = {
+        'run-test': () => RunTest(args.id),
+        'reload-tests': () => Setup(window, tests || []),
+        'pause-test': () => AutomationInstance.pause(),
+        'stop-test': () => AutomationInstance.stop(),
+        'continue-test': () => AutomationInstance.continue(),
+        'next-test': () => AutomationInstance.next(),
+        'retry-action': () => AutomationInstance.retryAction(),
+        'skip-action': () => AutomationInstance.skipAction(),
+        'user-accept': () => AutomationEvents.dispatch(EVENT_NAMES.USER_ACCEPT),
+        'user-reject': () => AutomationEvents.dispatch(EVENT_NAMES.USER_REJECT),
+      };
+
+      if (commands[cmd]) {
+        commands[cmd]();
+      }
+    });
+
+    // Core setup
+    Setup(window, tests);
+
+    // Optional tuning
+    AutomationInstance.setDebug(debug);
+    AutomationInstance.speed = TestSpeed[speed];
+
+    console.log('[tomation] Ready ✓');
+  } catch (err) {
+    console.error('[tomation] Initialization failed:', err);
+  }
 }
 
 export {
