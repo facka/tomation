@@ -93,17 +93,16 @@ class AutomationCompiler {
 }
 
 enum EVENT_NAMES {
-  START = 'start',
-  END = 'end',
-  ACTION_UPDATE = 'action-update',
-  SAVE_VALUE = 'save-value',
-  REGISTER_TEST = 'register-test',
-  TEST_STARTED = 'test-started',
-  TEST_PASSED = 'test-passed',
-  TEST_FAILED = 'test-failed',
-  TEST_END = 'test-end',
-  USER_ACCEPT = 'user-accept',
-  USER_REJECT = 'user-reject'
+  ACTION_UPDATE = 'tomation-action-update',
+  SAVE_VALUE = 'tomation-save-value',
+  REGISTER_TEST = 'tomation-register-test',
+  TEST_STARTED = 'tomation-test-started',
+  TEST_PASSED = 'tomation-test-passed',
+  TEST_FAILED = 'tomation-test-failed',
+  TEST_END = 'tomation-test-end',
+  TEST_STOP = 'tomation-test-stop',
+  USER_ACCEPT = 'tomation-user-accept',
+  USER_REJECT = 'tomation-user-reject'
 }
 
 type AutomationEventHandlerType = ((action?: any) => void)
@@ -162,23 +161,29 @@ class AutomationRunner {
   static running = false
 
   static async start (startAction: Action) {
+    if (AutomationRunner.running) {
+      logger.error('Not able to run test while other test is running.')
+      throw new Error('Not able to run test while other test is running.')
+    }
     AutomationRunner.running = true
     AutomationInstance.status = TestPlayStatus.PLAYING
     AutomationInstance.runMode = RunMode.NORMAL
     logger.groupCollapsed('Start Action: ', startAction.getDescription())
-    AutomationEvents.dispatch(EVENT_NAMES.START, {
+    AutomationEvents.dispatch(EVENT_NAMES.TEST_STARTED, {
       action: startAction?.getJSON(),
     })
     try {
       await startAction?.execute()
+      AutomationEvents.dispatch(EVENT_NAMES.TEST_PASSED, { id: startAction.name })
     } catch (e: any) {
+      AutomationEvents.dispatch(EVENT_NAMES.TEST_FAILED, { id: startAction.name })
       AutomationInstance.uiUtils.hideCheckElementContainer()
       logger.error(`🤖 Error running task ${startAction.getDescription()}. Reason: ${e.message}`)
       throw e
     } finally {
       logger.groupEnd()
       AutomationRunner.running = false
-      AutomationEvents.dispatch(EVENT_NAMES.END, {
+      AutomationEvents.dispatch(EVENT_NAMES.TEST_END, {
         action: startAction?.getJSON()
       })
     }
@@ -192,26 +197,11 @@ const Test = (id: string, steps: () => void) => {
   const action = new Action(id, steps)
   AutomationCompiler.init(action)
   console.log(`Compiled Test: ${id}`)
-  const testCode = async () => {
-    if (!AutomationRunner.running) {
-      try {
-        AutomationEvents.dispatch(EVENT_NAMES.TEST_STARTED, { action: action.getJSON() })
-        await AutomationRunner.start(action)
-        AutomationEvents.dispatch(EVENT_NAMES.TEST_PASSED, { id })
-      } catch (e) {
-        AutomationEvents.dispatch(EVENT_NAMES.TEST_FAILED, { id })
-      } finally {
-        AutomationEvents.dispatch(EVENT_NAMES.TEST_END, { id })
-      }
-    } else {
-      logger.error('Not able to run test while other test is running.')
-      throw new Error('Not able to run test while other test is running.')
-    }
-  }
   AutomationEvents.dispatch(EVENT_NAMES.REGISTER_TEST, { id, action: action.getJSON() })
   console.log(`Registered Test: ${id} in TestsMap`)
-  TestsMap[id] = testCode
-  console.log({ TestsMap })
+  TestsMap[id] = () => {
+    AutomationRunner.start(action)
+  }
 }
 
 const RunTest = (id: string) => {
@@ -452,6 +442,7 @@ class Automation {
       this.currentActionCallback(this.currentAction)
       this.currentActionCallback = undefined
     }
+    AutomationEvents.dispatch(EVENT_NAMES.TEST_STOP)
   }
 
   public retryAction() {
@@ -533,39 +524,58 @@ export function tomation(options: TomationOptions) {
   try {
     // Messaging bridge
     // Forward framework events
+
+    console.log('[tomation] Setting up messaging bridge with extension...');
     Object.values(EVENT_NAMES).forEach((event) => {
+      console.log(`[tomation] Setting up listener for event "${event}"`);
       AutomationEvents.on(event as EVENT_NAMES, (data: any) => {
+        console.log(`[tomation] Dispatching event "${event}" to extension`, data);
         window.postMessage({
+          message: 'injectedScript-to-contentScript',
           sender: 'tomation',
-          eventId: event,
-          data,
+          payload: {
+            cmd: event,
+            params: data,
+          },
         });
       });
     });
 
     // Listen for extension messages
     window.addEventListener('message', (event: any) => {
-      if (event.source !== window) return;
-      if (event.data?.sender !== 'web-extension') return;
-      const { cmd, args } = event.data || {};
-
-      const commands: Record<string, () => void> = {
-        'run-test': () => RunTest(args.id),
-        'reload-tests': () => Setup(window, tests || []),
-        'pause-test': () => AutomationInstance.pause(),
-        'stop-test': () => AutomationInstance.stop(),
-        'continue-test': () => AutomationInstance.continue(),
-        'next-test': () => AutomationInstance.next(),
-        'retry-action': () => AutomationInstance.retryAction(),
-        'skip-action': () => AutomationInstance.skipAction(),
-        'user-accept': () => AutomationEvents.dispatch(EVENT_NAMES.USER_ACCEPT),
-        'user-reject': () => AutomationEvents.dispatch(EVENT_NAMES.USER_REJECT),
-      };
-
-      if (commands[cmd]) {
-        commands[cmd]();
+      try {
+        console.log('[tomation] Received message from extension:', event.data);
+        const { message, sender, payload } = event.data || {};
+        const { cmd, params } = payload || {};
+        // if (event.source !== window) return;
+        if (sender !== 'web-extension') return;
+        if (message === 'contentScript-to-injectedScript') {
+          const commands: Record<string, () => void> = {
+            'run-test-request': () => RunTest(params?.testId),
+            'reload-tests-request': () => Setup(window, tests || []),
+            'pause-test-request': () => AutomationInstance.pause(),
+            'stop-test-request': () => AutomationInstance.stop(),
+            'continue-test-request': () => AutomationInstance.continue(),
+            'next-step-request': () => AutomationInstance.next(),
+            'retry-action-request': () => AutomationInstance.retryAction(),
+            'skip-action-request': () => AutomationInstance.skipAction(),
+            'user-accept-request': () => AutomationEvents.dispatch(EVENT_NAMES.USER_ACCEPT),
+            'user-reject-request': () => AutomationEvents.dispatch(EVENT_NAMES.USER_REJECT),
+          };
+          const commandFn = commands[cmd];
+          if (commandFn) {
+            console.log(`[tomation] Executing command "${cmd}" from extension`);
+            commandFn();
+          } else {
+            console.warn(`[tomation] Unknown command "${cmd}" from extension`);
+          }
+          return;
+        }
+      } catch (err) {
+        console.error('[tomation] Error handling message from extension:', err);
       }
-    });
+    });  
+    
 
     // Core setup
     Setup(window, tests);
