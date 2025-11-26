@@ -34,9 +34,9 @@ const retry = async (currentAction: ActionOnElement | WaitUntilElementRemovedAct
   if (index === maxTries) {
     console.groupEnd()
     if (untilRemoved) {
-      throw new Error(`UI Element ${uiElement.getElementName() || 'UNKNNOWN'} still present after 10 tries`)
+      throw new Error(`UI Element ${uiElement.getElementName() || 'UNKNOWN'} still present after 10 tries`)
     } else {
-      throw new Error(`UI Element ${uiElement.getElementName() || 'UNKNNOWN'} not found after 10 tries`)
+      throw new Error(`UI Element ${uiElement.getElementName() || 'UNKNOWN'} not found after 10 tries`)
     }
   } else {
     const elem = uiElement.selector(parentElement, uiElement.postProcess)
@@ -380,9 +380,9 @@ abstract class ActionOnElement extends AbstractAction {
         if (index === maxTries) {
           console.groupEnd()
           if (untilRemoved) {
-            throw new Error(`UI Element ${elementName || 'UNKNNOWN'} still present after 10 tries`)
+            throw new Error(`UI Element ${elementName || 'UNKNOWN'} still present after 10 tries`)
           } else {
-            throw new Error(`UI Element ${elementName || 'UNKNNOWN'} not found after 10 tries`)
+            throw new Error(`UI Element ${elementName || 'UNKNOWN'} not found after 10 tries`)
           }
         } else {
           const elem = uiElement.selector(parentElement, uiElement.postProcess)
@@ -433,7 +433,7 @@ abstract class ActionOnElement extends AbstractAction {
         }
       } else {
         console.groupEnd()
-        reject(new Error(`Parent ${uiElement.parent?.getElementName()} of UI Element ${uiElement.name || 'UNKNNOWN'} not found`))
+        reject(new Error(`Parent ${uiElement.parent?.getElementName()} of UI Element ${uiElement.name || 'UNKNOWN'} not found`))
       }
     })
   }
