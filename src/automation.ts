@@ -37,13 +37,13 @@ class Logger {
 
   log(...args: any[]) {
     if (this.enabled) {
-      console.log('[Automation]', ...args);
+      console.log('[tomation]', ...args);
     }
   }
 
   groupCollapsed(...args: any[]) {
     if (this.enabled) {
-      console.groupCollapsed('[Automation]', ...args);
+      console.groupCollapsed('[tomation]', ...args);
     }
   }
 
@@ -55,7 +55,7 @@ class Logger {
 
   error(...args: any[]) {
     if (this.enabled) {
-      console.error('[Automation]', ...args);
+      console.error('[tomation]', ...args);
     }
   }
 }
