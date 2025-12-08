@@ -14,6 +14,9 @@ import {
   PressEscKeyAction,
   PressDownKeyAction,
   PressTabKeyAction,
+  PressKeyAction,
+  KEY_MAP,
+  PressEnterKeyAction,
   UploadFileAction,
   SaveValueAction,
   WaitAction,
@@ -312,6 +315,22 @@ const PressTabKey = () => {
   }
 }
 
+const PressEnterKey = () => {
+  return {
+    in: (uiElement: UIElement) => {
+      AutomationCompiler.addAction(new PressEnterKeyAction(uiElement))
+    }
+  }
+}
+
+const PressKey = (key: KEY_MAP) => {
+  return {
+    in: (uiElement: UIElement) => {
+      AutomationCompiler.addAction(new PressKeyAction(uiElement, key))
+    }
+  }
+}
+
 const TypePassword = (value: string) => {
   return {
     in: (uiElement: UIElement) => {
@@ -605,6 +624,9 @@ export {
   PressEscKey,
   PressDownKey,
   PressTabKey,
+  PressKey,
+  PressEnterKey,
+  KEY_MAP,
   UploadFile,
   SaveValue,
   Wait,

@@ -675,8 +675,10 @@ class TypeAction extends ActionOnElement {
       }
     } // allows to type in wrapper elements which contain input elem
     inputElem.value = this.value
+
     inputElem.dispatchEvent(new Event('change'));
-    inputElem.dispatchEvent(new Event('keyup'));
+    inputElem.dispatchEvent(new Event('keyup', { bubbles: true }));
+    inputElem.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
   getDescription () {
@@ -710,6 +712,8 @@ class TypePasswordAction extends ActionOnElement {
     } // allows to type in wrapper elements which contain input elem
     inputElem.value = this.value
     inputElem.dispatchEvent(new Event('change'));
+    inputElem.dispatchEvent(new Event('keyup', { bubbles: true }));
+    inputElem.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
   getDescription () {
@@ -829,6 +833,114 @@ class PressTabKeyAction extends ActionOnElement {
     return {
       ...super.getJSON(),
       type: 'PressTabKey',
+    }
+  }
+}
+
+class PressEnterKeyAction extends ActionOnElement {
+  constructor (uiElement: UIElement) {
+    super(uiElement)
+  }
+
+  protected executeActionOnElement () {
+    this.element?.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        altKey: false,
+        code: "Enter",
+        ctrlKey: false,
+        isComposing: false,
+        key: "Enter",
+        location: 0,
+        metaKey: false,
+        repeat: false,
+        shiftKey: false,
+        which: 13,
+        charCode: 0,
+        keyCode: 13,
+      })
+    )
+  }
+
+  getDescription () {
+    return `Press Enter key in ${this.getElementName()}`
+  }
+
+  getJSON () {
+    return {
+      ...super.getJSON(),
+      type: 'PressEnterKey',
+    }
+  }
+}
+
+enum KEY_MAP {
+  ESCAPE = 'Escape',
+  ENTER = 'Enter',
+  TAB = 'Tab',
+  ARROW_DOWN = 'ArrowDown',
+  ARROW_UP = 'ArrowUp',
+  ARROW_LEFT = 'ArrowLeft',
+  ARROW_RIGHT = 'ArrowRight',
+  BACKSPACE = 'Backspace',
+  DELETE = 'Delete',
+  SHIFT = 'Shift',
+  CONTROL = 'Control',
+  ALT = 'Alt',
+  META = 'Meta',
+}
+
+const KEY_CODES: Record<KEY_MAP, number> = {
+  [KEY_MAP.ESCAPE]: 27,
+  [KEY_MAP.ENTER]: 13,
+  [KEY_MAP.TAB]: 9,
+  [KEY_MAP.ARROW_DOWN]: 40,
+  [KEY_MAP.ARROW_UP]: 38,
+  [KEY_MAP.ARROW_LEFT]: 37,
+  [KEY_MAP.ARROW_RIGHT]: 39,
+  [KEY_MAP.BACKSPACE]: 8,
+  [KEY_MAP.DELETE]: 46,
+  [KEY_MAP.SHIFT]: 16,
+  [KEY_MAP.CONTROL]: 17,
+  [KEY_MAP.ALT]: 18,
+  [KEY_MAP.META]: 91,
+}
+
+class PressKeyAction extends ActionOnElement {
+  key: KEY_MAP
+
+  constructor (uiElement: UIElement, key: KEY_MAP) {
+    super(uiElement)
+    this.key = key
+  }
+
+  protected executeActionOnElement () {
+    this.element?.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: this.key,
+        code: this.key,
+        keyCode: KEY_CODES[this.key],
+        charCode: 0,
+        which: KEY_CODES[this.key],
+        altKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        shiftKey: false,
+        isComposing: false,
+        location: 0,
+        repeat: false,
+      })
+    )
+  }
+
+  getDescription () {
+    return `Press ${this.key} key in ${this.getElementName()}`
+  }
+
+  getJSON () {
+    return {
+      ...super.getJSON(),
+      type: 'PressKey',
+      key: this.key,
     }
   }
 }
@@ -1089,6 +1201,9 @@ export {
   PressEscKeyAction,
   PressDownKeyAction,
   PressTabKeyAction,
+  PressKeyAction,
+  KEY_MAP,
+  PressEnterKeyAction,
   UploadFileAction,
   AssertTextIsAction,
   AssertContainsTextAction,
