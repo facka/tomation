@@ -29,6 +29,7 @@ import {
 import { UIUtils } from "./ui-utils"
 import { UIElement, setDocument } from './ui-element-builder'
 import DateUtils from './date-utils'
+import { v4 as uuidv4 } from 'uuid';
 
 // --- LOGGING CONTROL ---
 class Logger {
@@ -107,7 +108,8 @@ enum EVENT_NAMES {
   TEST_PAUSE = 'tomation-test-pause',
   TEST_PLAY = 'tomation-test-play',
   USER_ACCEPT = 'tomation-user-accept',
-  USER_REJECT = 'tomation-user-reject'
+  USER_REJECT = 'tomation-user-reject',
+  SESSION_INIT = 'tomation-session-init',
 }
 
 type AutomationEventHandlerType = ((action?: any) => void)
@@ -608,6 +610,18 @@ export function tomation(options: TomationOptions) {
     // Optional tuning
     AutomationInstance.setDebug(debug);
     AutomationInstance.speed = TestSpeed[speed];
+
+    window.postMessage({
+      message: 'injectedScript-to-contentScript',
+      sender: 'tomation',
+      payload: {
+        cmd: EVENT_NAMES.SESSION_INIT,
+        params: {
+          speed: AutomationInstance.speed,
+          sessionId: uuidv4(),
+        },
+      },
+    });
 
     console.log('[tomation] Ready ✓');
   } catch (err) {
