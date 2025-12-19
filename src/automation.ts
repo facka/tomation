@@ -104,6 +104,8 @@ enum EVENT_NAMES {
   TEST_FAILED = 'tomation-test-failed',
   TEST_END = 'tomation-test-end',
   TEST_STOP = 'tomation-test-stop',
+  TEST_PAUSE = 'tomation-test-pause',
+  TEST_PLAY = 'tomation-test-play',
   USER_ACCEPT = 'tomation-user-accept',
   USER_REJECT = 'tomation-user-reject'
 }
@@ -429,12 +431,14 @@ class Automation {
   public pause() {
     logger.log('Pause Test')
     this.status = TestPlayStatus.PAUSED
+    AutomationEvents.dispatch(EVENT_NAMES.TEST_PAUSE)
   }
 
   public continue() {
     logger.log('Continue Test')
     this.status = TestPlayStatus.PLAYING
     this.runMode = RunMode.NORMAL
+    AutomationEvents.dispatch(EVENT_NAMES.TEST_PLAY)
     if (this.currentActionCallback && this.currentAction) {
       logger.log('Continue: Executing current action callback')
       this.currentActionCallback(this.currentAction)
@@ -446,6 +450,7 @@ class Automation {
     logger.log('Continue Test to Next Step...')
     this.status = TestPlayStatus.PLAYING
     this.runMode = RunMode.STEPBYSTEP
+    AutomationEvents.dispatch(EVENT_NAMES.TEST_PLAY)
     if (this.currentActionCallback && this.currentAction) {
       logger.log('Next: Executing current action callback')
       this.currentActionCallback(this.currentAction)
@@ -467,6 +472,7 @@ class Automation {
   public retryAction() {
     logger.log('Retry current step')
     this.status = TestPlayStatus.PLAYING
+    AutomationEvents.dispatch(EVENT_NAMES.TEST_PLAY)
     if (this.currentActionCallback && this.currentAction) {
       if ((this.currentAction as ActionOnElement).resetTries) {
         logger.log('Retry: Resetting tries for current action');
