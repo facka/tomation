@@ -207,14 +207,11 @@ const firstChildTextIs = (text: string) => {
 
 const and = (conditions: any[]) => {
   return (elem: HTMLElement, elemIndex: number) => {
-    let response = true
-    let i = 0
-    while (response && i < conditions.length) {
-      const condResult = conditions[i](elem, elemIndex)
+    const response = conditions.every((condition, i) => {
+      const condResult = condition(elem, elemIndex)
       filterLog(`and condition[${i}] on`, elem, 'elemIndex', elemIndex, '=>', condResult)
-      response = response && condResult
-      i++
-    }
+      return condResult
+    })
     filterLog('and final result on', elem, 'elemIndex', elemIndex, '=>', response)
     return response
   }
