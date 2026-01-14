@@ -25,6 +25,7 @@ import {
   ManualAction,
   ACTION_STATUS,
   ReloadPageAction,
+  IfAction,
 } from './actions'
 import { UIUtils } from "./ui-utils"
 import { UIElement, setDocument } from './ui-element-builder'
@@ -80,6 +81,13 @@ class AutomationCompiler {
     AutomationCompiler.currentAction = previousAction
   }
 
+  static compileConditionalAction (action: Action) {
+    const previousAction = AutomationCompiler.currentAction
+    AutomationCompiler.currentAction = action
+    action.compileSteps()
+    AutomationCompiler.currentAction = previousAction
+  }
+
   static addAction (action: AbstractAction) {
     logger.log('Add action: ', action.getDescription())
     AutomationCompiler.currentAction.addStep(action)
@@ -110,6 +118,7 @@ enum EVENT_NAMES {
   USER_ACCEPT = 'tomation-user-accept',
   USER_REJECT = 'tomation-user-reject',
   SESSION_INIT = 'tomation-session-init',
+  ACTION_ERROR = 'tomation-action-error',
 }
 
 type AutomationEventHandlerType = ((action?: any) => void)
@@ -165,14 +174,12 @@ enum RunMode {
 
 
 class AutomationRunner {
-  static running = false
 
   static async start (startAction: Action) {
-    if (AutomationRunner.running) {
+    if (AutomationInstance.status !== TestPlayStatus.STOPPED) {
       logger.error('Not able to run test while other test is running.')
       throw new Error('Not able to run test while other test is running.')
     }
-    AutomationRunner.running = true
     AutomationInstance.status = TestPlayStatus.PLAYING
     AutomationInstance.runMode = RunMode.NORMAL
     logger.groupCollapsed('Start Action: ', startAction.getDescription())
@@ -182,14 +189,15 @@ class AutomationRunner {
     try {
       await startAction?.execute()
       AutomationEvents.dispatch(EVENT_NAMES.TEST_PASSED, { id: startAction.name })
+      AutomationInstance.status = TestPlayStatus.STOPPED
     } catch (e: any) {
       AutomationEvents.dispatch(EVENT_NAMES.TEST_FAILED, { id: startAction.name })
       AutomationInstance.uiUtils.hideCheckElementContainer()
       logger.error(`🤖 Error running task ${startAction.getDescription()}. Reason: ${e.message}`)
+      AutomationInstance.status = TestPlayStatus.PAUSED
       throw e
     } finally {
       logger.groupEnd()
-      AutomationRunner.running = false
       AutomationEvents.dispatch(EVENT_NAMES.TEST_END, {
         action: startAction?.getJSON()
       })
@@ -202,11 +210,18 @@ const TestsMap: any = {}
 const Test = (id: string, steps: () => void) => {
   console.log(`Registering Test: ${id}...`)
   const action = new Action(id, steps)
-  AutomationCompiler.init(action)
-  console.log(`Compiled Test: ${id}`)
-  AutomationEvents.dispatch(EVENT_NAMES.REGISTER_TEST, { id, action: action.getJSON() })
+  // AutomationCompiler.init(action) // Do not compile when doing setup
+  // console.log(`Compiled Test: ${id}`)
+  AutomationEvents.dispatch(EVENT_NAMES.REGISTER_TEST, { id }) // do not send action data
   console.log(`Registered Test: ${id} in TestsMap`)
+
   TestsMap[id] = () => {
+    // compile action before running
+
+    logger.log(`Compilation of Test ${id} starts...`)
+    AutomationCompiler.init(action)
+    logger.log(`Compilation of Test ${id} Finished.`)
+    logger.log(`Start running Test ${id}...`)
     AutomationRunner.start(action)
   }
 }
@@ -224,7 +239,7 @@ const Task = <T>(id: string, steps: (params: T) => void) => {
   return async (params?: T): Promise<void> => {
     const action = new Action(id, steps)
     action.setParams(params)
-    if (!AutomationRunner.running && !AutomationCompiler.isCompiling) {
+    if (AutomationInstance.status == TestPlayStatus.STOPPED && !AutomationCompiler.isCompiling) {
       try {
         logger.log(`Compilation of Task ${id} starts...`)
         AutomationCompiler.init(action)
@@ -386,6 +401,19 @@ const ReloadPage = () => {
   AutomationCompiler.addAction(new ReloadPageAction())
 }
 
+const If = (description: string, condition: () => boolean) => {
+  return {
+    then: (thenSteps: Action) => {
+      return {
+        else: (elseSteps: Action) => {
+          const action = new IfAction(condition, thenSteps, elseSteps, description)
+          AutomationCompiler.addAction(action)
+        }
+      }
+    }
+  }
+}
+
 class Automation {
   private _document: Document
   debug: Boolean
@@ -450,9 +478,8 @@ class Automation {
 
   public next() {
     logger.log('Continue Test to Next Step...')
-    this.status = TestPlayStatus.PLAYING
+    this.status = TestPlayStatus.PAUSED
     this.runMode = RunMode.STEPBYSTEP
-    AutomationEvents.dispatch(EVENT_NAMES.TEST_PLAY)
     if (this.currentActionCallback && this.currentAction) {
       logger.log('Next: Executing current action callback')
       this.currentActionCallback(this.currentAction)
@@ -603,6 +630,16 @@ export function tomation(options: TomationOptions) {
       }
     });  
     
+    window.postMessage({
+      message: 'injectedScript-to-contentScript',
+      sender: 'tomation',
+      payload: {
+        cmd: EVENT_NAMES.SESSION_INIT,
+        params: {
+          sessionId: uuidv4(),
+        },
+      },
+    });
 
     // Core setup
     Setup(window, tests);
@@ -610,18 +647,6 @@ export function tomation(options: TomationOptions) {
     // Optional tuning
     AutomationInstance.setDebug(debug);
     AutomationInstance.speed = TestSpeed[speed];
-
-    window.postMessage({
-      message: 'injectedScript-to-contentScript',
-      sender: 'tomation',
-      payload: {
-        cmd: EVENT_NAMES.SESSION_INIT,
-        params: {
-          speed: AutomationInstance.speed,
-          sessionId: uuidv4(),
-        },
-      },
-    });
 
     console.log('[tomation] Ready ✓');
   } catch (err) {
@@ -653,6 +678,7 @@ export {
   Pause,
   ManualTask,
   ReloadPage,
+  If,
   DateUtils,
   AutomationEvents,
   EVENT_NAMES,

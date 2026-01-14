@@ -259,53 +259,53 @@ class Action extends AbstractAction {
     this.index = 0
   }
 
-  async continue () {
-    if (AutomationInstance.isPaused) {
-      return new Promise<void>((resolve, reject) => {
-        AutomationInstance.saveCurrentAction(async (action: AbstractAction) => {
-          if (action.status == ACTION_STATUS.SKIPPED) {
-            return resolve()
-          }
-          try {
-            await (action as Action).continue()
-            resolve()
-          } catch (error: any) {
-            reject(error)
-          }
-        }, this)
-      })
-    }
-    if (AutomationInstance.isStopped) {
-      throw new Error('Test stopped manually')
-    }
-    if (this.index < this.steps.length) {
-      const step = this.steps[this.index]
-      try {
-        await wait(AutomationInstance.speed)
-        await step.execute()
-        if (!AutomationInstance.isPaused) {
-          this.index++
-          await this.continue()
-        } else {
-          return new Promise<void>((resolve, reject) => {
-            AutomationInstance.saveCurrentAction(async (action: AbstractAction) => {
-              if (action.status == ACTION_STATUS.SKIPPED) {
-                this.index++
-                await AbstractAction.notifyActionUpdated(step)
-                await this.continue()
-                return resolve()
-              }
-              try {
-                await (action as Action).continue()
-                resolve()
-              } catch (error: any) {
-                reject(error)
-              }
-            }, step)
-          })
+  private async handlePause(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      AutomationInstance.saveCurrentAction(async (action: AbstractAction) => {
+        if (action.status === ACTION_STATUS.SKIPPED) {
+          resolve();
+          return;
         }
-      } catch (e) {
-        throw e
+        try {
+          await this.continue();  // Resume after pause
+          resolve();
+        } catch (error: any) {
+          reject(error);
+        }
+      }, this);
+    });
+  }
+
+  async continue(): Promise<void> {
+    while (this.index < this.steps.length) {
+      if (AutomationInstance.isStopped) {
+        throw new Error('Test stopped manually');
+      }
+
+      const step = this.steps[this.index];
+      try {
+        await wait(AutomationInstance.speed);
+        await step.execute();
+
+        if (AutomationInstance.isPaused) {
+          await this.handlePause();
+          // After resume, check if we should skip or continue
+          if (step.status === ACTION_STATUS.SKIPPED) {
+            this.index++;  // Skip to next step
+            continue;
+          }
+        } else {
+          this.index++;
+        }
+      } catch (error: any) {
+        // Dispatch error event or log via a centralized mechanism
+        AutomationEvents.dispatch(EVENT_NAMES.ACTION_ERROR, {
+          action: this.getJSON(),
+          step,
+          error: error.message,
+          index: this.index
+        });
+        throw error;  // Re-throw to propagate
       }
     }
   }
@@ -1190,6 +1190,59 @@ class ReloadPageAction extends AbstractAction {
   }
 }
 
+class IfAction extends AbstractAction {
+  condition: () => boolean | Promise<boolean>
+  ifAction: Action
+  elseAction?: Action
+  conditionDescription: string
+
+  constructor(condition: () => boolean | Promise<boolean>, ifAction: Action, elseAction?: Action, conditionDescription: string = 'condition') {
+    super()
+    this.condition = condition
+    this.ifAction = ifAction
+    this.elseAction = elseAction
+    this.conditionDescription = conditionDescription
+  }
+
+  getDescription() {
+    const elsePart = this.elseAction ? `, else ${this.elseAction.getDescription()}` : ''
+    return `If ${this.conditionDescription}, then ${this.ifAction.getDescription()}${elsePart}`
+  }
+
+  getJSON() {
+    return {
+      ...super.getJSON(),
+      type: 'If',
+      conditionDescription: this.conditionDescription,
+      ifAction: this.ifAction.getJSON(),
+      elseAction: this.elseAction?.getJSON(),
+    }
+  }
+
+  async executeAction() {
+    try {
+      await this.condition()
+      await this.ifAction.execute()
+    } catch (e) {
+      // condition failed
+      if (this.elseAction) {
+        await this.elseAction.execute()
+      }
+    }
+  }
+
+  resetAction() {
+    this.ifAction.reset()
+    this.elseAction?.reset()
+  }
+
+  compileSteps() {
+    // this.condition()
+    this.ifAction.compileSteps()
+    this.elseAction?.compileSteps()
+  }
+}
+
 export {
   AbstractAction,
   Action,
@@ -1216,5 +1269,6 @@ export {
   PauseAction,
   ManualAction,
   ReloadPageAction,
+  IfAction,
   ACTION_STATUS,
 }
