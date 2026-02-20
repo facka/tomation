@@ -1,7 +1,4 @@
 import {
-  SelectorBuilder,
-  UIElement,
-  is,
   classIs,
   classIncludes,
   innerTextIs,
@@ -12,51 +9,45 @@ import {
   elementIndexIs,
   firstChildTextIs,
   and,
-  setFilterLogs,
-} from './ui-element-builder';
+} from './dsl/ui-element-filters';
+
+import { is, UIElement } from './dsl/ui-element';
 
 import {
-  Setup,
-  Test,
-  RunTest,
-  Task,
-  Click,
-  Assert,
-  Select,
-  Type,
-  TypePassword,
-  ClearValue,
-  PressEscKey,
-  PressDownKey,
-  PressTabKey,
-  PressEnterKey,
-  PressKey,
-  KEY_MAP,
-  UploadFile,
-  SaveValue,
-  Wait,
-  ManualTask,
-  Pause,
-  DateUtils,
-  AutomationEvents,
-  AutomationInstance,
-  EVENT_NAMES,
-  TestSpeed,
-  ReloadPage,
-  ACTION_STATUS,
-  setAutomationLogs,
+  Test
+} from './dsl/test';
+
+
+import {
   tomation,
-} from './automation';
+} from './tomation';
 
 import {
  wait,
-} from './ui-utils';
+} from './feedback/ui-utils';
+import { Task } from './dsl/task';
+import { Select, Click, Type, TypePassword, ClearValue, Assert, PressEscKey,
+  PressDownKey,
+  PressTabKey,
+  PressKey,
+  PressEnterKey,
+  UploadFile,
+  SaveValue,
+  Wait,
+  Pause,
+  ManualTask,
+  ReloadPage,  } from './dsl/actions';
+
+import DateUtils from './utils/date-utils';
+import { AutomationEvents, EVENT_NAMES } from './engine/events';
+import { AutomationInstance, Setup } from './engine/runner';
+import { TestSpeed } from './engine/runner';
+import { ACTION_STATUS, KEY_MAP } from './dom/actions';
 
 export default tomation;
 
 export {
   tomation,
-  SelectorBuilder,
   UIElement,
   is,
   classIs,
@@ -69,10 +60,7 @@ export {
   elementIndexIs,
   firstChildTextIs,
   and,
-  setFilterLogs,
-  Setup,
   Test,
-  RunTest,
   Task,
   Click,
   Assert,
@@ -95,9 +83,9 @@ export {
   DateUtils,
   AutomationEvents,
   AutomationInstance,
+  Setup,
   EVENT_NAMES,
   TestSpeed,
   wait,
   ACTION_STATUS,
-  setAutomationLogs,
 };

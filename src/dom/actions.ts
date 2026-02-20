@@ -1,7 +1,8 @@
-import { AutomationEvents, EVENT_NAMES, AutomationInstance } from "./automation";
-import { UIElement } from "./ui-element-builder";
+import { AutomationInstance } from "../engine/runner";
 import { v4 as uuidv4 } from 'uuid';
-import { wait } from "./ui-utils";
+import { wait } from "../feedback/ui-utils";
+import { UIElement } from "../dsl/ui-element";
+import { AutomationEvents, EVENT_NAMES } from "../engine/events";
 
 const HTML_ELEMENT_REMOVED = null
 

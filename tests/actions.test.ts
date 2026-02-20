@@ -1,8 +1,7 @@
-import { AutomationEvents, Click, EVENT_NAMES, Task, Setup, AutomationInstance, Type, Assert } from '../src/automation'
-import { innerTextIs, is, isFirstElement } from '../src/ui-element-builder'
+import { innerTextIs, is, isFirstElement, AutomationEvents, Click, EVENT_NAMES, Task, Setup, AutomationInstance, Type, Assert } from '../src/main'
 import { beforeAll, expect, test } from 'vitest'
 import { JSDOM } from 'jsdom'
-import { Action } from '../src/actions'
+import { Action } from '../src/dom/actions'
 
 const TestUtils = {
   waitForActionUpdate: ():Promise<Action> => {
@@ -47,7 +46,7 @@ beforeAll(async () => {
     </div>
   `));
   Event = window.Event
-  await Setup(window)
+  await Setup(window as unknown as Window)
 })
 
 test('Test click button', async () => {

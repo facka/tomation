@@ -1,6 +1,6 @@
 {
   "name": "tomation",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "type": "module",
   "exports": {
     ".": {
@@ -28,6 +28,7 @@
     "uuid": "^9.0.0"
   },
   "devDependencies": {
+    "@types/jsdom": "^27.0.0",
     "@types/node": "^20.19.30",
     "@types/uuid": "^9.0.2",
     "@vitest/coverage-v8": "^1.5.0",

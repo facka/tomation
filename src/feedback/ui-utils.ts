@@ -1,4 +1,4 @@
-import { AutomationInstance } from "./automation"
+import { AutomationInstance } from "../engine/runner";
 
 const wait = (timeout = 2000) => {
   return new Promise((resolve) => {
