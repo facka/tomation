@@ -12,6 +12,7 @@ enum EVENT_NAMES {
   USER_ACCEPT = 'tomation-user-accept',
   USER_REJECT = 'tomation-user-reject',
   SESSION_INIT = 'tomation-session-init',
+  URL_MISMATCH = 'tomation-url-mismatch',
 }
 
 type AutomationEventHandlerType = ((action?: any) => void)

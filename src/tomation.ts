@@ -25,6 +25,17 @@ function tomation(options: TomationOptions) {
 
   if (!shouldRun) {
     console.log(`[tomation] URL "${document.location.href}" does not match "${matches}"`);
+    window.postMessage({
+      message: 'injectedScript-to-contentScript',
+      sender: 'tomation',
+      payload: {
+        cmd: EVENT_NAMES.URL_MISMATCH,
+        params: {
+          matches,
+          url: document.location.href
+        },
+      },
+    });
     return;
   }
 
