@@ -67,7 +67,10 @@ function tomation(options: TomationOptions) {
           sender: 'tomation',
           payload: {
             cmd: event,
-            params: data,
+            params: {
+              ...data,
+              sessionId,
+            },
           },
         });
       });
