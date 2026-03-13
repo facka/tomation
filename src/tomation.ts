@@ -18,6 +18,19 @@ function tomation(options: TomationOptions) {
     debug = false,
   } = options;
 
+  const sessionId = uuidv4();
+  console.log(`[tomation] Initializing on URL: ${document.location.href} with session ID: ${sessionId}`);
+  window.postMessage({
+      message: 'injectedScript-to-contentScript',
+      sender: 'tomation',
+      payload: {
+        cmd: EVENT_NAMES.SESSION_INIT,
+        params: {
+          sessionId,
+        },
+      },
+    });
+
   const shouldRun =
     typeof matches === 'string'
       ? document.location.href.includes(matches)
@@ -31,6 +44,7 @@ function tomation(options: TomationOptions) {
       payload: {
         cmd: EVENT_NAMES.URL_MISMATCH,
         params: {
+          sessionId,
           matches,
           url: document.location.href
         },
@@ -106,10 +120,10 @@ function tomation(options: TomationOptions) {
       message: 'injectedScript-to-contentScript',
       sender: 'tomation',
       payload: {
-        cmd: EVENT_NAMES.SESSION_INIT,
+        cmd: EVENT_NAMES.SESSION_CONNECTED,
         params: {
           speed: AutomationInstance.speed,
-          sessionId: uuidv4(),
+          sessionId,
         },
       },
     });
