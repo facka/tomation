@@ -61,17 +61,18 @@ function tomation(options: TomationOptions) {
     Object.values(EVENT_NAMES).forEach((event) => {
       console.log(`[tomation] Setting up listener for event "${event}"`);
       AutomationEvents.on(event as EVENT_NAMES, (data: any) => {
-        console.log(`[tomation] Dispatching event "${event}" to extension`, data);
+        const payload = {
+          cmd: event,
+          params: {
+            ...data,
+            sessionId,
+          },
+        }
+        console.log(`[tomation] Dispatching event "${event}" to extension: `, payload);
         window.postMessage({
           message: 'injectedScript-to-contentScript',
           sender: 'tomation',
-          payload: {
-            cmd: event,
-            params: {
-              ...data,
-              sessionId,
-            },
-          },
+          payload,
         });
       });
     });
