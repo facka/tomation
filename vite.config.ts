@@ -26,6 +26,9 @@ export default defineConfig({
     },
     rollupOptions: {
       external: [],
+      output: {
+        exports: 'named',
+      },
       plugins: [
         dts({
           pathsToAliases: false,
