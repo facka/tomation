@@ -3,7 +3,12 @@ import dts from 'vite-plugin-dts'
 import path from "path";
 
 export default defineConfig({
-  plugins: [],
+  plugins: [
+    dts({
+      pathsToAliases: false,
+      insertTypesEntry: true,
+    }),
+  ],
   resolve: {
     alias: [
       {
@@ -29,12 +34,6 @@ export default defineConfig({
       output: {
         exports: 'named',
       },
-      plugins: [
-        dts({
-          pathsToAliases: false,
-          insertTypesEntry: true
-        })
-      ]
     },
   },
 });

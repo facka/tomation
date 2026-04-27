@@ -1,6 +1,6 @@
 {
   "name": "tomation",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "type": "module",
   "exports": {
     ".": {
@@ -10,7 +10,7 @@
   },
   "main": "./dist/main.js",
   "module": "./dist/main.js",
-  "types": "./dist/main.d.ts",
+  "types": "./dist/src/main.d.ts",
   "files": [
     "dist"
   ],
