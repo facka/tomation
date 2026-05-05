@@ -1,3 +1,4 @@
+import { logger } from '../feedback/logger';
 class UIElement {
   name: string
   selector: (parent?: HTMLElement | null,  postProcessFn?: (elem: HTMLElement) => (HTMLElement | null)) => HTMLElement | null
@@ -29,7 +30,7 @@ const setDocument = (doc: Document) => {
 const SelectorBuilder = (query: string, filterFn?: (value: HTMLElement, index: number, array: readonly HTMLElement[]) => Boolean) => {
   const selector = (root = document, postProcess?: (elem: HTMLElement) => HTMLElement) => {
     root = root || document
-    console.log('Searching elem from Root = ', root)
+    logger.log('Searching elem from Root = ', root)
     const elementsFound: HTMLElement[] = []
     root.querySelectorAll<HTMLElement>(query).forEach((e: HTMLElement) => {
       if (e.style.display !== 'none' ) {
@@ -38,22 +39,22 @@ const SelectorBuilder = (query: string, filterFn?: (value: HTMLElement, index: n
     })
     let elemFound
     if (filterFn) {
-      console.log('Applying filter ', filterFn)
-      console.log('  -- to ' + elementsFound.length + 'elements: ', elementsFound)
+      logger.log('Applying filter ', filterFn)
+      logger.log(' -- to ' + elementsFound.length + 'elements: ', elementsFound)
       elemFound = elementsFound.filter((elem: HTMLElement, index: number, array: HTMLElement[]) => {
-        console.log('Apply filter to item ' + index + ': ', elem)
+        logger.log('Apply filter to item ' + index + ': ', elem)
         const match = filterFn(elem, index, array)
-        console.log(`  -> Item ${index} ${ match ? 'Match' : 'Discarded'}`)
+        logger.log(` -> Item ${index} ${ match ? 'Match' : 'Discarded'}`)
         return match
       })[0]
     } else {
       elemFound = elementsFound[0]
     }
     if (elemFound && postProcess) {
-      console.log('Apply post process to = ', elemFound)
+      logger.log('Apply post process to = ', elemFound)
       elemFound = postProcess(elemFound)
     }
-    console.log('Return elem = ', elemFound)
+    logger.log('Return elem = ', elemFound)
     return elemFound
   }
   return selector

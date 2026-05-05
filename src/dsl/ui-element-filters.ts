@@ -1,3 +1,5 @@
+import { logger } from '../feedback/logger';
+
 let enableFilterLogs = false
 
 const setFilterLogs = (enabled: boolean) => {
@@ -6,7 +8,7 @@ const setFilterLogs = (enabled: boolean) => {
 
 const filterLog = (...args: any[]) => {
   if (enableFilterLogs) {
-    console.log('[UIElement Filter]', ...args)
+    logger.log('[UIElement Filter]', ...args)
   }
 }
 

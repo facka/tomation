@@ -16,7 +16,7 @@ const Task = <T>(id: string, steps: (params: T) => void) => {
         await AutomationRunner.start(action)
         logger.log(`End of Task ${id}: SUCCESS`)
       } catch (e: any) {
-        logger.error('Error running task ' + id + '. ' + e.message)
+        logger.error(`Error running task ${id}. ${e.message}`)
       }
     } else {
       logger.log(`Adding action ${id} to compilation stack`)

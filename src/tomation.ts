@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { AutomationEvents, EVENT_NAMES } from "./engine/events";
 import { RunTest } from "./dsl/test";
 import { AutomationInstance, Setup, TestSpeed } from './engine/runner';
-
+import { logger } from './feedback/logger';
 interface TomationOptions {
   matches: string | RegExp;
   tests: any[];
@@ -19,7 +19,7 @@ function tomation(options: TomationOptions) {
   } = options;
 
   const sessionId = uuidv4();
-  console.log(`[tomation] Initializing on URL: ${document.location.href} with session ID: ${sessionId}`);
+  logger.log(`Initializing on URL: ${document.location.href} with session ID: ${sessionId}`);
   window.postMessage({
       message: 'injectedScript-to-contentScript',
       sender: 'tomation',
@@ -37,7 +37,7 @@ function tomation(options: TomationOptions) {
       : !!document.location.href.match(matches);
 
   if (!shouldRun) {
-    console.log(`[tomation] URL "${document.location.href}" does not match "${matches}"`);
+    logger.log(`URL "${document.location.href}" does not match "${matches}"`);
     window.postMessage({
       message: 'injectedScript-to-contentScript',
       sender: 'tomation',
@@ -57,9 +57,9 @@ function tomation(options: TomationOptions) {
     // Messaging bridge
     // Forward framework events
 
-    console.log('[tomation] Setting up messaging bridge with extension...');
+    logger.log('Setting up messaging bridge with extension...');
     Object.values(EVENT_NAMES).forEach((event) => {
-      console.log(`[tomation] Setting up listener for event "${event}"`);
+      logger.log(`Setting up listener for event "${event}"`);
       AutomationEvents.on(event as EVENT_NAMES, (data: any) => {
         const payload = {
           cmd: event,
@@ -68,7 +68,7 @@ function tomation(options: TomationOptions) {
             sessionId,
           },
         }
-        console.log(`[tomation] Dispatching event "${event}" to extension: `, payload);
+        logger.log(`Dispatching event "${event}" to extension: `, payload);
         window.postMessage({
           message: 'injectedScript-to-contentScript',
           sender: 'tomation',
@@ -80,12 +80,12 @@ function tomation(options: TomationOptions) {
     // Listen for extension messages
     window.addEventListener('message', (event: any) => {
       try {
-        console.log('[tomation] Received message from extension:', event.data);
         const { message, sender, payload } = event.data || {};
         const { cmd, params } = payload || {};
         // if (event.source !== window) return;
         if (sender !== 'web-extension') return;
         if (message === 'contentScript-to-injectedScript') {
+          logger.log('Received message from extension:', event.data);
           const commands: Record<string, () => void> = {
             'run-test-request': () => RunTest(params?.testId),
             'reload-tests-request': () => Setup(window, tests || []),
@@ -100,15 +100,15 @@ function tomation(options: TomationOptions) {
           };
           const commandFn = commands[cmd];
           if (commandFn) {
-            console.log(`[tomation] Executing command "${cmd}" from extension`);
+            logger.log(`Executing command "${cmd}" from extension`);
             commandFn();
           } else {
-            console.warn(`[tomation] Unknown command "${cmd}" from extension`);
+            logger.warn(`Unknown command "${cmd}" from extension`);
           }
           return;
         }
       } catch (err) {
-        console.error('[tomation] Error handling message from extension:', err);
+        logger.error('Error handling message from extension:', err);
       }
     });  
     
@@ -132,9 +132,9 @@ function tomation(options: TomationOptions) {
       },
     });
 
-    console.log('[tomation] Ready ✓');
+    logger.log('Ready ✓');
   } catch (err) {
-    console.error('[tomation] Initialization failed:', err);
+    logger.error('Initialization failed:', err);
   }
 }
 

@@ -3,12 +3,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { wait } from "../feedback/ui-utils";
 import { UIElement } from "../dsl/ui-element";
 import { AutomationEvents, EVENT_NAMES } from "../engine/events";
+import { logger } from '../feedback/logger';
 
 const HTML_ELEMENT_REMOVED = null
 
 const retry = async (currentAction: ActionOnElement | WaitUntilElementRemovedAction, uiElement: UIElement, parentElement: HTMLElement | null, delay = 1000, index = 0, maxTries = 10, untilRemoved = false): Promise<HTMLElement | null > => {
 
-  console.log('Automation Status: ', AutomationInstance.status)
+  logger.log('Automation Status: ', AutomationInstance.status)
   if (AutomationInstance.isPaused) {
     return new Promise<HTMLElement | null >((resolve, reject) => {
       AutomationInstance.saveCurrentAction(async (action: AbstractAction) => {
@@ -27,32 +28,32 @@ const retry = async (currentAction: ActionOnElement | WaitUntilElementRemovedAct
   if (AutomationInstance.isStopped) {
     throw new Error('Test stopped manually')
   }
-  console.groupCollapsed(`tries ${index}/${maxTries}`)
+  logger.groupCollapsed(`tries ${index}/${maxTries}`)
   if (currentAction) {
     currentAction.updateTries(index)
     await AbstractAction.notifyActionUpdated(currentAction)
   }
   if (index === maxTries) {
-    console.groupEnd()
+    logger.groupEnd()
     if (untilRemoved) {
-      throw new Error(`UI Element ${uiElement.getElementName() || 'UNKNOWN'} still present after 10 tries`)
+      throw new Error(`[tomation] UI Element ${uiElement.getElementName() || 'UNKNOWN'} still present after 10 tries`)
     } else {
-      throw new Error(`UI Element ${uiElement.getElementName() || 'UNKNOWN'} not found after 10 tries`)
+      throw new Error(`[tomation] UI Element ${uiElement.getElementName() || 'UNKNOWN'} not found after 10 tries`)
     }
   } else {
     const elem = uiElement.selector(parentElement, uiElement.postProcess)
-    console.groupEnd()
+    logger.groupEnd()
     if (elem) {
       if (untilRemoved) {
         await wait(delay)
         return await retry(currentAction, uiElement, parentElement, delay, ++index, maxTries, untilRemoved)
       } else {
-        console.log('Element found = ', elem)
+        logger.log('Element found = ', elem)
         return elem
       }
     } else {
       if (untilRemoved) {
-        console.log('Element removed.')
+        logger.log('Element removed.')
         return HTML_ELEMENT_REMOVED
       } else {
         await wait(delay)
@@ -69,38 +70,38 @@ const retry = async (currentAction: ActionOnElement | WaitUntilElementRemovedAct
    */
 const waitForElement = async (currentAction: ActionOnElement | WaitUntilElementRemovedAction, uiElement: UIElement, delay: number = 1000, maxTries = 10, untilRemoved = false): Promise<HTMLElement | null > => {
   const elementName = uiElement?.getElementName()
-  console.group('Looking for Element: ' + elementName);
+  logger.group('Looking for Element: ' + elementName);
 
   let parentElement: HTMLElement | null = null
   if (uiElement.parent) {
     try {
-      console.groupCollapsed('Look for Parent ', uiElement.parent.getElementName())
+      logger.groupCollapsed('Look for Parent ', uiElement.parent.getElementName())
       parentElement = await waitForElement(currentAction, uiElement.parent, delay, maxTries, untilRemoved)
-      console.groupEnd()
+      logger.groupEnd()
     } catch (e: any) {
-      console.groupEnd() // Look for parent
+      logger.groupEnd() // Look for parent
       if (untilRemoved && e.message.includes('not found')) {
-        console.log('Parent not found, so element was removed')
-        console.groupEnd() // Look for element
+        logger.log('Parent not found, so element was removed')
+        logger.groupEnd() // Look for element
         return HTML_ELEMENT_REMOVED // Parent was removed so it's ok to return success
       } else {
-        console.groupEnd() // Look for element
+        logger.groupEnd() // Look for element
         throw e
       }
     }    
   }
   try {
-    console.log('Using parent element: ', parentElement)
+    logger.log('Using parent element: ', parentElement)
     const elem = await retry(currentAction, uiElement, parentElement, delay, 0, maxTries, untilRemoved)
-    console.groupEnd()
+    logger.groupEnd()
     return elem
   } catch (e: any) {
     if (untilRemoved && e.message.includes('not found')) {
-      console.log('Parent not found, so element was removed')
-      console.groupEnd() // Look for element
+      logger.log('Parent not found, so element was removed')
+      logger.groupEnd() // Look for element
       return HTML_ELEMENT_REMOVED // Parent was removed so it's ok to return success
     } else {
-      console.groupEnd() // Look for element
+      logger.groupEnd() // Look for element
       throw e
     }
   }
@@ -185,7 +186,7 @@ abstract class AbstractAction {
       this.context.beforeInputValues = this.getInputValuesFromPage()
       this.context.beforeHTML = AutomationInstance.document.body.innerHTML
       await AbstractAction.notifyActionUpdated(this)
-      console.log('Action: ', this.getDescription())
+      logger.log('Action: ', this.getDescription())
       await this.executeAction()
       this.status = ACTION_STATUS.SUCCESS
       this.error = ''
@@ -196,7 +197,7 @@ abstract class AbstractAction {
       this.status = ACTION_STATUS.ERROR
       this.error = e.message
       if (e.message == 'Test stopped manually') {
-        throw Error('Error in Action ' + this.getDescription() + '. Message: ' + e.message)
+        throw Error('[tomation] Error in Action ' + this.getDescription() + '. Message: ' + e.message)
       } else {
         this.status = ACTION_STATUS.PAUSED
         AutomationInstance.pause()
@@ -375,11 +376,11 @@ abstract class ActionOnElement extends AbstractAction {
       
       // retry function 
       const retry = async (parentElement: HTMLElement | null, delay = 1000, index = 0, untilRemoved = false): Promise<HTMLElement | null > => {
-        console.groupCollapsed(`tries ${index}/${maxTries}`)
+        logger.groupCollapsed(`tries ${index}/${maxTries}`)
         currentAction.updateTries(index)
         await AbstractAction.notifyActionUpdated(currentAction)
         if (index === maxTries) {
-          console.groupEnd()
+          logger.groupEnd()
           if (untilRemoved) {
             throw new Error(`UI Element ${elementName || 'UNKNOWN'} still present after 10 tries`)
           } else {
@@ -387,18 +388,18 @@ abstract class ActionOnElement extends AbstractAction {
           }
         } else {
           const elem = uiElement.selector(parentElement, uiElement.postProcess)
-          console.groupEnd()
+          logger.groupEnd()
           if (elem) {
             if (untilRemoved) {
               await wait(delay)
               return await retry(parentElement, delay, ++index, untilRemoved)
             } else {
-              console.log('Element found = ', elem)
+              logger.log('Element found = ', elem)
               return elem
             }
           } else {
             if (untilRemoved) {
-              console.log('Element removed.')
+              logger.log('Element removed.')
               return null
             } else {
               await wait(delay)
@@ -408,32 +409,32 @@ abstract class ActionOnElement extends AbstractAction {
         }
       }
 
-      console.group('[Action On Element] Looking for Element: ' + elementName);
+      logger.group('[Action On Element] Looking for Element: ' + elementName);
 
       let parentElement: HTMLElement | null = null
       let parentSuccess = true
       if (uiElement.parent) {
-        console.groupCollapsed('Look for Parent ', uiElement.parent.getElementName())
+        logger.groupCollapsed('Look for Parent ', uiElement.parent.getElementName())
         try {
           parentElement = await ActionOnElement.waitForElement(currentAction, uiElement.parent, delay, maxTries, untilRemoved)
         } catch (e) {
           parentSuccess = false
         } finally {
-          console.groupEnd()
+          logger.groupEnd()
         }
       }
       if (parentSuccess) {
-        console.log('using parent element: ', parentElement)
+        logger.log('using parent element: ', parentElement)
         try {
           const elem = await retry(parentElement, delay, 0, untilRemoved)
-          console.groupEnd()
+          logger.groupEnd()
           resolve(elem)
         } catch (e: any) {
-          console.groupEnd()
+          logger.groupEnd()
           reject(new Error(e.message))
         }
       } else {
-        console.groupEnd()
+        logger.groupEnd()
         reject(new Error(`Parent ${uiElement.parent?.getElementName()} of UI Element ${uiElement.name || 'UNKNOWN'} not found`))
       }
     })
