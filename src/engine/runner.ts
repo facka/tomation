@@ -30,13 +30,15 @@ class Automation {
   runMode: RunMode
   currentActionCallback: ((action: AbstractAction) => {}) | undefined
   currentAction: AbstractAction | undefined
+  tests: Array<any>
 
-  constructor(window: Window) {
+  constructor(window: Window, tests: Array<any>) {
     this._document = window.document
     this.debug = true
     this._uiUtils = new UIUtils(window)
     this.speed = TestSpeed.NORMAL
     this.status = TestPlayStatus.STOPPED
+    this.tests = tests
     this.runMode = RunMode.NORMAL
   }
 
@@ -134,27 +136,37 @@ class Automation {
     }
   }
 
-  public saveCurrentAction(callback: (action: AbstractAction) => {}, action: AbstractAction) {
+  public saveCurrentAction(callback: (action: AbstractAction) => {}, action: AbstractAction): void {
     logger.log('Save current action')
     this.currentActionCallback = callback
     this.currentAction = action
   }
 
-  setDebug(value: boolean) {
+  setDebug(value: boolean): void {
     logger.setEnabled(value);
   }
+
+  public setupTests(): void {
+    // AutomationEvents.dispatch(EVENT_NAMES.CLEAR_TESTS) no need to send event, tests are supposed to be removed before compilation
+    this.tests?.forEach((installerFn) => installerFn())
+    AutomationEvents.dispatch(EVENT_NAMES.TESTS_LOADED)
+  }
+
+  public getTests(): Array<any> {
+    return this.tests
+  }
+
 }
 
 let AutomationInstance: Automation
 
 const Setup = (window: Window, tests?: Array<any>) => {
-  /* if (AutomationInstance) {
+  if (AutomationInstance) {
     throw new Error('Automation Setup already executed.')
-  } */
-  AutomationInstance = new Automation(window)
+  }
+  AutomationInstance = new Automation(window, tests || [])
   setDocument(AutomationInstance.document)
 
-  tests?.forEach((installerFn) => installerFn())
   return AutomationInstance
 }
 

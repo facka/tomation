@@ -14,6 +14,8 @@ enum EVENT_NAMES {
   SESSION_INIT = 'tomation-session-init',
   URL_MISMATCH = 'tomation-url-mismatch',
   SESSION_CONNECTED = 'tomation-session-connected',
+  CLEAR_TESTS = 'tomation-clear-tests',
+  TESTS_LOADED = 'tomation-tests-loaded',
 }
 
 type AutomationEventHandlerType = ((action?: any) => void)

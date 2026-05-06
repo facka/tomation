@@ -88,7 +88,7 @@ function tomation(options: TomationOptions) {
           logger.log('Received message from extension:', event.data);
           const commands: Record<string, () => void> = {
             'run-test-request': () => RunTest(params?.testId),
-            'reload-tests-request': () => Setup(window, tests || []),
+            'reload-tests-request': () => AutomationInstance.setupTests(),
             'pause-test-request': () => AutomationInstance.pause(),
             'stop-test-request': () => AutomationInstance.stop(),
             'continue-test-request': () => AutomationInstance.continue(),
@@ -97,6 +97,7 @@ function tomation(options: TomationOptions) {
             'skip-action-request': () => AutomationInstance.skipAction(),
             'user-accept-request': () => AutomationEvents.dispatch(EVENT_NAMES.USER_ACCEPT),
             'user-reject-request': () => AutomationEvents.dispatch(EVENT_NAMES.USER_REJECT),
+            'setup-tests-request': () => AutomationInstance.setupTests(),
           };
           const commandFn = commands[cmd];
           if (commandFn) {
