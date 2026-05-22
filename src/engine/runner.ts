@@ -147,6 +147,7 @@ class Automation {
   }
 
   public setupTests(): void {
+    console.log('[tomation] Setting up tests...')
     // AutomationEvents.dispatch(EVENT_NAMES.CLEAR_TESTS) no need to send event, tests are supposed to be removed before compilation
     this.tests?.forEach((installerFn) => installerFn())
     AutomationEvents.dispatch(EVENT_NAMES.TESTS_LOADED)
