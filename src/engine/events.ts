@@ -18,35 +18,96 @@ enum EVENT_NAMES {
   TESTS_LOADED = 'tomation-tests-loaded',
 }
 
-type AutomationEventHandlerType = ((action?: any) => void)
+type AutomationEventHandlerType = ((action?: unknown) => void | Promise<void>)
 
 class EventDispatcher {
-  events: Map<EVENT_NAMES, Array<AutomationEventHandlerType>>
+  private events: Map<EVENT_NAMES, Set<AutomationEventHandlerType>>
 
+  /**
+   * Creates an empty in-memory registry of event listeners.
+   */
   constructor() {
     this.events = new Map()
   }
 
-  on(eventName: EVENT_NAMES, callback: AutomationEventHandlerType) {
+  /**
+   * Subscribes a callback to an event.
+   * Returns a function that can be called to unsubscribe the callback.
+   */
+  on(eventName: EVENT_NAMES, callback: AutomationEventHandlerType): () => void {
     if (!this.events.has(eventName)) {
-      this.events.set(eventName, [])
+      this.events.set(eventName, new Set())
     }
-    this.events.get(eventName)?.push(callback)
+
+    this.events.get(eventName)?.add(callback)
+
+    return () => this.off(eventName, callback)
   }
 
+  /**
+   * Removes a specific callback from an event.
+   * If the event has no listeners left, its entry is removed.
+   */
   off(eventName: EVENT_NAMES, callback: AutomationEventHandlerType) {
-    if (this.events.has(eventName) ) {
-      this.events.set(eventName, this.events.get(eventName)?.filter((cb: AutomationEventHandlerType) => cb !== callback) || [])
+    const listeners = this.events.get(eventName)
+
+    if (!listeners) {
+      return
+    }
+
+    listeners.delete(callback)
+
+    if (listeners.size === 0) {
+      this.events.delete(eventName)
     }
   }
 
-  dispatch(eventName: EVENT_NAMES, data?: any) {
-    if (this.events.has(eventName) ) {
-      this.events.get(eventName)?.forEach((callback: AutomationEventHandlerType) => {
-        console.log(`Dispatch Event ${eventName}:`, data)
-        callback(data)
-      })
+  /**
+   * Subscribes a callback that will run only once.
+   * The callback is automatically removed before it is executed.
+   */
+  once(eventName: EVENT_NAMES, callback: AutomationEventHandlerType): () => void {
+    const wrapper: AutomationEventHandlerType = async (data?: unknown) => {
+      this.off(eventName, wrapper)
+      await callback(data)
     }
+
+    return this.on(eventName, wrapper)
+  }
+
+  /**
+   * Dispatches an event payload to all current listeners in registration order.
+   * Listener callbacks are awaited sequentially.
+   */
+  async dispatch(eventName: EVENT_NAMES, data?: unknown) {
+    const listeners = this.events.get(eventName)
+
+    if (!listeners || listeners.size === 0) {
+      return
+    }
+
+    for (const callback of Array.from(listeners)) {
+      await callback(data)
+    }
+  }
+
+  /**
+   * Clears listeners for a specific event or for all events if no event is provided.
+   */
+  clear(eventName?: EVENT_NAMES) {
+    if (eventName) {
+      this.events.delete(eventName)
+      return
+    }
+
+    this.events.clear()
+  }
+
+  /**
+   * Returns the number of listeners currently registered for an event.
+   */
+  listenerCount(eventName: EVENT_NAMES) {
+    return this.events.get(eventName)?.size ?? 0
   }
 }
 

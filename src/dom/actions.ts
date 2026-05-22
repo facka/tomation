@@ -1150,11 +1150,11 @@ class ManualAction extends AbstractAction {
   async executeAction () {
     await AutomationInstance.uiUtils.showAlert('Waiting manual step...')
     return new Promise((resolve, reject) => {
-      AutomationEvents.on(EVENT_NAMES.USER_ACCEPT, async () => {
+      AutomationEvents.once(EVENT_NAMES.USER_ACCEPT, async () => {
         await AutomationInstance.uiUtils.hideAlert()
         return resolve(true)
       })
-      AutomationEvents.on(EVENT_NAMES.USER_REJECT, async () => {
+      AutomationEvents.once(EVENT_NAMES.USER_REJECT, async () => {
         await AutomationInstance.uiUtils.hideAlert()
         return reject()
       })
