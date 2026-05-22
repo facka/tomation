@@ -217,6 +217,7 @@ abstract class AbstractAction {
 }
 
 class Action extends AbstractAction {
+  static useImprovedContinue = true
   name: string
   stepsFn: (params?: any) => void
   steps: Array<AbstractAction>
@@ -312,9 +313,73 @@ class Action extends AbstractAction {
     }
   }
 
+  async continueImproved () {
+    if (AutomationInstance.isPaused) {
+      return new Promise<void>((resolve, reject) => {
+        AutomationInstance.saveCurrentAction(async (action: AbstractAction) => {
+          if (action.status == ACTION_STATUS.SKIPPED) {
+            return resolve()
+          }
+          try {
+            await (action as Action).continueImproved()
+            resolve()
+          } catch (error: any) {
+            reject(error)
+          }
+        }, this)
+      })
+    }
+    if (AutomationInstance.isStopped) {
+      throw new Error('Test stopped manually')
+    }
+
+    console.warn('[tomation] continueImproved is still experimental, not fully working in all scenarios. Use with caution.')
+    while (this.index < this.steps.length) {
+      const step = this.steps[this.index]
+      try {
+        await wait(AutomationInstance.speed)
+        await step.execute()
+        if (!AutomationInstance.isPaused) {
+          this.index++
+          continue
+        }
+
+        let shouldContinueCurrentAction = false
+        await new Promise<void>((resolve, reject) => {
+          AutomationInstance.saveCurrentAction(async (action: AbstractAction) => {
+            if (action.status == ACTION_STATUS.SKIPPED) {
+              this.index++
+              shouldContinueCurrentAction = true
+              await AbstractAction.notifyActionUpdated(step)
+              return resolve()
+            }
+            try {
+              await (action as Action).continueImproved()
+              resolve()
+            } catch (error: any) {
+              reject(error)
+            }
+          }, step)
+        })
+
+        if (shouldContinueCurrentAction) {
+          continue
+        }
+
+        return
+      } catch (e) {
+        throw e
+      }
+    }
+  }
+
   async executeAction () {
     this.index = 0
-    await this.continue()
+    if (Action.useImprovedContinue) {
+      await this.continueImproved()
+    } else {
+      await this.continue()
+    }
   }
 
   setParams (params?: any) {
