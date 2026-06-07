@@ -15,6 +15,7 @@ import {
   PressTabKeyAction,
   PressKeyAction,
   KEY_MAP,
+  KEY_OPTIONS,
   PressEnterKeyAction,
   UploadFileAction,
   SaveValueAction,
@@ -109,10 +110,10 @@ const PressEnterKey = () => {
   }
 }
 
-const PressKey = (key: KEY_MAP) => {
+const PressKey = (key: KEY_MAP, options: KEY_OPTIONS[] = []) => {
   return {
     in: (uiElement: UIElement) => {
-      AutomationCompiler.addAction(new PressKeyAction(uiElement, key))
+      AutomationCompiler.addAction(new PressKeyAction(uiElement, key, options))
     }
   }
 }

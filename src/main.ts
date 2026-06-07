@@ -42,7 +42,7 @@ import DateUtils from './utils/date-utils';
 import { AutomationEvents, EVENT_NAMES } from './engine/events';
 import { AutomationInstance, Setup } from './engine/runner';
 import { TestSpeed } from './engine/runner';
-import { ACTION_STATUS, KEY_MAP } from './dom/actions';
+import { ACTION_STATUS, KEY_MAP, KEY_OPTIONS } from './dom/actions';
 
 export default tomation;
 
@@ -74,6 +74,7 @@ export {
   PressKey,
   PressEnterKey,
   KEY_MAP,
+  KEY_OPTIONS,
   UploadFile,
   SaveValue,
   Wait,
