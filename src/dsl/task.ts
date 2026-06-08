@@ -1,6 +1,6 @@
 import { Action } from '~/dom/actions';
 import { logger } from '../feedback/logger';
-import { AutomationRunner } from '~/engine/runner';
+import { AutomationInstance } from '~/engine/runner';
 import { AutomationCompiler } from '~/engine/compiler';
 
 const Task = <T>(id: string, steps: (params: T) => void) => {
@@ -11,14 +11,17 @@ const Task = <T>(id: string, steps: (params: T) => void) => {
     // If either is true, this task is being called from inside another task's steps,
     // so it should register itself as a nested action in the compilation stack instead
     // of starting a new execution cycle.
-    const isRootTask = !AutomationRunner.running && !AutomationCompiler.getIsCompiling()
+    const isRootTask = !AutomationInstance?.running && !AutomationCompiler.getIsCompiling()
     if (isRootTask) {
+      if (!AutomationInstance) {
+        throw new Error('Automation Setup not executed.')
+      }
       try {
         logger.log(`Compilation of Task ${id} starts...`)
         AutomationCompiler.init(action)
         logger.log(`Compilation of Task ${id} Finished.`)
         logger.log(`Start running Task ${id}...`)
-        await AutomationRunner.start(action)
+        await AutomationInstance.start(action)
         logger.log(`End of Task ${id}: SUCCESS`)
       } catch (e: any) {
         logger.error(`Error running task ${id}. ${e.message}`)
