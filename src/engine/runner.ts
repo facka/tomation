@@ -1,5 +1,6 @@
 import { AbstractAction, Action, ACTION_STATUS, ActionOnElement } from "~/dom/actions"
 import { AutomationEvents, EVENT_NAMES } from "./events"
+import { AutomationCompiler } from './compiler'
 import { logger } from "~/feedback/logger"
 import { UIUtils } from "~/feedback/ui-utils"
 import { setDocument } from '../dsl/ui-element'
@@ -31,6 +32,7 @@ class Automation {
   currentActionCallback: ((action: AbstractAction) => {}) | undefined
   currentAction: AbstractAction | undefined
   tests: Array<any>
+  initialActionByTestId: Record<string, Action>
 
   constructor(window: Window, tests: Array<any>) {
     this._document = window.document
@@ -40,6 +42,7 @@ class Automation {
     this.status = TestPlayStatus.STOPPED
     this.tests = tests
     this.runMode = RunMode.NORMAL
+    this.initialActionByTestId = {}
   }
 
   public get document() {
@@ -155,6 +158,41 @@ class Automation {
 
   public getTests(): Array<any> {
     return this.tests
+  }
+
+  public setInitialAction(testId: string, action: Action): void {
+    this.initialActionByTestId[testId] = action
+  }
+
+  public getInitialAction(testId: string): Action | undefined {
+    return this.initialActionByTestId[testId]
+  }
+
+  public getRegisteredTestIds(): string[] {
+    return Object.keys(this.initialActionByTestId)
+  }
+
+  public runTest(testId: string): void {
+    const action = this.getInitialAction(testId)
+    if (!action) {
+      logger.log('Available Tests:', this.getRegisteredTestIds())
+      throw new Error(`[tomation] Test with id ${testId} not found.`)
+    }
+
+    AutomationCompiler.init(action)
+    logger.log(`Compiled Test: ${testId}`)
+    AutomationRunner.start(action)
+  }
+
+  public compileTest(testId: string) {
+    const action = this.getInitialAction(testId)
+    if (!action) {
+      logger.log('Available Tests:', this.getRegisteredTestIds())
+      throw new Error(`[tomation] Test with id ${testId} not found for compilation.`)
+    }
+
+    AutomationCompiler.init(action)
+    return action.getJSON()
   }
 
 }

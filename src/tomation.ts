@@ -1,6 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
 import { AutomationEvents, EVENT_NAMES } from "./engine/events";
-import { RunTest } from "./dsl/test";
 import { AutomationInstance, Setup, TestSpeed } from './engine/runner';
 import { logger } from './feedback/logger';
 interface TomationOptions {
@@ -87,7 +86,7 @@ function tomation(options: TomationOptions) {
         if (message === 'contentScript-to-injectedScript') {
           logger.log('Received message from extension:', event.data);
           const commands: Record<string, () => void> = {
-            'run-test-request': () => RunTest(params?.testId),
+            'run-test-request': () => AutomationInstance.runTest(params?.testId),
             'reload-tests-request': () => AutomationInstance.setupTests(),
             'pause-test-request': () => AutomationInstance.pause(),
             'stop-test-request': () => AutomationInstance.stop(),
