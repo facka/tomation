@@ -239,7 +239,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - When building the `EXECUTE_STEP` message for a step with a target: attach the full `elementDescriptor` from `pageElements[target]`; if the descriptor has a `childOf` field, also resolve the parent entry from `pageElements` and attach it as `parentDescriptor`
     - _Requirements: 3.8, 4.1, 4.2, 4.3, 4.4, 5.1, 6.4_
 
-  - [ ]* 14.2 Write property tests for step flattener
+  - [x] 14.2 Write property tests for step flattener
     - **Property 4: Template Parameter Resolution Completeness** — generate task definitions with params and `{{token}}` values; verify no unresolved tokens in output
     - **Property 7: Step Flattening Preserves Order and Count** — generate nested task structures; verify output order and step count
     - **Property 8: Skipped Steps Are Never Executed** — generate step lists with random unchecked subsets; verify executed list equals checked steps only
