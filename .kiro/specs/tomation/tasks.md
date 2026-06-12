@@ -140,7 +140,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - All errors report file path + line number; exit code 1 on any error
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
 
-- [ ] 9. Checkpoint — compiler pipeline end-to-end
+- [x] 9. Checkpoint — compiler pipeline end-to-end
   - Use the `examples/my-app-tests/` fixture to run `node bin/tomation.js compile` and verify `spec.json` is emitted correctly.
   - Ensure all tests pass, ask the user if questions arise.
 
