@@ -224,13 +224,13 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - `// Feature: tomation, Property 2, 3, 7, 9, 10, 11`
     - _Requirements: 2.1, 2.2a, 2.5, 2.6, 3.2, 3.3, 3.7_
 
-- [ ] 13. Checkpoint — runtime unit tests pass
+- [x] 13. Checkpoint — runtime unit tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ---
 
-- [ ] 14. Implement the background script — step resolution and flattening
-  - [ ] 14.1 Create `packages/extension/src/background.js` — step flattener
+- [x] 14. Implement the background script — step resolution and flattening
+  - [x] 14.1 Create `packages/extension/src/background.js` — step flattener
     - `flattenSteps(testSteps, tasksMap, checkedIndexes)` → returns ordered array of resolved steps with task actions expanded inline
     - For each `task` action: recursively expand the task's steps, substituting `{{param}}` tokens from the invocation's params
     - Skip steps whose index is in the unchecked set
