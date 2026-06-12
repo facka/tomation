@@ -308,7 +308,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - Listen for `api.tabs.onActivated` and `api.tabs.onUpdated`; if no test running, sync to new hostname
     - _Requirements: 8.1–8.6_
 
-  - [ ]* 17.3 Write property tests for home view rendering
+  - [x] 17.3 Write property tests for home view rendering
     - **Property (project rendering)**: For any project with N specs and M total tests, verify render produces N spec sections and M test items
     - **Property (meta.url mismatch warning)**: For any spec with meta.url host ≠ current hostname, verify warning element is visible
     - `// Feature: tomation, Property (8.3, 8.6)`
