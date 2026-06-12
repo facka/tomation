@@ -353,8 +353,8 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
 
 ---
 
-- [ ] 20. Implement the Options page
-  - [ ] 20.1 Create `packages/extension/src/options.html` and `options.js`
+- [x] 20. Implement the Options page
+  - [x] 20.1 Create `packages/extension/src/options.html` and `options.js`
     - Render all projects grouped by hostname using `storage.getAllProjects()`
     - Each project shows a rename button (inline text input on click) and a delete button (with confirmation prompt)
     - Each spec within a project shows a delete button (with confirmation prompt)
