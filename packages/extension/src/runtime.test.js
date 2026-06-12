@@ -557,3 +557,273 @@ test('executeAction unknown action: returns ok false with error', async function
   assert.equal(result.ok, false);
   assert.equal(result.error, 'Unknown action: unknownAction');
 });
+
+
+// ---------------------------------------------------------------------------
+// Message listener tests (Task 12.4)
+// Requirements: 5.2, 5.6
+// ---------------------------------------------------------------------------
+
+var sentMessages;
+var registeredListener;
+
+function setupDOMWithMessaging(html) {
+  dom = new JSDOM(html || '<html><body></body></html>', {
+    url: 'http://localhost',
+    runScripts: 'dangerously',
+    resources: 'usable',
+    pretendToBeVisual: true
+  });
+  window = dom.window;
+
+  sentMessages = [];
+  registeredListener = null;
+
+  // Provide the browser global with message tracking
+  window.eval(
+    'var browser = { runtime: { onMessage: { addListener: function(fn) { window.__registeredListener = fn; } }, sendMessage: function(msg) { window.__sentMessages = window.__sentMessages || []; window.__sentMessages.push(msg); } } };'
+  );
+
+  // Load runtime.js source
+  var fs = require('fs');
+  var path = require('path');
+  var runtimeSrc = fs.readFileSync(path.join(__dirname, 'runtime.js'), 'utf8');
+  window.eval(runtimeSrc);
+
+  registeredListener = window.__registeredListener;
+  sentMessages = window.__sentMessages || [];
+}
+
+test('message listener: sends RUNTIME_READY on script load', function () {
+  setupDOMWithMessaging('<html><body></body></html>');
+  assert.equal(sentMessages.length, 1);
+  assert.equal(sentMessages[0].type, 'RUNTIME_READY');
+});
+
+test('message listener: registers a listener on api.runtime.onMessage', function () {
+  setupDOMWithMessaging('<html><body></body></html>');
+  assert.ok(registeredListener, 'Listener should be registered');
+  assert.equal(typeof registeredListener, 'function');
+});
+
+test('message listener: ignores non-EXECUTE_STEP messages', function () {
+  setupDOMWithMessaging('<html><body></body></html>');
+  var responseSent = false;
+  var result = registeredListener(
+    { type: 'SOME_OTHER_MESSAGE' },
+    {},
+    function () { responseSent = true; }
+  );
+  assert.equal(responseSent, false);
+  assert.notEqual(result, true); // should not return true (no async)
+});
+
+test('message listener: navigate action responds synchronously with ok', function () {
+  setupDOMWithMessaging('<html><body></body></html>');
+  var response = null;
+  registeredListener(
+    { type: 'EXECUTE_STEP', action: 'navigate', stepIndex: 0, url: 'http://example.com' },
+    {},
+    function (r) { response = r; }
+  );
+  assert.equal(response.type, 'STEP_RESULT');
+  assert.equal(response.stepIndex, 0);
+  assert.equal(response.ok, true);
+});
+
+test('message listener: wait action responds synchronously with ok', function () {
+  setupDOMWithMessaging('<html><body></body></html>');
+  var response = null;
+  registeredListener(
+    { type: 'EXECUTE_STEP', action: 'wait', stepIndex: 1, ms: 500 },
+    {},
+    function (r) { response = r; }
+  );
+  assert.equal(response.type, 'STEP_RESULT');
+  assert.equal(response.stepIndex, 1);
+  assert.equal(response.ok, true);
+});
+
+test('message listener: task action responds synchronously with ok', function () {
+  setupDOMWithMessaging('<html><body></body></html>');
+  var response = null;
+  registeredListener(
+    { type: 'EXECUTE_STEP', action: 'task', stepIndex: 2 },
+    {},
+    function (r) { response = r; }
+  );
+  assert.equal(response.type, 'STEP_RESULT');
+  assert.equal(response.stepIndex, 2);
+  assert.equal(response.ok, true);
+});
+
+test('message listener: manual action responds synchronously with ok', function () {
+  setupDOMWithMessaging('<html><body></body></html>');
+  var response = null;
+  registeredListener(
+    { type: 'EXECUTE_STEP', action: 'manual', stepIndex: 3 },
+    {},
+    function (r) { response = r; }
+  );
+  assert.equal(response.type, 'STEP_RESULT');
+  assert.equal(response.stepIndex, 3);
+  assert.equal(response.ok, true);
+});
+
+test('message listener: click action finds element, highlights, executes, unhighlights', async function () {
+  setupDOMWithMessaging('<html><body><button id="btn">Go</button></body></html>');
+  var response = null;
+  var returnValue = registeredListener(
+    {
+      type: 'EXECUTE_STEP',
+      action: 'click',
+      stepIndex: 4,
+      target: 'goBtn',
+      elementDescriptor: { tag: 'button', where: { id: 'btn' } }
+    },
+    {},
+    function (r) { response = r; }
+  );
+
+  // Should return true for async
+  assert.equal(returnValue, true);
+
+  // Wait for promises to resolve
+  await new Promise(function (resolve) { setTimeout(resolve, 50); });
+
+  assert.equal(response.type, 'STEP_RESULT');
+  assert.equal(response.stepIndex, 4);
+  assert.equal(response.ok, true);
+
+  // Element should be unhighlighted after execution
+  var el = window.document.getElementById('btn');
+  assert.equal(el.hasAttribute('data-tomation-active'), false);
+});
+
+test('message listener: type action sets value on found element', async function () {
+  setupDOMWithMessaging('<html><body><input id="inp" type="text" /></body></html>');
+  var response = null;
+  registeredListener(
+    {
+      type: 'EXECUTE_STEP',
+      action: 'type',
+      stepIndex: 5,
+      target: 'emailInput',
+      value: 'test@example.com',
+      elementDescriptor: { tag: 'input', where: { id: 'inp' } }
+    },
+    {},
+    function (r) { response = r; }
+  );
+
+  await new Promise(function (resolve) { setTimeout(resolve, 50); });
+
+  assert.equal(response.ok, true);
+  assert.equal(response.stepIndex, 5);
+  var el = window.document.getElementById('inp');
+  assert.equal(el.value, 'test@example.com');
+});
+
+test('message listener: returns error when element not found', async function () {
+  setupDOMWithMessaging('<html><body></body></html>');
+
+  // Override Date.now to trigger timeout fast
+  var callCount = 0;
+  window.Date.now = function () {
+    callCount++;
+    if (callCount <= 1) return 0;
+    return 6000;
+  };
+
+  var response = null;
+  registeredListener(
+    {
+      type: 'EXECUTE_STEP',
+      action: 'click',
+      stepIndex: 6,
+      target: 'missingBtn',
+      elementDescriptor: { tag: 'button', where: { id: 'nope' } }
+    },
+    {},
+    function (r) { response = r; }
+  );
+
+  await new Promise(function (resolve) { setTimeout(resolve, 100); });
+
+  assert.equal(response.ok, false);
+  assert.equal(response.stepIndex, 6);
+  assert.equal(response.error, 'Element not found: missingBtn');
+});
+
+test('message listener: assertNotExists passes when element is NOT found', async function () {
+  setupDOMWithMessaging('<html><body></body></html>');
+
+  // Override Date.now to trigger timeout fast (element won't be found)
+  var callCount = 0;
+  window.Date.now = function () {
+    callCount++;
+    if (callCount <= 1) return 0;
+    return 6000;
+  };
+
+  var response = null;
+  registeredListener(
+    {
+      type: 'EXECUTE_STEP',
+      action: 'assertNotExists',
+      stepIndex: 7,
+      target: 'ghost',
+      elementDescriptor: { tag: 'div', where: { id: 'ghost' } }
+    },
+    {},
+    function (r) { response = r; }
+  );
+
+  await new Promise(function (resolve) { setTimeout(resolve, 100); });
+
+  assert.equal(response.ok, true);
+  assert.equal(response.stepIndex, 7);
+});
+
+test('message listener: assertNotExists fails when element IS found', async function () {
+  setupDOMWithMessaging('<html><body><div id="exists">here</div></body></html>');
+  var response = null;
+  registeredListener(
+    {
+      type: 'EXECUTE_STEP',
+      action: 'assertNotExists',
+      stepIndex: 8,
+      target: 'existsDiv',
+      elementDescriptor: { tag: 'div', where: { id: 'exists' } }
+    },
+    {},
+    function (r) { response = r; }
+  );
+
+  await new Promise(function (resolve) { setTimeout(resolve, 50); });
+
+  assert.equal(response.ok, false);
+  assert.equal(response.stepIndex, 8);
+  assert.equal(response.error, 'Element exists but should not');
+});
+
+test('message listener: unknown action returns error via sendResponse', async function () {
+  setupDOMWithMessaging('<html><body></body></html>');
+  var response = null;
+  var returnValue = registeredListener(
+    {
+      type: 'EXECUTE_STEP',
+      action: 'fancyAction',
+      stepIndex: 9
+    },
+    {},
+    function (r) { response = r; }
+  );
+
+  assert.equal(returnValue, true);
+
+  await new Promise(function (resolve) { setTimeout(resolve, 50); });
+
+  assert.equal(response.ok, false);
+  assert.equal(response.error, 'Unknown action: fancyAction');
+});

@@ -181,7 +181,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
 
 ---
 
-- [ ] 12. Implement the content script — runtime.js
+- [x] 12. Implement the content script — runtime.js
   - [x] 12.1 Implement element finder
     - `findElement(descriptor, parentNode?)` → returns a Promise that resolves to the DOM element or rejects after 5 seconds
     - Poll using `requestAnimationFrame`; evaluate all `where` keys as AND conditions
@@ -208,7 +208,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - All others (`navigate`, `wait`, `task`, `manual`) are handled in background, not runtime
     - _Requirements: 3.1–3.7, 3.11, 3.12_
 
-  - [ ] 12.4 Implement message listener in runtime.js
+  - [x] 12.4 Implement message listener in runtime.js
     - Listen for `EXECUTE_STEP` messages via `api.runtime.onMessage`
     - On receive: find element (if step requires one), highlight, execute action, unhighlight, send back `STEP_RESULT`
     - On script load: send `RUNTIME_READY` to background

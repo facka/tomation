@@ -300,3 +300,73 @@ function handleWaitFor(step) {
     poll();
   });
 }
+
+// ---------------------------------------------------------------------------
+// Message listener: receives EXECUTE_STEP from background, runs DOM actions
+// ---------------------------------------------------------------------------
+
+var ACTIONS_NEEDING_ELEMENT = ['click', 'type', 'typePassword', 'select', 'assertExists', 'assertHasText', 'waitFor'];
+
+api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+  if (message.type !== 'EXECUTE_STEP') {
+    return;
+  }
+
+  var action = message.action;
+  var stepIndex = message.stepIndex;
+
+  // Actions that don't need a DOM element — just respond ok
+  if (action === 'navigate' || action === 'wait' || action === 'task' || action === 'manual') {
+    sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: true });
+    return;
+  }
+
+  // assertNotExists: attempt to find element, pass if NOT found
+  if (action === 'assertNotExists') {
+    findElementWithParent(message).then(function (findResult) {
+      var element = findResult.ok ? findResult.element : null;
+      return executeAction(message, element);
+    }).then(function (result) {
+      sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: result.ok, error: result.error });
+    }).catch(function (err) {
+      sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: false, error: err.message || String(err) });
+    });
+    return true;
+  }
+
+  // Actions that require an element
+  if (ACTIONS_NEEDING_ELEMENT.indexOf(action) !== -1) {
+    findElementWithParent(message).then(function (findResult) {
+      if (!findResult.ok) {
+        sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: false, error: findResult.error });
+        return;
+      }
+      var element = findResult.element;
+      highlightElement(element);
+      return executeAction(message, element).then(function (result) {
+        unhighlightElement(element);
+        sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: result.ok, error: result.error });
+      }).catch(function (err) {
+        unhighlightElement(element);
+        sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: false, error: err.message || String(err) });
+      });
+    }).catch(function (err) {
+      sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: false, error: err.message || String(err) });
+    });
+    return true;
+  }
+
+  // Unknown action — let executeAction handle it
+  executeAction(message, null).then(function (result) {
+    sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: result.ok, error: result.error });
+  }).catch(function (err) {
+    sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: false, error: err.message || String(err) });
+  });
+  return true;
+});
+
+// ---------------------------------------------------------------------------
+// On script load: notify background that the runtime is ready
+// ---------------------------------------------------------------------------
+
+api.runtime.sendMessage({ type: 'RUNTIME_READY' });
