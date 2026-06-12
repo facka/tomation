@@ -146,8 +146,8 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
 
 ---
 
-- [ ] 10. Implement extension storage layer
-  - [ ] 10.1 Create `packages/extension/src/storage.js`
+- [x] 10. Implement extension storage layer
+  - [x] 10.1 Create `packages/extension/src/storage.js`
     - Implement `getProject(hostname)` → returns project object or null
     - Implement `saveProject(hostname, project)` → persists to `browser.storage.local`
     - Implement `addSpec(hostname, filename, spec)` → assign new UUID-v4 `id` and `loadedAt` ISO timestamp; if same `filename` exists, replace entry keeping original UUID and updating `loadedAt`
