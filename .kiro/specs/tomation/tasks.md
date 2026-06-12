@@ -264,7 +264,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - `stop()`: set `stopRequested = true`; if paused, also call `continue()` to unblock; step loop checks `stopRequested` and exits
     - _Requirements: 5.8, 5.9, 5.10_
 
-  - [ ] 15.3 Implement navigate step handling and cross-page continuity
+  - [x] 15.3 Implement navigate step handling and cross-page continuity
     - When a `navigate` step is encountered: call `api.tabs.update(lockedTabId, { url })`, then await a Promise that resolves when `RUNTIME_READY` is received from that tab
     - Timeout after 10 seconds; if no RUNTIME_READY received, halt run with error
     - _Requirements: 3.9, 5.6_

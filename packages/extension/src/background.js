@@ -418,6 +418,16 @@ function runStepLoop() {
     var currentIndex = runState.stepIndex;
     var step = runState.steps[currentIndex];
 
+    // Handle navigate steps in the background (don't send to runtime)
+    if (step.action === 'navigate') {
+      return handleNavigateStep(step, currentIndex);
+    }
+
+    // Handle wait steps in the background (don't send to runtime)
+    if (step.action === 'wait') {
+      return handleWaitStep(step, currentIndex);
+    }
+
     return sendStepToRuntime(step, currentIndex).then(function (result) {
       if (runState.stopRequested) {
         return finishRun();
@@ -447,6 +457,75 @@ function runStepLoop() {
       runState.stepIndex++;
       return runStepLoop();
     });
+  });
+}
+
+/**
+ * Handle a navigate step: update the tab URL, then wait for RUNTIME_READY
+ * from the content script on the new page. Times out after 10 seconds.
+ *
+ * @param {object} step - The navigate step (has step.url)
+ * @param {number} currentIndex - The current step index
+ * @returns {Promise}
+ */
+function handleNavigateStep(step, currentIndex) {
+  return api.tabs.update(runState.lockedTabId, { url: step.url }).then(function () {
+    return new Promise(function (resolve, reject) {
+      var timeoutId = null;
+      var listener = null;
+
+      listener = function (message, sender) {
+        // Only accept RUNTIME_READY from the locked tab
+        var fromTab = sender && sender.tab && sender.tab.id === runState.lockedTabId;
+        if (message && message.type === 'RUNTIME_READY' && fromTab) {
+          clearTimeout(timeoutId);
+          api.runtime.onMessage.removeListener(listener);
+          resolve();
+        }
+      };
+
+      api.runtime.onMessage.addListener(listener);
+
+      timeoutId = setTimeout(function () {
+        api.runtime.onMessage.removeListener(listener);
+        reject(new Error('Navigation timeout: RUNTIME_READY not received within 10 seconds'));
+      }, 10000);
+    });
+  }).then(function () {
+    // Navigation succeeded
+    runState.passCount++;
+    emitLog(currentIndex, step, true, undefined);
+    runState.stepIndex++;
+    return runStepLoop();
+  }).catch(function (err) {
+    // Navigation timed out or failed
+    runState.failCount++;
+    emitLog(currentIndex, step, false, err.message || 'Navigation failed');
+    unlockTab();
+    runState.running = false;
+    emitSummary('RUN_COMPLETE', currentIndex + 1, runState.passCount, runState.failCount);
+  });
+}
+
+/**
+ * Handle a wait step: pause execution for the specified milliseconds,
+ * then emit LOG and advance to the next step.
+ *
+ * @param {object} step - The wait step (has step.ms)
+ * @param {number} currentIndex - The current step index
+ * @returns {Promise}
+ */
+function handleWaitStep(step, currentIndex) {
+  return new Promise(function (resolve) {
+    setTimeout(resolve, step.ms || 0);
+  }).then(function () {
+    if (runState.stopRequested) {
+      return finishRun();
+    }
+    runState.passCount++;
+    emitLog(currentIndex, step, true, undefined);
+    runState.stepIndex++;
+    return runStepLoop();
   });
 }
 
@@ -533,6 +612,8 @@ if (typeof module !== 'undefined' && module.exports) {
     finishRun: finishRun,
     stopRun: stopRun,
     pauseRun: pauseRun,
-    continueRun: continueRun
+    continueRun: continueRun,
+    handleNavigateStep: handleNavigateStep,
+    handleWaitStep: handleWaitStep
   };
 }

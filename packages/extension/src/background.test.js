@@ -3,7 +3,15 @@ var test = require('node:test');
 var assert = require('node:assert/strict');
 
 // Mock chrome/browser global before requiring background.js
-global.chrome = { runtime: { onMessage: { addListener: function () {} }, sendMessage: function () {} } };
+global.chrome = {
+  runtime: {
+    onMessage: {
+      addListener: function () {},
+      removeListener: function () {}
+    },
+    sendMessage: function () {}
+  }
+};
 var bg = require('./background.js');
 
 // ---------------------------------------------------------------------------
@@ -863,5 +871,377 @@ test('stop while paused unblocks and halts the run', function () {
         resolve();
       });
     }, 50);
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// Navigate step handling (Task 15.3)
+// ---------------------------------------------------------------------------
+
+test('navigate step calls api.tabs.update with url and waits for RUNTIME_READY', function () {
+  bg.resetRunState();
+
+  var sentLogs = [];
+  var sentSummary = null;
+  var navigatedUrl = null;
+  var messageListeners = [];
+
+  global.chrome.tabs = {
+    update: function (tabId, props) {
+      if (props.url) navigatedUrl = props.url;
+      return Promise.resolve();
+    },
+    sendMessage: function () {
+      return Promise.resolve({ ok: true });
+    }
+  };
+  global.chrome.runtime.onMessage = {
+    addListener: function (fn) { messageListeners.push(fn); },
+    removeListener: function (fn) {
+      var idx = messageListeners.indexOf(fn);
+      if (idx !== -1) messageListeners.splice(idx, 1);
+    }
+  };
+  global.chrome.runtime.sendMessage = function (msg) {
+    if (msg.type === 'LOG') sentLogs.push(msg);
+    else sentSummary = msg;
+  };
+
+  var testObj = {
+    name: 'Navigate Test',
+    steps: [
+      { action: 'navigate', url: 'https://example.com/page2' },
+      { action: 'click', target: 'btn' }
+    ]
+  };
+  var spec = {
+    tasks: {},
+    pageElements: {
+      btn: { tag: 'button', where: { id: 'btn' } }
+    }
+  };
+
+  var runPromise = bg.startRun(10, testObj, spec, [0, 1]);
+
+  // Simulate RUNTIME_READY from the locked tab after a short delay
+  return new Promise(function (resolve) {
+    setTimeout(function () {
+      assert.equal(navigatedUrl, 'https://example.com/page2');
+      assert.equal(messageListeners.length, 1);
+
+      // Simulate RUNTIME_READY message from the correct tab
+      messageListeners[0]({ type: 'RUNTIME_READY' }, { tab: { id: 10 } });
+
+      runPromise.then(function () {
+        // Navigate step logged as ok
+        assert.equal(sentLogs[0].action, 'navigate');
+        assert.equal(sentLogs[0].ok, true);
+        // Second step also executed
+        assert.equal(sentLogs[1].action, 'click');
+        assert.equal(sentLogs[1].ok, true);
+        // Summary
+        assert.equal(sentSummary.type, 'RUN_COMPLETE');
+        assert.equal(sentSummary.passed, 2);
+        // Listener removed after resolve
+        assert.equal(messageListeners.length, 0);
+        resolve();
+      });
+    }, 20);
+  });
+});
+
+test('navigate step times out after 10 seconds if no RUNTIME_READY', function () {
+  bg.resetRunState();
+
+  var sentLogs = [];
+  var sentSummary = null;
+  var messageListeners = [];
+  var originalSetTimeout = global.setTimeout;
+
+  // Use fake timers for the timeout test
+  var timers = [];
+  global.setTimeout = function (fn, ms) {
+    var id = timers.length;
+    timers.push({ fn: fn, ms: ms });
+    return id;
+  };
+  global.clearTimeout = function (id) {
+    if (timers[id]) timers[id] = null;
+  };
+
+  global.chrome.tabs = {
+    update: function () { return Promise.resolve(); },
+    sendMessage: function () { return Promise.resolve({ ok: true }); }
+  };
+  global.chrome.runtime.onMessage = {
+    addListener: function (fn) { messageListeners.push(fn); },
+    removeListener: function (fn) {
+      var idx = messageListeners.indexOf(fn);
+      if (idx !== -1) messageListeners.splice(idx, 1);
+    }
+  };
+  global.chrome.runtime.sendMessage = function (msg) {
+    if (msg.type === 'LOG') sentLogs.push(msg);
+    else sentSummary = msg;
+  };
+
+  var testObj = {
+    name: 'Navigate Timeout Test',
+    steps: [
+      { action: 'navigate', url: 'https://example.com/timeout' }
+    ]
+  };
+  var spec = { tasks: {}, pageElements: {} };
+
+  var runPromise = bg.startRun(10, testObj, spec, [0]);
+
+  // Wait for the navigate handler to set up
+  return new Promise(function (resolve) {
+    originalSetTimeout(function () {
+      // Find the 10-second timeout timer and fire it
+      var found = false;
+      for (var i = 0; i < timers.length; i++) {
+        if (timers[i] && timers[i].ms === 10000) {
+          timers[i].fn();
+          found = true;
+          break;
+        }
+      }
+      assert.ok(found, 'Should have registered a 10s timeout');
+
+      runPromise.then(function () {
+        // Navigate step failed with timeout error
+        assert.equal(sentLogs.length, 1);
+        assert.equal(sentLogs[0].ok, false);
+        assert.ok(sentLogs[0].error.indexOf('RUNTIME_READY not received within 10 seconds') !== -1);
+        // Run halted
+        assert.equal(sentSummary.type, 'RUN_COMPLETE');
+        assert.equal(sentSummary.failed, 1);
+        // Restore setTimeout
+        global.setTimeout = originalSetTimeout;
+        resolve();
+      });
+    }, 20);
+  });
+});
+
+test('navigate step ignores RUNTIME_READY from wrong tab', function () {
+  bg.resetRunState();
+
+  var sentLogs = [];
+  var sentSummary = null;
+  var messageListeners = [];
+
+  global.chrome.tabs = {
+    update: function () { return Promise.resolve(); },
+    sendMessage: function () { return Promise.resolve({ ok: true }); }
+  };
+  global.chrome.runtime.onMessage = {
+    addListener: function (fn) { messageListeners.push(fn); },
+    removeListener: function (fn) {
+      var idx = messageListeners.indexOf(fn);
+      if (idx !== -1) messageListeners.splice(idx, 1);
+    }
+  };
+  global.chrome.runtime.sendMessage = function (msg) {
+    if (msg.type === 'LOG') sentLogs.push(msg);
+    else sentSummary = msg;
+  };
+
+  var testObj = {
+    name: 'Navigate Wrong Tab Test',
+    steps: [
+      { action: 'navigate', url: 'https://example.com/page' }
+    ]
+  };
+  var spec = { tasks: {}, pageElements: {} };
+
+  var runPromise = bg.startRun(10, testObj, spec, [0]);
+
+  return new Promise(function (resolve) {
+    setTimeout(function () {
+      // Send RUNTIME_READY from a different tab (id=999, locked is 10)
+      messageListeners[0]({ type: 'RUNTIME_READY' }, { tab: { id: 999 } });
+
+      // Listener should still be active (message was ignored)
+      assert.equal(messageListeners.length, 1);
+
+      // Now send from the correct tab
+      messageListeners[0]({ type: 'RUNTIME_READY' }, { tab: { id: 10 } });
+
+      runPromise.then(function () {
+        assert.equal(sentLogs[0].ok, true);
+        assert.equal(sentSummary.type, 'RUN_COMPLETE');
+        assert.equal(sentSummary.passed, 1);
+        resolve();
+      });
+    }, 20);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Wait step handling (Task 15.3)
+// ---------------------------------------------------------------------------
+
+test('wait step pauses for specified ms and then advances', function () {
+  bg.resetRunState();
+
+  var sentLogs = [];
+  var sentSummary = null;
+
+  global.chrome.tabs = {
+    update: function () { return Promise.resolve(); },
+    sendMessage: function () { return Promise.resolve({ ok: true }); }
+  };
+  global.chrome.runtime.onMessage = {
+    addListener: function () {},
+    removeListener: function () {}
+  };
+  global.chrome.runtime.sendMessage = function (msg) {
+    if (msg.type === 'LOG') sentLogs.push(msg);
+    else sentSummary = msg;
+  };
+
+  var testObj = {
+    name: 'Wait Test',
+    steps: [
+      { action: 'wait', ms: 50 },
+      { action: 'click', target: 'btn' }
+    ]
+  };
+  var spec = {
+    tasks: {},
+    pageElements: {
+      btn: { tag: 'button', where: { id: 'btn' } }
+    }
+  };
+
+  var startTime = Date.now();
+  return bg.startRun(10, testObj, spec, [0, 1]).then(function () {
+    var elapsed = Date.now() - startTime;
+    // Should have waited at least 50ms (with some tolerance)
+    assert.ok(elapsed >= 40, 'Should have waited at least ~50ms, got ' + elapsed);
+    // Wait step logged as ok
+    assert.equal(sentLogs[0].action, 'wait');
+    assert.equal(sentLogs[0].ok, true);
+    // Click step also executed
+    assert.equal(sentLogs[1].action, 'click');
+    assert.equal(sentLogs[1].ok, true);
+    // Complete
+    assert.equal(sentSummary.type, 'RUN_COMPLETE');
+    assert.equal(sentSummary.passed, 2);
+  });
+});
+
+test('wait step respects stopRequested during wait', function () {
+  bg.resetRunState();
+
+  var sentSummary = null;
+
+  global.chrome.tabs = {
+    update: function () { return Promise.resolve(); },
+    sendMessage: function () { return Promise.resolve({ ok: true }); }
+  };
+  global.chrome.runtime.onMessage = {
+    addListener: function () {},
+    removeListener: function () {}
+  };
+  global.chrome.runtime.sendMessage = function (msg) {
+    if (msg.type !== 'LOG') sentSummary = msg;
+  };
+
+  var testObj = {
+    name: 'Wait Stop Test',
+    steps: [
+      { action: 'wait', ms: 100 },
+      { action: 'click', target: 'btn' }
+    ]
+  };
+  var spec = {
+    tasks: {},
+    pageElements: {
+      btn: { tag: 'button', where: { id: 'btn' } }
+    }
+  };
+
+  var runPromise = bg.startRun(10, testObj, spec, [0, 1]);
+
+  // Stop during the wait
+  return new Promise(function (resolve) {
+    setTimeout(function () {
+      bg.stopRun();
+    }, 30);
+
+    runPromise.then(function () {
+      // Run was stopped after the wait completes and checks stopRequested
+      assert.equal(sentSummary.type, 'RUN_STOPPED');
+      assert.equal(bg.runState.running, false);
+      resolve();
+    });
+  });
+});
+
+test('startRun handles mixed navigate and regular steps in sequence', function () {
+  bg.resetRunState();
+
+  var sentLogs = [];
+  var sentSummary = null;
+  var messageListeners = [];
+
+  global.chrome.tabs = {
+    update: function () { return Promise.resolve(); },
+    sendMessage: function () { return Promise.resolve({ ok: true }); }
+  };
+  global.chrome.runtime.onMessage = {
+    addListener: function (fn) { messageListeners.push(fn); },
+    removeListener: function (fn) {
+      var idx = messageListeners.indexOf(fn);
+      if (idx !== -1) messageListeners.splice(idx, 1);
+    }
+  };
+  global.chrome.runtime.sendMessage = function (msg) {
+    if (msg.type === 'LOG') sentLogs.push(msg);
+    else sentSummary = msg;
+  };
+
+  var testObj = {
+    name: 'Mixed Steps Test',
+    steps: [
+      { action: 'click', target: 'btn' },
+      { action: 'navigate', url: 'https://example.com/next' },
+      { action: 'click', target: 'btn' }
+    ]
+  };
+  var spec = {
+    tasks: {},
+    pageElements: {
+      btn: { tag: 'button', where: { id: 'btn' } }
+    }
+  };
+
+  var runPromise = bg.startRun(10, testObj, spec, [0, 1, 2]);
+
+  return new Promise(function (resolve) {
+    setTimeout(function () {
+      // After first click, navigate should be in progress
+      // Send RUNTIME_READY from the locked tab
+      if (messageListeners.length > 0) {
+        messageListeners[0]({ type: 'RUNTIME_READY' }, { tab: { id: 10 } });
+      }
+
+      runPromise.then(function () {
+        assert.equal(sentLogs.length, 3);
+        assert.equal(sentLogs[0].action, 'click');
+        assert.equal(sentLogs[0].ok, true);
+        assert.equal(sentLogs[1].action, 'navigate');
+        assert.equal(sentLogs[1].ok, true);
+        assert.equal(sentLogs[2].action, 'click');
+        assert.equal(sentLogs[2].ok, true);
+        assert.equal(sentSummary.type, 'RUN_COMPLETE');
+        assert.equal(sentSummary.passed, 3);
+        resolve();
+      });
+    }, 30);
   });
 });
