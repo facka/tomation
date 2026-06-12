@@ -214,7 +214,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - On script load: send `RUNTIME_READY` to background
     - _Requirements: 5.2, 5.6_
 
-  - [ ]* 12.5 Write property tests for runtime logic (using jsdom)
+  - [x] 12.5 Write property tests for runtime logic (using jsdom)
     - **Property 9: Where Matcher AND Semantics** — generate DOM trees and multi-key where descriptors; verify only elements satisfying all conditions returned
     - **Property 11: childOf Scoping** — generate DOM trees with matching elements inside and outside a parent subtree; verify element inside parent is found, element outside is not found even when it matches the `where` descriptor
     - **Property 2 (type action): type sets value** — generate arbitrary non-empty strings; verify element.value equals input after `type`
