@@ -286,19 +286,19 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - `// Feature: tomation, Property 5, 8`
     - _Requirements: 5.4, 5.5, 5.11_
 
-- [ ] 16. Checkpoint — background orchestration tests pass
+- [x] 16. Checkpoint — background orchestration tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ---
 
-- [ ] 17. Implement the panel UI — Home view
-  - [ ] 17.1 Create `packages/extension/src/panel.html`
+- [x] 17. Implement the panel UI — Home view
+  - [x] 17.1 Create `packages/extension/src/panel.html`
     - Scaffold four view containers (home, test-plan, run, error) toggled by CSS display
     - Include `panel.js` as a `<script>` tag
     - Basic CSS: sidebar-appropriate layout, project/test list styles, controller bar styles, manual banner styles, log styles
     - _Requirements: 8.1–8.6_
 
-  - [ ] 17.2 Implement Home view in `panel.js`
+  - [x] 17.2 Implement Home view in `panel.js`
     - On load: query active tab for hostname via `api.tabs.query`
     - Call `storage.getProject(hostname)`; if null, show create-project form; if found, render spec + test list
     - Render each spec's filename as a section header; beneath each, render test names as clickable items

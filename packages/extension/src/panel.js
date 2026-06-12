@@ -1,3 +1,378 @@
 // panel.js — sidebar UI
 // Implementation: Tasks 17, 18, 19
 var api = typeof browser !== 'undefined' ? browser : chrome;
+
+// --- State ---
+var currentHostname = null;
+var currentProject = null;
+var currentSpec = null;
+var currentTest = null;
+var isRunning = false;
+
+// --- View Navigation ---
+
+/**
+ * Show a specific view container and hide all others.
+ * @param {string} viewName - One of: 'home', 'test-plan', 'run', 'error'
+ */
+function showView(viewName) {
+  var views = document.querySelectorAll('.view');
+  for (var i = 0; i < views.length; i++) {
+    views[i].classList.remove('active');
+  }
+  var target = document.getElementById('view-' + viewName);
+  if (target) {
+    target.classList.add('active');
+  }
+}
+
+// --- Inline Spec Validator (lightweight UI-level guard) ---
+
+/**
+ * Validate a parsed spec object. Checks format, version, required fields,
+ * and basic structural integrity.
+ * @param {object} obj
+ * @returns {{ ok: boolean, spec?: object, error?: string }}
+ */
+function validateSpec(obj) {
+  if (!obj || typeof obj !== 'object') {
+    return { ok: false, error: 'Spec must be a JSON object' };
+  }
+  if (obj.format !== 'tomation-spec') {
+    return { ok: false, error: 'Invalid or missing format field (expected "tomation-spec")' };
+  }
+  if (obj.version !== 1) {
+    return { ok: false, error: 'Unsupported spec version (expected 1)' };
+  }
+  if (!obj.pageElements || typeof obj.pageElements !== 'object') {
+    return { ok: false, error: 'Missing required field: pageElements' };
+  }
+  if (!obj.tasks || typeof obj.tasks !== 'object') {
+    return { ok: false, error: 'Missing required field: tasks' };
+  }
+  if (!Array.isArray(obj.tests)) {
+    return { ok: false, error: 'Missing required field: tests' };
+  }
+
+  // Validate pageElements entries
+  var peKeys = Object.keys(obj.pageElements);
+  for (var i = 0; i < peKeys.length; i++) {
+    var entry = obj.pageElements[peKeys[i]];
+    if (!entry || !entry.tag) {
+      return { ok: false, error: 'pageElements entry "' + peKeys[i] + '" missing tag field' };
+    }
+    if (!entry.where || typeof entry.where !== 'object' || Object.keys(entry.where).length === 0) {
+      return { ok: false, error: 'pageElements entry "' + peKeys[i] + '" missing or empty where object' };
+    }
+  }
+
+  // Validate tasks entries
+  var taskKeys = Object.keys(obj.tasks);
+  for (var j = 0; j < taskKeys.length; j++) {
+    var taskEntry = obj.tasks[taskKeys[j]];
+    if (!taskEntry || !Array.isArray(taskEntry.steps)) {
+      return { ok: false, error: 'tasks entry "' + taskKeys[j] + '" missing steps array' };
+    }
+  }
+
+  // Validate tests entries
+  for (var k = 0; k < obj.tests.length; k++) {
+    var testEntry = obj.tests[k];
+    if (!testEntry || typeof testEntry.name !== 'string') {
+      return { ok: false, error: 'tests entry at index ' + k + ' missing name field' };
+    }
+    if (!Array.isArray(testEntry.steps)) {
+      return { ok: false, error: 'tests entry "' + testEntry.name + '" missing steps array' };
+    }
+  }
+
+  return { ok: true, spec: obj };
+}
+
+// --- Home View Rendering ---
+
+/**
+ * Render the home view for a given hostname.
+ * Loads the project from storage and displays specs/tests or a create form.
+ */
+function renderHomeView() {
+  var contentEl = document.getElementById('project-content');
+  var warningEl = document.getElementById('warning-banner');
+
+  if (!contentEl) return;
+
+  warningEl.classList.remove('visible');
+  warningEl.textContent = '';
+
+  if (!currentHostname) {
+    contentEl.innerHTML = '<p>No active tab detected.</p>';
+    return;
+  }
+
+  getProject(currentHostname).then(function (project) {
+    currentProject = project;
+
+    if (!project || !project.specs || project.specs.length === 0) {
+      // Show create-project prompt
+      contentEl.innerHTML =
+        '<div class="create-project">' +
+        '<p>No project found for <strong>' + escapeHtml(currentHostname) + '</strong></p>' +
+        '<p>Load a spec file to get started.</p>' +
+        '</div>';
+      return;
+    }
+
+    // Render spec + test list
+    var html = '';
+    for (var i = 0; i < project.specs.length; i++) {
+      var specEntry = project.specs[i];
+      var spec = specEntry.spec;
+
+      // Check meta.url warning
+      if (spec && spec.meta && spec.meta.url) {
+        try {
+          var specHost = getHostFromUrl(spec.meta.url);
+          if (specHost && specHost !== currentHostname) {
+            warningEl.textContent = 'Warning: Spec "' + escapeHtml(specEntry.filename) +
+              '" targets ' + escapeHtml(specHost) +
+              ' but current tab is ' + escapeHtml(currentHostname);
+            warningEl.classList.add('visible');
+          }
+        } catch (e) {
+          // ignore parse errors for meta.url
+        }
+      }
+
+      html += '<div class="spec-section">';
+      html += '<div class="spec-header">' + escapeHtml(specEntry.filename) + '</div>';
+
+      if (spec && spec.tests && spec.tests.length > 0) {
+        html += '<ul class="test-list">';
+        for (var j = 0; j < spec.tests.length; j++) {
+          html += '<li data-spec-index="' + i + '" data-test-index="' + j + '">' +
+            escapeHtml(spec.tests[j].name) + '</li>';
+        }
+        html += '</ul>';
+      }
+
+      html += '</div>';
+    }
+
+    contentEl.innerHTML = html;
+
+    // Attach click handlers to test items
+    var testItems = contentEl.querySelectorAll('.test-list li');
+    for (var t = 0; t < testItems.length; t++) {
+      testItems[t].addEventListener('click', onTestItemClick);
+    }
+  });
+}
+
+/**
+ * Handle click on a test item — navigate to Test Plan view.
+ */
+function onTestItemClick(e) {
+  var li = e.currentTarget;
+  var specIndex = parseInt(li.getAttribute('data-spec-index'), 10);
+  var testIndex = parseInt(li.getAttribute('data-test-index'), 10);
+
+  if (!currentProject || !currentProject.specs[specIndex]) return;
+
+  currentSpec = currentProject.specs[specIndex];
+  currentTest = currentSpec.spec.tests[testIndex];
+
+  showView('test-plan');
+  // Test Plan rendering will be implemented in Task 18
+  var titleEl = document.getElementById('test-plan-title');
+  if (titleEl && currentTest) {
+    titleEl.textContent = currentTest.name;
+  }
+}
+
+// --- Load Spec ---
+
+/**
+ * Handle spec file selection and loading.
+ */
+function onSpecFileSelected(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+
+  var reader = new FileReader();
+  reader.onload = function (evt) {
+    var text = evt.target.result;
+    var parsed;
+
+    try {
+      parsed = JSON.parse(text);
+    } catch (parseErr) {
+      showError('Failed to parse JSON: ' + parseErr.message);
+      return;
+    }
+
+    var result = validateSpec(parsed);
+    if (!result.ok) {
+      showError('Invalid spec: ' + result.error);
+      return;
+    }
+
+    addSpec(currentHostname, file.name, result.spec).then(function () {
+      renderHomeView();
+    });
+  };
+  reader.readAsText(file);
+
+  // Reset file input so the same file can be re-selected
+  e.target.value = '';
+}
+
+// --- Error View ---
+
+/**
+ * Show an error message in the error view.
+ * @param {string} message
+ */
+function showError(message) {
+  var errorEl = document.getElementById('error-message');
+  if (errorEl) {
+    errorEl.textContent = message;
+  }
+  showView('error');
+}
+
+// --- Tab Sync ---
+
+/**
+ * Get the hostname of the currently active tab.
+ * @param {function} callback - Called with hostname string or null
+ */
+function getActiveTabHostname(callback) {
+  api.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+    if (tabs && tabs.length > 0 && tabs[0].url) {
+      try {
+        var url = new URL(tabs[0].url);
+        callback(url.hostname);
+      } catch (e) {
+        callback(null);
+      }
+    } else {
+      callback(null);
+    }
+  });
+}
+
+/**
+ * Sync the panel to the active tab's hostname.
+ * Only syncs if no test is currently running.
+ */
+function syncToActiveTab() {
+  if (isRunning) return;
+
+  getActiveTabHostname(function (hostname) {
+    if (hostname && hostname !== currentHostname) {
+      currentHostname = hostname;
+      currentProject = null;
+      showView('home');
+      renderHomeView();
+    }
+  });
+}
+
+// --- Utility ---
+
+/**
+ * Escape HTML special characters.
+ * @param {string} str
+ * @returns {string}
+ */
+function escapeHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * Extract hostname from a URL string.
+ * @param {string} urlStr
+ * @returns {string|null}
+ */
+function getHostFromUrl(urlStr) {
+  try {
+    var u = new URL(urlStr);
+    return u.hostname;
+  } catch (e) {
+    return null;
+  }
+}
+
+// --- Initialization ---
+
+function init() {
+  // Wire up Load Spec button and file input
+  var loadBtn = document.getElementById('load-spec-btn');
+  var fileInput = document.getElementById('spec-file-input');
+  if (loadBtn && fileInput) {
+    loadBtn.addEventListener('click', function () {
+      fileInput.click();
+    });
+    fileInput.addEventListener('change', onSpecFileSelected);
+  }
+
+  // Wire up error back button
+  var errorBackBtn = document.getElementById('error-back-btn');
+  if (errorBackBtn) {
+    errorBackBtn.addEventListener('click', function () {
+      showView('home');
+    });
+  }
+
+  // Wire up back button from test plan view
+  var backHomeBtn = document.getElementById('back-home-btn');
+  if (backHomeBtn) {
+    backHomeBtn.addEventListener('click', function () {
+      showView('home');
+      renderHomeView();
+    });
+  }
+
+  // Wire up back button from run view
+  var backFromRunBtn = document.getElementById('back-home-from-run-btn');
+  if (backFromRunBtn) {
+    backFromRunBtn.addEventListener('click', function () {
+      showView('home');
+      renderHomeView();
+    });
+  }
+
+  // Get active tab hostname and render home view
+  getActiveTabHostname(function (hostname) {
+    currentHostname = hostname;
+    renderHomeView();
+  });
+
+  // Listen for tab changes — sync to new hostname if no test running
+  if (api.tabs && api.tabs.onActivated) {
+    api.tabs.onActivated.addListener(function () {
+      syncToActiveTab();
+    });
+  }
+
+  if (api.tabs && api.tabs.onUpdated) {
+    api.tabs.onUpdated.addListener(function (tabId, changeInfo) {
+      if (changeInfo.status === 'complete') {
+        syncToActiveTab();
+      }
+    });
+  }
+}
+
+// Run init when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
