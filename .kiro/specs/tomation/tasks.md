@@ -110,7 +110,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - On conflict, report error: `"Duplicate element key 'X' defined in file1 and file2"` — stop processing (do not emit)
     - _Requirements: 13.7_
 
-  - [ ] 7.2 Create `packages/compiler/src/flattener.js`
+  - [x] 7.2 Create `packages/compiler/src/flattener.js`
     - Accept the ordered list of parsed POM and test definitions
     - Merge all `pageElements` objects into a single flat map
     - Merge all `tasks` objects into a single flat map
