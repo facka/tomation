@@ -376,3 +376,295 @@ test('flattenSteps works with a native Set for checkedIndexes', function () {
   assert.equal(result[0].action, 'click');
   assert.equal(result[1].action, 'click');
 });
+
+
+// ---------------------------------------------------------------------------
+// Run State Machine tests (Task 15)
+// ---------------------------------------------------------------------------
+
+test('resetRunState resets all fields to defaults', function () {
+  bg.runState.running = true;
+  bg.runState.paused = true;
+  bg.runState.stopRequested = true;
+  bg.runState.lockedTabId = 42;
+  bg.runState.currentTestName = 'test';
+  bg.runState.steps = [{ action: 'click' }];
+  bg.runState.stepIndex = 5;
+  bg.runState.passCount = 3;
+  bg.runState.failCount = 2;
+  bg.runState.pauseResolve = function () {};
+
+  bg.resetRunState();
+
+  assert.equal(bg.runState.running, false);
+  assert.equal(bg.runState.paused, false);
+  assert.equal(bg.runState.stopRequested, false);
+  assert.equal(bg.runState.lockedTabId, null);
+  assert.equal(bg.runState.currentTestName, '');
+  assert.deepEqual(bg.runState.steps, []);
+  assert.equal(bg.runState.stepIndex, 0);
+  assert.equal(bg.runState.passCount, 0);
+  assert.equal(bg.runState.failCount, 0);
+  assert.equal(bg.runState.pauseResolve, null);
+});
+
+test('lockTab stores tabId and calls api.tabs.update', function () {
+  bg.resetRunState();
+
+  var updatedTabId = null;
+  var updatedProps = null;
+  global.chrome.tabs = {
+    update: function (tabId, props) {
+      updatedTabId = tabId;
+      updatedProps = props;
+      return Promise.resolve();
+    }
+  };
+
+  return bg.lockTab(99).then(function () {
+    assert.equal(bg.runState.lockedTabId, 99);
+    assert.equal(updatedTabId, 99);
+    assert.deepEqual(updatedProps, { active: true });
+  });
+});
+
+test('unlockTab clears lockedTabId', function () {
+  bg.resetRunState();
+  bg.runState.lockedTabId = 42;
+
+  bg.unlockTab();
+
+  assert.equal(bg.runState.lockedTabId, null);
+});
+
+test('emitLog sends LOG message via api.runtime.sendMessage', function () {
+  var sentMsg = null;
+  global.chrome.runtime.sendMessage = function (msg) { sentMsg = msg; };
+
+  bg.emitLog(3, { action: 'click', target: 'btn', value: null }, true, undefined);
+
+  assert.equal(sentMsg.type, 'LOG');
+  assert.equal(sentMsg.stepIndex, 3);
+  assert.equal(sentMsg.action, 'click');
+  assert.equal(sentMsg.target, 'btn');
+  assert.equal(sentMsg.ok, true);
+  assert.equal(sentMsg.error, undefined);
+});
+
+test('emitLog includes error when step fails', function () {
+  var sentMsg = null;
+  global.chrome.runtime.sendMessage = function (msg) { sentMsg = msg; };
+
+  bg.emitLog(1, { action: 'type', target: 'input', value: 'hello' }, false, 'Element not found');
+
+  assert.equal(sentMsg.type, 'LOG');
+  assert.equal(sentMsg.ok, false);
+  assert.equal(sentMsg.error, 'Element not found');
+});
+
+test('emitSummary sends RUN_COMPLETE message', function () {
+  var sentMsg = null;
+  global.chrome.runtime.sendMessage = function (msg) { sentMsg = msg; };
+
+  bg.emitSummary('RUN_COMPLETE', 5, 4, 1);
+
+  assert.equal(sentMsg.type, 'RUN_COMPLETE');
+  assert.equal(sentMsg.total, 5);
+  assert.equal(sentMsg.passed, 4);
+  assert.equal(sentMsg.failed, 1);
+});
+
+test('emitSummary sends RUN_STOPPED message', function () {
+  var sentMsg = null;
+  global.chrome.runtime.sendMessage = function (msg) { sentMsg = msg; };
+
+  bg.emitSummary('RUN_STOPPED', 3, 2, 0);
+
+  assert.equal(sentMsg.type, 'RUN_STOPPED');
+  assert.equal(sentMsg.total, 3);
+  assert.equal(sentMsg.passed, 2);
+  assert.equal(sentMsg.failed, 0);
+});
+
+test('startRun flattens steps, locks tab, and runs step loop to completion', function () {
+  bg.resetRunState();
+
+  var sentSteps = [];
+  var sentLogs = [];
+  var sentSummary = null;
+
+  global.chrome.tabs = {
+    update: function () { return Promise.resolve(); },
+    sendMessage: function (tabId, msg) {
+      sentSteps.push(msg);
+      return Promise.resolve({ ok: true });
+    }
+  };
+  global.chrome.runtime.sendMessage = function (msg) {
+    if (msg.type === 'LOG') sentLogs.push(msg);
+    else sentSummary = msg;
+  };
+
+  var testObj = {
+    name: 'Login Test',
+    steps: [
+      { action: 'click', target: 'btn' },
+      { action: 'type', target: 'input', value: 'hello' }
+    ]
+  };
+  var spec = {
+    tasks: {},
+    pageElements: {
+      btn: { tag: 'button', where: { id: 'btn' } },
+      input: { tag: 'input', where: { id: 'inp' } }
+    }
+  };
+
+  return bg.startRun(10, testObj, spec, [0, 1]).then(function () {
+    // Both steps sent to runtime
+    assert.equal(sentSteps.length, 2);
+    assert.equal(sentSteps[0].action, 'click');
+    assert.equal(sentSteps[1].action, 'type');
+
+    // LOG emitted per step
+    assert.equal(sentLogs.length, 2);
+    assert.equal(sentLogs[0].ok, true);
+    assert.equal(sentLogs[1].ok, true);
+
+    // Summary emitted
+    assert.equal(sentSummary.type, 'RUN_COMPLETE');
+    assert.equal(sentSummary.total, 2);
+    assert.equal(sentSummary.passed, 2);
+    assert.equal(sentSummary.failed, 0);
+
+    // State is reset after run
+    assert.equal(bg.runState.running, false);
+    assert.equal(bg.runState.lockedTabId, null);
+  });
+});
+
+test('startRun halts on step failure and emits RUN_COMPLETE with failure', function () {
+  bg.resetRunState();
+
+  var sentLogs = [];
+  var sentSummary = null;
+
+  global.chrome.tabs = {
+    update: function () { return Promise.resolve(); },
+    sendMessage: function (tabId, msg) {
+      if (msg.stepIndex === 0) return Promise.resolve({ ok: true });
+      return Promise.resolve({ ok: false, error: 'Element not found' });
+    }
+  };
+  global.chrome.runtime.sendMessage = function (msg) {
+    if (msg.type === 'LOG') sentLogs.push(msg);
+    else sentSummary = msg;
+  };
+
+  var testObj = {
+    name: 'Fail Test',
+    steps: [
+      { action: 'click', target: 'btn' },
+      { action: 'click', target: 'btn' },
+      { action: 'click', target: 'btn' }
+    ]
+  };
+  var spec = {
+    tasks: {},
+    pageElements: {
+      btn: { tag: 'button', where: { id: 'btn' } }
+    }
+  };
+
+  return bg.startRun(10, testObj, spec, [0, 1, 2]).then(function () {
+    // Only 2 steps attempted (halts on second failure)
+    assert.equal(sentLogs.length, 2);
+    assert.equal(sentLogs[0].ok, true);
+    assert.equal(sentLogs[1].ok, false);
+    assert.equal(sentLogs[1].error, 'Element not found');
+
+    // Summary indicates failure
+    assert.equal(sentSummary.type, 'RUN_COMPLETE');
+    assert.equal(sentSummary.total, 2);
+    assert.equal(sentSummary.passed, 1);
+    assert.equal(sentSummary.failed, 1);
+
+    // Tab unlocked
+    assert.equal(bg.runState.lockedTabId, null);
+  });
+});
+
+test('stopRun sets stopRequested flag and run emits RUN_STOPPED', function () {
+  bg.resetRunState();
+
+  var sentSummary = null;
+  var stepCount = 0;
+
+  global.chrome.tabs = {
+    update: function () { return Promise.resolve(); },
+    sendMessage: function (tabId, msg) {
+      stepCount++;
+      // Stop after first step
+      if (stepCount === 1) {
+        bg.stopRun();
+      }
+      return Promise.resolve({ ok: true });
+    }
+  };
+  global.chrome.runtime.sendMessage = function (msg) {
+    if (msg.type !== 'LOG') sentSummary = msg;
+  };
+
+  var testObj = {
+    name: 'Stop Test',
+    steps: [
+      { action: 'click', target: 'btn' },
+      { action: 'click', target: 'btn' },
+      { action: 'click', target: 'btn' }
+    ]
+  };
+  var spec = {
+    tasks: {},
+    pageElements: {
+      btn: { tag: 'button', where: { id: 'btn' } }
+    }
+  };
+
+  return bg.startRun(10, testObj, spec, [0, 1, 2]).then(function () {
+    // Run was stopped
+    assert.equal(sentSummary.type, 'RUN_STOPPED');
+    assert.equal(bg.runState.running, false);
+    assert.equal(bg.runState.lockedTabId, null);
+  });
+});
+
+test('stopRun does nothing when not running', function () {
+  bg.resetRunState();
+  bg.stopRun();
+  assert.equal(bg.runState.stopRequested, false);
+});
+
+test('sendStepToRuntime sends EXECUTE_STEP message with stepIndex', function () {
+  bg.resetRunState();
+  bg.runState.lockedTabId = 55;
+
+  var sentTabId = null;
+  var sentMsg = null;
+  global.chrome.tabs = {
+    sendMessage: function (tabId, msg) {
+      sentTabId = tabId;
+      sentMsg = msg;
+      return Promise.resolve({ ok: true });
+    }
+  };
+
+  var step = { action: 'click', target: 'btn', elementDescriptor: { tag: 'button' } };
+  return bg.sendStepToRuntime(step, 7).then(function (result) {
+    assert.equal(sentTabId, 55);
+    assert.equal(sentMsg.type, 'EXECUTE_STEP');
+    assert.equal(sentMsg.stepIndex, 7);
+    assert.equal(sentMsg.action, 'click');
+    assert.equal(sentMsg.target, 'btn');
+    assert.equal(result.ok, true);
+  });
+});

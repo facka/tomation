@@ -243,6 +243,225 @@ function findParentDescriptor(childOfId, pageElements) {
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// Run State Machine (Task 15)
+// ---------------------------------------------------------------------------
+
+/** Runtime state for the current test run */
+var runState = {
+  running: false,
+  paused: false,
+  stopRequested: false,
+  lockedTabId: null,
+  currentTestName: '',
+  steps: [],
+  stepIndex: 0,
+  passCount: 0,
+  failCount: 0,
+  pauseResolve: null
+};
+
+/**
+ * Reset run state to defaults.
+ */
+function resetRunState() {
+  runState.running = false;
+  runState.paused = false;
+  runState.stopRequested = false;
+  runState.lockedTabId = null;
+  runState.currentTestName = '';
+  runState.steps = [];
+  runState.stepIndex = 0;
+  runState.passCount = 0;
+  runState.failCount = 0;
+  runState.pauseResolve = null;
+}
+
+/**
+ * Lock the active tab for the duration of the test run.
+ * Stores the tabId and calls api.tabs.update to keep it active.
+ *
+ * @param {number} tabId - The tab to lock
+ * @returns {Promise}
+ */
+function lockTab(tabId) {
+  runState.lockedTabId = tabId;
+  return api.tabs.update(tabId, { active: true });
+}
+
+/**
+ * Unlock the active tab after a test run ends.
+ * Clears the lockedTabId from run state.
+ */
+function unlockTab() {
+  runState.lockedTabId = null;
+}
+
+/**
+ * Send a single step to the runtime content script and return its response.
+ *
+ * @param {object} step - The resolved EXECUTE_STEP message
+ * @param {number} stepIndex - The current step index
+ * @returns {Promise<{ok: boolean, error?: string}>}
+ */
+function sendStepToRuntime(step, stepIndex) {
+  var msg = {};
+  var keys = Object.keys(step);
+  for (var i = 0; i < keys.length; i++) {
+    msg[keys[i]] = step[keys[i]];
+  }
+  msg.type = 'EXECUTE_STEP';
+  msg.stepIndex = stepIndex;
+
+  return api.tabs.sendMessage(runState.lockedTabId, msg);
+}
+
+/**
+ * Emit a LOG message to the panel after a step completes.
+ *
+ * @param {number} stepIndex - The index of the completed step
+ * @param {object} step - The step object (with action, target, value)
+ * @param {boolean} ok - Whether the step passed
+ * @param {string} [error] - Error message if the step failed
+ */
+function emitLog(stepIndex, step, ok, error) {
+  var logMsg = {
+    type: 'LOG',
+    stepIndex: stepIndex,
+    action: step.action,
+    target: step.target || null,
+    value: step.value || null,
+    ok: ok
+  };
+  if (error) {
+    logMsg.error = error;
+  }
+  api.runtime.sendMessage(logMsg);
+}
+
+/**
+ * Emit a final summary message to the panel.
+ *
+ * @param {string} type - 'RUN_COMPLETE' or 'RUN_STOPPED'
+ * @param {number} total - Total steps attempted
+ * @param {number} passed - Steps that passed
+ * @param {number} failed - Steps that failed
+ */
+function emitSummary(type, total, passed, failed) {
+  api.runtime.sendMessage({
+    type: type,
+    total: total,
+    passed: passed,
+    failed: failed
+  });
+}
+
+/**
+ * Start a test run. Flattens steps, locks the tab, and begins the step loop.
+ *
+ * @param {number} tabId - The active tab id to lock
+ * @param {object} test - The test object from the spec (has .name and .steps)
+ * @param {object} spec - The full spec object (has .tasks, .pageElements)
+ * @param {Array|Set} checkedSteps - The checked step indexes
+ * @returns {Promise}
+ */
+function startRun(tabId, test, spec, checkedSteps) {
+  resetRunState();
+
+  var resolvedSteps = flattenSteps(
+    test.steps,
+    spec.tasks || {},
+    spec.pageElements || {},
+    checkedSteps
+  );
+
+  runState.running = true;
+  runState.currentTestName = test.name || '';
+  runState.steps = resolvedSteps;
+  runState.stepIndex = 0;
+  runState.passCount = 0;
+  runState.failCount = 0;
+
+  return lockTab(tabId).then(function () {
+    return runStepLoop();
+  });
+}
+
+/**
+ * Execute steps sequentially. Halts on failure or stop request.
+ * Emits LOG after each step and a summary on completion.
+ *
+ * @returns {Promise}
+ */
+function runStepLoop() {
+  if (runState.stepIndex >= runState.steps.length || runState.stopRequested) {
+    return finishRun();
+  }
+
+  var currentIndex = runState.stepIndex;
+  var step = runState.steps[currentIndex];
+
+  return sendStepToRuntime(step, currentIndex).then(function (result) {
+    if (runState.stopRequested) {
+      return finishRun();
+    }
+
+    var ok = result && result.ok;
+    var error = result && result.error;
+
+    if (ok) {
+      runState.passCount++;
+    } else {
+      runState.failCount++;
+    }
+
+    // Emit LOG for this step
+    emitLog(currentIndex, step, !!ok, error || undefined);
+
+    if (!ok) {
+      // Halt run on failure
+      unlockTab();
+      runState.running = false;
+      emitSummary('RUN_COMPLETE', currentIndex + 1, runState.passCount, runState.failCount);
+      return;
+    }
+
+    // Advance to next step
+    runState.stepIndex++;
+    return runStepLoop();
+  });
+}
+
+/**
+ * Finish the run (either all steps done or stopped).
+ * Unlocks tab and emits appropriate summary.
+ */
+function finishRun() {
+  unlockTab();
+  runState.running = false;
+
+  var total = runState.stepIndex;
+  var passed = runState.passCount;
+  var failed = runState.failCount;
+
+  if (runState.stopRequested) {
+    runState.stopRequested = false;
+    emitSummary('RUN_STOPPED', total, passed, failed);
+  } else {
+    emitSummary('RUN_COMPLETE', total, passed, failed);
+  }
+}
+
+/**
+ * Request the run to stop. The step loop will check this flag
+ * and halt at the next iteration.
+ */
+function stopRun() {
+  if (runState.running) {
+    runState.stopRequested = true;
+  }
+}
+
 // Export for testing in Node.js
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -252,6 +471,17 @@ if (typeof module !== 'undefined' && module.exports) {
     expandStep: expandStep,
     expandTaskStep: expandTaskStep,
     buildStepMessage: buildStepMessage,
-    findParentDescriptor: findParentDescriptor
+    findParentDescriptor: findParentDescriptor,
+    runState: runState,
+    resetRunState: resetRunState,
+    lockTab: lockTab,
+    unlockTab: unlockTab,
+    sendStepToRuntime: sendStepToRuntime,
+    emitLog: emitLog,
+    emitSummary: emitSummary,
+    startRun: startRun,
+    runStepLoop: runStepLoop,
+    finishRun: finishRun,
+    stopRun: stopRun
   };
 }

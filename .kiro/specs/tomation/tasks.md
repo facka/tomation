@@ -249,7 +249,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
 ---
 
 - [ ] 15. Implement the background script — test run orchestration
-  - [ ] 15.1 Implement run state machine in `background.js`
+  - [x] 15.1 Implement run state machine in `background.js`
     - Initialize run state: `{ running, paused, stopRequested, lockedTabId, steps, stepIndex, passCount, failCount, pauseResolve }`
     - `startRun(tabId, test, spec, checkedSteps)`: flatten steps, lock tab, begin step loop
     - Step loop: while steps remain and not stopped, await `sendStepToRuntime(step)`; on ok:false halt with failure log; emit LOG per step
