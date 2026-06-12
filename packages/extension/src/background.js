@@ -428,6 +428,11 @@ function runStepLoop() {
       return handleWaitStep(step, currentIndex);
     }
 
+    // Handle manual steps in the background (don't send to runtime)
+    if (step.action === 'manual') {
+      return handleManualStep(step, currentIndex);
+    }
+
     return sendStepToRuntime(step, currentIndex).then(function (result) {
       if (runState.stopRequested) {
         return finishRun();
@@ -530,6 +535,37 @@ function handleWaitStep(step, currentIndex) {
 }
 
 /**
+ * Handle a manual step: emit MANUAL_PAUSE to the panel with the step's description,
+ * then pause execution until the panel sends CONTINUE. Once continued, emit LOG
+ * and advance to the next step.
+ *
+ * @param {object} step - The manual step (has step.description)
+ * @param {number} currentIndex - The current step index
+ * @returns {Promise}
+ */
+function handleManualStep(step, currentIndex) {
+  // Emit MANUAL_PAUSE to the panel
+  api.runtime.sendMessage({
+    type: 'MANUAL_PAUSE',
+    description: step.description || ''
+  });
+
+  // Pause execution using the same mechanism as pauseRun
+  runState.paused = true;
+  return new Promise(function (resolve) {
+    runState.pauseResolve = resolve;
+  }).then(function () {
+    if (runState.stopRequested) {
+      return finishRun();
+    }
+    runState.passCount++;
+    emitLog(currentIndex, step, true, undefined);
+    runState.stepIndex++;
+    return runStepLoop();
+  });
+}
+
+/**
  * Finish the run (either all steps done or stopped).
  * Unlocks tab and emits appropriate summary.
  */
@@ -614,6 +650,7 @@ if (typeof module !== 'undefined' && module.exports) {
     pauseRun: pauseRun,
     continueRun: continueRun,
     handleNavigateStep: handleNavigateStep,
-    handleWaitStep: handleWaitStep
+    handleWaitStep: handleWaitStep,
+    handleManualStep: handleManualStep
   };
 }

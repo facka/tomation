@@ -269,7 +269,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - Timeout after 10 seconds; if no RUNTIME_READY received, halt run with error
     - _Requirements: 3.9, 5.6_
 
-  - [ ] 15.4 Implement manual step handling
+  - [x] 15.4 Implement manual step handling
     - When a `manual` step is encountered: emit `MANUAL_PAUSE` to panel with `description`
     - Await `CONTINUE` message from panel (same pause/resolve mechanism as pause control)
     - _Requirements: 3.13_

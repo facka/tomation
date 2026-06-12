@@ -1245,3 +1245,130 @@ test('startRun handles mixed navigate and regular steps in sequence', function (
     }, 30);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Manual step handling (Task 15.4)
+// ---------------------------------------------------------------------------
+
+test('manual step emits MANUAL_PAUSE and waits for continue', function () {
+  bg.resetRunState();
+
+  var sentLogs = [];
+  var sentMessages = [];
+  var sentSummary = null;
+
+  global.chrome.tabs = {
+    update: function () { return Promise.resolve(); },
+    sendMessage: function (tabId, msg) {
+      return Promise.resolve({ ok: true });
+    }
+  };
+  global.chrome.runtime.sendMessage = function (msg) {
+    if (msg.type === 'LOG') sentLogs.push(msg);
+    else if (msg.type === 'MANUAL_PAUSE') sentMessages.push(msg);
+    else sentSummary = msg;
+  };
+
+  var testObj = {
+    name: 'Manual Step Test',
+    steps: [
+      { action: 'click', target: 'btn' },
+      { action: 'manual', description: 'Please verify the page looks correct' },
+      { action: 'click', target: 'btn' }
+    ]
+  };
+  var spec = {
+    tasks: {},
+    pageElements: {
+      btn: { tag: 'button', where: { id: 'btn' } }
+    }
+  };
+
+  var runPromise = bg.startRun(10, testObj, spec, [0, 1, 2]);
+
+  return new Promise(function (resolve) {
+    setTimeout(function () {
+      // After first click, manual step should have emitted MANUAL_PAUSE
+      assert.equal(sentMessages.length, 1);
+      assert.equal(sentMessages[0].type, 'MANUAL_PAUSE');
+      assert.equal(sentMessages[0].description, 'Please verify the page looks correct');
+
+      // Run should be paused
+      assert.equal(bg.runState.paused, true);
+
+      // Simulate user clicking Continue in the panel
+      bg.continueRun();
+
+      runPromise.then(function () {
+        // All 3 steps logged
+        assert.equal(sentLogs.length, 3);
+        assert.equal(sentLogs[0].action, 'click');
+        assert.equal(sentLogs[0].ok, true);
+        assert.equal(sentLogs[1].action, 'manual');
+        assert.equal(sentLogs[1].ok, true);
+        assert.equal(sentLogs[2].action, 'click');
+        assert.equal(sentLogs[2].ok, true);
+
+        // Summary
+        assert.equal(sentSummary.type, 'RUN_COMPLETE');
+        assert.equal(sentSummary.passed, 3);
+        assert.equal(sentSummary.failed, 0);
+        resolve();
+      });
+    }, 50);
+  });
+});
+
+test('manual step respects stopRequested when continued', function () {
+  bg.resetRunState();
+
+  var sentLogs = [];
+  var sentMessages = [];
+  var sentSummary = null;
+
+  global.chrome.tabs = {
+    update: function () { return Promise.resolve(); },
+    sendMessage: function (tabId, msg) {
+      return Promise.resolve({ ok: true });
+    }
+  };
+  global.chrome.runtime.sendMessage = function (msg) {
+    if (msg.type === 'LOG') sentLogs.push(msg);
+    else if (msg.type === 'MANUAL_PAUSE') sentMessages.push(msg);
+    else sentSummary = msg;
+  };
+
+  var testObj = {
+    name: 'Manual Stop Test',
+    steps: [
+      { action: 'manual', description: 'Do something manually' },
+      { action: 'click', target: 'btn' }
+    ]
+  };
+  var spec = {
+    tasks: {},
+    pageElements: {
+      btn: { tag: 'button', where: { id: 'btn' } }
+    }
+  };
+
+  var runPromise = bg.startRun(10, testObj, spec, [0, 1]);
+
+  return new Promise(function (resolve) {
+    setTimeout(function () {
+      // Manual step should have emitted MANUAL_PAUSE
+      assert.equal(sentMessages.length, 1);
+      assert.equal(bg.runState.paused, true);
+
+      // Stop the run while paused on manual step
+      bg.stopRun();
+
+      runPromise.then(function () {
+        // Run should have stopped
+        assert.equal(sentSummary.type, 'RUN_STOPPED');
+        assert.equal(bg.runState.running, false);
+        resolve();
+      });
+    }, 50);
+  });
+});
