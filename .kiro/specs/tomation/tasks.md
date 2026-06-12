@@ -383,7 +383,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
 
 ---
 
-- [~] 23. Final checkpoint — all tests pass
+- [x] 23. Final checkpoint — all tests pass
   - Run full test suite across compiler and extension logic packages.
   - Verify all three playground specs load and execute successfully against their respective HTML pages.
   - Ensure all tests pass, ask the user if questions arise.
