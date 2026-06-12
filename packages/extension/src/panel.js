@@ -7,6 +7,7 @@ var currentHostname = null;
 var currentProject = null;
 var currentSpec = null;
 var currentTest = null;
+var currentTestIndex = -1;
 var isRunning = false;
 
 // --- View Navigation ---
@@ -180,13 +181,147 @@ function onTestItemClick(e) {
 
   currentSpec = currentProject.specs[specIndex];
   currentTest = currentSpec.spec.tests[testIndex];
+  currentTestIndex = testIndex;
 
   showView('test-plan');
-  // Test Plan rendering will be implemented in Task 18
   var titleEl = document.getElementById('test-plan-title');
   if (titleEl && currentTest) {
     titleEl.textContent = currentTest.name;
   }
+  renderTestPlan();
+}
+
+// --- Test Plan View ---
+
+/**
+ * Build a human-readable label for a step.
+ * @param {object} step
+ * @returns {string}
+ */
+function buildStepLabel(step) {
+  var parts = [step.action];
+  if (step.target) {
+    parts.push(step.target);
+  }
+  if (step.value) {
+    parts.push('"' + step.value + '"');
+  }
+  if (step.action === 'task' && step.name) {
+    parts = ['task: ' + step.name];
+  }
+  return parts.join(' ');
+}
+
+/**
+ * Render the Test Plan checklist for the current test.
+ * Expands task action steps inline with indented child checkboxes (max 2 levels).
+ * All checkboxes start checked.
+ */
+function renderTestPlan() {
+  var checklist = document.getElementById('step-checklist');
+  if (!checklist || !currentTest) return;
+
+  checklist.innerHTML = '';
+
+  var steps = currentTest.steps;
+  var tasks = currentSpec.spec.tasks || {};
+
+  for (var i = 0; i < steps.length; i++) {
+    var step = steps[i];
+
+    if (step.action === 'task' && step.name && tasks[step.name]) {
+      // Render task header as a checkbox item (top-level)
+      var taskLi = document.createElement('li');
+      var taskCb = document.createElement('input');
+      taskCb.type = 'checkbox';
+      taskCb.checked = true;
+      taskCb.setAttribute('data-step-index', String(i));
+      taskCb.setAttribute('data-is-task', 'true');
+      taskCb.addEventListener('change', onTaskCheckboxChange);
+      var taskLabel = document.createElement('label');
+      taskLabel.textContent = step.name;
+      taskLabel.setAttribute('for', '');
+      taskLi.appendChild(taskCb);
+      taskLi.appendChild(taskLabel);
+      checklist.appendChild(taskLi);
+
+      // Render child steps indented
+      var childSteps = tasks[step.name].steps;
+      for (var c = 0; c < childSteps.length; c++) {
+        var childLi = document.createElement('li');
+        childLi.className = 'indented';
+        var childCb = document.createElement('input');
+        childCb.type = 'checkbox';
+        childCb.checked = true;
+        childCb.setAttribute('data-step-index', String(i));
+        childCb.setAttribute('data-child-index', String(c));
+        var childLabel = document.createElement('label');
+        childLabel.textContent = buildStepLabel(childSteps[c]);
+        childLi.appendChild(childCb);
+        childLi.appendChild(childLabel);
+        checklist.appendChild(childLi);
+      }
+    } else {
+      // Render regular step as a checkbox item
+      var li = document.createElement('li');
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = true;
+      cb.setAttribute('data-step-index', String(i));
+      var label = document.createElement('label');
+      label.textContent = buildStepLabel(step);
+      li.appendChild(cb);
+      li.appendChild(label);
+      checklist.appendChild(li);
+    }
+  }
+}
+
+/**
+ * When a task checkbox is unchecked, uncheck all its child checkboxes.
+ * When checked, do not force children to re-check.
+ */
+function onTaskCheckboxChange(e) {
+  var cb = e.target;
+  var stepIndex = cb.getAttribute('data-step-index');
+  var isChecked = cb.checked;
+
+  if (!isChecked) {
+    // Uncheck all child checkboxes for this task
+    var checklist = document.getElementById('step-checklist');
+    var childCbs = checklist.querySelectorAll(
+      'input[data-step-index="' + stepIndex + '"][data-child-index]'
+    );
+    for (var i = 0; i < childCbs.length; i++) {
+      childCbs[i].checked = false;
+    }
+  }
+}
+
+/**
+ * Collect checked step indices and send RUN_TEST to the background.
+ * Only top-level step indices are sent (task steps that are checked).
+ */
+function onRunClick() {
+  var checklist = document.getElementById('step-checklist');
+  if (!checklist) return;
+
+  // Collect checked top-level step indexes
+  var topLevelCbs = checklist.querySelectorAll(
+    'input[type="checkbox"][data-step-index]:not([data-child-index])'
+  );
+  var checkedSteps = [];
+  for (var i = 0; i < topLevelCbs.length; i++) {
+    if (topLevelCbs[i].checked) {
+      checkedSteps.push(parseInt(topLevelCbs[i].getAttribute('data-step-index'), 10));
+    }
+  }
+
+  api.runtime.sendMessage({
+    type: 'RUN_TEST',
+    testIndex: currentTestIndex,
+    checkedSteps: checkedSteps
+  });
 }
 
 // --- Load Spec ---
@@ -337,6 +472,12 @@ function init() {
       showView('home');
       renderHomeView();
     });
+  }
+
+  // Wire up Run button in test plan view
+  var runBtn = document.getElementById('run-btn');
+  if (runBtn) {
+    runBtn.addEventListener('click', onRunClick);
   }
 
   // Wire up back button from run view

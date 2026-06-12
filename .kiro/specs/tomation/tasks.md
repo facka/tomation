@@ -316,8 +316,8 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
 
 ---
 
-- [ ] 18. Implement the panel UI — Test Plan view
-  - [ ] 18.1 Implement Test Plan view in `panel.js`
+- [x] 18. Implement the panel UI — Test Plan view
+  - [x] 18.1 Implement Test Plan view in `panel.js`
     - Show test name as heading; render all steps as a checklist
     - For `task` action steps, expand the task inline showing child steps indented (max 2 levels), with the task name as a non-interactive header and child steps as checkboxes
     - All checkboxes start checked
