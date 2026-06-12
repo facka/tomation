@@ -182,14 +182,14 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
 ---
 
 - [ ] 12. Implement the content script — runtime.js
-  - [ ] 12.1 Implement element finder
+  - [x] 12.1 Implement element finder
     - `findElement(descriptor, parentNode?)` → returns a Promise that resolves to the DOM element or rejects after 5 seconds
     - Poll using `requestAnimationFrame`; evaluate all `where` keys as AND conditions
     - Support all 7 matcher types: `id`, `textIs`, `textContains`, `classIncludes`, `placeholder`, `name`, `type`
     - WHEN `parentDescriptor` is present in the step message, first locate the parent element using its full descriptor, then scope the child search to `parent.querySelectorAll` descendants; return `{ ok: false, error: "Parent element not found: <id>" }` if parent is not found within timeout
     - _Requirements: 2.1, 2.2, 2.2a, 2.3, 2.4_
 
-  - [ ] 12.2 Implement element highlighter
+  - [x] 12.2 Implement element highlighter
     - `highlightElement(el)` → adds `data-tomation-active` attribute
     - `unhighlightElement(el)` → removes `data-tomation-active` attribute
     - Call `highlightElement` before executing each step's action; call `unhighlightElement` after (in a finally block)
