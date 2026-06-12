@@ -1,10 +1,11 @@
 'use strict';
 
 /**
- * Property-based tests for background.js — step flattener, template resolution.
+ * Property-based tests for background.js — step flattener, template resolution,
+ * and background orchestration (run state machine).
  *
- * Requirements: 4.1–4.4, 5.1, 6.4
- * Tag: // Feature: tomation, Property 4, 7, 8
+ * Requirements: 4.1–4.4, 5.1, 5.4, 5.5, 5.11, 6.4
+ * Tag: // Feature: tomation, Property 4, 5, 7, 8
  */
 
 const { test } = require('node:test');
@@ -327,5 +328,229 @@ test('Property 8: Skipped Steps Are Never Executed — checked subset only', fun
       }
     ),
     { numRuns: 100 }
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Property 5 (tab lock): Tab Is Unlocked After Any Run Outcome
+// Feature: tomation, Property 5, 8
+// ---------------------------------------------------------------------------
+
+test('Property 5 (tab lock): Tab is unlocked after a passing run', function () {
+  // Validates: Requirements 5.4, 5.5
+  return fc.assert(
+    fc.asyncProperty(
+      // Generate 1-10 simple steps (all will pass)
+      fc.array(
+        fc.record({
+          action: fc.constantFrom('click', 'type', 'assertExists'),
+          target: fc.constant('el'),
+          value: fc.constant('hello')
+        }),
+        { minLength: 1, maxLength: 10 }
+      ),
+      function (steps) {
+        // Track tabs.update calls
+        var tabsUpdateCalls = [];
+        global.chrome.tabs.update = function (tabId, opts) {
+          tabsUpdateCalls.push({ tabId: tabId, opts: opts });
+          return Promise.resolve();
+        };
+        // All steps succeed
+        global.chrome.tabs.sendMessage = function () {
+          return Promise.resolve({ ok: true });
+        };
+        // Capture runtime.sendMessage (LOG messages)
+        global.chrome.runtime.sendMessage = function () {};
+
+        bg.resetRunState();
+
+        var test_obj = { name: 'test', steps: steps };
+        var spec = { tasks: {}, pageElements: { el: { tag: 'input', where: { id: 'el' } } } };
+        var checkedIndexes = [];
+        for (var i = 0; i < steps.length; i++) { checkedIndexes.push(i); }
+
+        return bg.startRun(42, test_obj, spec, checkedIndexes).then(function () {
+          // After run completes, tab should be unlocked
+          assert.equal(bg.runState.lockedTabId, null,
+            'lockedTabId should be null after passing run');
+          // tabs.update should have been called at least once at the start (lock)
+          assert.ok(tabsUpdateCalls.length >= 1,
+            'tabs.update should have been called at start to lock tab');
+          assert.deepEqual(tabsUpdateCalls[0].opts, { active: true },
+            'First tabs.update call should lock with { active: true }');
+          assert.equal(tabsUpdateCalls[0].tabId, 42,
+            'First tabs.update call should use the correct tabId');
+        });
+      }
+    ),
+    { numRuns: 50 }
+  );
+});
+
+test('Property 5 (tab lock): Tab is unlocked after a failing run', function () {
+  // Validates: Requirements 5.4, 5.5
+  return fc.assert(
+    fc.asyncProperty(
+      // Generate 2-10 steps; one will fail
+      fc.array(
+        fc.record({
+          action: fc.constantFrom('click', 'type', 'assertExists'),
+          target: fc.constant('el'),
+          value: fc.constant('hello')
+        }),
+        { minLength: 2, maxLength: 10 }
+      ),
+      // Choose which step index will fail (0-based, within the array length)
+      fc.nat({ max: 9 }),
+      function (steps, failAtRaw) {
+        var failAt = failAtRaw % steps.length;
+
+        var tabsUpdateCalls = [];
+        global.chrome.tabs.update = function (tabId, opts) {
+          tabsUpdateCalls.push({ tabId: tabId, opts: opts });
+          return Promise.resolve();
+        };
+
+        var stepCounter = 0;
+        global.chrome.tabs.sendMessage = function () {
+          var current = stepCounter++;
+          if (current === failAt) {
+            return Promise.resolve({ ok: false, error: 'simulated failure' });
+          }
+          return Promise.resolve({ ok: true });
+        };
+        global.chrome.runtime.sendMessage = function () {};
+
+        bg.resetRunState();
+
+        var test_obj = { name: 'test', steps: steps };
+        var spec = { tasks: {}, pageElements: { el: { tag: 'input', where: { id: 'el' } } } };
+        var checkedIndexes = [];
+        for (var i = 0; i < steps.length; i++) { checkedIndexes.push(i); }
+
+        return bg.startRun(99, test_obj, spec, checkedIndexes).then(function () {
+          // After run fails, tab should be unlocked
+          assert.equal(bg.runState.lockedTabId, null,
+            'lockedTabId should be null after failing run');
+          // tabs.update should have been called at start (lock)
+          assert.ok(tabsUpdateCalls.length >= 1,
+            'tabs.update should have been called');
+          assert.deepEqual(tabsUpdateCalls[0].opts, { active: true },
+            'First tabs.update call should lock with { active: true }');
+        });
+      }
+    ),
+    { numRuns: 50 }
+  );
+});
+
+test('Property 5 (tab lock): Tab is unlocked after a stopped run', function () {
+  // Validates: Requirements 5.4, 5.5
+  return fc.assert(
+    fc.asyncProperty(
+      // Generate 2-10 steps
+      fc.array(
+        fc.record({
+          action: fc.constantFrom('click', 'type', 'assertExists'),
+          target: fc.constant('el'),
+          value: fc.constant('hello')
+        }),
+        { minLength: 2, maxLength: 10 }
+      ),
+      function (steps) {
+        var tabsUpdateCalls = [];
+        global.chrome.tabs.update = function (tabId, opts) {
+          tabsUpdateCalls.push({ tabId: tabId, opts: opts });
+          return Promise.resolve();
+        };
+
+        var stepCounter = 0;
+        global.chrome.tabs.sendMessage = function () {
+          stepCounter++;
+          // After the first step, request stop
+          if (stepCounter === 1) {
+            bg.stopRun();
+          }
+          return Promise.resolve({ ok: true });
+        };
+        global.chrome.runtime.sendMessage = function () {};
+
+        bg.resetRunState();
+
+        var test_obj = { name: 'test', steps: steps };
+        var spec = { tasks: {}, pageElements: { el: { tag: 'input', where: { id: 'el' } } } };
+        var checkedIndexes = [];
+        for (var i = 0; i < steps.length; i++) { checkedIndexes.push(i); }
+
+        return bg.startRun(77, test_obj, spec, checkedIndexes).then(function () {
+          // After stop, tab should be unlocked
+          assert.equal(bg.runState.lockedTabId, null,
+            'lockedTabId should be null after stopped run');
+          // tabs.update should have been called at start (lock)
+          assert.ok(tabsUpdateCalls.length >= 1,
+            'tabs.update should have been called');
+          assert.deepEqual(tabsUpdateCalls[0].opts, { active: true },
+            'First tabs.update call should lock with { active: true }');
+        });
+      }
+    ),
+    { numRuns: 50 }
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Property 8 (LOG count): Exactly N LOG Messages for N Steps
+// Feature: tomation, Property 5, 8
+// ---------------------------------------------------------------------------
+
+test('Property 8 (LOG count): Exactly N LOG messages emitted for N passing steps', function () {
+  // Validates: Requirements 5.11
+  return fc.assert(
+    fc.asyncProperty(
+      // Generate 1-10 simple steps (all will pass)
+      fc.array(
+        fc.record({
+          action: fc.constantFrom('click', 'type', 'assertExists'),
+          target: fc.constant('el'),
+          value: fc.constant('val')
+        }),
+        { minLength: 1, maxLength: 10 }
+      ),
+      function (steps) {
+        var logMessages = [];
+        global.chrome.tabs.update = function () { return Promise.resolve(); };
+        global.chrome.tabs.sendMessage = function () {
+          return Promise.resolve({ ok: true });
+        };
+        global.chrome.runtime.sendMessage = function (msg) {
+          if (msg && msg.type === 'LOG') {
+            logMessages.push(msg);
+          }
+        };
+
+        bg.resetRunState();
+
+        var test_obj = { name: 'test', steps: steps };
+        var spec = { tasks: {}, pageElements: { el: { tag: 'input', where: { id: 'el' } } } };
+        var checkedIndexes = [];
+        for (var i = 0; i < steps.length; i++) { checkedIndexes.push(i); }
+
+        return bg.startRun(10, test_obj, spec, checkedIndexes).then(function () {
+          // Exactly N LOG messages for N steps
+          assert.equal(logMessages.length, steps.length,
+            'Expected ' + steps.length + ' LOG messages but got ' + logMessages.length);
+
+          // Each LOG message should have the correct stepIndex
+          for (var j = 0; j < logMessages.length; j++) {
+            assert.equal(logMessages[j].stepIndex, j,
+              'LOG message ' + j + ' should have stepIndex ' + j);
+            assert.equal(logMessages[j].ok, true,
+              'LOG message ' + j + ' should have ok=true for passing steps');
+          }
+        });
+      }
+    ),
+    { numRuns: 50 }
   );
 });

@@ -280,7 +280,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - Listen for `STEP_RESULT` and `RUNTIME_READY` from content scripts
     - _Requirements: 5.2, 5.8–5.10_
 
-  - [ ]* 15.6 Write property/integration tests for background orchestration
+  - [x] 15.6 Write property/integration tests for background orchestration
     - **Property 5 (tab lock)**: For any test run outcome (pass, fail, stop), verify tab is unlocked after — mock `api.tabs.update` and verify call sequence
     - **Property 8 (LOG count)**: For any sequence of N steps, verify N LOG messages emitted
     - `// Feature: tomation, Property 5, 8`
