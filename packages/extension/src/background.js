@@ -389,7 +389,8 @@ function startRun(tabId, test, spec, checkedSteps) {
 
 /**
  * Execute steps sequentially. Halts on failure or stop request.
- * Emits LOG after each step and a summary on completion.
+ * Checks pause state before each step. Emits LOG after each step
+ * and a summary on completion.
  *
  * @returns {Promise}
  */
@@ -398,37 +399,54 @@ function runStepLoop() {
     return finishRun();
   }
 
-  var currentIndex = runState.stepIndex;
-  var step = runState.steps[currentIndex];
+  // If paused, wait for continueRun() to resolve the pause promise
+  var waitForPause;
+  if (runState.paused) {
+    waitForPause = new Promise(function (resolve) {
+      runState.pauseResolve = resolve;
+    });
+  } else {
+    waitForPause = Promise.resolve();
+  }
 
-  return sendStepToRuntime(step, currentIndex).then(function (result) {
+  return waitForPause.then(function () {
+    // After unpausing, check if stop was requested while paused
     if (runState.stopRequested) {
       return finishRun();
     }
 
-    var ok = result && result.ok;
-    var error = result && result.error;
+    var currentIndex = runState.stepIndex;
+    var step = runState.steps[currentIndex];
 
-    if (ok) {
-      runState.passCount++;
-    } else {
-      runState.failCount++;
-    }
+    return sendStepToRuntime(step, currentIndex).then(function (result) {
+      if (runState.stopRequested) {
+        return finishRun();
+      }
 
-    // Emit LOG for this step
-    emitLog(currentIndex, step, !!ok, error || undefined);
+      var ok = result && result.ok;
+      var error = result && result.error;
 
-    if (!ok) {
-      // Halt run on failure
-      unlockTab();
-      runState.running = false;
-      emitSummary('RUN_COMPLETE', currentIndex + 1, runState.passCount, runState.failCount);
-      return;
-    }
+      if (ok) {
+        runState.passCount++;
+      } else {
+        runState.failCount++;
+      }
 
-    // Advance to next step
-    runState.stepIndex++;
-    return runStepLoop();
+      // Emit LOG for this step
+      emitLog(currentIndex, step, !!ok, error || undefined);
+
+      if (!ok) {
+        // Halt run on failure
+        unlockTab();
+        runState.running = false;
+        emitSummary('RUN_COMPLETE', currentIndex + 1, runState.passCount, runState.failCount);
+        return;
+      }
+
+      // Advance to next step
+      runState.stepIndex++;
+      return runStepLoop();
+    });
   });
 }
 
@@ -453,12 +471,43 @@ function finishRun() {
 }
 
 /**
+ * Pause the current test run. Creates a promise that the step loop
+ * will await before each step, blocking dispatch until continueRun() is called.
+ *
+ * @returns {Promise|undefined} - The pause promise (resolves when continued), or undefined if not running
+ */
+function pauseRun() {
+  if (!runState.running) return undefined;
+  runState.paused = true;
+  var promise = new Promise(function (resolve) {
+    runState.pauseResolve = resolve;
+  });
+  return promise;
+}
+
+/**
+ * Continue after a pause. Resolves the pause promise to unblock the step loop
+ * and resets the paused state.
+ */
+function continueRun() {
+  if (runState.pauseResolve) {
+    runState.pauseResolve();
+    runState.pauseResolve = null;
+  }
+  runState.paused = false;
+}
+
+/**
  * Request the run to stop. The step loop will check this flag
- * and halt at the next iteration.
+ * and halt at the next iteration. If currently paused, also unblocks
+ * the step loop so it can exit.
  */
 function stopRun() {
   if (runState.running) {
     runState.stopRequested = true;
+    if (runState.paused) {
+      continueRun();
+    }
   }
 }
 
@@ -482,6 +531,8 @@ if (typeof module !== 'undefined' && module.exports) {
     startRun: startRun,
     runStepLoop: runStepLoop,
     finishRun: finishRun,
-    stopRun: stopRun
+    stopRun: stopRun,
+    pauseRun: pauseRun,
+    continueRun: continueRun
   };
 }

@@ -668,3 +668,200 @@ test('sendStepToRuntime sends EXECUTE_STEP message with stepIndex', function () 
     assert.equal(result.ok, true);
   });
 });
+
+
+// ---------------------------------------------------------------------------
+// Pause / Continue / Stop controls (Task 15.2)
+// ---------------------------------------------------------------------------
+
+test('pauseRun sets paused=true and creates a pauseResolve function', function () {
+  bg.resetRunState();
+  bg.runState.running = true;
+
+  var promise = bg.pauseRun();
+
+  assert.equal(bg.runState.paused, true);
+  assert.equal(typeof bg.runState.pauseResolve, 'function');
+  assert.ok(promise instanceof Promise);
+
+  // Clean up: resolve the promise so it doesn't hang
+  bg.continueRun();
+  return promise;
+});
+
+test('pauseRun does nothing when not running', function () {
+  bg.resetRunState();
+  // running is false by default
+
+  var result = bg.pauseRun();
+
+  assert.equal(bg.runState.paused, false);
+  assert.equal(bg.runState.pauseResolve, null);
+  assert.equal(result, undefined);
+});
+
+test('continueRun resolves the pause and sets paused=false', function () {
+  bg.resetRunState();
+  bg.runState.running = true;
+
+  var promise = bg.pauseRun();
+  var resolved = false;
+
+  promise.then(function () { resolved = true; });
+
+  assert.equal(bg.runState.paused, true);
+  assert.equal(typeof bg.runState.pauseResolve, 'function');
+
+  bg.continueRun();
+
+  assert.equal(bg.runState.paused, false);
+  assert.equal(bg.runState.pauseResolve, null);
+
+  // Allow the promise microtask to settle
+  return promise.then(function () {
+    assert.equal(resolved, true);
+  });
+});
+
+test('continueRun does nothing when no pauseResolve exists', function () {
+  bg.resetRunState();
+  // No crash expected
+  bg.continueRun();
+  assert.equal(bg.runState.paused, false);
+  assert.equal(bg.runState.pauseResolve, null);
+});
+
+test('stopRun while paused calls continueRun to unblock', function () {
+  bg.resetRunState();
+  bg.runState.running = true;
+
+  var promise = bg.pauseRun();
+
+  assert.equal(bg.runState.paused, true);
+  assert.equal(typeof bg.runState.pauseResolve, 'function');
+
+  bg.stopRun();
+
+  // stopRequested is set
+  assert.equal(bg.runState.stopRequested, true);
+  // paused is cleared by continueRun
+  assert.equal(bg.runState.paused, false);
+  assert.equal(bg.runState.pauseResolve, null);
+
+  // The pause promise should be resolved (not hanging)
+  return promise;
+});
+
+test('pause during a run suspends step dispatch until continue', function () {
+  bg.resetRunState();
+
+  var stepsSent = [];
+  var sentSummary = null;
+
+  global.chrome.tabs = {
+    update: function () { return Promise.resolve(); },
+    sendMessage: function (tabId, msg) {
+      stepsSent.push(msg);
+      // Pause after first step is sent
+      if (stepsSent.length === 1) {
+        bg.pauseRun();
+      }
+      return Promise.resolve({ ok: true });
+    }
+  };
+  global.chrome.runtime.sendMessage = function (msg) {
+    if (msg.type !== 'LOG') sentSummary = msg;
+  };
+
+  var testObj = {
+    name: 'Pause Test',
+    steps: [
+      { action: 'click', target: 'btn' },
+      { action: 'click', target: 'btn' },
+      { action: 'click', target: 'btn' }
+    ]
+  };
+  var spec = {
+    tasks: {},
+    pageElements: {
+      btn: { tag: 'button', where: { id: 'btn' } }
+    }
+  };
+
+  var runPromise = bg.startRun(10, testObj, spec, [0, 1, 2]);
+
+  // After a microtask tick, step 1 should be done but step 2 should be paused
+  return new Promise(function (resolve) {
+    setTimeout(function () {
+      // Only 1 step sent so far (the pause happened after first step's sendMessage)
+      assert.equal(bg.runState.paused, true);
+
+      // Continue the run
+      bg.continueRun();
+
+      // Let the rest of the run complete
+      runPromise.then(function () {
+        assert.equal(stepsSent.length, 3);
+        assert.equal(sentSummary.type, 'RUN_COMPLETE');
+        assert.equal(sentSummary.total, 3);
+        assert.equal(sentSummary.passed, 3);
+        resolve();
+      });
+    }, 50);
+  });
+});
+
+test('stop while paused unblocks and halts the run', function () {
+  bg.resetRunState();
+
+  var stepsSent = [];
+  var sentSummary = null;
+
+  global.chrome.tabs = {
+    update: function () { return Promise.resolve(); },
+    sendMessage: function (tabId, msg) {
+      stepsSent.push(msg);
+      // Pause after first step
+      if (stepsSent.length === 1) {
+        bg.pauseRun();
+      }
+      return Promise.resolve({ ok: true });
+    }
+  };
+  global.chrome.runtime.sendMessage = function (msg) {
+    if (msg.type !== 'LOG') sentSummary = msg;
+  };
+
+  var testObj = {
+    name: 'Stop While Paused Test',
+    steps: [
+      { action: 'click', target: 'btn' },
+      { action: 'click', target: 'btn' },
+      { action: 'click', target: 'btn' }
+    ]
+  };
+  var spec = {
+    tasks: {},
+    pageElements: {
+      btn: { tag: 'button', where: { id: 'btn' } }
+    }
+  };
+
+  var runPromise = bg.startRun(10, testObj, spec, [0, 1, 2]);
+
+  return new Promise(function (resolve) {
+    setTimeout(function () {
+      assert.equal(bg.runState.paused, true);
+
+      // Stop while paused — should unblock and halt
+      bg.stopRun();
+
+      runPromise.then(function () {
+        // Run should have stopped
+        assert.equal(sentSummary.type, 'RUN_STOPPED');
+        assert.equal(bg.runState.running, false);
+        resolve();
+      });
+    }, 50);
+  });
+});

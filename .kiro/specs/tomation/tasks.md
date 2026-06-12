@@ -258,7 +258,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - On completion/failure/stop: unlock tab, emit `RUN_COMPLETE` or `RUN_STOPPED` with summary
     - _Requirements: 5.2, 5.3, 5.4, 5.5, 5.7, 5.11, 5.12_
 
-  - [ ] 15.2 Implement pause/continue/stop controls in background
+  - [x] 15.2 Implement pause/continue/stop controls in background
     - `pause()`: set `paused = true`; create a Promise and store its resolve function in `pauseResolve`; step loop awaits this promise before each step
     - `continue()`: if `pauseResolve` exists, call it and clear `pauseResolve`; set `paused = false`
     - `stop()`: set `stopRequested = true`; if paused, also call `continue()` to unblock; step loop checks `stopRequested` and exits
