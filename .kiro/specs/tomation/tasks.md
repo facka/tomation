@@ -124,7 +124,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - Write `spec.json` with `JSON.stringify` (formatted, 2-space indent)
     - _Requirements: 12.1_
 
-  - [ ]* 7.4 Write property tests for flattener
+  - [x] 7.4 Write property tests for flattener
     - **Property 5: Spec Serialization Round-Trip** — generate spec objects; serialize via emitter; parse back; verify structural equivalence
     - `// Feature: tomation, Property 5`
     - _Requirements: 13.6, 12.1_
