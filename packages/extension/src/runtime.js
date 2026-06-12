@@ -2,6 +2,7 @@
 // Implementation: Task 12
 var api = typeof browser !== 'undefined' ? browser : chrome;
 
+var TIMEOUT_5sec = 5000;
 /**
  * Check if a single DOM element matches all conditions in the `where` object.
  * All keys are evaluated as AND conditions.
@@ -55,7 +56,6 @@ function findElement(descriptor, parentNode) {
 
   return new Promise(function (resolve, reject) {
     var startTime = Date.now();
-    var TIMEOUT = 5000;
 
     function poll() {
       var candidates = root.querySelectorAll(tag);
@@ -65,8 +65,8 @@ function findElement(descriptor, parentNode) {
           return;
         }
       }
-      if (Date.now() - startTime >= TIMEOUT) {
-        reject(new Error('Element not found'));
+      if (Date.now() - startTime >= TIMEOUT_5sec) {
+        reject(new Error('Element not found: ' + tag + ' with conditions ' + JSON.stringify(where)));
         return;
       }
       requestAnimationFrame(poll);
@@ -253,12 +253,11 @@ function handleAssertHasText(element, value) {
 
 /**
  * Handle waitFor — poll until element appears (gone=false) or disappears (gone=true).
- * Uses requestAnimationFrame with a 5-second timeout.
+ * Polls every 100ms with a 5-second timeout.
  */
 function handleWaitFor(step) {
   var gone = step.gone;
   var descriptor = step.elementDescriptor;
-  var TIMEOUT = 5000;
 
   return new Promise(function (resolve) {
     var startTime = Date.now();
@@ -285,7 +284,7 @@ function handleWaitFor(step) {
         return;
       }
 
-      if (Date.now() - startTime >= TIMEOUT) {
+      if (Date.now() - startTime >= TIMEOUT_5sec) {
         if (!gone) {
           resolve({ ok: false, error: 'Timed out waiting for element to appear' });
         } else {
