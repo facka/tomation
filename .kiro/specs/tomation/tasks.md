@@ -168,13 +168,13 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
 
 ---
 
-- [ ] 11. Implement extension manifest and cross-browser shim
-  - [ ] 11.1 Create `packages/extension/manifest.json`
+- [x] 11. Implement extension manifest and cross-browser shim
+  - [x] 11.1 Create `packages/extension/manifest.json`
     - MV3 structure for Chrome/Edge: declare `side_panel`, `action`, `background` (service worker), `content_scripts` (runtime.js), `permissions` (`storage`, `tabs`, `sidePanel`)
     - Include `browser_action` with `default_popup: "src/panel.html"` for Firefox compatibility
     - _Requirements: 11.2, 11.3_
 
-  - [ ] 11.2 Create a shared `api` shim at the top of each extension script
+  - [x] 11.2 Create a shared `api` shim at the top of each extension script
     - `var api = typeof browser !== 'undefined' ? browser : chrome;`
     - Use `api` for all WebExtensions calls throughout background.js, runtime.js, panel.js, options.js, storage.js
     - _Requirements: 11.1, 11.4_

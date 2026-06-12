@@ -2,5 +2,34 @@
   "manifest_version": 3,
   "name": "Tomation",
   "version": "0.0.1",
-  "description": "Browser automation and testing via a sidebar panel"
+  "description": "Browser automation and testing via a sidebar panel",
+
+  "permissions": ["storage", "tabs", "sidePanel"],
+
+  "background": {
+    "service_worker": "src/background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/runtime.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "side_panel": {
+    "default_path": "src/panel.html"
+  },
+
+  "action": {
+    "default_title": "Tomation"
+  },
+
+  "options_page": "src/options.html",
+
+  "browser_action": {
+    "default_popup": "src/panel.html",
+    "default_title": "Tomation"
+  }
 }
