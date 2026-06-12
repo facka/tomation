@@ -346,3 +346,214 @@ test('unhighlightElement: is safe to call on element without the attribute', fun
   unhighlightElement(el);
   assert.equal(el.hasAttribute('data-tomation-active'), false);
 });
+
+
+// ---------------------------------------------------------------------------
+// executeAction tests
+// Requirements: 3.1–3.7, 3.11, 3.12
+// ---------------------------------------------------------------------------
+
+test('executeAction click: dispatches click event on element', async function () {
+  setupDOM('<html><body><button id="btn">Click Me</button></body></html>');
+  var el = window.document.getElementById('btn');
+  var clicked = false;
+  el.addEventListener('click', function () { clicked = true; });
+
+  var executeAction = window.eval('executeAction');
+  var result = await executeAction({ action: 'click' }, el);
+  assert.equal(result.ok, true);
+  assert.equal(clicked, true);
+});
+
+test('executeAction type: sets value and dispatches input+change events', async function () {
+  setupDOM('<html><body><input id="inp" type="text" /></body></html>');
+  var el = window.document.getElementById('inp');
+  var events = [];
+  el.addEventListener('input', function () { events.push('input'); });
+  el.addEventListener('change', function () { events.push('change'); });
+
+  var executeAction = window.eval('executeAction');
+  var result = await executeAction({ action: 'type', value: 'hello' }, el);
+  assert.equal(result.ok, true);
+  assert.equal(el.value, 'hello');
+  assert.deepEqual(events, ['input', 'change']);
+});
+
+test('executeAction typePassword: behaves same as type', async function () {
+  setupDOM('<html><body><input id="inp" type="password" /></body></html>');
+  var el = window.document.getElementById('inp');
+  var events = [];
+  el.addEventListener('input', function () { events.push('input'); });
+  el.addEventListener('change', function () { events.push('change'); });
+
+  var executeAction = window.eval('executeAction');
+  var result = await executeAction({ action: 'typePassword', value: 'secret123' }, el);
+  assert.equal(result.ok, true);
+  assert.equal(el.value, 'secret123');
+  assert.deepEqual(events, ['input', 'change']);
+});
+
+test('executeAction select: sets value and dispatches change event', async function () {
+  setupDOM('<html><body><select id="sel"><option value="a">A</option><option value="b">B</option></select></body></html>');
+  var el = window.document.getElementById('sel');
+  var changed = false;
+  el.addEventListener('change', function () { changed = true; });
+
+  var executeAction = window.eval('executeAction');
+  var result = await executeAction({ action: 'select', value: 'b' }, el);
+  assert.equal(result.ok, true);
+  assert.equal(el.value, 'b');
+  assert.equal(changed, true);
+});
+
+test('executeAction assertExists: always returns ok true', async function () {
+  setupDOM('<html><body><div id="d">exists</div></body></html>');
+  var el = window.document.getElementById('d');
+
+  var executeAction = window.eval('executeAction');
+  var result = await executeAction({ action: 'assertExists' }, el);
+  assert.equal(result.ok, true);
+});
+
+test('executeAction assertNotExists: returns ok false when element is found', async function () {
+  setupDOM('<html><body><div id="d">should not exist</div></body></html>');
+  var el = window.document.getElementById('d');
+
+  var executeAction = window.eval('executeAction');
+  var result = await executeAction({ action: 'assertNotExists' }, el);
+  assert.equal(result.ok, false);
+  assert.equal(result.error, 'Element exists but should not');
+});
+
+test('executeAction assertNotExists: returns ok true when element is null', async function () {
+  setupDOM('<html><body></body></html>');
+
+  var executeAction = window.eval('executeAction');
+  var result = await executeAction({ action: 'assertNotExists' }, null);
+  assert.equal(result.ok, true);
+});
+
+test('executeAction assertHasText: returns ok when text contains value', async function () {
+  setupDOM('<html><body><p id="p">Hello World, welcome!</p></body></html>');
+  var el = window.document.getElementById('p');
+
+  var executeAction = window.eval('executeAction');
+  var result = await executeAction({ action: 'assertHasText', value: 'World' }, el);
+  assert.equal(result.ok, true);
+});
+
+test('executeAction assertHasText: returns ok false when text does not contain value', async function () {
+  setupDOM('<html><body><p id="p">Hello World</p></body></html>');
+  var el = window.document.getElementById('p');
+
+  var executeAction = window.eval('executeAction');
+  var result = await executeAction({ action: 'assertHasText', value: 'Goodbye' }, el);
+  assert.equal(result.ok, false);
+  assert.equal(result.error, 'Element text does not contain: Goodbye');
+});
+
+test('executeAction waitFor gone=false: resolves ok when element exists', async function () {
+  setupDOM('<html><body><div id="target">Here</div></body></html>');
+
+  var executeAction = window.eval('executeAction');
+  var step = {
+    action: 'waitFor',
+    gone: false,
+    elementDescriptor: { tag: 'div', where: { id: 'target' } }
+  };
+  var result = await executeAction(step, null);
+  assert.equal(result.ok, true);
+});
+
+test('executeAction waitFor gone=true: resolves ok when element is absent', async function () {
+  setupDOM('<html><body></body></html>');
+
+  var executeAction = window.eval('executeAction');
+  var step = {
+    action: 'waitFor',
+    gone: true,
+    elementDescriptor: { tag: 'div', where: { id: 'absent' } }
+  };
+  var result = await executeAction(step, null);
+  assert.equal(result.ok, true);
+});
+
+test('executeAction waitFor gone=false: times out when element never appears', async function () {
+  setupDOM('<html><body></body></html>');
+
+  // Override Date.now to simulate timeout
+  var callCount = 0;
+  window.Date.now = function () {
+    callCount++;
+    if (callCount <= 1) return 0;
+    return 6000;
+  };
+
+  var executeAction = window.eval('executeAction');
+  var step = {
+    action: 'waitFor',
+    gone: false,
+    elementDescriptor: { tag: 'div', where: { id: 'nope' } }
+  };
+  var result = await executeAction(step, null);
+  assert.equal(result.ok, false);
+  assert.equal(result.error, 'Timed out waiting for element to appear');
+});
+
+test('executeAction waitFor gone=true: times out when element remains', async function () {
+  setupDOM('<html><body><span id="stuck">Still here</span></body></html>');
+
+  // Override Date.now to simulate timeout
+  var callCount = 0;
+  window.Date.now = function () {
+    callCount++;
+    if (callCount <= 1) return 0;
+    return 6000;
+  };
+
+  var executeAction = window.eval('executeAction');
+  var step = {
+    action: 'waitFor',
+    gone: true,
+    elementDescriptor: { tag: 'span', where: { id: 'stuck' } }
+  };
+  var result = await executeAction(step, null);
+  assert.equal(result.ok, false);
+  assert.equal(result.error, 'Timed out waiting for element to disappear');
+});
+
+test('executeAction navigate: returns ok (handled by background)', async function () {
+  setupDOM('<html><body></body></html>');
+  var executeAction = window.eval('executeAction');
+  var result = await executeAction({ action: 'navigate', url: 'http://example.com' }, null);
+  assert.equal(result.ok, true);
+});
+
+test('executeAction wait: returns ok (handled by background)', async function () {
+  setupDOM('<html><body></body></html>');
+  var executeAction = window.eval('executeAction');
+  var result = await executeAction({ action: 'wait', ms: 1000 }, null);
+  assert.equal(result.ok, true);
+});
+
+test('executeAction task: returns ok (handled by background)', async function () {
+  setupDOM('<html><body></body></html>');
+  var executeAction = window.eval('executeAction');
+  var result = await executeAction({ action: 'task', name: 'someTask' }, null);
+  assert.equal(result.ok, true);
+});
+
+test('executeAction manual: returns ok (handled by background)', async function () {
+  setupDOM('<html><body></body></html>');
+  var executeAction = window.eval('executeAction');
+  var result = await executeAction({ action: 'manual', description: 'Check something' }, null);
+  assert.equal(result.ok, true);
+});
+
+test('executeAction unknown action: returns ok false with error', async function () {
+  setupDOM('<html><body></body></html>');
+  var executeAction = window.eval('executeAction');
+  var result = await executeAction({ action: 'unknownAction' }, null);
+  assert.equal(result.ok, false);
+  assert.equal(result.error, 'Unknown action: unknownAction');
+});

@@ -195,7 +195,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - Call `highlightElement` before executing each step's action; call `unhighlightElement` after (in a finally block)
     - _Requirements: 2.5, 2.6_
 
-  - [ ] 12.3 Implement action handlers for all 13 action types
+  - [x] 12.3 Implement action handlers for all 13 action types
     - `executeAction(step, element)` dispatches to the correct handler based on `step.action`
     - `click`: dispatch MouseEvent
     - `type`: set element.value, dispatch `input` + `change` events

@@ -135,3 +135,168 @@ function findElementWithParent(stepMessage) {
       return { ok: false, error: 'Parent element not found: ' + parentId };
     });
 }
+
+/**
+ * Execute an action for a given step on the resolved element.
+ * Dispatches to the correct handler based on step.action.
+ *
+ * @param {object} step - The step object with action, value, elementDescriptor, etc.
+ * @param {Element|null} element - The resolved DOM element (may be null for some actions)
+ * @returns {Promise<{ok: boolean, error?: string}>}
+ */
+function executeAction(step, element) {
+  var action = step.action;
+
+  switch (action) {
+    case 'click':
+      return handleClick(element);
+
+    case 'type':
+      return handleType(element, step.value);
+
+    case 'typePassword':
+      return handleType(element, step.value);
+
+    case 'select':
+      return handleSelect(element, step.value);
+
+    case 'assertExists':
+      return handleAssertExists();
+
+    case 'assertNotExists':
+      return handleAssertNotExists(element);
+
+    case 'assertHasText':
+      return handleAssertHasText(element, step.value);
+
+    case 'waitFor':
+      return handleWaitFor(step);
+
+    case 'navigate':
+    case 'wait':
+    case 'task':
+    case 'manual':
+      // These actions are handled by the background script, not the runtime
+      return Promise.resolve({ ok: true });
+
+    default:
+      return Promise.resolve({ ok: false, error: 'Unknown action: ' + action });
+  }
+}
+
+/**
+ * Handle click action — dispatch a MouseEvent on the element.
+ */
+function handleClick(element) {
+  try {
+    element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    return Promise.resolve({ ok: true });
+  } catch (e) {
+    return Promise.resolve({ ok: false, error: 'Click failed: ' + e.message });
+  }
+}
+
+/**
+ * Handle type action — set element value and dispatch input + change events.
+ */
+function handleType(element, value) {
+  try {
+    element.value = value;
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+    return Promise.resolve({ ok: true });
+  } catch (e) {
+    return Promise.resolve({ ok: false, error: 'Type failed: ' + e.message });
+  }
+}
+
+/**
+ * Handle select action — set select element value and dispatch change event.
+ */
+function handleSelect(element, value) {
+  try {
+    element.value = value;
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+    return Promise.resolve({ ok: true });
+  } catch (e) {
+    return Promise.resolve({ ok: false, error: 'Select failed: ' + e.message });
+  }
+}
+
+/**
+ * Handle assertExists — element was already found by the finder, so always ok.
+ */
+function handleAssertExists() {
+  return Promise.resolve({ ok: true });
+}
+
+/**
+ * Handle assertNotExists — if element was found, the assertion fails.
+ */
+function handleAssertNotExists(element) {
+  if (element) {
+    return Promise.resolve({ ok: false, error: 'Element exists but should not' });
+  }
+  return Promise.resolve({ ok: true });
+}
+
+/**
+ * Handle assertHasText — check if element's textContent contains the value.
+ */
+function handleAssertHasText(element, value) {
+  var text = element.textContent || '';
+  if (text.indexOf(value) !== -1) {
+    return Promise.resolve({ ok: true });
+  }
+  return Promise.resolve({ ok: false, error: 'Element text does not contain: ' + value });
+}
+
+/**
+ * Handle waitFor — poll until element appears (gone=false) or disappears (gone=true).
+ * Uses requestAnimationFrame with a 5-second timeout.
+ */
+function handleWaitFor(step) {
+  var gone = step.gone;
+  var descriptor = step.elementDescriptor;
+  var TIMEOUT = 5000;
+
+  return new Promise(function (resolve) {
+    var startTime = Date.now();
+
+    function poll() {
+      var candidates = document.querySelectorAll(descriptor.tag);
+      var found = false;
+      for (var i = 0; i < candidates.length; i++) {
+        if (matchesWhere(candidates[i], descriptor.where)) {
+          found = true;
+          break;
+        }
+      }
+
+      if (!gone && found) {
+        // Waiting for element to appear, and it appeared
+        resolve({ ok: true });
+        return;
+      }
+
+      if (gone && !found) {
+        // Waiting for element to disappear, and it's gone
+        resolve({ ok: true });
+        return;
+      }
+
+      if (Date.now() - startTime >= TIMEOUT) {
+        if (!gone) {
+          resolve({ ok: false, error: 'Timed out waiting for element to appear' });
+        } else {
+          resolve({ ok: false, error: 'Timed out waiting for element to disappear' });
+        }
+        return;
+      }
+
+      requestAnimationFrame(poll);
+    }
+
+    poll();
+  });
+}
