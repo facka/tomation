@@ -131,8 +131,8 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
 
 ---
 
-- [ ] 8. Implement the compiler CLI entry point
-  - [ ] 8.1 Create `packages/compiler/bin/tomation.js`
+- [x] 8. Implement the compiler CLI entry point
+  - [x] 8.1 Create `packages/compiler/bin/tomation.js`
     - Parse CLI arguments: `compile`, `watch`, `check` subcommands
     - `compile`: run full pipeline and emit `spec.json`
     - `check`: run pipeline through validation, report errors, exit 0 (valid) or 1 (invalid), no file write
