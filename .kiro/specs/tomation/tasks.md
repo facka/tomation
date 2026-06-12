@@ -104,7 +104,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
 ---
 
 - [ ] 7. Implement the compiler — flattener, deduplicator, and emitter
-  - [ ] 7.1 Create `packages/compiler/src/deduplicator.js`
+  - [x] 7.1 Create `packages/compiler/src/deduplicator.js`
     - Accept a merged map of all namespaced element and task keys with their source file metadata
     - Detect any key defined in more than one source POM file
     - On conflict, report error: `"Duplicate element key 'X' defined in file1 and file2"` — stop processing (do not emit)
