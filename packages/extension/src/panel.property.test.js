@@ -412,3 +412,61 @@ test('Property (task uncheck cascades): For any task with N children, unchecking
     { numRuns: 100 }
   );
 });
+
+
+// ---------------------------------------------------------------------------
+// Property 10: TypePassword Value Masking
+// Validates: Requirements 3.3
+// Feature: tomation, Property 10
+// ---------------------------------------------------------------------------
+
+test('Property 10 (typePassword masking): rendered log entry shows "****" regardless of actual password value', function () {
+  fc.assert(
+    fc.property(
+      // Generate password strings using alphanumeric + special chars (min 1 char).
+      // Filter out strings that would trivially appear in the fixed output text
+      // (the output always contains "typePassword <target> ****").
+      fc.stringMatching(/^[a-zA-Z0-9!@#$%^&()_+=\-{}[\]:;"'<>,.\/?~`]{1,50}$/).filter(function (s) {
+        // The rendered output for target "pwField" is "typePassword pwField **** ✓"
+        var fixedOutput = 'typePassword pwField ****';
+        return s !== '****' && fixedOutput.indexOf(s) === -1;
+      }),
+      function (password) {
+        var env = createTestEnv();
+
+        // Add a log-container element inside the run view for appendLogEntry to use
+        var logContainer = env.document.createElement('div');
+        logContainer.id = 'log-container';
+        env.document.getElementById('view-run').appendChild(logContainer);
+
+        // Call appendLogEntry with a typePassword action and the generated password
+        env.window.eval('appendLogEntry(' + JSON.stringify({
+          stepIndex: 0,
+          action: 'typePassword',
+          target: 'pwField',
+          value: password,
+          ok: true
+        }) + ');');
+
+        // Get the rendered log entry
+        var entries = logContainer.querySelectorAll('.log-entry');
+        assert.equal(entries.length, 1, 'Should render exactly one log entry');
+
+        var renderedText = entries[0].textContent;
+
+        // Verify "****" is present in the rendered output
+        assert.ok(
+          renderedText.indexOf('****') !== -1,
+          'Rendered log entry should contain "****" but got: ' + renderedText
+        );
+
+        // Verify the actual password value is NOT present in the rendered output
+        assert.ok(
+          renderedText.indexOf(password) === -1,
+          'Rendered log entry should NOT contain the actual password "' + password + '"'
+        );
+      }
+    ),
+    { numRuns: 100 }
+  );
+});

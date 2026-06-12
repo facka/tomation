@@ -346,7 +346,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - On `RUN_COMPLETE` / `RUN_STOPPED`: render summary row with total/passed/failed counts; show "Back to Home" button
     - _Requirements: 7.1–7.9_
 
-  - [ ]* 19.2 Write property tests for typePassword masking
+  - [x] 19.2 Write property tests for typePassword masking
     - **Property 10: TypePassword Value Masking** — generate arbitrary password strings; simulate LOG message with typePassword action; verify rendered value is `"****"` regardless of actual value
     - `// Feature: tomation, Property 10`
     - _Requirements: 3.3_
