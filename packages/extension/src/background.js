@@ -1,6 +1,44 @@
 // background.js — service worker / orchestrator
 // Implementation: Tasks 14, 15
+try { importScripts('storage.js'); } catch (e) { /* Node.js test environment */ }
 var api = typeof browser !== 'undefined' ? browser : chrome;
+
+// Open side panel when the extension icon is clicked (Chrome/Edge only)
+if (api.sidePanel && api.sidePanel.setPanelBehavior) {
+  api.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
+    .catch(function () { /* ignore if unsupported */ });
+}
+
+/**
+ * Safely send a message to the panel via runtime.sendMessage.
+ * Catches "Could not establish connection" errors that occur when
+ * the panel is not open/connected.
+ *
+ * @param {object} msg - The message to send
+ */
+function safeSendMessage(msg) {
+  try {
+    api.runtime.sendMessage(msg).catch(function (err) {
+      console.log(
+        '[tomation] sendMessage failed: ' + (err.message || err) + '\n' +
+        'Possible reason: The side panel or popup is not open, or the extension context was invalidated.\n' +
+        'Suggested solutions:\n' +
+        '  1. Open the extension side panel and try again.\n' +
+        '  2. Reload the page to re-establish the content script connection.\n' +
+        '  3. Reload the extension from chrome://extensions if the context was invalidated.'
+      );
+    });
+  } catch (e) {
+    console.log(
+      '[tomation] sendMessage threw synchronously: ' + (e.message || e) + '\n' +
+      'Possible reason: The extension runtime is no longer available (e.g., extension was updated or disabled).\n' +
+      'Suggested solutions:\n' +
+      '  1. Reload the extension from the extensions page.\n' +
+      '  2. Reload the page to restore the connection.\n' +
+      '  3. Close and reopen the browser if the issue persists.'
+    );
+  }
+}
 
 /**
  * Generate a random alphanumeric string of the given length.
@@ -336,7 +374,7 @@ function emitLog(stepIndex, step, ok, error) {
   if (error) {
     logMsg.error = error;
   }
-  api.runtime.sendMessage(logMsg);
+  safeSendMessage(logMsg);
 }
 
 /**
@@ -348,7 +386,7 @@ function emitLog(stepIndex, step, ok, error) {
  * @param {number} failed - Steps that failed
  */
 function emitSummary(type, total, passed, failed) {
-  api.runtime.sendMessage({
+  safeSendMessage({
     type: type,
     total: total,
     passed: passed,
@@ -545,7 +583,7 @@ function handleWaitStep(step, currentIndex) {
  */
 function handleManualStep(step, currentIndex) {
   // Emit MANUAL_PAUSE to the panel
-  api.runtime.sendMessage({
+  safeSendMessage({
     type: 'MANUAL_PAUSE',
     description: step.description || ''
   });
@@ -748,6 +786,7 @@ if (typeof module !== 'undefined' && module.exports) {
     expandTaskStep: expandTaskStep,
     buildStepMessage: buildStepMessage,
     findParentDescriptor: findParentDescriptor,
+    safeSendMessage: safeSendMessage,
     runState: runState,
     resetRunState: resetRunState,
     lockTab: lockTab,
