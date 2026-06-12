@@ -103,7 +103,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
 
 ---
 
-- [ ] 7. Implement the compiler — flattener, deduplicator, and emitter
+- [x] 7. Implement the compiler — flattener, deduplicator, and emitter
   - [x] 7.1 Create `packages/compiler/src/deduplicator.js`
     - Accept a merged map of all namespaced element and task keys with their source file metadata
     - Detect any key defined in more than one source POM file
@@ -119,7 +119,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - Return a spec-shaped object ready for validation and emission
     - _Requirements: 13.6_
 
-  - [ ] 7.3 Create `packages/compiler/src/emitter.js`
+  - [x] 7.3 Create `packages/compiler/src/emitter.js`
     - Accept a validated spec object and an output path
     - Write `spec.json` with `JSON.stringify` (formatted, 2-space indent)
     - _Requirements: 12.1_
