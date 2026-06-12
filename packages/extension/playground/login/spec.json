@@ -1,0 +1,125 @@
+{
+  "format": "tomation-spec",
+  "version": 1,
+  "meta": {
+    "name": "Login Playground",
+    "url": "",
+    "description": "Tests login form with valid and invalid credentials"
+  },
+  "pageElements": {
+    "Login__usernameInput": {
+      "tag": "input",
+      "where": {
+        "id": "username"
+      }
+    },
+    "Login__passwordInput": {
+      "tag": "input",
+      "where": {
+        "id": "password"
+      }
+    },
+    "Login__submitButton": {
+      "tag": "button",
+      "where": {
+        "id": "login-btn"
+      }
+    },
+    "Login__message": {
+      "tag": "div",
+      "where": {
+        "id": "message"
+      }
+    }
+  },
+  "tasks": {
+    "Login__fillCredentials": {
+      "steps": [
+        {
+          "action": "type",
+          "target": "Login__usernameInput",
+          "value": "admin"
+        },
+        {
+          "action": "typePassword",
+          "target": "Login__passwordInput",
+          "value": "password123"
+        }
+      ]
+    },
+    "Login__fillInvalidCredentials": {
+      "steps": [
+        {
+          "action": "type",
+          "target": "Login__usernameInput",
+          "value": "wronguser"
+        },
+        {
+          "action": "typePassword",
+          "target": "Login__passwordInput",
+          "value": "wrongpass"
+        }
+      ]
+    },
+    "Login__submit": {
+      "steps": [
+        {
+          "action": "click",
+          "target": "Login__submitButton"
+        }
+      ]
+    }
+  },
+  "tests": [
+    {
+      "name": "Login with valid credentials",
+      "steps": [
+        {
+          "action": "task",
+          "name": "Login__fillCredentials"
+        },
+        {
+          "action": "task",
+          "name": "Login__submit"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Login__message",
+          "value": "Login successful"
+        }
+      ]
+    },
+    {
+      "name": "Login with invalid credentials shows error",
+      "steps": [
+        {
+          "action": "task",
+          "name": "Login__fillInvalidCredentials"
+        },
+        {
+          "action": "task",
+          "name": "Login__submit"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Login__message",
+          "value": "Invalid username or password"
+        }
+      ]
+    },
+    {
+      "name": "Login shows error on empty submit",
+      "steps": [
+        {
+          "action": "click",
+          "target": "Login__submitButton"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Login__message",
+          "value": "required"
+        }
+      ]
+    }
+  ]
+}

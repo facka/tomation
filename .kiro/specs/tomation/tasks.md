@@ -368,16 +368,16 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
 
 ---
 
-- [ ] 22. Create playground scenarios
-  - [ ] 22.1 Create `packages/extension/playground/login/` with `index.html` (simple login form) and `spec.json`
+- [x] 22. Create playground scenarios
+  - [x] 22.1 Create `packages/extension/playground/login/` with `index.html` (simple login form) and `spec.json`
     - `spec.json` exercises: `type`, `typePassword`, `click`, `assertHasText`
     - _Requirements: 15.1, 15.2, 15.3_
 
-  - [ ] 22.2 Create `packages/extension/playground/todo/` with `index.html` (todo list) and `spec.json`
+  - [x] 22.2 Create `packages/extension/playground/todo/` with `index.html` (todo list) and `spec.json`
     - `spec.json` exercises: `type`, `click`, `assertExists`, `assertNotExists`, `assertHasText`
     - _Requirements: 15.1, 15.2, 15.3_
 
-  - [ ] 22.3 Create `packages/extension/playground/navigation/` with multiple HTML pages and `spec.json`
+  - [x] 22.3 Create `packages/extension/playground/navigation/` with multiple HTML pages and `spec.json`
     - `spec.json` exercises: `navigate`, `wait`, `assertHasText`, `manual`
     - _Requirements: 15.1, 15.2, 15.3_
 

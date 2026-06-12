@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo List — Tomation Playground</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 480px;
+      margin: 40px auto;
+      padding: 0 16px;
+    }
+    h1 { margin-bottom: 16px; }
+    .add-form {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    #todo-input {
+      flex: 1;
+      padding: 8px;
+      font-size: 14px;
+    }
+    #add-btn {
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    #todo-list {
+      list-style: none;
+      padding: 0;
+    }
+    .todo-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    .todo-item span {
+      flex: 1;
+    }
+    .delete-btn {
+      background: #e74c3c;
+      color: #fff;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Todo List</h1>
+  <div class="add-form">
+    <input type="text" id="todo-input" placeholder="Enter a task...">
+    <button id="add-btn">Add</button>
+  </div>
+  <ul id="todo-list"></ul>
+
+  <script>
+    (function() {
+      var input = document.getElementById('todo-input');
+      var addBtn = document.getElementById('add-btn');
+      var list = document.getElementById('todo-list');
+
+      function addTodo() {
+        var text = input.value.trim();
+        if (!text) return;
+
+        var li = document.createElement('li');
+        li.className = 'todo-item';
+
+        var span = document.createElement('span');
+        span.className = 'todo-text';
+        span.textContent = text;
+
+        var del = document.createElement('button');
+        del.className = 'delete-btn';
+        del.textContent = 'Delete';
+        del.addEventListener('click', function() {
+          list.removeChild(li);
+        });
+
+        li.appendChild(span);
+        li.appendChild(del);
+        list.appendChild(li);
+
+        input.value = '';
+      }
+
+      addBtn.addEventListener('click', addTodo);
+      input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') addTodo();
+      });
+    })();
+  </script>
+</body>
+</html>

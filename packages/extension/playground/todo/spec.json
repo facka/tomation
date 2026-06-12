@@ -1,0 +1,145 @@
+{
+  "format": "tomation-spec",
+  "version": 1,
+  "meta": {
+    "name": "Todo List Playground",
+    "url": "",
+    "description": "Exercises type, click, assertExists, assertNotExists, and assertHasText actions against a simple todo list app."
+  },
+  "pageElements": {
+    "Todo__input": {
+      "tag": "input",
+      "where": {
+        "id": "todo-input"
+      }
+    },
+    "Todo__addButton": {
+      "tag": "button",
+      "where": {
+        "id": "add-btn"
+      }
+    },
+    "Todo__list": {
+      "tag": "ul",
+      "where": {
+        "id": "todo-list"
+      }
+    },
+    "Todo__firstItem": {
+      "tag": "li",
+      "where": {
+        "classIncludes": "todo-item"
+      }
+    },
+    "Todo__firstItemText": {
+      "tag": "span",
+      "where": {
+        "classIncludes": "todo-text"
+      }
+    },
+    "Todo__deleteButton": {
+      "tag": "button",
+      "where": {
+        "classIncludes": "delete-btn"
+      }
+    }
+  },
+  "tasks": {
+    "Todo__addItem": {
+      "steps": [
+        {
+          "action": "type",
+          "target": "Todo__input",
+          "value": "Buy groceries"
+        },
+        {
+          "action": "click",
+          "target": "Todo__addButton"
+        }
+      ]
+    }
+  },
+  "tests": [
+    {
+      "name": "Add a todo item and verify it exists",
+      "steps": [
+        {
+          "action": "task",
+          "name": "Todo__addItem"
+        },
+        {
+          "action": "assertExists",
+          "target": "Todo__firstItem"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Todo__firstItemText",
+          "value": "Buy groceries"
+        }
+      ]
+    },
+    {
+      "name": "Delete a todo item and verify it is removed",
+      "steps": [
+        {
+          "action": "type",
+          "target": "Todo__input",
+          "value": "Walk the dog"
+        },
+        {
+          "action": "click",
+          "target": "Todo__addButton"
+        },
+        {
+          "action": "assertExists",
+          "target": "Todo__firstItem"
+        },
+        {
+          "action": "click",
+          "target": "Todo__deleteButton"
+        },
+        {
+          "action": "assertNotExists",
+          "target": "Todo__firstItem"
+        }
+      ]
+    },
+    {
+      "name": "Add multiple items and verify text content",
+      "steps": [
+        {
+          "action": "type",
+          "target": "Todo__input",
+          "value": "Read a book"
+        },
+        {
+          "action": "click",
+          "target": "Todo__addButton"
+        },
+        {
+          "action": "type",
+          "target": "Todo__input",
+          "value": "Write code"
+        },
+        {
+          "action": "click",
+          "target": "Todo__addButton"
+        },
+        {
+          "action": "assertExists",
+          "target": "Todo__firstItem"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Todo__list",
+          "value": "Read a book"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Todo__list",
+          "value": "Write code"
+        }
+      ]
+    }
+  ]
+}
