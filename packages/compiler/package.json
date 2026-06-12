@@ -1,0 +1,18 @@
+{
+  "name": "@tomation/compiler",
+  "version": "0.0.1",
+  "description": "CLI compiler for Tomation DSL — resolves, parses, flattens, and emits spec.json",
+  "main": "src/index.js",
+  "bin": {
+    "tomation": "./bin/tomation.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "acorn": "^8.11.3"
+  },
+  "devDependencies": {
+    "fast-check": "^3.23.2"
+  }
+}

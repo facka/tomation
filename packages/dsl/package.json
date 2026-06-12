@@ -1,0 +1,12 @@
+{
+  "name": "@tomation/dsl",
+  "version": "0.0.1",
+  "description": "TypeScript type definitions and runtime stubs for the Tomation DSL",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "globals.d.ts"
+  ]
+}
