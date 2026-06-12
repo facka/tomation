@@ -423,3 +423,135 @@ test('importAll handles multiple projects with mixed conflicts', async function 
   assert.ok(store['b.com'], 'new project added');
   assert.equal(store['b.com'].name, 'B');
 });
+
+
+// ---------------------------------------------------------------------------
+// Property-Based Tests (fast-check)
+// Feature: tomation, Property 5: Spec Serialization Round-Trip
+// Validates: Requirements 10.1–10.5
+// ---------------------------------------------------------------------------
+
+const fc = require('fast-check');
+
+// ---------------------------------------------------------------------------
+// Generators
+// ---------------------------------------------------------------------------
+
+/** Generate a valid hostname (non-empty alphanumeric + '.com') */
+function arbHostname() {
+  return fc.stringOf(fc.char().filter(function (c) {
+    return /[a-z0-9]/.test(c);
+  }), { minLength: 1, maxLength: 12 }).map(function (s) {
+    return s + '.com';
+  });
+}
+
+/** Generate a valid project name (non-empty string) */
+function arbProjectName() {
+  return fc.string({ minLength: 1, maxLength: 30 });
+}
+
+/** Generate a valid spec filename ending in .json */
+function arbFilename() {
+  return fc.stringOf(fc.char().filter(function (c) {
+    return /[a-z0-9\-_]/.test(c);
+  }), { minLength: 1, maxLength: 15 }).map(function (s) {
+    return s + '.json';
+  });
+}
+
+/** Generate a valid tomation-spec object */
+function arbSpec() {
+  return fc.record({
+    name: fc.string({ minLength: 1, maxLength: 20 }),
+    url: fc.webUrl()
+  }).chain(function (meta) {
+    return fc.record({
+      format: fc.constant('tomation-spec'),
+      version: fc.constant(1),
+      meta: fc.constant(meta),
+      pageElements: fc.constant({}),
+      tasks: fc.constant({}),
+      tests: fc.constant([])
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Property 5 (storage): Round-trip storage
+// Feature: tomation, Property 5: Spec Serialization Round-Trip
+// ---------------------------------------------------------------------------
+
+test('Property 5 (storage): Round-trip storage — saveProject/addSpec then getProject returns structurally equivalent data', async function () {
+  await fc.assert(
+    fc.asyncProperty(
+      arbHostname(),
+      arbProjectName(),
+      arbFilename(),
+      arbSpec(),
+      async function (hostname, projectName, filename, spec) {
+        // Reset store before each iteration
+        resetStore();
+
+        // Save a project
+        var project = {
+          host: hostname,
+          name: projectName,
+          specs: [],
+          lastUsed: new Date().toISOString()
+        };
+        await storage.saveProject(hostname, project);
+
+        // Add a spec
+        await storage.addSpec(hostname, filename, spec);
+
+        // Retrieve and verify structural equivalence
+        var retrieved = await storage.getProject(hostname);
+        assert.ok(retrieved, 'project should exist after save');
+        assert.equal(retrieved.host, hostname);
+        assert.equal(retrieved.name, projectName);
+        assert.equal(retrieved.specs.length, 1);
+        assert.equal(retrieved.specs[0].filename, filename);
+        assert.deepEqual(retrieved.specs[0].spec, spec);
+      }
+    ),
+    { numRuns: 100 }
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Property (UUID preservation): Same filename addSpec preserves UUID
+// Feature: tomation, Property 5
+// ---------------------------------------------------------------------------
+
+test('Property (UUID preservation): addSpec with same filename preserves UUID and updates content', async function () {
+  await fc.assert(
+    fc.asyncProperty(
+      arbHostname(),
+      arbFilename(),
+      arbSpec(),
+      arbSpec(),
+      async function (hostname, filename, specV1, specV2) {
+        // Reset store before each iteration
+        resetStore();
+
+        // First add
+        await storage.addSpec(hostname, filename, specV1);
+        var projectAfterV1 = await storage.getProject(hostname);
+        var originalId = projectAfterV1.specs[0].id;
+
+        // Second add with same filename but different spec content
+        await storage.addSpec(hostname, filename, specV2);
+        var projectAfterV2 = await storage.getProject(hostname);
+
+        // UUID should be preserved
+        assert.equal(projectAfterV2.specs.length, 1, 'should still have only 1 spec');
+        assert.equal(projectAfterV2.specs[0].id, originalId, 'UUID should be preserved');
+
+        // Content should be updated to v2
+        assert.deepEqual(projectAfterV2.specs[0].spec, specV2, 'spec content should be updated to v2');
+      }
+    ),
+    { numRuns: 100 }
+  );
+});

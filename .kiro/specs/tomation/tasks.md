@@ -159,7 +159,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - Implement `importAll(data)` → merges imported projects; on hostname conflict, call provided callback to get user choice (`merge` or `replace`)
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7_
 
-  - [ ]* 10.2 Write property tests for storage
+  - [x] 10.2 Write property tests for storage
     - **Property 5 (storage): Round-trip storage** — generate arbitrary project/spec data; store via `saveProject`/`addSpec`; retrieve via `getProject`; verify structural equivalence
     - **Property (UUID preservation)**: Generate spec pairs with same filename; verify UUID preserved after `addSpec` replacement
     - Mock `browser.storage.local` with an in-memory object
