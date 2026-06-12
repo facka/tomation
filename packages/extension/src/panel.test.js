@@ -285,3 +285,426 @@ test('renderTestPlan handles regular (non-task) steps correctly', function () {
   var label = lastItem.querySelector('label');
   assert.equal(label.textContent, 'assertExists Login__errorMessage');
 });
+
+
+// ---------------------------------------------------------------------------
+// Tests: Run View (Task 19.1)
+// Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9
+// ---------------------------------------------------------------------------
+
+function createRunViewEnv() {
+  var html = '<!DOCTYPE html><html><body>' +
+    '<div id="view-home" class="view active"></div>' +
+    '<div id="view-test-plan" class="view">' +
+    '  <h2 id="test-plan-title"></h2>' +
+    '  <ul id="step-checklist" class="step-checklist"></ul>' +
+    '  <div><button id="run-btn" class="btn btn-primary">Run</button>' +
+    '  <button id="back-home-btn" class="btn">Back</button></div>' +
+    '</div>' +
+    '<div id="view-run" class="view">' +
+    '  <h2 id="run-title"></h2>' +
+    '  <div class="controller-bar">' +
+    '    <button id="pause-btn" class="btn">Pause</button>' +
+    '    <button id="continue-btn" class="btn" disabled>Continue</button>' +
+    '    <button id="stop-btn" class="btn btn-danger">Stop</button>' +
+    '  </div>' +
+    '  <div id="manual-banner" class="manual-banner">' +
+    '    <p id="manual-description"></p>' +
+    '    <button id="manual-continue-btn" class="btn btn-primary">Continue</button>' +
+    '  </div>' +
+    '  <div id="log-container" class="log-container"></div>' +
+    '  <div id="run-summary" class="log-summary" style="display:none;"></div>' +
+    '  <div id="run-done-actions" style="display:none;">' +
+    '    <button id="back-home-from-run-btn" class="btn">Back to Home</button>' +
+    '  </div>' +
+    '</div>' +
+    '<div id="view-error" class="view"><div id="error-message"></div><button id="error-back-btn"></button></div>' +
+    '<div id="project-content"></div>' +
+    '<div id="warning-banner" class="warning-banner"></div>' +
+    '<button id="load-spec-btn"></button>' +
+    '<input type="file" id="spec-file-input" />' +
+    '</body></html>';
+
+  var dom = new JSDOM(html, {
+    url: 'http://localhost',
+    runScripts: 'dangerously',
+    resources: 'usable'
+  });
+
+  var window = dom.window;
+  var sentMessages = [];
+
+  window.eval('var browser = { ' +
+    'runtime: { ' +
+    '  sendMessage: function(msg) { window.__sentMessages.push(msg); return Promise.resolve(); }, ' +
+    '  onMessage: { addListener: function(fn) { window.__messageListener = fn; } } ' +
+    '}, ' +
+    'tabs: { ' +
+    '  query: function(opts, cb) { cb([]); }, ' +
+    '  onActivated: { addListener: function() {} }, ' +
+    '  onUpdated: { addListener: function() {} } ' +
+    '}, ' +
+    'storage: { local: { get: function() { return Promise.resolve({}); }, set: function() { return Promise.resolve(); } } } ' +
+    '};');
+
+  window.__sentMessages = sentMessages;
+
+  // Load storage.js
+  window.eval(storageJsSource);
+  window.eval('getProject = function() { return Promise.resolve(null); };');
+
+  // Load panel.js
+  window.eval(panelJsSource);
+
+  // Explicitly call init() to wire up event listeners (JSDOM readyState is 'loading')
+  window.init();
+
+  return { dom: dom, window: window, document: window.document, sentMessages: sentMessages };
+}
+
+test('switchToRunView shows run view and sets isRunning (Req 7.1)', function () {
+  var env = createRunViewEnv();
+  var spec = createSampleSpec();
+  setTestState(env, spec, 0);
+
+  env.window.switchToRunView();
+
+  var runView = env.document.getElementById('view-run');
+  assert.ok(runView.classList.contains('active'), 'Run view should be active');
+  assert.equal(env.window.isRunning, true);
+});
+
+test('switchToRunView sets run title from current test (Req 7.1)', function () {
+  var env = createRunViewEnv();
+  var spec = createSampleSpec();
+  setTestState(env, spec, 0);
+
+  env.window.switchToRunView();
+
+  var titleEl = env.document.getElementById('run-title');
+  assert.equal(titleEl.textContent, 'Login with valid credentials');
+});
+
+test('switchToRunView resets button states (Req 7.4)', function () {
+  var env = createRunViewEnv();
+  var spec = createSampleSpec();
+  setTestState(env, spec, 0);
+
+  env.window.switchToRunView();
+
+  var pauseBtn = env.document.getElementById('pause-btn');
+  var continueBtn = env.document.getElementById('continue-btn');
+  var stopBtn = env.document.getElementById('stop-btn');
+
+  assert.equal(pauseBtn.disabled, false, 'Pause should be enabled');
+  assert.equal(continueBtn.disabled, true, 'Continue should be disabled');
+  assert.equal(stopBtn.disabled, false, 'Stop should be enabled');
+});
+
+test('onRunClick switches to run view after sending message (Req 7.1)', function () {
+  var env = createRunViewEnv();
+  var spec = createSampleSpec();
+  setTestState(env, spec, 0);
+  env.window.renderTestPlan();
+
+  env.window.onRunClick();
+
+  var runView = env.document.getElementById('view-run');
+  assert.ok(runView.classList.contains('active'), 'Run view should be active after onRunClick');
+  assert.equal(env.sentMessages[0].type, 'RUN_TEST');
+});
+
+test('appendLogEntry renders a passing step with checkmark (Req 7.2)', function () {
+  var env = createRunViewEnv();
+  env.window.switchToRunView();
+
+  env.window.appendLogEntry({
+    stepIndex: 0,
+    action: 'click',
+    target: 'Login__submitButton',
+    value: null,
+    ok: true
+  });
+
+  var logContainer = env.document.getElementById('log-container');
+  var entries = logContainer.querySelectorAll('.log-entry');
+  assert.equal(entries.length, 1);
+  assert.ok(entries[0].classList.contains('pass'));
+  assert.ok(entries[0].innerHTML.indexOf('✓') !== -1);
+  assert.ok(entries[0].innerHTML.indexOf('click') !== -1);
+});
+
+test('appendLogEntry renders a failing step with X mark (Req 7.2)', function () {
+  var env = createRunViewEnv();
+  env.window.switchToRunView();
+
+  env.window.appendLogEntry({
+    stepIndex: 0,
+    action: 'assertExists',
+    target: 'Login__errorMessage',
+    value: null,
+    ok: false,
+    error: 'Element not found'
+  });
+
+  var logContainer = env.document.getElementById('log-container');
+  var entries = logContainer.querySelectorAll('.log-entry');
+  assert.equal(entries.length, 1);
+  assert.ok(entries[0].classList.contains('fail'));
+  assert.ok(entries[0].innerHTML.indexOf('✗') !== -1);
+  assert.ok(entries[0].innerHTML.indexOf('Element not found') !== -1);
+});
+
+test('appendLogEntry masks typePassword value with **** (Req 7.2)', function () {
+  var env = createRunViewEnv();
+  env.window.switchToRunView();
+
+  env.window.appendLogEntry({
+    stepIndex: 0,
+    action: 'typePassword',
+    target: 'Login__passwordInput',
+    value: 'supersecret123',
+    ok: true
+  });
+
+  var logContainer = env.document.getElementById('log-container');
+  var entry = logContainer.querySelector('.log-entry');
+  assert.ok(entry.innerHTML.indexOf('****') !== -1, 'Should show masked value');
+  assert.ok(entry.innerHTML.indexOf('supersecret123') === -1, 'Should NOT show real password');
+});
+
+test('appendLogEntry renders task header row (Req 7.3)', function () {
+  var env = createRunViewEnv();
+  env.window.switchToRunView();
+
+  env.window.appendLogEntry({ taskName: 'Login__fillCredentials' });
+
+  var logContainer = env.document.getElementById('log-container');
+  var entries = logContainer.querySelectorAll('.log-entry');
+  assert.equal(entries.length, 1);
+  assert.ok(entries[0].classList.contains('task-header'));
+  assert.equal(entries[0].textContent, 'Login__fillCredentials');
+});
+
+test('appendLogEntry renders indented child step (Req 7.3)', function () {
+  var env = createRunViewEnv();
+  env.window.switchToRunView();
+
+  env.window.appendLogEntry({ taskName: 'Login__fillCredentials' });
+  env.window.appendLogEntry({
+    stepIndex: 0,
+    action: 'type',
+    target: 'Login__usernameInput',
+    value: 'user1',
+    ok: true,
+    indented: true
+  });
+
+  var logContainer = env.document.getElementById('log-container');
+  var entries = logContainer.querySelectorAll('.log-entry');
+  assert.equal(entries.length, 2);
+  assert.ok(entries[1].classList.contains('indented'));
+});
+
+test('Pause button sends PAUSE and toggles button states (Req 7.5)', function () {
+  var env = createRunViewEnv();
+  env.window.switchToRunView();
+
+  var pauseBtn = env.document.getElementById('pause-btn');
+  var event = env.document.createEvent('Event');
+  event.initEvent('click', true, true);
+  pauseBtn.dispatchEvent(event);
+
+  assert.equal(env.sentMessages.length, 1);
+  assert.equal(env.sentMessages[0].type, 'PAUSE');
+  assert.equal(pauseBtn.disabled, true, 'Pause should be disabled after click');
+
+  var continueBtn = env.document.getElementById('continue-btn');
+  assert.equal(continueBtn.disabled, false, 'Continue should be enabled after pause');
+});
+
+test('Continue button sends CONTINUE and restores button states (Req 7.6)', function () {
+  var env = createRunViewEnv();
+  env.window.switchToRunView();
+
+  // First pause
+  var pauseBtn = env.document.getElementById('pause-btn');
+  var pauseEvent = env.document.createEvent('Event');
+  pauseEvent.initEvent('click', true, true);
+  pauseBtn.dispatchEvent(pauseEvent);
+
+  // Then continue
+  var continueBtn = env.document.getElementById('continue-btn');
+  var contEvent = env.document.createEvent('Event');
+  contEvent.initEvent('click', true, true);
+  continueBtn.dispatchEvent(contEvent);
+
+  assert.equal(env.sentMessages.length, 2);
+  assert.equal(env.sentMessages[1].type, 'CONTINUE');
+  assert.equal(continueBtn.disabled, true, 'Continue should be disabled again');
+  assert.equal(pauseBtn.disabled, false, 'Pause should be re-enabled');
+});
+
+test('Stop button sends STOP and disables itself (Req 7.7)', function () {
+  var env = createRunViewEnv();
+  env.window.switchToRunView();
+
+  var stopBtn = env.document.getElementById('stop-btn');
+  var event = env.document.createEvent('Event');
+  event.initEvent('click', true, true);
+  stopBtn.dispatchEvent(event);
+
+  assert.equal(env.sentMessages.length, 1);
+  assert.equal(env.sentMessages[0].type, 'STOP');
+  assert.equal(stopBtn.disabled, true);
+});
+
+test('onBackgroundMessage LOG appends entry (Req 7.2)', function () {
+  var env = createRunViewEnv();
+  env.window.switchToRunView();
+
+  env.window.onBackgroundMessage({
+    type: 'LOG',
+    stepIndex: 0,
+    action: 'click',
+    target: 'Login__submitButton',
+    ok: true
+  });
+
+  var logContainer = env.document.getElementById('log-container');
+  var entries = logContainer.querySelectorAll('.log-entry');
+  assert.equal(entries.length, 1);
+});
+
+test('onBackgroundMessage MANUAL_PAUSE shows banner (Req 7.8)', function () {
+  var env = createRunViewEnv();
+  env.window.switchToRunView();
+
+  env.window.onBackgroundMessage({
+    type: 'MANUAL_PAUSE',
+    description: 'Please verify the login form is visible'
+  });
+
+  var banner = env.document.getElementById('manual-banner');
+  assert.ok(banner.classList.contains('visible'), 'Banner should be visible');
+
+  var desc = env.document.getElementById('manual-description');
+  assert.equal(desc.textContent, 'Please verify the login form is visible');
+});
+
+test('Manual Continue button sends CONTINUE and hides banner (Req 7.9)', function () {
+  var env = createRunViewEnv();
+  env.window.switchToRunView();
+
+  // Show banner first
+  env.window.showManualBanner('Do something manual');
+
+  // Click manual continue
+  var manualBtn = env.document.getElementById('manual-continue-btn');
+  var event = env.document.createEvent('Event');
+  event.initEvent('click', true, true);
+  manualBtn.dispatchEvent(event);
+
+  assert.equal(env.sentMessages.length, 1);
+  assert.equal(env.sentMessages[0].type, 'CONTINUE');
+
+  var banner = env.document.getElementById('manual-banner');
+  assert.ok(!banner.classList.contains('visible'), 'Banner should be hidden after continue');
+});
+
+test('onBackgroundMessage RUN_COMPLETE shows summary (Req 7.7)', function () {
+  var env = createRunViewEnv();
+  env.window.switchToRunView();
+
+  env.window.onBackgroundMessage({
+    type: 'RUN_COMPLETE',
+    total: 5,
+    passed: 4,
+    failed: 1
+  });
+
+  var summaryEl = env.document.getElementById('run-summary');
+  assert.equal(summaryEl.style.display, 'block');
+  assert.ok(summaryEl.textContent.indexOf('Total: 5') !== -1);
+  assert.ok(summaryEl.textContent.indexOf('Passed: 4') !== -1);
+  assert.ok(summaryEl.textContent.indexOf('Failed: 1') !== -1);
+
+  var doneActions = env.document.getElementById('run-done-actions');
+  assert.equal(doneActions.style.display, 'block');
+});
+
+test('onBackgroundMessage RUN_STOPPED shows summary (Req 7.7)', function () {
+  var env = createRunViewEnv();
+  env.window.switchToRunView();
+
+  env.window.onBackgroundMessage({
+    type: 'RUN_STOPPED',
+    total: 3,
+    passed: 2,
+    failed: 0
+  });
+
+  var summaryEl = env.document.getElementById('run-summary');
+  assert.equal(summaryEl.style.display, 'block');
+  assert.ok(summaryEl.textContent.indexOf('Total: 3') !== -1);
+  assert.equal(env.window.isRunning, false);
+});
+
+test('showRunSummary disables all controller buttons', function () {
+  var env = createRunViewEnv();
+  env.window.switchToRunView();
+
+  env.window.showRunSummary({ total: 5, passed: 5, failed: 0 });
+
+  var pauseBtn = env.document.getElementById('pause-btn');
+  var continueBtn = env.document.getElementById('continue-btn');
+  var stopBtn = env.document.getElementById('stop-btn');
+  assert.equal(pauseBtn.disabled, true);
+  assert.equal(continueBtn.disabled, true);
+  assert.equal(stopBtn.disabled, true);
+});
+
+test('onBackgroundMessage STATE_SYNC restores run view when running (Req 7.1)', function () {
+  var env = createRunViewEnv();
+
+  env.window.onBackgroundMessage({
+    type: 'STATE_SYNC',
+    running: true,
+    paused: false,
+    lockedTabId: 1
+  });
+
+  var runView = env.document.getElementById('view-run');
+  assert.ok(runView.classList.contains('active'), 'Run view should be active');
+  assert.equal(env.window.isRunning, true);
+});
+
+test('onBackgroundMessage STATE_SYNC restores paused state (Req 7.5)', function () {
+  var env = createRunViewEnv();
+
+  env.window.onBackgroundMessage({
+    type: 'STATE_SYNC',
+    running: true,
+    paused: true,
+    lockedTabId: 1
+  });
+
+  var pauseBtn = env.document.getElementById('pause-btn');
+  var continueBtn = env.document.getElementById('continue-btn');
+  assert.equal(pauseBtn.disabled, true, 'Pause should be disabled when already paused');
+  assert.equal(continueBtn.disabled, false, 'Continue should be enabled when paused');
+});
+
+test('onBackgroundMessage STATE_SYNC does not switch view when not running', function () {
+  var env = createRunViewEnv();
+
+  env.window.onBackgroundMessage({
+    type: 'STATE_SYNC',
+    running: false,
+    paused: false,
+    lockedTabId: null
+  });
+
+  var homeView = env.document.getElementById('view-home');
+  assert.ok(homeView.classList.contains('active'), 'Home view should remain active');
+});

@@ -322,6 +322,212 @@ function onRunClick() {
     testIndex: currentTestIndex,
     checkedSteps: checkedSteps
   });
+
+  switchToRunView();
+}
+
+// --- Run View ---
+
+/**
+ * Switch to the run view and reset its state.
+ */
+function switchToRunView() {
+  isRunning = true;
+
+  // Set run title from current test
+  var titleEl = document.getElementById('run-title');
+  if (titleEl && currentTest) {
+    titleEl.textContent = currentTest.name;
+  }
+
+  // Clear log container
+  var logContainer = document.getElementById('log-container');
+  if (logContainer) {
+    logContainer.innerHTML = '';
+  }
+
+  // Hide summary and done actions
+  var summaryEl = document.getElementById('run-summary');
+  if (summaryEl) {
+    summaryEl.style.display = 'none';
+    summaryEl.textContent = '';
+  }
+  var doneActions = document.getElementById('run-done-actions');
+  if (doneActions) {
+    doneActions.style.display = 'none';
+  }
+
+  // Hide manual banner
+  hideManualBanner();
+
+  // Reset controller bar button states
+  var pauseBtn = document.getElementById('pause-btn');
+  var continueBtn = document.getElementById('continue-btn');
+  var stopBtn = document.getElementById('stop-btn');
+  if (pauseBtn) { pauseBtn.disabled = false; }
+  if (continueBtn) { continueBtn.disabled = true; }
+  if (stopBtn) { stopBtn.disabled = false; }
+
+  showView('run');
+}
+
+/**
+ * Append a log entry to the run view log container.
+ * @param {object} logData - { stepIndex, action, target, value, ok, error, taskName }
+ */
+function appendLogEntry(logData) {
+  var logContainer = document.getElementById('log-container');
+  if (!logContainer) return;
+
+  // If this is a task header entry, render a group header row
+  if (logData.taskName) {
+    var headerDiv = document.createElement('div');
+    headerDiv.className = 'log-entry task-header';
+    headerDiv.textContent = logData.taskName;
+    logContainer.appendChild(headerDiv);
+    return;
+  }
+
+  var div = document.createElement('div');
+  var classes = 'log-entry';
+
+  // Add pass/fail class
+  if (logData.ok === true) {
+    classes += ' pass';
+  } else if (logData.ok === false) {
+    classes += ' fail';
+  }
+
+  // Add indented class if this step is inside a task
+  if (logData.indented) {
+    classes += ' indented';
+  }
+
+  div.className = classes;
+
+  // Build display text: action, target, value (masked for typePassword)
+  var parts = [];
+  if (logData.action) {
+    parts.push(logData.action);
+  }
+  if (logData.target) {
+    parts.push(logData.target);
+  }
+  if (logData.action === 'typePassword') {
+    parts.push('****');
+  } else if (logData.value) {
+    parts.push(escapeHtml(logData.value));
+  }
+
+  // Add pass/fail indicator
+  var indicator = '';
+  if (logData.ok === true) {
+    indicator = ' ✓';
+  } else if (logData.ok === false) {
+    indicator = ' ✗';
+    if (logData.error) {
+      indicator += ' ' + escapeHtml(logData.error);
+    }
+  }
+
+  div.innerHTML = escapeHtml(parts.join(' ')) + indicator;
+
+  logContainer.appendChild(div);
+
+  // Auto-scroll to bottom
+  logContainer.scrollTop = logContainer.scrollHeight;
+}
+
+/**
+ * Show the manual pause banner with a description.
+ * @param {string} description
+ */
+function showManualBanner(description) {
+  var banner = document.getElementById('manual-banner');
+  var descEl = document.getElementById('manual-description');
+  if (banner && descEl) {
+    descEl.textContent = description;
+    banner.classList.add('visible');
+  }
+}
+
+/**
+ * Hide the manual pause banner.
+ */
+function hideManualBanner() {
+  var banner = document.getElementById('manual-banner');
+  if (banner) {
+    banner.classList.remove('visible');
+  }
+}
+
+/**
+ * Render the run summary after completion or stop.
+ * @param {object} data - { total, passed, failed }
+ */
+function showRunSummary(data) {
+  isRunning = false;
+
+  var summaryEl = document.getElementById('run-summary');
+  if (summaryEl) {
+    summaryEl.textContent = 'Total: ' + data.total + ' | Passed: ' + data.passed + ' | Failed: ' + data.failed;
+    summaryEl.style.display = 'block';
+  }
+
+  var doneActions = document.getElementById('run-done-actions');
+  if (doneActions) {
+    doneActions.style.display = 'block';
+  }
+
+  // Disable controller buttons since run is over
+  var pauseBtn = document.getElementById('pause-btn');
+  var continueBtn = document.getElementById('continue-btn');
+  var stopBtn = document.getElementById('stop-btn');
+  if (pauseBtn) { pauseBtn.disabled = true; }
+  if (continueBtn) { continueBtn.disabled = true; }
+  if (stopBtn) { stopBtn.disabled = true; }
+}
+
+/**
+ * Handle incoming messages from the background script.
+ * @param {object} message
+ */
+function onBackgroundMessage(message) {
+  if (!message || !message.type) return;
+
+  switch (message.type) {
+    case 'LOG':
+      appendLogEntry(message);
+      break;
+
+    case 'MANUAL_PAUSE':
+      showManualBanner(message.description);
+      break;
+
+    case 'RUN_COMPLETE':
+      hideManualBanner();
+      showRunSummary(message);
+      break;
+
+    case 'RUN_STOPPED':
+      hideManualBanner();
+      showRunSummary(message);
+      break;
+
+    case 'STATE_SYNC':
+      // Restore UI state if panel reconnects mid-run
+      if (message.running) {
+        isRunning = true;
+        showView('run');
+        if (message.paused) {
+          var pauseBtn = document.getElementById('pause-btn');
+          var continueBtn = document.getElementById('continue-btn');
+          if (pauseBtn) { pauseBtn.disabled = true; }
+          if (continueBtn) { continueBtn.disabled = false; }
+        }
+      }
+      break;
+  }
 }
 
 // --- Load Spec ---
@@ -484,9 +690,55 @@ function init() {
   var backFromRunBtn = document.getElementById('back-home-from-run-btn');
   if (backFromRunBtn) {
     backFromRunBtn.addEventListener('click', function () {
+      isRunning = false;
       showView('home');
       renderHomeView();
     });
+  }
+
+  // Wire up Pause button
+  var pauseBtn = document.getElementById('pause-btn');
+  if (pauseBtn) {
+    pauseBtn.addEventListener('click', function () {
+      api.runtime.sendMessage({ type: 'PAUSE' });
+      pauseBtn.disabled = true;
+      var continueBtn = document.getElementById('continue-btn');
+      if (continueBtn) { continueBtn.disabled = false; }
+    });
+  }
+
+  // Wire up Continue button
+  var continueBtn = document.getElementById('continue-btn');
+  if (continueBtn) {
+    continueBtn.addEventListener('click', function () {
+      api.runtime.sendMessage({ type: 'CONTINUE' });
+      continueBtn.disabled = true;
+      var pauseBtn2 = document.getElementById('pause-btn');
+      if (pauseBtn2) { pauseBtn2.disabled = false; }
+    });
+  }
+
+  // Wire up Stop button
+  var stopBtn = document.getElementById('stop-btn');
+  if (stopBtn) {
+    stopBtn.addEventListener('click', function () {
+      api.runtime.sendMessage({ type: 'STOP' });
+      stopBtn.disabled = true;
+    });
+  }
+
+  // Wire up Manual Continue button (inside banner)
+  var manualContinueBtn = document.getElementById('manual-continue-btn');
+  if (manualContinueBtn) {
+    manualContinueBtn.addEventListener('click', function () {
+      api.runtime.sendMessage({ type: 'CONTINUE' });
+      hideManualBanner();
+    });
+  }
+
+  // Listen for messages from background script
+  if (api.runtime && api.runtime.onMessage) {
+    api.runtime.onMessage.addListener(onBackgroundMessage);
   }
 
   // Get active tab hostname and render home view

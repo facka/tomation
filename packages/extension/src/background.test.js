@@ -9,9 +9,21 @@ global.chrome = {
       addListener: function () {},
       removeListener: function () {}
     },
+    onConnect: {
+      addListener: function () {}
+    },
     sendMessage: function () {}
+  },
+  tabs: {
+    query: function () { return Promise.resolve([]); },
+    update: function () { return Promise.resolve(); },
+    sendMessage: function () { return Promise.resolve({ ok: true }); }
   }
 };
+
+// Mock getProject global (normally provided by storage.js in the extension context)
+global.getProject = function () { return Promise.resolve(null); };
+
 var bg = require('./background.js');
 
 // ---------------------------------------------------------------------------
@@ -1371,4 +1383,206 @@ test('manual step respects stopRequested when continued', function () {
       });
     }, 50);
   });
+});
+
+
+// ---------------------------------------------------------------------------
+// Message Router (Task 15.5)
+// ---------------------------------------------------------------------------
+
+test('handleMessage routes PAUSE to pauseRun', function () {
+  bg.resetRunState();
+  bg.runState.running = true;
+
+  bg.handleMessage({ type: 'PAUSE' }, {}, function () {});
+
+  assert.equal(bg.runState.paused, true);
+
+  // Clean up
+  bg.continueRun();
+});
+
+test('handleMessage routes CONTINUE to continueRun', function () {
+  bg.resetRunState();
+  bg.runState.running = true;
+  bg.pauseRun();
+
+  assert.equal(bg.runState.paused, true);
+
+  bg.handleMessage({ type: 'CONTINUE' }, {}, function () {});
+
+  assert.equal(bg.runState.paused, false);
+});
+
+test('handleMessage routes STOP to stopRun', function () {
+  bg.resetRunState();
+  bg.runState.running = true;
+
+  bg.handleMessage({ type: 'STOP' }, {}, function () {});
+
+  assert.equal(bg.runState.stopRequested, true);
+});
+
+test('handleMessage ignores null or missing type', function () {
+  bg.resetRunState();
+  // Should not throw
+  bg.handleMessage(null, {}, function () {});
+  bg.handleMessage({}, {}, function () {});
+  bg.handleMessage({ type: 'UNKNOWN' }, {}, function () {});
+  assert.equal(bg.runState.running, false);
+});
+
+test('handleRunTest queries active tab and starts run with correct spec/test', function () {
+  bg.resetRunState();
+
+  var startedWith = null;
+  var sentLogs = [];
+  var sentSummary = null;
+
+  global.chrome.tabs = {
+    query: function () {
+      return Promise.resolve([{
+        id: 42,
+        url: 'https://example.com/dashboard'
+      }]);
+    },
+    update: function () { return Promise.resolve(); },
+    sendMessage: function (tabId, msg) {
+      return Promise.resolve({ ok: true });
+    }
+  };
+  global.chrome.runtime.sendMessage = function (msg) {
+    if (msg.type === 'LOG') sentLogs.push(msg);
+    else sentSummary = msg;
+  };
+
+  var mockSpec = {
+    format: 'tomation-spec',
+    version: 1,
+    pageElements: {
+      btn: { tag: 'button', where: { id: 'btn' } }
+    },
+    tasks: {},
+    tests: [
+      { name: 'First Test', steps: [{ action: 'click', target: 'btn' }] },
+      { name: 'Second Test', steps: [{ action: 'click', target: 'btn' }] }
+    ]
+  };
+
+  global.getProject = function (hostname) {
+    assert.equal(hostname, 'example.com');
+    return Promise.resolve({
+      host: 'example.com',
+      name: 'Example',
+      specs: [{ id: 'abc', filename: 'spec.json', spec: mockSpec }]
+    });
+  };
+
+  bg.handleRunTest({ type: 'RUN_TEST', testIndex: 1, checkedSteps: [0] });
+
+  // Allow promises to resolve
+  return new Promise(function (resolve) {
+    setTimeout(function () {
+      // The second test (index 1) should have been run
+      assert.equal(sentLogs.length, 1);
+      assert.equal(sentLogs[0].action, 'click');
+      assert.equal(sentLogs[0].ok, true);
+      assert.equal(sentSummary.type, 'RUN_COMPLETE');
+      resolve();
+    }, 100);
+  });
+});
+
+test('handleRunTest does nothing when no active tabs', function () {
+  bg.resetRunState();
+
+  global.chrome.tabs = {
+    query: function () { return Promise.resolve([]); }
+  };
+
+  // Should not throw or start a run
+  bg.handleRunTest({ type: 'RUN_TEST', testIndex: 0, checkedSteps: [0] });
+
+  return new Promise(function (resolve) {
+    setTimeout(function () {
+      assert.equal(bg.runState.running, false);
+      resolve();
+    }, 50);
+  });
+});
+
+test('handleRunTest does nothing when no project exists for hostname', function () {
+  bg.resetRunState();
+
+  global.chrome.tabs = {
+    query: function () {
+      return Promise.resolve([{
+        id: 42,
+        url: 'https://unknown.com/page'
+      }]);
+    }
+  };
+
+  global.getProject = function () { return Promise.resolve(null); };
+
+  bg.handleRunTest({ type: 'RUN_TEST', testIndex: 0, checkedSteps: [0] });
+
+  return new Promise(function (resolve) {
+    setTimeout(function () {
+      assert.equal(bg.runState.running, false);
+      resolve();
+    }, 50);
+  });
+});
+
+test('handlePanelConnect sends STATE_SYNC on panel port', function () {
+  bg.resetRunState();
+  bg.runState.running = true;
+  bg.runState.paused = true;
+  bg.runState.lockedTabId = 77;
+
+  var sentMsg = null;
+  var port = {
+    name: 'panel',
+    postMessage: function (msg) { sentMsg = msg; }
+  };
+
+  bg.handlePanelConnect(port);
+
+  assert.equal(sentMsg.type, 'STATE_SYNC');
+  assert.equal(sentMsg.running, true);
+  assert.equal(sentMsg.paused, true);
+  assert.equal(sentMsg.lockedTabId, 77);
+});
+
+test('handlePanelConnect ignores non-panel ports', function () {
+  bg.resetRunState();
+
+  var sentMsg = null;
+  var port = {
+    name: 'other',
+    postMessage: function (msg) { sentMsg = msg; }
+  };
+
+  bg.handlePanelConnect(port);
+
+  assert.equal(sentMsg, null);
+});
+
+test('initMessageRouter registers listeners', function () {
+  var addedMessageListener = null;
+  var addedConnectListener = null;
+
+  global.chrome.runtime.onMessage = {
+    addListener: function (fn) { addedMessageListener = fn; },
+    removeListener: function () {}
+  };
+  global.chrome.runtime.onConnect = {
+    addListener: function (fn) { addedConnectListener = fn; }
+  };
+
+  bg.initMessageRouter();
+
+  assert.equal(addedMessageListener, bg.handleMessage);
+  assert.equal(addedConnectListener, bg.handlePanelConnect);
 });

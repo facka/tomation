@@ -248,7 +248,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
 
 ---
 
-- [ ] 15. Implement the background script — test run orchestration
+- [x] 15. Implement the background script — test run orchestration
   - [x] 15.1 Implement run state machine in `background.js`
     - Initialize run state: `{ running, paused, stopRequested, lockedTabId, steps, stepIndex, passCount, failCount, pauseResolve }`
     - `startRun(tabId, test, spec, checkedSteps)`: flatten steps, lock tab, begin step loop
@@ -274,7 +274,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - Await `CONTINUE` message from panel (same pause/resolve mechanism as pause control)
     - _Requirements: 3.13_
 
-  - [ ] 15.5 Implement message router in background
+  - [x] 15.5 Implement message router in background
     - Listen for `RUN_TEST`, `PAUSE`, `CONTINUE`, `STOP` from panel
     - Route to appropriate functions; send `STATE_SYNC` to panel on connection
     - Listen for `STEP_RESULT` and `RUNTIME_READY` from content scripts
@@ -333,8 +333,8 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
 
 ---
 
-- [ ] 19. Implement the panel UI — Run view
-  - [ ] 19.1 Implement Run view in `panel.js`
+- [x] 19. Implement the panel UI — Run view
+  - [x] 19.1 Implement Run view in `panel.js`
     - Switch to run view when `RUN_TEST` is sent
     - Display live scrolling log; each `LOG` message appended as a row with action, target, value (masked for typePassword), and pass/fail indicator
     - For task section headers, render a labeled group header row; child step logs are indented beneath it (max 2 levels, no expand/collapse)
@@ -362,7 +362,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - "Import" button: file input accepting JSON; calls `storage.importAll(data, conflictCallback)` where `conflictCallback` shows a modal dialog blocking until user selects merge or replace
     - _Requirements: 9.1–9.7_
 
-- [ ] 21. Checkpoint — full extension UI wired together
+- [x] 21. Checkpoint — full extension UI wired together
   - Load the extension in Chrome (unpacked) and Firefox; verify sidebar opens, spec loads, test plan renders, run view executes against a playground page.
   - Ensure all tests pass, ask the user if questions arise.
 
@@ -383,7 +383,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
 
 ---
 
-- [ ] 23. Final checkpoint — all tests pass
+- [~] 23. Final checkpoint — all tests pass
   - Run full test suite across compiler and extension logic packages.
   - Verify all three playground specs load and execute successfully against their respective HTML pages.
   - Ensure all tests pass, ask the user if questions arise.

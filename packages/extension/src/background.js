@@ -626,6 +626,118 @@ function stopRun() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Message Router (Task 15.5)
+// ---------------------------------------------------------------------------
+
+/**
+ * Handle messages from the panel (RUN_TEST, PAUSE, CONTINUE, STOP)
+ * and from content scripts (STEP_RESULT, RUNTIME_READY).
+ *
+ * @param {object} message - The incoming message
+ * @param {object} sender - The message sender info
+ * @param {function} sendResponse - Callback to send a response (unused for async)
+ */
+function handleMessage(message, sender, sendResponse) {
+  if (!message || !message.type) return;
+
+  switch (message.type) {
+    case 'RUN_TEST':
+      handleRunTest(message);
+      break;
+    case 'PAUSE':
+      pauseRun();
+      break;
+    case 'CONTINUE':
+      continueRun();
+      break;
+    case 'STOP':
+      stopRun();
+      break;
+    // STEP_RESULT and RUNTIME_READY are handled inline by sendStepToRuntime
+    // and handleNavigateStep respectively via their own listeners.
+    // No additional routing needed here.
+  }
+}
+
+/**
+ * Handle the RUN_TEST message from the panel.
+ * Queries the active tab, looks up the project by hostname, finds the test
+ * by index, and starts the run.
+ *
+ * @param {object} message - { type: 'RUN_TEST', testIndex: number, checkedSteps: Array }
+ */
+function handleRunTest(message) {
+  var testIndex = message.testIndex;
+  var checkedSteps = message.checkedSteps;
+
+  api.tabs.query({ active: true, currentWindow: true }).then(function (tabs) {
+    if (!tabs || tabs.length === 0) return;
+
+    var tab = tabs[0];
+    var url = new URL(tab.url);
+    var hostname = url.hostname;
+
+    return getProject(hostname).then(function (project) {
+      if (!project || !project.specs || project.specs.length === 0) return;
+
+      // Find the test across all specs in the project
+      var foundTest = null;
+      var foundSpec = null;
+      var globalIndex = 0;
+
+      for (var s = 0; s < project.specs.length; s++) {
+        var spec = project.specs[s].spec;
+        if (!spec || !spec.tests) continue;
+
+        for (var t = 0; t < spec.tests.length; t++) {
+          if (globalIndex === testIndex) {
+            foundTest = spec.tests[t];
+            foundSpec = spec;
+            break;
+          }
+          globalIndex++;
+        }
+        if (foundTest) break;
+      }
+
+      if (foundTest && foundSpec) {
+        startRun(tab.id, foundTest, foundSpec, checkedSteps);
+      }
+    });
+  });
+}
+
+/**
+ * Send STATE_SYNC to a newly connected panel port.
+ *
+ * @param {object} port - The connected port
+ */
+function handlePanelConnect(port) {
+  if (port.name === 'panel') {
+    port.postMessage({
+      type: 'STATE_SYNC',
+      running: runState.running,
+      paused: runState.paused,
+      lockedTabId: runState.lockedTabId
+    });
+  }
+}
+
+/**
+ * Initialize the message router listeners.
+ * Called once when the background script loads.
+ */
+function initMessageRouter() {
+  api.runtime.onMessage.addListener(handleMessage);
+  api.runtime.onConnect.addListener(handlePanelConnect);
+}
+
+// Initialize the router (only in extension context, not in Node test context)
+if (typeof module === 'undefined' || !module.exports) {
+  initMessageRouter();
+}
+
 // Export for testing in Node.js
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -651,6 +763,10 @@ if (typeof module !== 'undefined' && module.exports) {
     continueRun: continueRun,
     handleNavigateStep: handleNavigateStep,
     handleWaitStep: handleWaitStep,
-    handleManualStep: handleManualStep
+    handleManualStep: handleManualStep,
+    handleMessage: handleMessage,
+    handleRunTest: handleRunTest,
+    handlePanelConnect: handlePanelConnect,
+    initMessageRouter: initMessageRouter
   };
 }
