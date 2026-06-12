@@ -4,7 +4,11 @@
   "description": "Tomation browser extension — cross-browser WebExtensions sidebar",
   "private": true,
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "build": "node build.js",
+    "build:chrome": "node build.js chrome",
+    "build:firefox": "node build.js firefox",
+    "generate-icons": "node generate-icons.js"
   },
   "devDependencies": {
     "fast-check": "^3.23.2",
