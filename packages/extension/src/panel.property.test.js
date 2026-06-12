@@ -226,3 +226,189 @@ test('Property (meta.url mismatch warning): For any spec with meta.url host != c
     { numRuns: 100 }
   );
 });
+
+// ---------------------------------------------------------------------------
+// Property: Test Plan — All checkboxes checked by default
+// Validates: Requirements 6.3
+// Feature: tomation, Property (6.3, 6.5)
+// ---------------------------------------------------------------------------
+
+/** Generate a regular step (non-task) */
+var regularStepArb = fc.record({
+  action: fc.constantFrom('click', 'type', 'navigate', 'assertExists'),
+  target: fc.constant('someElement')
+});
+
+/** Generate a task step referencing a task name */
+function taskStepArb(taskName) {
+  return fc.constant({ action: 'task', name: taskName });
+}
+
+/** Generate a list of child steps for a task */
+var childStepsArb = fc.array(
+  fc.record({
+    action: fc.constantFrom('click', 'type', 'assertExists'),
+    target: fc.constant('childElement')
+  }),
+  { minLength: 1, maxLength: 5 }
+);
+
+/**
+ * Generate a test with N steps (mix of regular and task steps).
+ * Returns { steps, tasks, expectedCheckboxCount }
+ */
+var testPlanArb = fc.integer({ min: 1, max: 8 }).chain(function (stepCount) {
+  return fc.array(
+    fc.record({
+      isTask: fc.boolean(),
+      childCount: fc.integer({ min: 1, max: 5 })
+    }),
+    { minLength: stepCount, maxLength: stepCount }
+  ).map(function (stepDefs) {
+    var steps = [];
+    var tasks = {};
+    var expectedCheckboxCount = 0;
+
+    for (var i = 0; i < stepDefs.length; i++) {
+      if (stepDefs[i].isTask) {
+        var taskName = 'task_' + i;
+        var childSteps = [];
+        for (var c = 0; c < stepDefs[i].childCount; c++) {
+          childSteps.push({ action: 'click', target: 'el_' + c });
+        }
+        tasks[taskName] = { steps: childSteps };
+        steps.push({ action: 'task', name: taskName });
+        // Task header checkbox + child checkboxes
+        expectedCheckboxCount += 1 + childSteps.length;
+      } else {
+        steps.push({ action: 'click', target: 'someElement' });
+        expectedCheckboxCount += 1;
+      }
+    }
+
+    return { steps: steps, tasks: tasks, expectedCheckboxCount: expectedCheckboxCount };
+  });
+});
+
+test('Property (test plan all checked): For any test with N steps, initial checked state has all N checked', function () {
+  fc.assert(
+    fc.property(testPlanArb, function (testPlan) {
+      var env = createTestEnv();
+
+      // Set up currentSpec and currentTest on the window
+      env.window.eval('currentSpec = ' + JSON.stringify({
+        spec: { tasks: testPlan.tasks }
+      }) + ';');
+      env.window.eval('currentTest = ' + JSON.stringify({
+        name: 'Generated Test',
+        steps: testPlan.steps
+      }) + ';');
+
+      // Call renderTestPlan
+      env.window.eval('renderTestPlan();');
+
+      // Query all checkboxes in the step-checklist
+      var checklist = env.document.getElementById('step-checklist');
+      var checkboxes = checklist.querySelectorAll('input[type="checkbox"]');
+
+      // Verify the count matches expected
+      assert.equal(checkboxes.length, testPlan.expectedCheckboxCount,
+        'Expected ' + testPlan.expectedCheckboxCount + ' checkboxes, got ' + checkboxes.length);
+
+      // Verify all checkboxes are checked
+      for (var i = 0; i < checkboxes.length; i++) {
+        assert.equal(checkboxes[i].checked, true,
+          'Checkbox at index ' + i + ' should be checked by default');
+      }
+    }),
+    { numRuns: 100 }
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Property: Test Plan — Task uncheck cascades to children
+// Validates: Requirements 6.5
+// Feature: tomation, Property (6.3, 6.5)
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate a test with at least one task step that has N children.
+ * Returns { steps, tasks, taskStepIndex, childCount }
+ */
+var taskUncheckedArb = fc.integer({ min: 1, max: 5 }).chain(function (childCount) {
+  return fc.integer({ min: 0, max: 3 }).map(function (prefixCount) {
+    var steps = [];
+    var tasks = {};
+
+    // Add some regular steps before the task
+    for (var p = 0; p < prefixCount; p++) {
+      steps.push({ action: 'click', target: 'el_prefix_' + p });
+    }
+
+    // Add the task step
+    var taskName = 'cascadeTask';
+    var childSteps = [];
+    for (var c = 0; c < childCount; c++) {
+      childSteps.push({ action: 'click', target: 'child_el_' + c });
+    }
+    tasks[taskName] = { steps: childSteps };
+    steps.push({ action: 'task', name: taskName });
+
+    var taskStepIndex = prefixCount; // The index in the steps array
+
+    return {
+      steps: steps,
+      tasks: tasks,
+      taskStepIndex: taskStepIndex,
+      childCount: childCount
+    };
+  });
+});
+
+test('Property (task uncheck cascades): For any task with N children, unchecking task results in all N children unchecked', function () {
+  fc.assert(
+    fc.property(taskUncheckedArb, function (testData) {
+      var env = createTestEnv();
+
+      // Set up currentSpec and currentTest on the window
+      env.window.eval('currentSpec = ' + JSON.stringify({
+        spec: { tasks: testData.tasks }
+      }) + ';');
+      env.window.eval('currentTest = ' + JSON.stringify({
+        name: 'Cascade Test',
+        steps: testData.steps
+      }) + ';');
+
+      // Call renderTestPlan
+      env.window.eval('renderTestPlan();');
+
+      var checklist = env.document.getElementById('step-checklist');
+
+      // Find the task checkbox (has data-is-task="true" and matching data-step-index)
+      var taskCb = checklist.querySelector(
+        'input[data-is-task="true"][data-step-index="' + testData.taskStepIndex + '"]'
+      );
+      assert.ok(taskCb, 'Task checkbox should exist at step index ' + testData.taskStepIndex);
+
+      // Verify all children are currently checked
+      var childCbs = checklist.querySelectorAll(
+        'input[data-step-index="' + testData.taskStepIndex + '"][data-child-index]'
+      );
+      assert.equal(childCbs.length, testData.childCount,
+        'Expected ' + testData.childCount + ' child checkboxes');
+
+      // Simulate unchecking the task checkbox
+      taskCb.checked = false;
+      var event = new env.window.Event('change', { bubbles: true });
+      Object.defineProperty(event, 'target', { value: taskCb, writable: false });
+      taskCb.dispatchEvent(event);
+
+      // Verify all child checkboxes are now unchecked
+      for (var i = 0; i < childCbs.length; i++) {
+        assert.equal(childCbs[i].checked, false,
+          'Child checkbox at index ' + i + ' should be unchecked after task uncheck');
+      }
+    }),
+    { numRuns: 100 }
+  );
+});

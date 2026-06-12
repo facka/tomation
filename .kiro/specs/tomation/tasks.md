@@ -325,7 +325,7 @@ The implementation language is **JavaScript (Node.js for compiler/tests, ES5-com
     - "Run" button collects the set of checked step indices and sends `RUN_TEST` message to background
     - _Requirements: 6.1–6.6_
 
-  - [ ]* 18.2 Write property tests for Test Plan view logic
+  - [x] 18.2 Write property tests for Test Plan view logic
     - **Property 6.3 (all checked by default)**: For any test with N steps, initial checked state has all N checked
     - **Property 6.5 (task uncheck cascades)**: For any task with N children, unchecking task results in all N children unchecked
     - `// Feature: tomation, Property (6.3, 6.5)`
