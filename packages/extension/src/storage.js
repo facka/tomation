@@ -218,6 +218,74 @@ function importAll(data, conflictCallback) {
   });
 }
 
+/**
+ * Default test plan configuration values.
+ */
+var DEFAULT_TEST_PLAN_CONFIG = {
+  allowContinueOnFailure: false,
+  allowRetryOnFailure: false,
+  executionSpeed: 'NORMAL'
+};
+
+/**
+ * Valid execution speed values.
+ */
+var VALID_SPEEDS = ['FAST', 'NORMAL', 'SLOW'];
+
+/**
+ * Retrieve a test plan configuration from storage.
+ * If the stored value is missing or has an invalid shape (missing fields, wrong types),
+ * returns the default configuration.
+ * @param {string} key - Storage key in format "config:<specId>:<testIndex>"
+ * @returns {Promise<object>}
+ */
+function getTestPlanConfig(key) {
+  return api.storage.local.get(key).then(function (result) {
+    var stored = result[key];
+    if (!stored || typeof stored !== 'object') {
+      return {
+        allowContinueOnFailure: DEFAULT_TEST_PLAN_CONFIG.allowContinueOnFailure,
+        allowRetryOnFailure: DEFAULT_TEST_PLAN_CONFIG.allowRetryOnFailure,
+        executionSpeed: DEFAULT_TEST_PLAN_CONFIG.executionSpeed
+      };
+    }
+
+    // Validate shape: check each field type
+    if (typeof stored.allowContinueOnFailure !== 'boolean' ||
+        typeof stored.allowRetryOnFailure !== 'boolean' ||
+        typeof stored.executionSpeed !== 'string' ||
+        VALID_SPEEDS.indexOf(stored.executionSpeed) === -1) {
+      console.warn('getTestPlanConfig: stored config has invalid shape for key "' + key + '", returning defaults');
+      return {
+        allowContinueOnFailure: DEFAULT_TEST_PLAN_CONFIG.allowContinueOnFailure,
+        allowRetryOnFailure: DEFAULT_TEST_PLAN_CONFIG.allowRetryOnFailure,
+        executionSpeed: DEFAULT_TEST_PLAN_CONFIG.executionSpeed
+      };
+    }
+
+    return {
+      allowContinueOnFailure: stored.allowContinueOnFailure,
+      allowRetryOnFailure: stored.allowRetryOnFailure,
+      executionSpeed: stored.executionSpeed
+    };
+  });
+}
+
+/**
+ * Persist a test plan configuration to storage.
+ * Catches and logs write failures without throwing.
+ * @param {string} key - Storage key in format "config:<specId>:<testIndex>"
+ * @param {object} config - Configuration object to persist
+ * @returns {Promise<void>}
+ */
+function saveTestPlanConfig(key, config) {
+  var data = {};
+  data[key] = config;
+  return api.storage.local.set(data).catch(function (err) {
+    console.error('saveTestPlanConfig: failed to write config for key "' + key + '":', err);
+  });
+}
+
 // Export for use by other extension scripts and for testing
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -230,6 +298,9 @@ if (typeof module !== 'undefined' && module.exports) {
     renameProject: renameProject,
     getAllProjects: getAllProjects,
     exportAll: exportAll,
-    importAll: importAll
+    importAll: importAll,
+    getTestPlanConfig: getTestPlanConfig,
+    saveTestPlanConfig: saveTestPlanConfig,
+    DEFAULT_TEST_PLAN_CONFIG: DEFAULT_TEST_PLAN_CONFIG
   };
 }

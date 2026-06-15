@@ -10,14 +10,14 @@ The implementation progresses incrementally: storage/config layer → background
 
 ## Tasks
 
-- [ ] 1. Extend storage layer with test plan configuration
-  - [-] 1.1 Add `getTestPlanConfig(key)` and `saveTestPlanConfig(key, config)` to `packages/extension/src/storage.js`
+- [x] 1. Extend storage layer with test plan configuration
+  - [x] 1.1 Add `getTestPlanConfig(key)` and `saveTestPlanConfig(key, config)` to `packages/extension/src/storage.js`
     - `getTestPlanConfig(key)` retrieves the config object from `browser.storage.local` using key format `"config:<specId>:<testIndex>"`
     - If stored value is missing or has wrong shape (missing fields, wrong types), return defaults: `{ allowContinueOnFailure: false, allowRetryOnFailure: false, executionSpeed: 'NORMAL' }`
     - `saveTestPlanConfig(key, config)` persists the config object; catch and log write failures without throwing
     - _Requirements: 3.11, 3.12, 3.13_
 
-  - [ ]* 1.2 Write property test for configuration storage round-trip
+  - [x] 1.2 Write property test for configuration storage round-trip
     - **Property 6: Configuration Storage Round-Trip**
     - Generate random valid config objects (boolean toggles + speed enum); save then read back; verify equality
     - Also verify that corrupted/missing storage returns default config
@@ -29,39 +29,39 @@ The implementation progresses incrementally: storage/config layer → background
     - Test that write failures are caught and logged
     - _Requirements: 3.11, 3.12, 3.13_
 
-- [ ] 2. Checkpoint — storage tests pass
+- [x] 2. Checkpoint — storage tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ---
 
-- [ ] 3. Extend background orchestration with awaiting-action state
-  - [ ] 3.1 Add speed delay infrastructure to `packages/extension/src/background.js`
+- [x] 3. Extend background orchestration with awaiting-action state
+  - [x] 3.1 Add speed delay infrastructure to `packages/extension/src/background.js`
     - Add `SPEED_DELAYS` map: `{ 'FAST': 0, 'NORMAL': 500, 'SLOW': 1500 }`
     - Implement `applySpeedDelay(speed)` function returning a Promise that resolves after the mapped delay; unknown values default to 0ms
     - _Requirements: 3.8, 3.9, 3.10_
 
-  - [ ] 3.2 Extend run state and step loop with `awaitingAction` state in `packages/extension/src/background.js`
+  - [x] 3.2 Extend run state and step loop with `awaitingAction` state in `packages/extension/src/background.js`
     - Add fields to run state: `awaitingAction`, `failedStepIndex`, `retryAttempt`, `config`
     - Modify `runStepLoop`: insert `applySpeedDelay(config.executionSpeed)` before each `sendStepToRuntime` call
     - On step failure: if `config.allowRetryOnFailure || config.allowContinueOnFailure`, set `awaitingAction = true`, store `failedStepIndex`, emit `STEP_FAILED_AWAITING_ACTION` message to panel, and pause the loop (do NOT halt or unlock tab)
     - If neither flag is enabled, preserve existing v1 behavior (halt immediately)
     - _Requirements: 1.7, 3.8, 3.9, 3.10_
 
-  - [ ] 3.3 Implement `handleRetryStep(msg)` in `packages/extension/src/background.js`
+  - [x] 3.3 Implement `handleRetryStep(msg)` in `packages/extension/src/background.js`
     - Validate: ignore if `awaitingAction` is false or `msg.stepIndex !== failedStepIndex`
     - Increment `retryAttempt`; re-send the failed step via `sendStepToRuntime`
     - On `{ ok: true }`: set `awaitingAction = false`, increment `passCount`, advance `stepIndex`, emit LOG with `retryAttempt`, resume step loop
     - On `{ ok: false }`: halt run, emit failure LOG, unlock tab
     - _Requirements: 1.3, 1.4, 1.5_
 
-  - [ ] 3.4 Implement `handleSkipStep(msg)` in `packages/extension/src/background.js`
+  - [x] 3.4 Implement `handleSkipStep(msg)` in `packages/extension/src/background.js`
     - Validate: ignore if `awaitingAction` is false or `msg.stepIndex !== failedStepIndex`
     - Set `awaitingAction = false`, advance `stepIndex` to `failedStepIndex + 1` without modifying `passCount`
     - If `failedStepIndex` was the last step, emit `RUN_COMPLETE` with summary
     - Otherwise resume step loop from the next step
     - _Requirements: 2.3, 2.4_
 
-  - [ ] 3.5 Extend `handleMessage()` in `packages/extension/src/background.js` to route `RETRY_STEP` and `SKIP_STEP` messages
+  - [x] 3.5 Extend `handleMessage()` in `packages/extension/src/background.js` to route `RETRY_STEP` and `SKIP_STEP` messages
     - Also extend `RUN_TEST` handler to accept and store `config` field from the message payload (default to v1 behavior if config is missing)
     - _Requirements: 1.2, 2.2, 3.7_
 
@@ -94,7 +94,7 @@ The implementation progresses incrementally: storage/config layer → background
     - Test RUN_TEST without config field uses v1 defaults
     - _Requirements: 1.3, 1.4, 1.5, 2.3, 2.4, 3.8, 3.9, 3.10_
 
-- [ ] 4. Checkpoint — background orchestration tests pass
+- [x] 4. Checkpoint — background orchestration tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ---

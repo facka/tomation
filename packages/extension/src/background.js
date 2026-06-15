@@ -282,8 +282,40 @@ function findParentDescriptor(childOfId, pageElements) {
 }
 
 // ---------------------------------------------------------------------------
+// Speed Delay Infrastructure
+// ---------------------------------------------------------------------------
+
+/** Mapping of execution speed names to delay durations in milliseconds */
+var SPEED_DELAYS = {
+  'FAST': 0,
+  'NORMAL': 500,
+  'SLOW': 1500
+};
+
+/**
+ * Return a Promise that resolves after the delay mapped to the given speed.
+ * Unknown speed values default to 0ms (no delay).
+ *
+ * @param {string} speed - One of 'FAST', 'NORMAL', 'SLOW' (or any other value for default)
+ * @returns {Promise} - Resolves after the mapped delay
+ */
+function applySpeedDelay(speed) {
+  var delay = SPEED_DELAYS.hasOwnProperty(speed) ? SPEED_DELAYS[speed] : 0;
+  return new Promise(function (resolve) {
+    setTimeout(resolve, delay);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Run State Machine (Task 15)
 // ---------------------------------------------------------------------------
+
+/** Default configuration (v1 behavior when no config is provided) */
+var DEFAULT_RUN_CONFIG = {
+  allowContinueOnFailure: false,
+  allowRetryOnFailure: false,
+  executionSpeed: 'FAST'
+};
 
 /** Runtime state for the current test run */
 var runState = {
@@ -296,7 +328,15 @@ var runState = {
   stepIndex: 0,
   passCount: 0,
   failCount: 0,
-  pauseResolve: null
+  pauseResolve: null,
+  awaitingAction: false,
+  failedStepIndex: null,
+  retryAttempt: 0,
+  config: {
+    allowContinueOnFailure: false,
+    allowRetryOnFailure: false,
+    executionSpeed: 'FAST'
+  }
 };
 
 /**
@@ -313,6 +353,14 @@ function resetRunState() {
   runState.passCount = 0;
   runState.failCount = 0;
   runState.pauseResolve = null;
+  runState.awaitingAction = false;
+  runState.failedStepIndex = null;
+  runState.retryAttempt = 0;
+  runState.config = {
+    allowContinueOnFailure: false,
+    allowRetryOnFailure: false,
+    executionSpeed: 'FAST'
+  };
 }
 
 /**
@@ -403,8 +451,12 @@ function emitSummary(type, total, passed, failed) {
  * @param {Array|Set} checkedSteps - The checked step indexes
  * @returns {Promise}
  */
-function startRun(tabId, test, spec, checkedSteps) {
+function startRun(tabId, test, spec, checkedSteps, config) {
   resetRunState();
+
+  if (config) {
+    runState.config = config;
+  }
 
   var resolvedSteps = flattenSteps(
     test.steps,
@@ -427,14 +479,21 @@ function startRun(tabId, test, spec, checkedSteps) {
 
 /**
  * Execute steps sequentially. Halts on failure or stop request.
- * Checks pause state before each step. Emits LOG after each step
- * and a summary on completion.
+ * Checks pause state before each step. Inserts a speed delay before
+ * dispatching each step to the runtime. On failure, enters
+ * awaiting-action state if retry/skip is enabled; otherwise halts immediately.
+ * Emits LOG after each step and a summary on completion.
  *
  * @returns {Promise}
  */
 function runStepLoop() {
   if (runState.stepIndex >= runState.steps.length || runState.stopRequested) {
     return finishRun();
+  }
+
+  // If awaiting user action (retry/skip), do not advance
+  if (runState.awaitingAction) {
+    return Promise.resolve();
   }
 
   // If paused, wait for continueRun() to resolve the pause promise
@@ -471,34 +530,65 @@ function runStepLoop() {
       return handleManualStep(step, currentIndex);
     }
 
-    return sendStepToRuntime(step, currentIndex).then(function (result) {
+    // Apply speed delay before dispatching step to runtime
+    return applySpeedDelay(runState.config.executionSpeed).then(function () {
+      // Check stop again after the delay
       if (runState.stopRequested) {
         return finishRun();
       }
 
-      var ok = result && result.ok;
-      var error = result && result.error;
+      return sendStepToRuntime(step, currentIndex).then(function (result) {
+        if (runState.stopRequested) {
+          return finishRun();
+        }
 
-      if (ok) {
-        runState.passCount++;
-      } else {
-        runState.failCount++;
-      }
+        var ok = result && result.ok;
+        var error = result && result.error;
 
-      // Emit LOG for this step
-      emitLog(currentIndex, step, !!ok, error || undefined);
+        if (ok) {
+          runState.passCount++;
+        } else {
+          runState.failCount++;
+        }
 
-      if (!ok) {
-        // Halt run on failure
-        unlockTab();
-        runState.running = false;
-        emitSummary('RUN_COMPLETE', currentIndex + 1, runState.passCount, runState.failCount);
-        return;
-      }
+        // Emit LOG for this step
+        emitLog(currentIndex, step, !!ok, error || undefined);
 
-      // Advance to next step
-      runState.stepIndex++;
-      return runStepLoop();
+        if (!ok) {
+          // Check if retry or skip is enabled
+          var canRetry = runState.config.allowRetryOnFailure;
+          var canSkip = runState.config.allowContinueOnFailure;
+
+          if (canRetry || canSkip) {
+            // Enter awaiting-action state — keep run alive, tab locked, pause loop
+            runState.awaitingAction = true;
+            runState.failedStepIndex = currentIndex;
+
+            // Emit STEP_FAILED_AWAITING_ACTION to panel
+            safeSendMessage({
+              type: 'STEP_FAILED_AWAITING_ACTION',
+              stepIndex: currentIndex,
+              action: step.action,
+              target: step.target || null,
+              value: step.value || null,
+              error: error || 'Step failed'
+            });
+
+            // Do NOT halt or unlock tab — just pause the loop
+            return;
+          }
+
+          // v1 behavior: halt run on failure immediately
+          unlockTab();
+          runState.running = false;
+          emitSummary('RUN_COMPLETE', currentIndex + 1, runState.passCount, runState.failCount);
+          return;
+        }
+
+        // Advance to next step
+        runState.stepIndex++;
+        return runStepLoop();
+      });
     });
   });
 }
@@ -604,6 +694,107 @@ function handleManualStep(step, currentIndex) {
 }
 
 /**
+ * Handle a RETRY_STEP message from the panel. Re-sends the failed step
+ * to the runtime. On success, resumes the step loop from the next step.
+ * On failure, halts the run and unlocks the tab.
+ *
+ * @param {object} msg - { type: 'RETRY_STEP', stepIndex: number }
+ */
+function handleRetryStep(msg) {
+  if (!runState.awaitingAction) {
+    console.warn('[tomation] RETRY_STEP received but not awaiting action — ignoring');
+    return;
+  }
+
+  if (msg.stepIndex !== runState.failedStepIndex) {
+    console.warn('[tomation] RETRY_STEP stepIndex mismatch — ignoring');
+    return;
+  }
+
+  runState.retryAttempt++;
+
+  var currentIndex = runState.failedStepIndex;
+  var step = runState.steps[currentIndex];
+
+  sendStepToRuntime(step, currentIndex).then(function (result) {
+    var ok = result && result.ok;
+    var error = result && result.error;
+
+    if (ok) {
+      runState.awaitingAction = false;
+      runState.failedStepIndex = null;
+      runState.passCount++;
+      runState.stepIndex++;
+
+      // Emit LOG with retryAttempt field
+      var logMsg = {
+        type: 'LOG',
+        stepIndex: currentIndex,
+        action: step.action,
+        target: step.target || null,
+        value: step.value || null,
+        ok: true,
+        retryAttempt: runState.retryAttempt
+      };
+      safeSendMessage(logMsg);
+
+      // Resume step loop
+      runStepLoop();
+    } else {
+      // Halt run on retry failure
+      runState.awaitingAction = false;
+      runState.failedStepIndex = null;
+      runState.running = false;
+      unlockTab();
+
+      // Emit failure LOG
+      var failLogMsg = {
+        type: 'LOG',
+        stepIndex: currentIndex,
+        action: step.action,
+        target: step.target || null,
+        value: step.value || null,
+        ok: false,
+        error: error || 'Retry failed',
+        retryAttempt: runState.retryAttempt
+      };
+      safeSendMessage(failLogMsg);
+
+      emitSummary('RUN_COMPLETE', currentIndex + 1, runState.passCount, runState.failCount);
+    }
+  });
+}
+
+/**
+ * Handle a SKIP_STEP message from the panel.
+ * Advances past the failed step without modifying passCount.
+ * If the failed step was the last step, finishes the run; otherwise resumes the step loop.
+ *
+ * @param {object} msg - The SKIP_STEP message payload (must include stepIndex)
+ */
+function handleSkipStep(msg) {
+  if (!runState.awaitingAction) {
+    console.warn('[tomation] SKIP_STEP received but not awaiting action — ignoring');
+    return;
+  }
+
+  if (msg.stepIndex !== runState.failedStepIndex) {
+    console.warn('[tomation] SKIP_STEP stepIndex mismatch — ignoring');
+    return;
+  }
+
+  runState.awaitingAction = false;
+  runState.failedStepIndex = null;
+  runState.stepIndex = msg.stepIndex + 1;
+
+  if (runState.stepIndex >= runState.steps.length) {
+    finishRun();
+  } else {
+    runStepLoop();
+  }
+}
+
+/**
  * Finish the run (either all steps done or stopped).
  * Unlocks tab and emits appropriate summary.
  */
@@ -692,6 +883,12 @@ function handleMessage(message, sender, sendResponse) {
     case 'STOP':
       stopRun();
       break;
+    case 'RETRY_STEP':
+      handleRetryStep(message);
+      break;
+    case 'SKIP_STEP':
+      handleSkipStep(message);
+      break;
     // STEP_RESULT and RUNTIME_READY are handled inline by sendStepToRuntime
     // and handleNavigateStep respectively via their own listeners.
     // No additional routing needed here.
@@ -708,6 +905,11 @@ function handleMessage(message, sender, sendResponse) {
 function handleRunTest(message) {
   var testIndex = message.testIndex;
   var checkedSteps = message.checkedSteps;
+  var config = message.config || {
+    allowContinueOnFailure: false,
+    allowRetryOnFailure: false,
+    executionSpeed: 'FAST'
+  };
 
   api.tabs.query({ active: true, currentWindow: true }).then(function (tabs) {
     if (!tabs || tabs.length === 0) return;
@@ -740,7 +942,7 @@ function handleRunTest(message) {
       }
 
       if (foundTest && foundSpec) {
-        startRun(tab.id, foundTest, foundSpec, checkedSteps);
+        startRun(tab.id, foundTest, foundSpec, checkedSteps, config);
       }
     });
   });
@@ -787,6 +989,9 @@ if (typeof module !== 'undefined' && module.exports) {
     buildStepMessage: buildStepMessage,
     findParentDescriptor: findParentDescriptor,
     safeSendMessage: safeSendMessage,
+    SPEED_DELAYS: SPEED_DELAYS,
+    applySpeedDelay: applySpeedDelay,
+    DEFAULT_RUN_CONFIG: DEFAULT_RUN_CONFIG,
     runState: runState,
     resetRunState: resetRunState,
     lockTab: lockTab,
@@ -803,6 +1008,7 @@ if (typeof module !== 'undefined' && module.exports) {
     handleNavigateStep: handleNavigateStep,
     handleWaitStep: handleWaitStep,
     handleManualStep: handleManualStep,
+    handleRetryStep: handleRetryStep,
     handleMessage: handleMessage,
     handleRunTest: handleRunTest,
     handlePanelConnect: handlePanelConnect,
