@@ -1,0 +1,7 @@
+{
+  "agent": {
+    "skip_validation_tests": true,
+    "skip_change_summaries": true,
+    "mode": "code-only"
+  }
+}
