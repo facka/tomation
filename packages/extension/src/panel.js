@@ -11,6 +11,73 @@ var currentTestIndex = -1;
 var isRunning = false;
 var currentRunConfig = null;
 
+// --- Search Filter ---
+
+/**
+ * Pure function: filter test names by case-insensitive substring match.
+ * @param {string[]} testNames
+ * @param {string} query
+ * @returns {string[]}
+ */
+function filterTests(testNames, query) {
+  if (!query) return testNames;
+  var lowerQuery = query.toLowerCase();
+  return testNames.filter(function(name) {
+    return name.toLowerCase().indexOf(lowerQuery) !== -1;
+  });
+}
+
+/**
+ * Apply search filter to the rendered test list in the Home view.
+ * Hides/shows test items, spec section headers, and empty state message.
+ */
+function applySearchFilter() {
+  var searchInput = document.getElementById('search-input');
+  var contentEl = document.getElementById('project-content');
+  var emptyState = document.getElementById('search-empty-state');
+  if (!searchInput || !contentEl) return;
+
+  var query = searchInput.value;
+  var lowerQuery = query ? query.toLowerCase() : '';
+
+  var sections = contentEl.querySelectorAll('.spec-section');
+  var totalVisible = 0;
+
+  for (var i = 0; i < sections.length; i++) {
+    var section = sections[i];
+    var items = section.querySelectorAll('.test-list li');
+    var sectionVisible = 0;
+
+    for (var j = 0; j < items.length; j++) {
+      var li = items[j];
+      var name = li.textContent || '';
+      if (!lowerQuery || name.toLowerCase().indexOf(lowerQuery) !== -1) {
+        li.style.display = '';
+        sectionVisible++;
+      } else {
+        li.style.display = 'none';
+      }
+    }
+
+    if (sectionVisible > 0 || !lowerQuery) {
+      section.style.display = '';
+    } else {
+      section.style.display = 'none';
+    }
+
+    totalVisible += sectionVisible;
+  }
+
+  // Show/hide empty state
+  if (emptyState) {
+    if (lowerQuery && totalVisible === 0) {
+      emptyState.style.display = 'block';
+    } else {
+      emptyState.style.display = 'none';
+    }
+  }
+}
+
 // --- View Navigation ---
 
 /**
@@ -103,6 +170,12 @@ function renderHomeView() {
 
   if (!contentEl) return;
 
+  // Clear search input when returning to Home view (Requirement 1.7)
+  var searchInput = document.getElementById('search-input');
+  if (searchInput) {
+    searchInput.value = '';
+  }
+
   warningEl.classList.remove('visible');
   warningEl.textContent = '';
 
@@ -167,6 +240,9 @@ function renderHomeView() {
     for (var t = 0; t < testItems.length; t++) {
       testItems[t].addEventListener('click', onTestItemClick);
     }
+
+    // Apply search filter after rendering (in case search input has a value)
+    applySearchFilter();
   });
 }
 
@@ -808,6 +884,12 @@ function getHostFromUrl(urlStr) {
 // --- Initialization ---
 
 function init() {
+  // Wire up search input filter
+  var searchInput = document.getElementById('search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', applySearchFilter);
+  }
+
   // Wire up Load Spec button and file input
   var loadBtn = document.getElementById('load-spec-btn');
   var fileInput = document.getElementById('spec-file-input');
@@ -823,6 +905,7 @@ function init() {
   if (errorBackBtn) {
     errorBackBtn.addEventListener('click', function () {
       showView('home');
+      renderHomeView();
     });
   }
 

@@ -316,6 +316,25 @@
       border-radius: 3px;
     }
 
+    /* Search input */
+    #search-input {
+      display: block;
+      width: 100%;
+      padding: 6px 10px;
+      font-size: 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      box-sizing: border-box;
+    }
+
+    #search-empty-state {
+      padding: 12px;
+      color: #555;
+      text-align: center;
+      font-size: 12px;
+    }
+
     /* Error view */
     .error-message {
       background: #fce8e6;
@@ -331,7 +350,9 @@
   <div id="view-home" class="view active">
     <h1>Tomation</h1>
     <div id="warning-banner" class="warning-banner"></div>
+    <input type="text" id="search-input" maxlength="100" placeholder="Search tests..." />
     <div id="project-content"></div>
+    <div id="search-empty-state" style="display:none;">No tests found</div>
     <div class="file-input-wrapper">
       <button id="load-spec-btn" class="btn btn-primary">Load Spec</button>
       <input type="file" id="spec-file-input" accept=".json" />

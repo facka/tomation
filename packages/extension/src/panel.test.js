@@ -708,3 +708,270 @@ test('onBackgroundMessage STATE_SYNC does not switch view when not running', fun
   var homeView = env.document.getElementById('view-home');
   assert.ok(homeView.classList.contains('active'), 'Home view should remain active');
 });
+
+
+// ---------------------------------------------------------------------------
+// Tests: Search Filter (Task 1.1)
+// Requirements: 1.1, 1.2, 1.3, 1.4, 1.5
+// ---------------------------------------------------------------------------
+
+function createSearchEnv() {
+  var html = '<!DOCTYPE html><html><body>' +
+    '<div id="view-home" class="view active">' +
+    '  <h1>Tomation</h1>' +
+    '  <div id="warning-banner" class="warning-banner"></div>' +
+    '  <input type="text" id="search-input" maxlength="100" placeholder="Search tests..." />' +
+    '  <div id="project-content"></div>' +
+    '  <div id="search-empty-state" style="display:none;">No tests found</div>' +
+    '  <button id="load-spec-btn"></button>' +
+    '  <input type="file" id="spec-file-input" />' +
+    '</div>' +
+    '<div id="view-test-plan" class="view">' +
+    '  <h2 id="test-plan-title"></h2>' +
+    '  <ul id="step-checklist" class="step-checklist"></ul>' +
+    '  <div><button id="run-btn" class="btn btn-primary">Run</button>' +
+    '  <button id="back-home-btn" class="btn">Back</button></div>' +
+    '</div>' +
+    '<div id="view-run" class="view">' +
+    '  <h2 id="run-title"></h2>' +
+    '  <div class="controller-bar">' +
+    '    <button id="pause-btn" class="btn">Pause</button>' +
+    '    <button id="continue-btn" class="btn" disabled>Continue</button>' +
+    '    <button id="stop-btn" class="btn btn-danger">Stop</button>' +
+    '  </div>' +
+    '  <div id="manual-banner" class="manual-banner">' +
+    '    <p id="manual-description"></p>' +
+    '    <button id="manual-continue-btn" class="btn btn-primary">Continue</button>' +
+    '  </div>' +
+    '  <div id="log-container" class="log-container"></div>' +
+    '  <div id="run-summary" class="log-summary" style="display:none;"></div>' +
+    '  <div id="run-done-actions" style="display:none;">' +
+    '    <button id="back-home-from-run-btn" class="btn">Back to Home</button>' +
+    '  </div>' +
+    '</div>' +
+    '<div id="view-error" class="view"><div id="error-message"></div><button id="error-back-btn"></button></div>' +
+    '</body></html>';
+
+  var dom = new JSDOM(html, {
+    url: 'http://localhost',
+    runScripts: 'dangerously',
+    resources: 'usable'
+  });
+
+  var window = dom.window;
+  var sentMessages = [];
+
+  window.eval('var browser = { ' +
+    'runtime: { ' +
+    '  sendMessage: function(msg) { window.__sentMessages.push(msg); return Promise.resolve(); }, ' +
+    '  onMessage: { addListener: function(fn) { window.__messageListener = fn; } } ' +
+    '}, ' +
+    'tabs: { ' +
+    '  query: function(opts, cb) { cb([]); }, ' +
+    '  onActivated: { addListener: function() {} }, ' +
+    '  onUpdated: { addListener: function() {} } ' +
+    '}, ' +
+    'storage: { local: { get: function() { return Promise.resolve({}); }, set: function() { return Promise.resolve(); } } } ' +
+    '};');
+
+  window.__sentMessages = sentMessages;
+
+  // Load storage.js
+  window.eval(storageJsSource);
+  window.eval('getProject = function() { return Promise.resolve(null); };');
+
+  // Load panel.js
+  window.eval(panelJsSource);
+
+  // Explicitly call init() to wire up event listeners
+  window.init();
+
+  return { dom: dom, window: window, document: window.document, sentMessages: sentMessages };
+}
+
+function renderProjectWithSpecs(env, specs) {
+  var contentEl = env.document.getElementById('project-content');
+  var html = '';
+  for (var i = 0; i < specs.length; i++) {
+    var spec = specs[i];
+    html += '<div class="spec-section">';
+    html += '<div class="spec-header">' + spec.name + '</div>';
+    html += '<ul class="test-list">';
+    for (var j = 0; j < spec.tests.length; j++) {
+      html += '<li data-spec-index="' + i + '" data-test-index="' + j + '">' + spec.tests[j] + '</li>';
+    }
+    html += '</ul>';
+    html += '</div>';
+  }
+  contentEl.innerHTML = html;
+}
+
+test('filterTests returns all names when query is empty (Req 1.5)', function () {
+  var env = createSearchEnv();
+  var names = ['Login test', 'Logout test', 'Signup test'];
+  var result = env.window.filterTests(names, '');
+  assert.deepEqual(result, names);
+});
+
+test('filterTests returns all names when query is null-ish (Req 1.5)', function () {
+  var env = createSearchEnv();
+  var names = ['Login test', 'Logout test'];
+  var result = env.window.filterTests(names, null);
+  assert.deepEqual(result, names);
+});
+
+test('filterTests filters by case-insensitive substring (Req 1.2)', function () {
+  var env = createSearchEnv();
+  var names = ['Login test', 'Logout test', 'Signup test'];
+  var result = env.window.filterTests(names, 'login');
+  assert.deepEqual(result, ['Login test']);
+});
+
+test('filterTests is case-insensitive for query (Req 1.2)', function () {
+  var env = createSearchEnv();
+  var names = ['Login test', 'Logout test'];
+  var result = env.window.filterTests(names, 'LOGIN');
+  assert.deepEqual(result, ['Login test']);
+});
+
+test('filterTests returns empty when no match (Req 1.4)', function () {
+  var env = createSearchEnv();
+  var names = ['Login test', 'Logout test'];
+  var result = env.window.filterTests(names, 'zzzzz');
+  assert.deepEqual(result, []);
+});
+
+test('filterTests handles special characters without regex issues (Req 1.2)', function () {
+  var env = createSearchEnv();
+  var names = ['Test (login)', 'Test [signup]', 'Test.*pattern'];
+  var result = env.window.filterTests(names, '(login)');
+  assert.deepEqual(result, ['Test (login)']);
+});
+
+test('applySearchFilter hides non-matching test items (Req 1.2)', function () {
+  var env = createSearchEnv();
+  renderProjectWithSpecs(env, [
+    { name: 'Spec A', tests: ['Login test', 'Logout test', 'Signup test'] }
+  ]);
+
+  var searchInput = env.document.getElementById('search-input');
+  searchInput.value = 'login';
+  env.window.applySearchFilter();
+
+  var items = env.document.querySelectorAll('.test-list li');
+  assert.equal(items[0].style.display, '', 'Login test should be visible');
+  assert.equal(items[1].style.display, 'none', 'Logout test should be hidden');
+  assert.equal(items[2].style.display, 'none', 'Signup test should be hidden');
+});
+
+test('applySearchFilter hides spec section when no tests match (Req 1.3)', function () {
+  var env = createSearchEnv();
+  renderProjectWithSpecs(env, [
+    { name: 'Spec A', tests: ['Login test'] },
+    { name: 'Spec B', tests: ['Signup test'] }
+  ]);
+
+  var searchInput = env.document.getElementById('search-input');
+  searchInput.value = 'signup';
+  env.window.applySearchFilter();
+
+  var sections = env.document.querySelectorAll('.spec-section');
+  assert.equal(sections[0].style.display, 'none', 'Spec A section should be hidden');
+  assert.equal(sections[1].style.display, '', 'Spec B section should be visible');
+});
+
+test('applySearchFilter shows empty state when no tests match anywhere (Req 1.4)', function () {
+  var env = createSearchEnv();
+  renderProjectWithSpecs(env, [
+    { name: 'Spec A', tests: ['Login test'] },
+    { name: 'Spec B', tests: ['Signup test'] }
+  ]);
+
+  var searchInput = env.document.getElementById('search-input');
+  searchInput.value = 'zzzznonexistent';
+  env.window.applySearchFilter();
+
+  var emptyState = env.document.getElementById('search-empty-state');
+  assert.equal(emptyState.style.display, 'block', 'Empty state should be shown');
+});
+
+test('applySearchFilter restores full list when search is cleared (Req 1.5)', function () {
+  var env = createSearchEnv();
+  renderProjectWithSpecs(env, [
+    { name: 'Spec A', tests: ['Login test', 'Logout test'] },
+    { name: 'Spec B', tests: ['Signup test'] }
+  ]);
+
+  var searchInput = env.document.getElementById('search-input');
+
+  // First, filter
+  searchInput.value = 'login';
+  env.window.applySearchFilter();
+
+  // Then clear
+  searchInput.value = '';
+  env.window.applySearchFilter();
+
+  var sections = env.document.querySelectorAll('.spec-section');
+  assert.equal(sections[0].style.display, '', 'Spec A should be visible');
+  assert.equal(sections[1].style.display, '', 'Spec B should be visible');
+
+  var items = env.document.querySelectorAll('.test-list li');
+  for (var i = 0; i < items.length; i++) {
+    assert.equal(items[i].style.display, '', 'All items should be visible after clearing');
+  }
+
+  var emptyState = env.document.getElementById('search-empty-state');
+  assert.equal(emptyState.style.display, 'none', 'Empty state should be hidden');
+});
+
+test('search input fires applySearchFilter on input event (Req 1.1, 1.2)', function () {
+  var env = createSearchEnv();
+  renderProjectWithSpecs(env, [
+    { name: 'Spec A', tests: ['Login test', 'Logout test'] }
+  ]);
+
+  var searchInput = env.document.getElementById('search-input');
+  searchInput.value = 'logout';
+
+  // Fire input event
+  var event = env.document.createEvent('Event');
+  event.initEvent('input', true, true);
+  searchInput.dispatchEvent(event);
+
+  var items = env.document.querySelectorAll('.test-list li');
+  assert.equal(items[0].style.display, 'none', 'Login test should be hidden');
+  assert.equal(items[1].style.display, '', 'Logout test should be visible');
+});
+
+test('search input has maxlength of 100 (Req 1.1)', function () {
+  var env = createSearchEnv();
+  var searchInput = env.document.getElementById('search-input');
+  assert.equal(searchInput.getAttribute('maxlength'), '100');
+});
+
+test('applySearchFilter matches tests across multiple specs (Req 1.6 cross-spec)', function () {
+  var env = createSearchEnv();
+  renderProjectWithSpecs(env, [
+    { name: 'Auth Spec', tests: ['Login test', 'Logout test'] },
+    { name: 'User Spec', tests: ['Login flow e2e', 'Profile update'] }
+  ]);
+
+  var searchInput = env.document.getElementById('search-input');
+  searchInput.value = 'login';
+  env.window.applySearchFilter();
+
+  var sections = env.document.querySelectorAll('.spec-section');
+  // Both specs have a 'login' match
+  assert.equal(sections[0].style.display, '', 'Auth Spec should be visible');
+  assert.equal(sections[1].style.display, '', 'User Spec should be visible');
+
+  // Verify correct items are shown
+  var authItems = sections[0].querySelectorAll('.test-list li');
+  assert.equal(authItems[0].style.display, '', 'Login test visible');
+  assert.equal(authItems[1].style.display, 'none', 'Logout test hidden');
+
+  var userItems = sections[1].querySelectorAll('.test-list li');
+  assert.equal(userItems[0].style.display, '', 'Login flow e2e visible');
+  assert.equal(userItems[1].style.display, 'none', 'Profile update hidden');
+});
