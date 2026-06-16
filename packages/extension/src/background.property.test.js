@@ -384,7 +384,7 @@ test('Property 5 (tab lock): Tab is unlocked after a passing run', function () {
         });
       }
     ),
-    { numRuns: 50 }
+    { numRuns: 100 }
   );
 });
 
@@ -441,7 +441,7 @@ test('Property 5 (tab lock): Tab is unlocked after a failing run', function () {
         });
       }
     ),
-    { numRuns: 50 }
+    { numRuns: 100 }
   );
 });
 
@@ -495,7 +495,7 @@ test('Property 5 (tab lock): Tab is unlocked after a stopped run', function () {
         });
       }
     ),
-    { numRuns: 50 }
+    { numRuns: 100 }
   );
 });
 
@@ -551,6 +551,6 @@ test('Property 8 (LOG count): Exactly N LOG messages emitted for N passing steps
         });
       }
     ),
-    { numRuns: 50 }
+    { numRuns: 100 }
   );
 });

@@ -9,6 +9,7 @@ var currentSpec = null;
 var currentTest = null;
 var currentTestIndex = -1;
 var isRunning = false;
+var currentRunConfig = null;
 
 // --- View Navigation ---
 
@@ -275,6 +276,58 @@ function renderTestPlan() {
       checklist.appendChild(li);
     }
   }
+
+  // Load configuration for this test plan
+  loadTestPlanConfiguration();
+}
+
+/**
+ * Get the storage key for the current test plan configuration.
+ * @returns {string}
+ */
+function getConfigKey() {
+  return 'config:' + currentSpec.id + ':' + currentTestIndex;
+}
+
+/**
+ * Load test plan configuration from storage and apply to UI controls.
+ * If no saved config exists, controls remain in their default states.
+ */
+function loadTestPlanConfiguration() {
+  var key = getConfigKey();
+  getTestPlanConfig(key).then(function (config) {
+    var continueEl = document.getElementById('config-continue-on-failure');
+    var retryEl = document.getElementById('config-retry-on-failure');
+    var speedEl = document.getElementById('config-execution-speed');
+
+    if (continueEl) {
+      continueEl.checked = config.allowContinueOnFailure;
+    }
+    if (retryEl) {
+      retryEl.checked = config.allowRetryOnFailure;
+    }
+    if (speedEl) {
+      speedEl.value = config.executionSpeed;
+    }
+  });
+}
+
+/**
+ * Read the current configuration state from the UI controls and persist it.
+ */
+function onConfigChange() {
+  var continueEl = document.getElementById('config-continue-on-failure');
+  var retryEl = document.getElementById('config-retry-on-failure');
+  var speedEl = document.getElementById('config-execution-speed');
+
+  var config = {
+    allowContinueOnFailure: continueEl ? continueEl.checked : false,
+    allowRetryOnFailure: retryEl ? retryEl.checked : false,
+    executionSpeed: speedEl ? speedEl.value : 'NORMAL'
+  };
+
+  var key = getConfigKey();
+  saveTestPlanConfig(key, config);
 }
 
 /**
@@ -317,10 +370,23 @@ function onRunClick() {
     }
   }
 
+  var continueEl = document.getElementById('config-continue-on-failure');
+  var retryEl = document.getElementById('config-retry-on-failure');
+  var speedEl = document.getElementById('config-execution-speed');
+
+  var config = {
+    allowContinueOnFailure: continueEl ? continueEl.checked : false,
+    allowRetryOnFailure: retryEl ? retryEl.checked : false,
+    executionSpeed: speedEl ? speedEl.value : 'NORMAL'
+  };
+
+  currentRunConfig = config;
+
   api.runtime.sendMessage({
     type: 'RUN_TEST',
     testIndex: currentTestIndex,
-    checkedSteps: checkedSteps
+    checkedSteps: checkedSteps,
+    config: config
   });
 
   switchToRunView();
@@ -419,12 +485,18 @@ function appendLogEntry(logData) {
     parts.push(escapeHtml(logData.value));
   }
 
-  // Add pass/fail indicator
+  // Add pass/fail indicator with optional retry attempt count
   var indicator = '';
   if (logData.ok === true) {
     indicator = ' ✓';
+    if (logData.retryAttempt) {
+      indicator += ' Attempt ' + logData.retryAttempt;
+    }
   } else if (logData.ok === false) {
     indicator = ' ✗';
+    if (logData.retryAttempt) {
+      indicator += ' Attempt ' + logData.retryAttempt;
+    }
     if (logData.error) {
       indicator += ' ' + escapeHtml(logData.error);
     }
@@ -489,6 +561,85 @@ function showRunSummary(data) {
 }
 
 /**
+ * Handle STEP_FAILED_AWAITING_ACTION message from the background.
+ * Renders "Try Again" and/or "Skip" buttons adjacent to the failed log entry
+ * based on the current run configuration.
+ * @param {object} message - { stepIndex, action, target, value, error }
+ */
+function handleStepFailedAwaitingAction(message) {
+  var logContainer = document.getElementById('log-container');
+  if (!logContainer) return;
+
+  var config = currentRunConfig || {};
+  var showRetry = !!config.allowRetryOnFailure;
+  var showSkip = !!config.allowContinueOnFailure;
+
+  // If neither button should be shown, nothing to do
+  if (!showRetry && !showSkip) return;
+
+  // Create button container adjacent to the last (failed) log entry
+  var buttonContainer = document.createElement('div');
+  buttonContainer.className = 'log-entry action-buttons';
+
+  var retryBtn = null;
+  var skipBtn = null;
+
+  if (showRetry) {
+    retryBtn = document.createElement('button');
+    retryBtn.className = 'btn btn-primary';
+    retryBtn.textContent = 'Try Again';
+    retryBtn.setAttribute('data-step-index', String(message.stepIndex));
+    buttonContainer.appendChild(retryBtn);
+  }
+
+  if (showSkip) {
+    skipBtn = document.createElement('button');
+    skipBtn.className = 'btn';
+    skipBtn.textContent = 'Skip';
+    skipBtn.setAttribute('data-step-index', String(message.stepIndex));
+    buttonContainer.appendChild(skipBtn);
+  }
+
+  logContainer.appendChild(buttonContainer);
+
+  // Wire click handlers
+  if (retryBtn) {
+    retryBtn.addEventListener('click', function () {
+      api.runtime.sendMessage({
+        type: 'RETRY_STEP',
+        stepIndex: message.stepIndex
+      });
+      if (retryBtn) retryBtn.disabled = true;
+      if (skipBtn) skipBtn.disabled = true;
+    });
+  }
+
+  if (skipBtn) {
+    skipBtn.addEventListener('click', function () {
+      api.runtime.sendMessage({
+        type: 'SKIP_STEP',
+        stepIndex: message.stepIndex
+      });
+      if (retryBtn) retryBtn.disabled = true;
+      if (skipBtn) skipBtn.disabled = true;
+
+      // Update the last failed log entry to show "skipped" badge with muted styling
+      var logEntries = logContainer.querySelectorAll('.log-entry.fail');
+      if (logEntries.length > 0) {
+        var lastFailed = logEntries[logEntries.length - 1];
+        lastFailed.classList.remove('fail');
+        lastFailed.classList.add('skipped');
+        // Replace the ✗ indicator with ⊘ skipped badge
+        lastFailed.innerHTML = lastFailed.innerHTML.replace(/ ✗.*$/, ' ⊘ skipped');
+      }
+    });
+  }
+
+  // Auto-scroll to bottom
+  logContainer.scrollTop = logContainer.scrollHeight;
+}
+
+/**
  * Handle incoming messages from the background script.
  * @param {object} message
  */
@@ -498,6 +649,10 @@ function onBackgroundMessage(message) {
   switch (message.type) {
     case 'LOG':
       appendLogEntry(message);
+      break;
+
+    case 'STEP_FAILED_AWAITING_ACTION':
+      handleStepFailedAwaitingAction(message);
       break;
 
     case 'MANUAL_PAUSE':
@@ -684,6 +839,20 @@ function init() {
   var runBtn = document.getElementById('run-btn');
   if (runBtn) {
     runBtn.addEventListener('click', onRunClick);
+  }
+
+  // Wire up configuration controls change listeners
+  var configContinue = document.getElementById('config-continue-on-failure');
+  var configRetry = document.getElementById('config-retry-on-failure');
+  var configSpeed = document.getElementById('config-execution-speed');
+  if (configContinue) {
+    configContinue.addEventListener('change', onConfigChange);
+  }
+  if (configRetry) {
+    configRetry.addEventListener('change', onConfigChange);
+  }
+  if (configSpeed) {
+    configSpeed.addEventListener('change', onConfigChange);
   }
 
   // Wire up back button from run view

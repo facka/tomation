@@ -99,8 +99,8 @@ The implementation progresses incrementally: storage/config layer → background
 
 ---
 
-- [ ] 5. Implement panel configuration section
-  - [ ] 5.1 Add configuration UI to Test Plan view in `packages/extension/src/panel.js`
+- [x] 5. Implement panel configuration section
+  - [x] 5.1 Add configuration UI to Test Plan view in `packages/extension/src/panel.js`
     - Render a "Configuration" section between the step checklist and the Run button
     - Include "Allow continue on failure" toggle (checkbox), default disabled
     - Include "Allow retry on failure" toggle (checkbox), default disabled
@@ -109,7 +109,7 @@ The implementation progresses incrementally: storage/config layer → background
     - On any control change: call `saveTestPlanConfig(key, config)` with full config object
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.12, 3.13_
 
-  - [ ] 5.2 Extend `RUN_TEST` message to include config in `packages/extension/src/panel.js`
+  - [x] 5.2 Extend `RUN_TEST` message to include config in `packages/extension/src/panel.js`
     - When Run button is clicked, include `config: { allowContinueOnFailure, allowRetryOnFailure, executionSpeed }` in the `RUN_TEST` message payload, reading current values from the UI controls
     - _Requirements: 3.7_
 
@@ -120,15 +120,15 @@ The implementation progresses incrementally: storage/config layer → background
 
 ---
 
-- [ ] 6. Implement retry/skip buttons in Run view
-  - [ ] 6.1 Handle `STEP_FAILED_AWAITING_ACTION` message in Run view in `packages/extension/src/panel.js`
+- [x] 6. Implement retry/skip buttons in Run view
+  - [x] 6.1 Handle `STEP_FAILED_AWAITING_ACTION` message in Run view in `packages/extension/src/panel.js`
     - When panel receives `STEP_FAILED_AWAITING_ACTION`: render "Try Again" button if `config.allowRetryOnFailure` is true; render "Skip" button if `config.allowContinueOnFailure` is true
     - Buttons appear adjacent to the failed log entry, "Try Again" before "Skip" when both shown
     - On "Try Again" click: send `RETRY_STEP` message with `stepIndex`, disable both buttons
     - On "Skip" click: send `SKIP_STEP` message with `stepIndex`, disable both buttons
     - _Requirements: 1.1, 1.2, 1.8, 1.9, 2.1, 2.2, 2.6, 2.7, 2.8_
 
-  - [ ] 6.2 Handle retry attempt display and skip badge in Run view in `packages/extension/src/panel.js`
+  - [x] 6.2 Handle retry attempt display and skip badge in Run view in `packages/extension/src/panel.js`
     - When LOG message has `retryAttempt` field: update the log entry to show "Attempt N" alongside status
     - When a step is skipped: replace fail indicator with "skipped" badge and apply muted styling (grey text)
     - _Requirements: 1.6, 2.5_
@@ -155,7 +155,7 @@ The implementation progresses incrementally: storage/config layer → background
     - Panel sends RUN_TEST with SLOW config → verify Background inserts 1500ms delay before each step dispatch
     - _Requirements: 3.8, 3.9, 3.10_
 
-- [ ] 8. Final checkpoint — all failure recovery tests pass
+- [x] 8. Final checkpoint — all failure recovery tests pass
   - Run full test suite: `node --test` in `packages/extension/`
   - Verify all property tests pass with minimum 100 iterations
   - Ensure all tests pass, ask the user if questions arise.

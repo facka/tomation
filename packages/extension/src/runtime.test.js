@@ -189,7 +189,7 @@ test('findElement: rejects after timeout if element not found', async function (
   await assert.rejects(
     findElement(descriptor),
     function (err) {
-      return err.message === 'Element not found';
+      return err.message === 'Element not found: button with conditions {"id":"nonexistent"}';
     }
   );
 
