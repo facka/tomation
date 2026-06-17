@@ -10,7 +10,8 @@
     "test": "node --test"
   },
   "dependencies": {
-    "acorn": "^8.11.3"
+    "acorn": "^8.11.3",
+    "typescript": "^5.4.0"
   },
   "devDependencies": {
     "fast-check": "^3.23.2"

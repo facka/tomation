@@ -33,8 +33,8 @@ This plan implements the DSL v2 compiler pipeline across three packages: `@tomat
     - Test action stubs (Click, Type, etc.) are callable
     - _Requirements: 2.1, 2.2, 3.1, 3.2, 4.1_
 
-- [ ] 2. Compiler — TypeScript Stripper
-  - [ ] 2.1 Create `packages/compiler/src/ts-stripper.js` implementing `stripTypes(source, filePath)`
+- [x] 2. Compiler — TypeScript Stripper
+  - [x] 2.1 Create `packages/compiler/src/ts-stripper.js` implementing `stripTypes(source, filePath)`
     - Add `typescript` as a production dependency in `packages/compiler/package.json`
     - Implement `stripTypes()` using `ts.transpileModule` with `isolatedModules: true`
     - Configure `target: ESNext`, `module: ESNext`, preserve JSX for `.tsx` files
