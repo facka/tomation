@@ -78,14 +78,14 @@ This plan implements the DSL v2 compiler pipeline across three packages: `@tomat
     - _Requirements: 8.1, 8.2, 8.3, 8.4_
 
 - [ ] 4. Compiler — Parser v2 (Element Patterns)
-  - [ ] 4.1 Extend `packages/compiler/src/parser.js` to detect `is.TAG.where(matcher).as('Label')` element patterns
+  - [x] 4.1 Extend `packages/compiler/src/parser.js` to detect `is.TAG.where(matcher).as('Label')` element patterns
     - Implement `extractV2Element()` to walk the method chain: `.as()` → `.where()` → `.childOf()` → `is.TAG`
     - Extract tag (lowercase), label (from `.as()`), where matcher (from factory call), childOf (from `.childOf()`)
     - Emit error for multiple `.where()` calls on same chain
     - Emit error for missing `.as()` argument or non-string label
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 4.1_
 
-  - [ ] 4.2 Extend parser to detect XPath element patterns: `Element(xpath).as('Label')` and `is.ELEMENT(xpath).as('Label')`
+  - [x] 4.2 Extend parser to detect XPath element patterns: `Element(xpath).as('Label')` and `is.ELEMENT(xpath).as('Label')`
     - Implement `extractXPathElement()` detecting both constructor forms
     - Set tag to `'*'`, where to `{}`, populate `xpath` field
     - Emit error for missing/non-string xpath argument

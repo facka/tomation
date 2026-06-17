@@ -4,22 +4,28 @@
  * parser.js — AST parsing of Page() / Task() calls from DSL source files.
  *
  * Uses acorn to parse each file and walks the resulting AST to find:
- *   - Page(name, { elements, tasks }) constructor calls → POM files
- *   - module.exports = { name, steps } patterns → test files
+ *   - Page(name, { elements, tasks }) constructor calls → POM files (v1)
+ *   - module.exports = { name, steps } patterns → test files (v1)
+ *   - const X = is.TAG.where(matcher).as('Label') → element declarations (v2)
+ *   - const X = Element(xpath).as('Label') → XPath element declarations (v2)
+ *   - Task('name', fn) / Test('name', fn) → task/test declarations (v2)
  *
  * Exported API:
  *   parseFile(filePath) → ParsedFile
+ *   parseSource(source, filePath) → ParsedFile
  *
  * ParsedFile shape:
  * {
  *   filePath: string,
  *   type: 'pom' | 'test',
- *   pages: PageDef[],        // for POM files
- *   tests: TestDef[],        // for test files
+ *   pages: PageDef[],        // for POM files (v1)
+ *   tests: TestDef[],        // for test files (v1)
+ *   elements: ElementDef[],  // for v2 element declarations
  *   error: null | { message: string, line: number }
+ *   warnings: Array<{ message: string, filePath: string, line: number }>
  * }
  *
- * Requirements: 12.5, 13.1
+ * Requirements: 12.5, 13.1, 2.1, 2.2, 2.3, 2.4, 4.1
  */
 
 const fs = require('fs');
@@ -361,6 +367,301 @@ function extractTaskValue(valueNode, line) {
 }
 
 // ---------------------------------------------------------------------------
+// V2 Element pattern extraction
+// ---------------------------------------------------------------------------
+
+/**
+ * Check if a node is a method call on an object with a specific method name.
+ * e.g., isMethodCall(node, 'as') matches X.as(...)
+ * @param {object} node - AST node
+ * @param {string} methodName - expected method name
+ * @returns {boolean}
+ */
+function isMethodCall(node, methodName) {
+  return (
+    node &&
+    node.type === 'CallExpression' &&
+    node.callee &&
+    node.callee.type === 'MemberExpression' &&
+    node.callee.property &&
+    node.callee.property.type === 'Identifier' &&
+    node.callee.property.name === methodName
+  );
+}
+
+/**
+ * Extract a WhereMatcher descriptor from a matcher factory call expression.
+ * e.g., innerTextIs('Login') → { textIs: 'Login' }
+ *
+ * @param {object} callNode - CallExpression for the matcher factory
+ * @returns {object} where descriptor or empty object
+ */
+function extractMatcherCall(callNode) {
+  if (!callNode || callNode.type !== 'CallExpression') return {};
+  const callee = callNode.callee;
+  const calleeName = callee.type === 'Identifier' ? callee.name : null;
+  if (!calleeName) return {};
+
+  const arg = extractString(callNode.arguments[0]);
+  if (arg === null) return {};
+
+  const matcherMap = {
+    innerTextIs: 'textIs',
+    innerTextContains: 'textContains',
+    classIncludes: 'classIncludes',
+    placeholderIs: 'placeholder',
+    nameIs: 'name',
+    typeIs: 'type',
+    idIs: 'id',
+  };
+
+  const key = matcherMap[calleeName];
+  if (!key) return {};
+  return { [key]: arg };
+}
+
+/**
+ * Extract a v2 ElementDef from a VariableDeclarator node matching the pattern:
+ *   const X = is.TAG.where(matcher).as('Label')
+ *   const X = is.TAG.childOf(parent).where(matcher).as('Label')
+ *   const X = is.TAG.as('Label')
+ *
+ * Walks the method chain from top to bottom: .as() → .where() → .childOf() → is.TAG
+ *
+ * @param {object} node - VariableDeclarator AST node
+ * @param {string} filePath - current file path for error reporting
+ * @returns {{ element: object|null, error: object|null }}
+ */
+function extractV2Element(node, filePath) {
+  if (node.type !== 'VariableDeclarator') return { element: null, error: null };
+  if (!node.init || node.init.type !== 'CallExpression') return { element: null, error: null };
+
+  let current = node.init;
+  let label = null;
+  let matchers = {};
+  let childOf = null;
+  let tag = null;
+  let whereCount = 0;
+
+  // Step 1: Check for .as('Label') at the top
+  if (!isMethodCall(current, 'as')) return { element: null, error: null };
+
+  // Before validating the .as() argument, peek to see if this is an XPath pattern.
+  // If the base is Element(...) or is.ELEMENT(...), defer to extractXPathElement.
+  const peekBase = current.callee.object;
+  if (peekBase && peekBase.type === 'CallExpression') {
+    const peekCallee = peekBase.callee;
+    const isXPathPattern = (peekCallee && peekCallee.type === 'Identifier' && peekCallee.name === 'Element') ||
+      (peekCallee && peekCallee.type === 'MemberExpression' &&
+        peekCallee.object && peekCallee.object.type === 'Identifier' && peekCallee.object.name === 'is' &&
+        peekCallee.property && peekCallee.property.type === 'Identifier' && peekCallee.property.name === 'ELEMENT');
+    if (isXPathPattern) return { element: null, error: null };
+  }
+
+  const asArg = current.arguments[0];
+  label = extractString(asArg);
+  if (label === null) {
+    // .as() called without a string argument
+    return {
+      element: null,
+      error: {
+        message: `Element at ${filePath}:${lineOf(current)} missing label in .as()`,
+        filePath,
+        line: lineOf(current),
+      },
+    };
+  }
+
+  current = current.callee.object;
+
+  // Step 2: Walk .where() and .childOf() calls (may appear in any order, multiple times)
+  while (current && current.type === 'CallExpression' && current.callee && current.callee.type === 'MemberExpression') {
+    const methodName = current.callee.property && current.callee.property.type === 'Identifier'
+      ? current.callee.property.name
+      : null;
+
+    if (methodName === 'where') {
+      whereCount++;
+      if (whereCount > 1) {
+        return {
+          element: null,
+          error: {
+            message: `Multiple .where() calls at ${filePath}:${lineOf(current)} — use a single .where() with all conditions`,
+            filePath,
+            line: lineOf(current),
+          },
+        };
+      }
+      const arg = current.arguments[0];
+      if (arg && arg.type === 'CallExpression') {
+        matchers = extractMatcherCall(arg);
+      }
+      current = current.callee.object;
+    } else if (methodName === 'childOf') {
+      const parentArg = current.arguments[0];
+      if (parentArg && parentArg.type === 'Identifier') {
+        childOf = parentArg.name;
+      }
+      current = current.callee.object;
+    } else {
+      // Unknown method in the chain — not a recognized element builder pattern
+      break;
+    }
+  }
+
+  // Step 3: Check for is.TAG at the base
+  if (
+    current &&
+    current.type === 'MemberExpression' &&
+    current.object &&
+    current.object.type === 'Identifier' &&
+    current.object.name === 'is' &&
+    current.property &&
+    current.property.type === 'Identifier'
+  ) {
+    const propName = current.property.name;
+    // Must be uppercase (HTML tag name convention in DSL)
+    if (propName[0] === propName[0].toUpperCase() && propName[0] !== propName[0].toLowerCase()) {
+      // ELEMENT is reserved for the XPath form — handled separately
+      if (propName === 'ELEMENT') return { element: null, error: null };
+      tag = propName.toLowerCase();
+    }
+  }
+
+  if (!tag) return { element: null, error: null };
+
+  const variableName = node.id && node.id.type === 'Identifier' ? node.id.name : null;
+  if (!variableName) return { element: null, error: null };
+
+  const element = {
+    variableName,
+    tag,
+    label,
+    where: matchers,
+    line: lineOf(node),
+  };
+
+  if (childOf) {
+    element.childOf = childOf;
+  }
+
+  return { element, error: null };
+}
+
+/**
+ * Extract a v2 XPath ElementDef from a VariableDeclarator node matching either:
+ *   const X = Element(xpath).as('Label')
+ *   const X = is.ELEMENT(xpath).as('Label')
+ *
+ * Sets tag to '*', where to {}, and populates the xpath field.
+ *
+ * @param {object} node - VariableDeclarator AST node
+ * @param {string} filePath - current file path for error reporting
+ * @returns {{ element: object|null, error: object|null }}
+ */
+function extractXPathElement(node, filePath) {
+  if (node.type !== 'VariableDeclarator') return { element: null, error: null };
+  if (!node.init || node.init.type !== 'CallExpression') return { element: null, error: null };
+
+  let current = node.init;
+  let label = null;
+  let xpath = null;
+
+  // Step 1: Check for .as('Label') at the top
+  if (!isMethodCall(current, 'as')) return { element: null, error: null };
+
+  // Peek at the base to see if this is an XPath pattern before committing
+  const baseCandidate = current.callee.object;
+  if (!baseCandidate || baseCandidate.type !== 'CallExpression') return { element: null, error: null };
+
+  const baseCallee = baseCandidate.callee;
+  const isElementCall = baseCallee && baseCallee.type === 'Identifier' && baseCallee.name === 'Element';
+  const isIsElementCall = baseCallee && baseCallee.type === 'MemberExpression' &&
+    baseCallee.object && baseCallee.object.type === 'Identifier' && baseCallee.object.name === 'is' &&
+    baseCallee.property && baseCallee.property.type === 'Identifier' && baseCallee.property.name === 'ELEMENT';
+
+  if (!isElementCall && !isIsElementCall) return { element: null, error: null };
+
+  // This IS an XPath pattern — now validate fully
+
+  // Extract .as() label
+  const asArg = current.arguments[0];
+  label = extractString(asArg);
+  if (label === null) {
+    return {
+      element: null,
+      error: {
+        message: `XPath element at ${filePath}:${lineOf(current)} missing label — call .as('Label') to name it`,
+        filePath,
+        line: lineOf(current),
+      },
+    };
+  }
+
+  // Extract xpath argument from base call
+  const xpathArg = baseCandidate.arguments[0];
+  xpath = extractString(xpathArg);
+  if (xpath === null) {
+    return {
+      element: null,
+      error: {
+        message: `XPath element at ${filePath}:${lineOf(baseCandidate)} requires a string argument`,
+        filePath,
+        line: lineOf(baseCandidate),
+      },
+    };
+  }
+
+  const variableName = node.id && node.id.type === 'Identifier' ? node.id.name : null;
+  if (!variableName) return { element: null, error: null };
+
+  return {
+    element: {
+      variableName,
+      tag: '*',
+      label,
+      where: {},
+      xpath,
+      line: lineOf(node),
+    },
+    error: null,
+  };
+}
+
+/**
+ * Check for XPath element patterns used WITHOUT .as('Label') — emit helpful error.
+ * Detects: Element(xpath) or is.ELEMENT(xpath) used as a bare expression or assignment
+ * without the .as() chain.
+ *
+ * @param {object} node - VariableDeclarator AST node
+ * @param {string} filePath - current file path for error reporting
+ * @returns {{ error: object|null }}
+ */
+function checkBareXPathElement(node, filePath) {
+  if (node.type !== 'VariableDeclarator') return { error: null };
+  if (!node.init || node.init.type !== 'CallExpression') return { error: null };
+
+  const current = node.init;
+  const callee = current.callee;
+
+  const isElementCall = callee && callee.type === 'Identifier' && callee.name === 'Element';
+  const isIsElementCall = callee && callee.type === 'MemberExpression' &&
+    callee.object && callee.object.type === 'Identifier' && callee.object.name === 'is' &&
+    callee.property && callee.property.type === 'Identifier' && callee.property.name === 'ELEMENT';
+
+  if (!isElementCall && !isIsElementCall) return { error: null };
+
+  // This is Element(xpath) or is.ELEMENT(xpath) without .as()
+  return {
+    error: {
+      message: `XPath element at ${filePath}:${lineOf(current)} missing label — call .as('Label') to name it`,
+      filePath,
+      line: lineOf(current),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Page() call extraction
 // ---------------------------------------------------------------------------
 
@@ -535,8 +836,9 @@ function extractSingleTest(objNode, defaultLine) {
  * @returns {'pom'|'test'}
  */
 function detectFileType(filePath) {
-  if (filePath.endsWith('.pom.js')) return 'pom';
-  if (filePath.endsWith('.test.js')) return 'test';
+  if (filePath.endsWith('.pom.js') || filePath.endsWith('.pom.ts')) return 'pom';
+  if (filePath.endsWith('.test.js') || filePath.endsWith('.test.ts')) return 'test';
+  if (filePath.endsWith('.page.js') || filePath.endsWith('.page.ts')) return 'pom';
   // Fallback: treat as unknown but default to 'test'
   return 'test';
 }
@@ -557,29 +859,52 @@ function detectFileType(filePath) {
  *   type: 'pom' | 'test',
  *   pages: PageDef[],
  *   tests: TestDef[],
+ *   elements: ElementDef[],
  *   error: null | { message: string, line: number }
+ *   warnings: Array<{ message: string, filePath: string, line: number }>
  * }
  */
 function parseFile(filePath) {
-  const result = {
-    filePath,
-    type: detectFileType(filePath),
-    pages: [],
-    tests: [],
-    error: null,
-  };
-
   // Read the source file
   let source;
   try {
     source = fs.readFileSync(filePath, 'utf8');
   } catch (e) {
-    result.error = {
-      message: 'Parse error in ' + filePath + ':0: ' + e.message,
-      line: 0,
+    return {
+      filePath,
+      type: detectFileType(filePath),
+      pages: [],
+      tests: [],
+      elements: [],
+      error: {
+        message: 'Parse error in ' + filePath + ':0: ' + e.message,
+        line: 0,
+      },
+      warnings: [],
     };
-    return result;
   }
+
+  return parseSource(source, filePath);
+}
+
+/**
+ * Parse DSL source code (already read/type-stripped) and return a structured AST representation.
+ * This is the v2 entry point for the pipeline where TypeScript stripping has already occurred.
+ *
+ * @param {string} source - JavaScript source code (types already stripped)
+ * @param {string} filePath - file path (for error reporting and file type detection)
+ * @returns {ParsedFile}
+ */
+function parseSource(source, filePath) {
+  const result = {
+    filePath,
+    type: detectFileType(filePath),
+    pages: [],
+    tests: [],
+    elements: [],
+    error: null,
+    warnings: [],
+  };
 
   // Parse with acorn
   let ast;
@@ -599,9 +924,7 @@ function parseFile(filePath) {
     return result;
   }
 
-  // Walk the AST and collect Page() calls (for POM files)
-  // We collect them regardless of file type so that files that don't strictly
-  // follow naming conventions still work.
+  // Walk the AST and collect Page() calls (for POM files, v1)
   walk(ast, node => {
     if (node.type !== 'CallExpression') return;
     const calleeName = node.callee && node.callee.type === 'Identifier' ? node.callee.name : null;
@@ -617,8 +940,45 @@ function parseFile(filePath) {
     }
   });
 
-  // Extract test definitions from module.exports assignments
-  if (result.pages.length === 0) {
+  // Walk the AST for v2 element declarations: const X = is.TAG.where(...).as('Label')
+  // and XPath element declarations: const X = Element(xpath).as('Label') / is.ELEMENT(xpath).as('Label')
+  walk(ast, node => {
+    if (node.type !== 'VariableDeclaration') return;
+    for (const declarator of node.declarations) {
+      // Try v2 tag-based element pattern first
+      const { element, error } = extractV2Element(declarator, filePath);
+      if (error) {
+        result.warnings.push(error);
+      }
+      if (element) {
+        result.elements.push(element);
+        result.type = 'pom';
+        continue;
+      }
+
+      // Try XPath element pattern: Element(xpath).as('Label') / is.ELEMENT(xpath).as('Label')
+      const { element: xpathElement, error: xpathError } = extractXPathElement(declarator, filePath);
+      if (xpathError) {
+        result.warnings.push(xpathError);
+      }
+      if (xpathElement) {
+        result.elements.push(xpathElement);
+        result.type = 'pom';
+        continue;
+      }
+
+      // Check for bare XPath usage without .as() (only if neither pattern matched)
+      if (!error && !xpathError) {
+        const { error: bareError } = checkBareXPathElement(declarator, filePath);
+        if (bareError) {
+          result.warnings.push(bareError);
+        }
+      }
+    }
+  });
+
+  // Extract test definitions from module.exports assignments (v1)
+  if (result.pages.length === 0 && result.elements.length === 0) {
     result.tests = extractTestDefinitions(ast);
     result.type = 'test';
   }
@@ -630,4 +990,4 @@ function parseFile(filePath) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { parseFile };
+module.exports = { parseFile, parseSource, extractV2Element, extractXPathElement };
