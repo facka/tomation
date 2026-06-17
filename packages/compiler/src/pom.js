@@ -1,5 +1,7 @@
 'use strict';
 
+const path = require('path');
+
 /**
  * pom.js — POM extraction and PageName__key namespacing.
  *
@@ -8,6 +10,7 @@
  *
  * Exported API:
  *   extractPom(parsedFile) → PomResult
+ *   deriveNamespace(filePath) → string
  *
  * PomResult shape:
  * {
@@ -31,7 +34,7 @@
  *   errors: Array<{ message: string, filePath: string, line: number }>
  * }
  *
- * Requirements: 13.2, 13.3
+ * Requirements: 8.1, 8.2, 8.3, 13.2, 13.3
  */
 
 // ---------------------------------------------------------------------------
@@ -132,7 +135,55 @@ function extractPom(parsedFile) {
 }
 
 // ---------------------------------------------------------------------------
+// deriveNamespace — file-path-based PascalCase namespace derivation
+// Requirements: 8.1, 8.2, 8.3
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert a kebab-case string to PascalCase.
+ * Each hyphen-separated segment gets its first letter capitalized.
+ * @param {string} str
+ * @returns {string}
+ */
+function kebabToPascal(str) {
+  return str
+    .split('-')
+    .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join('');
+}
+
+/**
+ * Derive a PascalCase namespace from a file path.
+ *
+ * 1. Extracts the basename from the path.
+ * 2. Strips known suffixes: .pom.ts, .pom.js, .page.ts, .page.js,
+ *    then falls back to stripping .ts, .tsx, .js.
+ * 3. Throws if the stripped name contains underscores (with kebab-case suggestion).
+ * 4. Converts kebab-case to PascalCase.
+ *
+ * @param {string} filePath - Absolute or relative path to the source file.
+ * @returns {string} PascalCase namespace.
+ * @throws {Error} If the file name contains underscores.
+ */
+function deriveNamespace(filePath) {
+  const basename = path.basename(filePath);
+
+  // Strip known compound suffixes first, then simple extensions.
+  const stripped = basename
+    .replace(/\.(pom|page)\.(ts|tsx|js)$/, '')
+    .replace(/\.(ts|tsx|js)$/, '');
+
+  if (stripped.includes('_')) {
+    throw new Error(
+      `File name '${basename}' contains underscores. Use kebab-case (e.g., ${stripped.replace(/_/g, '-')}.ts)`
+    );
+  }
+
+  return kebabToPascal(stripped);
+}
+
+// ---------------------------------------------------------------------------
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { extractPom };
+module.exports = { extractPom, deriveNamespace };

@@ -56,7 +56,7 @@ This plan implements the DSL v2 compiler pipeline across three packages: `@tomat
     - _Requirements: 1.1, 1.3, 1.4, 1.5_
 
 - [ ] 3. Compiler — Namespace Derivation
-  - [ ] 3.1 Implement `deriveNamespace(filePath)` in `packages/compiler/src/pom.js` (or new `namespace.js` module)
+  - [x] 3.1 Implement `deriveNamespace(filePath)` in `packages/compiler/src/pom.js` (or new `namespace.js` module)
     - Convert kebab-case file name to PascalCase
     - Strip `.pom.ts`, `.page.ts`, `.pom.js`, `.page.js` suffixes before conversion
     - Throw error if file name contains underscores (with kebab-case suggestion)
