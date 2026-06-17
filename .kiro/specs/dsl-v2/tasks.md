@@ -6,7 +6,7 @@ This plan implements the DSL v2 compiler pipeline across three packages: `@tomat
 
 ## Tasks
 
-- [ ] 1. DSL Package — Builder API and Type Definitions
+- [x] 1. DSL Package — Builder API and Type Definitions
   - [x] 1.1 Implement the `is` proxy, `Element()` constructor, and matcher factories in `packages/dsl/index.js`
     - Implement the `is` Proxy that returns an `ElementBuilder` for any uppercase property access (e.g., `is.BUTTON`, `is.INPUT`)
     - Implement `is.ELEMENT(xpath)` returning an `XPathElementBuilder`
@@ -25,7 +25,7 @@ This plan implements the DSL v2 compiler pipeline across three packages: `@tomat
     - Add `is` proxy type with mapped HTML tag names and `ELEMENT` method
     - _Requirements: 2.5, 3.1, 3.2, 5.1, 6.1_
 
-  - [ ]* 1.3 Write unit tests for the DSL package builder and stubs
+  - [x] 1.3 Write unit tests for the DSL package builder and stubs
     - Test `is.BUTTON.where(innerTextIs('X')).as('Y')` returns correct descriptor
     - Test `Element(xpath).as('Label')` and `is.ELEMENT(xpath).as('Label')` produce equivalent descriptors
     - Test `.childOf(parent)` chains
