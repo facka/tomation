@@ -1,9 +1,9 @@
-// @tomation/dsl — TypeScript definitions
+// @tomation/dsl — TypeScript definitions (v2)
+
+// --- Matcher / Where Types ---
 
 /**
  * Describes the criteria used to locate an element on the page.
- * At least one key should be provided (TypeScript cannot enforce this natively,
- * but providing none will result in an unresolvable element at runtime).
  */
 export interface WhereDescriptor {
   id?: string;
@@ -16,31 +16,71 @@ export interface WhereDescriptor {
 }
 
 /**
- * Describes a single named element in a page's element map.
+ * Union of all matcher factory return types.
+ */
+export type WhereMatcher =
+  | { textIs: string }
+  | { textContains: string }
+  | { classIncludes: string }
+  | { placeholder: string }
+  | { name: string }
+  | { type: string }
+  | { id: string };
+
+// --- Element Descriptors ---
+
+/**
+ * Describes a single named element in the spec output.
  */
 export interface ElementDescriptor {
   tag: string;
   label?: string;
   childOf?: string;
   where: WhereDescriptor;
+  xpath?: string;
+  __el?: true;
 }
+
+// --- Element Builders ---
+
+/**
+ * Builder chain returned by `is.TAG` access.
+ * Supports .where(matcher), .childOf(parent), .as(label) chaining.
+ */
+export interface ElementBuilder {
+  where(matcher: WhereMatcher): ElementBuilder;
+  childOf(parent: ElementDescriptor): ElementBuilder;
+  as(label: string): ElementDescriptor;
+}
+
+/**
+ * Builder for XPath-based elements — returned by Element() or is.ELEMENT().
+ * Supports only .as(label).
+ */
+export interface XPathElementBuilder {
+  as(label: string): ElementDescriptor;
+}
+
+// --- Step Types ---
 
 /**
  * A discriminated union covering all supported automation action types.
  */
 export type Step =
-  | { action: "click";           target: string }
-  | { action: "type";            target: string; value: string }
-  | { action: "typePassword";    target: string; value: string }
-  | { action: "select";          target: string; value: string }
-  | { action: "assertExists";    target: string }
+  | { action: "click"; target: string }
+  | { action: "type"; target: string; value: string }
+  | { action: "typePassword"; target: string; value: string }
+  | { action: "select"; target: string; value: string }
+  | { action: "assertExists"; target: string }
   | { action: "assertNotExists"; target: string }
-  | { action: "assertHasText";   target: string; value: string }
-  | { action: "task";            name: string; params?: Record<string, string> }
-  | { action: "navigate";        url: string }
-  | { action: "wait";            ms: number }
-  | { action: "waitFor";         target: string; gone: boolean }
-  | { action: "manual";          description: string };
+  | { action: "assertHasText"; target: string; value: string }
+  | { action: "task"; name: string; params?: Record<string, string> }
+  | { action: "navigate"; url: string }
+  | { action: "wait"; ms: number }
+  | { action: "waitFor"; target: string; gone: boolean }
+  | { action: "manual"; description: string };
+
+// --- Legacy Types (backward compatibility) ---
 
 /**
  * Defines a reusable task — an ordered list of steps with optional parameter names.
@@ -59,7 +99,7 @@ export interface PageDefinition {
 }
 
 /**
- * Defines a Page Object Model.
+ * Defines a Page Object Model (legacy v1 API).
  * @param name - The page name used for namespacing.
  * @param definition - The page definition containing elements and tasks.
  */
@@ -68,16 +108,77 @@ export declare function Page(
   definition: PageDefinition
 ): { __pom: true; name: string; definition: PageDefinition };
 
-/**
- * Defines a reusable task.
- * @param steps - The ordered list of steps.
- */
-export declare function Task(
-  steps: Step[]
-): { __task: true; steps: Step[] };
+// --- Matcher Factories ---
+
+export declare function innerTextIs(text: string): { textIs: string };
+export declare function innerTextContains(text: string): { textContains: string };
+export declare function classIncludes(cls: string): { classIncludes: string };
+export declare function placeholderIs(ph: string): { placeholder: string };
+export declare function nameIs(name: string): { name: string };
+export declare function typeIs(type: string): { type: string };
+export declare function idIs(id: string): { id: string };
+
+// --- XPath Element Constructor ---
 
 /**
- * Defines an element descriptor.
+ * Creates an XPath-based element builder.
+ * @param xpath - The XPath expression used to locate the element.
+ */
+export declare function Element(xpath: string): XPathElementBuilder;
+
+// --- `is` Proxy ---
+
+/**
+ * The `is` proxy provides an ElementBuilder for every uppercase HTML tag name,
+ * plus an `ELEMENT` method for XPath-based element construction.
+ */
+export declare const is: {
+  [TAG in keyof HTMLElementTagNameMap as Uppercase<TAG>]: ElementBuilder;
+} & {
+  ELEMENT: (xpath: string) => XPathElementBuilder;
+};
+
+// --- Task and Test ---
+
+/**
+ * Declares a named, reusable task with optional parameters.
+ * @param name - The task name.
+ * @param fn - The task function receiving params.
+ */
+export declare function Task(
+  name: string,
+  fn: (params: any) => void
+): { __task: true; name: string; fn: (params: any) => void };
+
+/**
+ * Declares a named test scenario.
+ * @param name - The test name.
+ * @param fn - The test function containing steps.
+ */
+export declare function Test(
+  name: string,
+  fn: () => void
+): { __test: true; name: string; fn: () => void };
+
+// --- Action Stubs ---
+
+export declare function Click(element: ElementDescriptor): any;
+export declare function Type(value: string): { in(element: ElementDescriptor): any };
+export declare function TypePassword(value: string): { in(element: ElementDescriptor): any };
+export declare function Select(value: string): { in(element: ElementDescriptor): any };
+export declare function AssertExists(element: ElementDescriptor): any;
+export declare function AssertNotExists(element: ElementDescriptor): any;
+export declare function AssertHasText(element: ElementDescriptor, text: string): any;
+export declare function Navigate(url: string): any;
+export declare function Wait(ms: number): any;
+export declare function WaitFor(element: ElementDescriptor): any;
+export declare function WaitForGone(element: ElementDescriptor): any;
+export declare function Manual(description: string): any;
+
+// --- Legacy v1 el() helper ---
+
+/**
+ * Defines an element descriptor (legacy v1 API).
  * @param descriptor - The element descriptor object.
  */
 export declare function el(

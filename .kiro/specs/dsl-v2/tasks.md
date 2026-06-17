@@ -7,7 +7,7 @@ This plan implements the DSL v2 compiler pipeline across three packages: `@tomat
 ## Tasks
 
 - [ ] 1. DSL Package — Builder API and Type Definitions
-  - [ ] 1.1 Implement the `is` proxy, `Element()` constructor, and matcher factories in `packages/dsl/index.js`
+  - [x] 1.1 Implement the `is` proxy, `Element()` constructor, and matcher factories in `packages/dsl/index.js`
     - Implement the `is` Proxy that returns an `ElementBuilder` for any uppercase property access (e.g., `is.BUTTON`, `is.INPUT`)
     - Implement `is.ELEMENT(xpath)` returning an `XPathElementBuilder`
     - Implement standalone `Element(xpath)` function returning an `XPathElementBuilder`
@@ -17,7 +17,7 @@ This plan implements the DSL v2 compiler pipeline across three packages: `@tomat
     - Implement `Task`, `Test`, and all action stubs: `Click`, `Type`, `TypePassword`, `Select`, `AssertExists`, `AssertNotExists`, `AssertHasText`, `Navigate`, `Wait`, `WaitFor`, `WaitForGone`, `Manual`
     - _Requirements: 2.5, 3.1, 3.2, 5.1, 6.1, 15.1–15.12_
 
-  - [ ] 1.2 Update TypeScript type definitions in `packages/dsl/index.d.ts` and `packages/dsl/globals.d.ts`
+  - [x] 1.2 Update TypeScript type definitions in `packages/dsl/index.d.ts` and `packages/dsl/globals.d.ts`
     - Add `ElementBuilder`, `XPathElementBuilder`, `ElementDescriptor` interfaces
     - Add `WhereMatcher` type union for all matcher return types
     - Add type signatures for `Task`, `Test`, all action functions, and matcher factories
