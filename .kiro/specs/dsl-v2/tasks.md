@@ -111,20 +111,20 @@ This plan implements the DSL v2 compiler pipeline across three packages: `@tomat
     - **Validates: Requirement 2.3**
 
 - [ ] 5. Compiler — Parser v2 (Task/Test Patterns and Actions)
-  - [ ] 5.1 Extend parser to detect `Task('name', fn)` and `Test('name', fn)` declarations
+  - [x] 5.1 Extend parser to detect `Task('name', fn)` and `Test('name', fn)` declarations
     - Implement `extractV2Task()` — extract task name, function params (destructured)
     - Implement `extractV2Test()` — extract test name and steps from body
     - Track `const { x, y } = params` destructuring for conditional resolution
     - _Requirements: 5.1, 5.2, 6.1_
 
-  - [ ] 5.2 Implement step extraction and action mapping for all 12 DSL actions
+  - [x] 5.2 Implement step extraction and action mapping for all 12 DSL actions
     - Implement `extractV2Step()` with the full action table: Click, Type, TypePassword, Select, AssertExists, AssertNotExists, AssertHasText, Navigate, Wait, WaitFor, WaitForGone, Manual
     - Handle `.in(element)` chain pattern for Type/TypePassword/Select
     - Handle `PageName.taskName(params)` → task invocation steps
     - Implement element reference resolution to namespaced keys
     - _Requirements: 15.1–15.12, 5.3, 5.4_
 
-  - [ ] 5.3 Implement conditional `if` step extraction in the parser
+  - [x] 5.3 Implement conditional `if` step extraction in the parser
     - Implement `extractIfStep()` supporting truthy, falsy, equals, notEquals patterns
     - Implement `extractCondition()` resolving identifiers against tracked destructured params
     - Recursively extract steps from if-block bodies (including nested ifs)
@@ -132,7 +132,7 @@ This plan implements the DSL v2 compiler pipeline across three packages: `@tomat
     - Emit warning for unsupported condition patterns
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
 
-  - [ ] 5.4 Implement unrecognized statement warning logic
+  - [x] 5.4 Implement unrecognized statement warning logic
     - Emit warning with file path, line number, source snippet for unrecognized statements inside task/test bodies
     - Skip without producing a step, continue parsing
     - Silently ignore top-level statements outside Task/Test bodies
@@ -161,7 +161,7 @@ This plan implements the DSL v2 compiler pipeline across three packages: `@tomat
     - Generate top-level statements → assert no warning emitted
     - **Validates: Requirements 11.1, 11.2, 11.3, 11.4**
 
-- [ ] 6. Checkpoint - Ensure all tests pass
+- [x] 6. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 7. Compiler — POM Extractor v2

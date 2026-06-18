@@ -21,11 +21,13 @@
  *   pages: PageDef[],        // for POM files (v1)
  *   tests: TestDef[],        // for test files (v1)
  *   elements: ElementDef[],  // for v2 element declarations
+ *   tasks: TaskDefV2[],      // for v2 task declarations
+ *   v2Tests: TestDefV2[],    // for v2 test declarations
  *   error: null | { message: string, line: number }
  *   warnings: Array<{ message: string, filePath: string, line: number }>
  * }
  *
- * Requirements: 12.5, 13.1, 2.1, 2.2, 2.3, 2.4, 4.1
+ * Requirements: 12.5, 13.1, 2.1, 2.2, 2.3, 2.4, 4.1, 5.1, 5.2, 6.1
  */
 
 const fs = require('fs');
@@ -662,6 +664,667 @@ function checkBareXPathElement(node, filePath) {
 }
 
 // ---------------------------------------------------------------------------
+// V2 Task/Test declaration extraction
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// V2 Step extraction — parses action calls in Task/Test function bodies
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract a template string value from a TemplateLiteral that may contain expressions.
+ * Converts `${paramName}` to `{{paramName}}` format used in spec.json.
+ *
+ * @param {object} node - TemplateLiteral AST node
+ * @returns {string|null}
+ */
+function extractTemplateValue(node) {
+  if (!node || node.type !== 'TemplateLiteral') return null;
+
+  let result = '';
+  for (let i = 0; i < node.quasis.length; i++) {
+    result += node.quasis[i].value.cooked;
+    if (i < node.expressions.length) {
+      const expr = node.expressions[i];
+      if (expr.type === 'Identifier') {
+        result += '{{' + expr.name + '}}';
+      } else {
+        // Unsupported expression type in template — skip gracefully
+        result += '{{?}}';
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Extract a string or template value from an AST node.
+ * Handles plain strings, simple template literals (no expressions),
+ * and template literals with identifier expressions (→ {{param}} format).
+ *
+ * @param {object} node - AST node
+ * @returns {string|null}
+ */
+function extractStringOrTemplate(node) {
+  if (!node) return null;
+  const plain = extractString(node);
+  if (plain !== null) return plain;
+  if (node.type === 'TemplateLiteral') return extractTemplateValue(node);
+  return null;
+}
+
+/**
+ * Extract a v2 step descriptor from a single expression node.
+ * Handles all 12 DSL actions and task invocation patterns.
+ *
+ * Patterns:
+ *   Click(element)                 → { action: "click", target: "varName" }
+ *   Type(value).in(element)        → { action: "type", target: "varName", value: "..." }
+ *   TypePassword(value).in(el)     → { action: "typePassword", target: "varName", value: "..." }
+ *   Select(value).in(element)      → { action: "select", target: "varName", value: "..." }
+ *   AssertExists(element)          → { action: "assertExists", target: "varName" }
+ *   AssertNotExists(element)       → { action: "assertNotExists", target: "varName" }
+ *   AssertHasText(element, text)   → { action: "assertHasText", target: "varName", value: "..." }
+ *   Navigate(url)                  → { action: "navigate", url: "..." }
+ *   Wait(ms)                       → { action: "wait", ms: N }
+ *   WaitFor(element)               → { action: "waitFor", target: "varName", gone: false }
+ *   WaitForGone(element)           → { action: "waitFor", target: "varName", gone: true }
+ *   Manual(description)            → { action: "manual", description: "..." }
+ *   PageName.taskName(params)      → { action: "task", name: "PageName__taskName", params: {...} }
+ *
+ * @param {object} exprNode - expression AST node (typically CallExpression or MemberExpression call)
+ * @param {string} filePath - current file path for error reporting
+ * @returns {object|null} step descriptor or null if unrecognized
+ */
+function extractV2Step(exprNode, filePath) {
+  if (!exprNode) return null;
+
+  // Pattern: Type(value).in(element) / TypePassword(value).in(element) / Select(value).in(element)
+  // AST shape: CallExpression with callee being MemberExpression (X.in) where X is a CallExpression
+  if (
+    exprNode.type === 'CallExpression' &&
+    exprNode.callee &&
+    exprNode.callee.type === 'MemberExpression' &&
+    exprNode.callee.property &&
+    exprNode.callee.property.type === 'Identifier' &&
+    exprNode.callee.property.name === 'in'
+  ) {
+    const innerCall = exprNode.callee.object;
+    if (innerCall && innerCall.type === 'CallExpression' && innerCall.callee && innerCall.callee.type === 'Identifier') {
+      const actionName = innerCall.callee.name;
+      const actionMap = { Type: 'type', TypePassword: 'typePassword', Select: 'select' };
+      const action = actionMap[actionName];
+      if (action) {
+        const valueArg = innerCall.arguments[0];
+        const value = extractStringOrTemplate(valueArg);
+        const targetArg = exprNode.arguments[0];
+        const target = targetArg && targetArg.type === 'Identifier' ? targetArg.name : null;
+        if (target === null) return null;
+        return { action, target, value: value !== null ? value : '' };
+      }
+    }
+  }
+
+  // Pattern: Simple CallExpression — Click(el), Navigate(url), etc.
+  if (exprNode.type === 'CallExpression' && exprNode.callee) {
+    // Task invocation: PageName.taskName(params)
+    if (exprNode.callee.type === 'MemberExpression') {
+      const obj = exprNode.callee.object;
+      const prop = exprNode.callee.property;
+      if (
+        obj && obj.type === 'Identifier' &&
+        prop && prop.type === 'Identifier'
+      ) {
+        const taskName = obj.name + '__' + prop.name;
+        const step = { action: 'task', name: taskName };
+        // Optional params object
+        const paramsArg = exprNode.arguments[0];
+        if (paramsArg && paramsArg.type === 'ObjectExpression') {
+          const params = extractTaskInvocationParams(paramsArg);
+          if (params && Object.keys(params).length > 0) step.params = params;
+        }
+        return step;
+      }
+      return null;
+    }
+
+    // Named function calls (actions)
+    if (exprNode.callee.type === 'Identifier') {
+      const fnName = exprNode.callee.name;
+      const args = exprNode.arguments || [];
+
+      switch (fnName) {
+        // Simple target actions (one element arg)
+        case 'Click':
+        case 'AssertExists':
+        case 'AssertNotExists': {
+          const target = args[0] && args[0].type === 'Identifier' ? args[0].name : null;
+          if (target === null) return null;
+          const actionNameMap = { Click: 'click', AssertExists: 'assertExists', AssertNotExists: 'assertNotExists' };
+          return { action: actionNameMap[fnName], target };
+        }
+
+        case 'WaitFor': {
+          const target = args[0] && args[0].type === 'Identifier' ? args[0].name : null;
+          if (target === null) return null;
+          return { action: 'waitFor', target, gone: false };
+        }
+
+        case 'WaitForGone': {
+          const target = args[0] && args[0].type === 'Identifier' ? args[0].name : null;
+          if (target === null) return null;
+          return { action: 'waitFor', target, gone: true };
+        }
+
+        // Two-argument target+value: AssertHasText(element, text)
+        case 'AssertHasText': {
+          const target = args[0] && args[0].type === 'Identifier' ? args[0].name : null;
+          if (target === null) return null;
+          const value = extractStringOrTemplate(args[1]);
+          return { action: 'assertHasText', target, value: value !== null ? value : '' };
+        }
+
+        // Value-only: Navigate(url)
+        case 'Navigate': {
+          const url = extractStringOrTemplate(args[0]);
+          if (url === null) return null;
+          return { action: 'navigate', url };
+        }
+
+        // Value-only: Wait(ms)
+        case 'Wait': {
+          const ms = extractNumber(args[0]);
+          return { action: 'wait', ms: ms !== null ? ms : 0 };
+        }
+
+        // Value-only: Manual(description)
+        case 'Manual': {
+          const description = extractStringOrTemplate(args[0]);
+          return { action: 'manual', description: description !== null ? description : '' };
+        }
+
+        // Type/TypePassword/Select without .in() chain — shouldn't normally occur,
+        // but return null to skip gracefully
+        case 'Type':
+        case 'TypePassword':
+        case 'Select':
+          return null;
+
+        default:
+          return null;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Extract params from a task invocation's ObjectExpression argument.
+ * Handles string/number/boolean values and template literals with param refs.
+ *
+ * @param {object} objNode - ObjectExpression AST node
+ * @returns {object} params object
+ */
+function extractTaskInvocationParams(objNode) {
+  if (!objNode || objNode.type !== 'ObjectExpression') return {};
+  const params = {};
+  for (const prop of objNode.properties) {
+    if (prop.type !== 'Property') continue;
+    const key = prop.key.type === 'Identifier' ? prop.key.name
+               : prop.key.type === 'Literal' ? String(prop.key.value)
+               : null;
+    if (!key) continue;
+
+    // Try string/template, then number, then boolean
+    const strVal = extractStringOrTemplate(prop.value);
+    if (strVal !== null) {
+      params[key] = strVal;
+      continue;
+    }
+    const numVal = extractNumber(prop.value);
+    if (numVal !== null) {
+      params[key] = numVal;
+      continue;
+    }
+    const boolVal = extractBoolean(prop.value);
+    if (boolVal !== null) {
+      params[key] = boolVal;
+      continue;
+    }
+  }
+  return params;
+}
+
+/**
+ * Extract the condition from an if-statement's test expression.
+ * Resolves identifiers against tracked destructured params.
+ *
+ * Supported patterns:
+ *   if (paramName)           → { param: "paramName", op: "truthy" }
+ *   if (!paramName)          → { param: "paramName", op: "falsy" }
+ *   if (paramName === 'val') → { param: "paramName", op: "equals", value: "val" }
+ *   if (paramName !== 'val') → { param: "paramName", op: "notEquals", value: "val" }
+ *
+ * @param {object} testNode - the `test` property of an IfStatement AST node
+ * @param {Set<string>} trackedParams - set of known param names from destructuring
+ * @returns {object|null} condition object or null if pattern is unsupported
+ */
+function extractCondition(testNode, trackedParams) {
+  if (!testNode) return null;
+
+  // Pattern: paramName (truthy)
+  if (testNode.type === 'Identifier') {
+    if (trackedParams.has(testNode.name)) {
+      return { param: testNode.name, op: 'truthy' };
+    }
+    return null;
+  }
+
+  // Pattern: !paramName (falsy)
+  if (
+    testNode.type === 'UnaryExpression' &&
+    testNode.operator === '!' &&
+    testNode.argument &&
+    testNode.argument.type === 'Identifier'
+  ) {
+    if (trackedParams.has(testNode.argument.name)) {
+      return { param: testNode.argument.name, op: 'falsy' };
+    }
+    return null;
+  }
+
+  // Pattern: paramName === 'value' or paramName !== 'value'
+  if (
+    testNode.type === 'BinaryExpression' &&
+    (testNode.operator === '===' || testNode.operator === '!==')
+  ) {
+    const left = testNode.left && testNode.left.type === 'Identifier'
+      ? testNode.left.name
+      : null;
+    const right = extractString(testNode.right);
+    if (left && trackedParams.has(left) && right !== null) {
+      return {
+        param: left,
+        op: testNode.operator === '===' ? 'equals' : 'notEquals',
+        value: right,
+      };
+    }
+    return null;
+  }
+
+  return null;
+}
+
+/**
+ * Extract a conditional if-step from an IfStatement AST node.
+ * Emits a warning for else blocks and unsupported condition patterns.
+ * Recursively extracts steps from the if-block body (including nested ifs).
+ *
+ * @param {object} stmt - IfStatement AST node
+ * @param {string} filePath - current file path for error reporting
+ * @param {Set<string>} trackedParams - set of known param names from destructuring
+ * @param {Array} warnings - array to push warnings into
+ * @returns {object|null} conditional step or null if condition is unsupported
+ */
+function extractIfStep(stmt, filePath, trackedParams, warnings, source) {
+  if (!stmt || stmt.type !== 'IfStatement') return null;
+
+  // Warn about else blocks (not supported)
+  if (stmt.alternate !== null) {
+    warnings.push({
+      message: `else blocks are not supported — use a separate if with the negated condition`,
+      filePath,
+      line: stmt.alternate.loc ? stmt.alternate.loc.start.line : lineOf(stmt),
+    });
+  }
+
+  // Extract the condition
+  const condition = extractCondition(stmt.test, trackedParams);
+  if (!condition) {
+    // Unsupported condition pattern — emit warning
+    warnings.push({
+      message: `Unsupported if-condition at ${filePath}:${lineOf(stmt)} — only param truthiness/equality checks are allowed`,
+      filePath,
+      line: lineOf(stmt),
+    });
+    return null;
+  }
+
+  // Recursively extract steps from the if-block body
+  const consequent = stmt.consequent;
+  const body = consequent && consequent.type === 'BlockStatement' ? consequent : null;
+  const thenSteps = body ? extractV2Steps(body, filePath, trackedParams, warnings, source) : [];
+
+  if (thenSteps.length === 0) return null;
+
+  return { action: 'if', condition, then: thenSteps };
+}
+
+/**
+ * Extract v2 steps from a BlockStatement body (the function body of a Task or Test).
+ * Iterates statements, handling param destructuring tracking, if-statements for
+ * conditional steps, and ExpressionStatements for action steps.
+ * Emits warnings for unrecognized statements with file path, line number, and source snippet.
+ *
+ * @param {object} body - BlockStatement AST node (fn.body)
+ * @param {string} filePath - current file path for error reporting
+ * @param {Set<string>} [trackedParams] - set of known param names from destructuring
+ * @param {Array} [warnings] - array to push warnings into
+ * @param {string} [source] - original source code for snippet extraction
+ * @returns {Array} array of step objects
+ */
+function extractV2Steps(body, filePath, trackedParams, warnings, source) {
+  if (!body || body.type !== 'BlockStatement') return [];
+  if (!trackedParams) trackedParams = new Set();
+  if (!warnings) warnings = [];
+  const steps = [];
+
+  for (const stmt of body.body) {
+    // Track param destructuring: const { x, y } = params
+    if (stmt.type === 'VariableDeclaration') {
+      const destructured = extractBodyDestructuring(stmt);
+      if (destructured.length > 0) {
+        for (const name of destructured) {
+          trackedParams.add(name);
+        }
+        continue;
+      }
+      // Non-destructuring variable declarations are unrecognized
+      const snippet = source ? source.slice(stmt.start, stmt.end).split('\n')[0] : '';
+      warnings.push({
+        message: `Unrecognized statement at ${filePath}:${lineOf(stmt)} — skipped`,
+        filePath,
+        line: lineOf(stmt),
+        source: snippet,
+      });
+      continue;
+    }
+
+    // Handle if-statements → conditional steps
+    if (stmt.type === 'IfStatement') {
+      const ifStep = extractIfStep(stmt, filePath, trackedParams, warnings, source);
+      if (ifStep) {
+        steps.push(ifStep);
+      }
+      continue;
+    }
+
+    // Process expression statements
+    if (stmt.type === 'ExpressionStatement') {
+      const step = extractV2Step(stmt.expression, filePath);
+      if (step) {
+        steps.push(step);
+      } else {
+        // Recognized JS but not a known tomation action — emit warning
+        const snippet = source ? source.slice(stmt.start, stmt.end).split('\n')[0] : '';
+        warnings.push({
+          message: `Unrecognized statement at ${filePath}:${lineOf(stmt)} — skipped`,
+          filePath,
+          line: lineOf(stmt),
+          source: snippet,
+        });
+      }
+      continue;
+    }
+
+    // Any other statement type (for, while, return, throw, etc.) — emit warning
+    const snippet = source ? source.slice(stmt.start, stmt.end).split('\n')[0] : '';
+    warnings.push({
+      message: `Unrecognized statement at ${filePath}:${lineOf(stmt)} — skipped`,
+      filePath,
+      line: lineOf(stmt),
+      source: snippet,
+    });
+  }
+
+  return steps;
+}
+
+// ---------------------------------------------------------------------------
+// V2 Task/Test declaration extraction
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract destructured parameter names from function params.
+ * Handles: ({username, password}) => ...  OR  (params) => ...
+ *
+ * For ObjectPattern: returns the property names directly.
+ * For Identifier: returns empty (we'll track body destructuring separately).
+ *
+ * @param {Array} fnParams - function parameter nodes
+ * @returns {string[]} extracted param names
+ */
+function extractFnParams(fnParams) {
+  const params = [];
+  if (!fnParams || fnParams.length === 0) return params;
+
+  const firstParam = fnParams[0];
+  if (firstParam.type === 'ObjectPattern') {
+    for (const prop of firstParam.properties) {
+      if (prop.type === 'Property' && prop.key && prop.key.type === 'Identifier') {
+        params.push(prop.key.name);
+      } else if (prop.type === 'RestElement' && prop.argument && prop.argument.type === 'Identifier') {
+        params.push(prop.argument.name);
+      }
+    }
+  }
+  // For plain identifier params (e.g., `(params) => ...`), we return empty;
+  // body destructuring like `const { x, y } = params` is tracked separately.
+
+  return params;
+}
+
+/**
+ * Track `const { x, y } = params` or `const { x, y } = someIdentifier` destructuring
+ * inside a task/test body. Returns the destructured variable names.
+ *
+ * @param {object} stmt - VariableDeclaration AST node
+ * @returns {string[]} destructured param names, or empty if not a matching pattern
+ */
+function extractBodyDestructuring(stmt) {
+  if (!stmt || stmt.type !== 'VariableDeclaration') return [];
+  const params = [];
+
+  for (const declarator of stmt.declarations) {
+    if (
+      declarator.id &&
+      declarator.id.type === 'ObjectPattern' &&
+      declarator.init &&
+      declarator.init.type === 'Identifier'
+    ) {
+      for (const prop of declarator.id.properties) {
+        if (prop.type === 'Property' && prop.key && prop.key.type === 'Identifier') {
+          params.push(prop.key.name);
+        }
+      }
+    }
+  }
+
+  return params;
+}
+
+/**
+ * Extract a v2 TaskDefV2 from a CallExpression node matching:
+ *   Task('name', (params) => { ... })
+ *   Task('name', ({username, password}) => { ... })
+ *   Task('name', function(params) { ... })
+ *
+ * @param {object} node - CallExpression AST node
+ * @param {string} filePath - current file path for error reporting
+ * @returns {{ task: object|null, error: object|null }}
+ */
+function extractV2Task(node, filePath, source) {
+  if (!node || node.type !== 'CallExpression') return { task: null, error: null };
+
+  const callee = node.callee;
+  if (!callee || callee.type !== 'Identifier' || callee.name !== 'Task') return { task: null, error: null };
+
+  const args = node.arguments || [];
+
+  // First argument must be a string (the task name)
+  if (args.length < 1) {
+    return {
+      task: null,
+      error: {
+        message: `Task() at ${filePath}:${lineOf(node)} requires a name string as the first argument`,
+        filePath,
+        line: lineOf(node),
+      },
+    };
+  }
+
+  const name = extractString(args[0]);
+  if (name === null) {
+    // Could be a v1 Task([...]) call — don't emit error, just skip
+    return { task: null, error: null };
+  }
+
+  // Second argument must be a function (arrow or function expression)
+  if (args.length < 2) {
+    return {
+      task: null,
+      error: {
+        message: `Task('${name}') at ${filePath}:${lineOf(node)} requires a function as the second argument`,
+        filePath,
+        line: lineOf(node),
+      },
+    };
+  }
+
+  const fn = args[1];
+  if (fn.type !== 'ArrowFunctionExpression' && fn.type !== 'FunctionExpression') {
+    return {
+      task: null,
+      error: {
+        message: `Task('${name}') at ${filePath}:${lineOf(node)} second argument must be a function`,
+        filePath,
+        line: lineOf(node),
+      },
+    };
+  }
+
+  // Extract params from function parameter destructuring
+  const params = extractFnParams(fn.params);
+
+  // Build the initial tracked params set from function signature params
+  const trackedParams = new Set(params);
+
+  // Pre-scan body for destructuring to collect allParams for the task definition
+  const bodyParams = [];
+  if (fn.body && fn.body.type === 'BlockStatement') {
+    for (const stmt of fn.body.body) {
+      if (stmt.type === 'VariableDeclaration') {
+        const destructured = extractBodyDestructuring(stmt);
+        bodyParams.push(...destructured);
+      }
+    }
+  }
+
+  // Merge: params from fn signature + body destructuring
+  const allParams = [...params, ...bodyParams];
+
+  // Extract steps from the function body (extractV2Steps will also track body destructuring)
+  const warnings = [];
+  const steps = fn.body && fn.body.type === 'BlockStatement'
+    ? extractV2Steps(fn.body, filePath, trackedParams, warnings, source)
+    : [];
+
+  return {
+    task: {
+      name,
+      params: allParams,
+      steps,
+      line: lineOf(node),
+    },
+    error: null,
+    warnings,
+  };
+}
+
+/**
+ * Extract a v2 TestDefV2 from a CallExpression node matching:
+ *   Test('name', () => { ... })
+ *   Test('name', function() { ... })
+ *
+ * @param {object} node - CallExpression AST node
+ * @param {string} filePath - current file path for error reporting
+ * @returns {{ test: object|null, error: object|null }}
+ */
+function extractV2Test(node, filePath, source) {
+  if (!node || node.type !== 'CallExpression') return { test: null, error: null };
+
+  const callee = node.callee;
+  if (!callee || callee.type !== 'Identifier' || callee.name !== 'Test') return { test: null, error: null };
+
+  const args = node.arguments || [];
+
+  // First argument must be a string (the test name)
+  if (args.length < 1) {
+    return {
+      test: null,
+      error: {
+        message: `Test() at ${filePath}:${lineOf(node)} requires a name string as the first argument`,
+        filePath,
+        line: lineOf(node),
+      },
+    };
+  }
+
+  const name = extractString(args[0]);
+  if (name === null) {
+    return {
+      test: null,
+      error: {
+        message: `Test() at ${filePath}:${lineOf(node)} first argument must be a string`,
+        filePath,
+        line: lineOf(node),
+      },
+    };
+  }
+
+  // Second argument must be a function (arrow or function expression)
+  if (args.length < 2) {
+    return {
+      test: null,
+      error: {
+        message: `Test('${name}') at ${filePath}:${lineOf(node)} requires a function as the second argument`,
+        filePath,
+        line: lineOf(node),
+      },
+    };
+  }
+
+  const fn = args[1];
+  if (fn.type !== 'ArrowFunctionExpression' && fn.type !== 'FunctionExpression') {
+    return {
+      test: null,
+      error: {
+        message: `Test('${name}') at ${filePath}:${lineOf(node)} second argument must be a function`,
+        filePath,
+        line: lineOf(node),
+      },
+    };
+  }
+
+  // Extract steps from the function body
+  const warnings = [];
+  const steps = fn.body && fn.body.type === 'BlockStatement'
+    ? extractV2Steps(fn.body, filePath, new Set(), warnings, source)
+    : [];
+
+  return {
+    test: {
+      name,
+      steps,
+      line: lineOf(node),
+    },
+    error: null,
+    warnings,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Page() call extraction
 // ---------------------------------------------------------------------------
 
@@ -876,6 +1539,8 @@ function parseFile(filePath) {
       pages: [],
       tests: [],
       elements: [],
+      tasks: [],
+      v2Tests: [],
       error: {
         message: 'Parse error in ' + filePath + ':0: ' + e.message,
         line: 0,
@@ -902,6 +1567,8 @@ function parseSource(source, filePath) {
     pages: [],
     tests: [],
     elements: [],
+    tasks: [],
+    v2Tests: [],
     error: null,
     warnings: [],
   };
@@ -924,7 +1591,7 @@ function parseSource(source, filePath) {
     return result;
   }
 
-  // Walk the AST and collect Page() calls (for POM files, v1)
+  // Walk the AST and detect Page() calls (v1 syntax — deprecated in v2)
   walk(ast, node => {
     if (node.type !== 'CallExpression') return;
     const calleeName = node.callee && node.callee.type === 'Identifier' ? node.callee.name : null;
@@ -935,8 +1602,14 @@ function parseSource(source, filePath) {
         result.pages.push(pageDef);
         // If we found a Page() call, mark this as a POM file
         result.type = 'pom';
+        // v2: Page() is deprecated — emit a warning (Req 14.1, 14.2)
+        result.warnings.push({
+          message: `Page() syntax is deprecated — use element declarations and Task/Test functions instead`,
+          filePath,
+          line: lineOf(node),
+        });
       }
-      return false; // don't recurse into Page() arguments for more Page() calls
+      return false; // don't recurse into Page() arguments
     }
   });
 
@@ -977,8 +1650,45 @@ function parseSource(source, filePath) {
     }
   });
 
+  // Walk the AST for v2 Task/Test declarations: Task('name', fn) / Test('name', fn)
+  walk(ast, node => {
+    if (node.type !== 'CallExpression') return;
+    const callee = node.callee;
+    if (!callee || callee.type !== 'Identifier') return;
+
+    if (callee.name === 'Task') {
+      const { task, error, warnings } = extractV2Task(node, filePath, source);
+      if (error) {
+        result.warnings.push(error);
+      }
+      if (warnings) {
+        result.warnings.push(...warnings);
+      }
+      if (task) {
+        result.tasks.push(task);
+        result.type = 'pom';
+      }
+      return false; // don't recurse into Task() arguments
+    }
+
+    if (callee.name === 'Test') {
+      const { test, error, warnings } = extractV2Test(node, filePath, source);
+      if (error) {
+        result.warnings.push(error);
+      }
+      if (warnings) {
+        result.warnings.push(...warnings);
+      }
+      if (test) {
+        result.v2Tests.push(test);
+        result.type = 'test';
+      }
+      return false; // don't recurse into Test() arguments
+    }
+  });
+
   // Extract test definitions from module.exports assignments (v1)
-  if (result.pages.length === 0 && result.elements.length === 0) {
+  if (result.pages.length === 0 && result.elements.length === 0 && result.tasks.length === 0 && result.v2Tests.length === 0) {
     result.tests = extractTestDefinitions(ast);
     result.type = 'test';
   }
@@ -990,4 +1700,4 @@ function parseSource(source, filePath) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { parseFile, parseSource, extractV2Element, extractXPathElement };
+module.exports = { parseFile, parseSource, extractV2Element, extractXPathElement, extractV2Task, extractV2Test, extractV2Step, extractIfStep, extractCondition };
