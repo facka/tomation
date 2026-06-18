@@ -1594,6 +1594,7 @@ function parseSource(source, filePath) {
     elements: [],
     tasks: [],
     v2Tests: [],
+    imports: [],   // v2: track import declarations for namespace resolution
     error: null,
     warnings: [],
   };
@@ -1615,6 +1616,28 @@ function parseSource(source, filePath) {
     };
     return result;
   }
+
+  // Extract import declarations: import X from './path' or import X from '~/path'
+  // Builds a map of localName → importPath for namespace resolution later
+  walk(ast, node => {
+    if (node.type !== 'ImportDeclaration') return;
+    if (!node.source || typeof node.source.value !== 'string') return;
+    var importPath = node.source.value;
+    // Only track relative and ~/ imports (project-internal POM files)
+    if (!importPath.startsWith('.') && !importPath.startsWith('~/')) return;
+    // Extract the default import specifier (import X from '...')
+    if (node.specifiers) {
+      for (var si = 0; si < node.specifiers.length; si++) {
+        var spec = node.specifiers[si];
+        if (spec.type === 'ImportDefaultSpecifier' && spec.local && spec.local.name) {
+          result.imports.push({
+            localName: spec.local.name,
+            importPath: importPath,
+          });
+        }
+      }
+    }
+  });
 
   // Walk the AST and detect Page() calls (v1 syntax — deprecated in v2)
   walk(ast, node => {

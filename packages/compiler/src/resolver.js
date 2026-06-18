@@ -509,7 +509,7 @@ function resolve(cwd) {
     }
   }
 
-  return { ok: true, files: sortResult.sorted, meta: meta };
+  return { ok: true, files: sortResult.sorted, meta: meta, pomDir: pomDir, baseUrl: baseUrl };
 }
 
 module.exports = { resolve, discoverFiles, parseImports, buildGraph, topologicalSort, resolveSpecifier, resolveAlias, resolveWithExtensions };

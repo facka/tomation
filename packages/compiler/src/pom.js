@@ -154,18 +154,23 @@ function kebabToPascal(str) {
 
 /**
  * Derive a PascalCase namespace from a file path.
+ * Includes subdirectory segments relative to pomDir in the namespace, separated by '>'.
  *
- * 1. Extracts the basename from the path.
- * 2. Strips known suffixes: .pom.ts, .pom.js, .page.ts, .page.js,
- *    then falls back to stripping .ts, .tsx, .js.
- * 3. Throws if the stripped name contains underscores (with kebab-case suggestion).
- * 4. Converts kebab-case to PascalCase.
+ * Examples:
+ *   deriveNamespace('/project/pom/login.pom.ts', '/project/pom') → 'Login'
+ *   deriveNamespace('/project/pom/home/login.pom.ts', '/project/pom') → 'Home/Login'
+ *   deriveNamespace('/project/pom/settings/account/profile.pom.ts', '/project/pom') → 'Settings/Account/Profile'
+ *
+ * The '/' separator prevents collisions between path+filename and flat filenames
+ * (e.g., pom/home/login.pom.ts → 'Home/Login' vs pom/home-login.pom.ts → 'HomeLogin').
+ * The UI displays this as '>' for readability.
  *
  * @param {string} filePath - Absolute or relative path to the source file.
- * @returns {string} PascalCase namespace.
- * @throws {Error} If the file name contains underscores.
+ * @param {string} [pomDir] - Absolute path to the POM root directory (for folder prefix derivation).
+ * @returns {string} PascalCase namespace with '>' separating folder segments.
+ * @throws {Error} If the file name or folder names contain underscores.
  */
-function deriveNamespace(filePath) {
+function deriveNamespace(filePath, pomDir) {
   const basename = path.basename(filePath);
 
   // Strip known compound suffixes first, then simple extensions.
@@ -179,7 +184,30 @@ function deriveNamespace(filePath) {
     );
   }
 
-  return kebabToPascal(stripped);
+  // Compute relative folder path from pomDir and include in namespace
+  var folderParts = [];
+  if (pomDir) {
+    var relativePath = path.relative(pomDir, path.dirname(filePath));
+    if (relativePath && relativePath !== '.' && !relativePath.startsWith('..')) {
+      var segments = relativePath.split(path.sep).filter(function(s) { return s.length > 0; });
+      for (var i = 0; i < segments.length; i++) {
+        var seg = segments[i];
+        if (seg.includes('_')) {
+          throw new Error(
+            `Folder name '${seg}' contains underscores. Use kebab-case (e.g., ${seg.replace(/_/g, '-')})`
+          );
+        }
+        folderParts.push(kebabToPascal(seg));
+      }
+    }
+  }
+
+  var fileNamespace = kebabToPascal(stripped);
+
+  if (folderParts.length > 0) {
+    return folderParts.join('/') + '/' + fileNamespace;
+  }
+  return fileNamespace;
 }
 
 // ---------------------------------------------------------------------------
@@ -200,6 +228,8 @@ function deriveNamespace(filePath) {
  *   - Resolves `childOf` variable references to namespaced keys
  *
  * @param {object} parsedFile - ParsedFile returned by parseSource() with v2 elements/tasks
+ * @param {object} [options] - Optional settings
+ * @param {string} [options.pomDir] - Absolute path to the POM root directory
  * @returns {object} PomResult (same shape as extractPom output)
  */
 
@@ -242,8 +272,9 @@ function resolveStepRefs(steps, variableToKey, prefix) {
   });
 }
 
-function extractPomV2(parsedFile) {
+function extractPomV2(parsedFile, options) {
   const result = emptyResult(parsedFile.filePath);
+  const pomDir = (options && options.pomDir) || null;
 
   // If the parser encountered a fatal error, surface it and bail out.
   if (parsedFile.error) {
@@ -262,10 +293,10 @@ function extractPomV2(parsedFile) {
     return result;
   }
 
-  // Derive namespace from file name
+  // Derive namespace from file name (and folder path if pomDir is provided)
   let namespace;
   try {
-    namespace = deriveNamespace(parsedFile.filePath);
+    namespace = deriveNamespace(parsedFile.filePath, pomDir);
   } catch (err) {
     result.errors.push({
       message: err.message,

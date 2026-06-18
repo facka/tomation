@@ -355,7 +355,7 @@ function buildStepLabel(step, pageElements) {
 /**
  * Resolve a namespaced element key to its human-readable label.
  * Falls back to the key itself if no label is found.
- * @param {string} target - namespaced key (e.g., "Login__submitButton")
+ * @param {string} target - namespaced key (e.g., "Home/Login__submitButton")
  * @param {object} [pageElements] - spec.pageElements map
  * @returns {string}
  */
@@ -364,8 +364,11 @@ function resolveTargetLabel(target, pageElements) {
   if (pageElements && pageElements[target] && pageElements[target].label) {
     return pageElements[target].label;
   }
-  // Fallback: convert namespace key to readable form (Login__submitButton → Login.submitButton)
-  return target.replace('__', '.');
+  // Fallback: convert namespace key to readable form
+  // "Home/Login__submitButton" → "Home > Login.submitButton"
+  var displayTarget = target.replace('__', '.');
+  displayTarget = displayTarget.replace(/\//g, ' > ');
+  return displayTarget;
 }
 
 /**

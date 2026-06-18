@@ -18,6 +18,7 @@ var fs = require('fs');
 var path = require('path');
 
 var resolve = require('../src/resolver').resolve;
+var resolveSpecifier = require('../src/resolver').resolveSpecifier;
 var parseSource = require('../src/parser').parseSource;
 var extractPom = require('../src/pom').extractPom;
 var extractPomV2 = require('../src/pom').extractPomV2;
@@ -43,6 +44,74 @@ var USAGE = [
   'Options:',
   '  --verbose  Print detailed step-by-step progress and context data for debugging',
 ].join('\n');
+
+// ---------------------------------------------------------------------------
+// Import-based target rewriting
+// ---------------------------------------------------------------------------
+
+/**
+ * Rewrite step targets in a parsed file using the import → namespace map.
+ * Handles both test steps and task steps.
+ *
+ * When a step target is "VariableName__property" and VariableName is found
+ * in the importMap, it's rewritten to "Namespace__property".
+ *
+ * @param {object} parsedFile - parsed file with tests/v2Tests/tasks
+ * @param {object} importMap - { localName: namespace }
+ */
+function rewriteStepTargets(parsedFile, importMap) {
+  // Rewrite test steps
+  if (parsedFile.tests) {
+    for (var ti = 0; ti < parsedFile.tests.length; ti++) {
+      parsedFile.tests[ti].steps = rewriteSteps(parsedFile.tests[ti].steps, importMap);
+    }
+  }
+  // Rewrite task steps (for POM files that import other POMs)
+  if (parsedFile.tasks) {
+    for (var tki = 0; tki < parsedFile.tasks.length; tki++) {
+      parsedFile.tasks[tki].steps = rewriteSteps(parsedFile.tasks[tki].steps, importMap);
+    }
+  }
+}
+
+/**
+ * Rewrite an array of steps, replacing import-based targets with namespace-based targets.
+ * @param {Array} steps
+ * @param {object} importMap - { localName: namespace }
+ * @returns {Array}
+ */
+function rewriteSteps(steps, importMap) {
+  if (!steps) return steps;
+  return steps.map(function(step) {
+    var rewritten = Object.assign({}, step);
+
+    if (rewritten.target && rewritten.target.indexOf('__') !== -1) {
+      var parts = rewritten.target.split('__');
+      var varName = parts[0];
+      var prop = parts.slice(1).join('__');
+      if (importMap[varName]) {
+        rewritten.target = importMap[varName] + '__' + prop;
+      }
+    }
+
+    // Rewrite task invocation names
+    if (rewritten.action === 'task' && rewritten.name && rewritten.name.indexOf('__') !== -1) {
+      var taskParts = rewritten.name.split('__');
+      var taskVar = taskParts[0];
+      var taskMethod = taskParts.slice(1).join('__');
+      if (importMap[taskVar]) {
+        rewritten.name = importMap[taskVar] + '__' + taskMethod;
+      }
+    }
+
+    // Recurse into if-step then blocks
+    if (rewritten.action === 'if' && rewritten.then) {
+      rewritten.then = rewriteSteps(rewritten.then, importMap);
+    }
+
+    return rewritten;
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Pipeline
@@ -75,6 +144,7 @@ function runPipeline(cwd, options) {
     return { ok: false, error: resolveResult.error };
   }
   var files = resolveResult.files;
+  var pomDir = resolveResult.pomDir || null;
   log('  Resolved ' + files.length + ' file(s): ' + files.map(function(f) { return path.basename(f); }).join(', '));
 
   // Use meta from config if available, otherwise fall back to defaults
@@ -145,7 +215,7 @@ function runPipeline(cwd, options) {
       var pomResult;
       if (hasV2Patterns) {
         log('  Extracting POM v2: ' + path.basename(pf.filePath));
-        pomResult = extractPomV2(pf);
+        pomResult = extractPomV2(pf, { pomDir: pomDir });
       } else {
         log('  Extracting POM v1: ' + path.basename(pf.filePath));
         pomResult = extractPom(pf);
@@ -174,6 +244,42 @@ function runPipeline(cwd, options) {
   if (collisionErrors.length > 0) {
     log('  ✗ Namespace collision: ' + collisionErrors[0].message);
     return { ok: false, error: collisionErrors[0].message };
+  }
+
+  // Step 3c: resolve cross-file element references in test steps using import paths
+  // Build a map of absoluteFilePath → namespace from POM results
+  log('  Resolving cross-file element references via imports');
+  var fileToNamespace = {};
+  for (var pi = 0; pi < pomResults.length; pi++) {
+    if (pomResults[pi].namespace && pomResults[pi].filePath) {
+      fileToNamespace[pomResults[pi].filePath] = pomResults[pi].namespace;
+    }
+  }
+
+  // Resolve baseUrl for ~/ alias resolution
+  var baseUrl = resolveResult.baseUrl || cwd;
+
+  // For each test file (and POM file with imports), resolve import variable → namespace
+  for (var ri = 0; ri < parsedFiles.length; ri++) {
+    var rpf = parsedFiles[ri];
+    if (!rpf.imports || rpf.imports.length === 0) continue;
+
+    // Build import variable → namespace map for this file
+    var importMap = {};
+    for (var ii = 0; ii < rpf.imports.length; ii++) {
+      var imp = rpf.imports[ii];
+      // Resolve the import path to an absolute file path
+      var resolvedPath = resolveSpecifier(imp.importPath, rpf.filePath, baseUrl);
+      if (resolvedPath && fileToNamespace[resolvedPath]) {
+        importMap[imp.localName] = fileToNamespace[resolvedPath];
+        log('    ' + imp.localName + ' → ' + fileToNamespace[resolvedPath] + ' (from ' + imp.importPath + ')');
+      }
+    }
+
+    // Rewrite step targets: "VariableName__prop" → "Namespace__prop"
+    if (Object.keys(importMap).length > 0) {
+      rewriteStepTargets(rpf, importMap);
+    }
   }
 
   // Step 4: deduplication
