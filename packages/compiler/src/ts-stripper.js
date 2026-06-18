@@ -10,14 +10,17 @@ const ts = require('typescript')
  */
 function stripTypes(source, filePath) {
   try {
+    const compilerOptions = {
+      target: ts.ScriptTarget.ESNext,
+      module: ts.ModuleKind.ESNext,
+      removeComments: false,
+      isolatedModules: true,
+    }
+    if (filePath.endsWith('.tsx')) {
+      compilerOptions.jsx = ts.JsxEmit.Preserve
+    }
     const result = ts.transpileModule(source, {
-      compilerOptions: {
-        target: ts.ScriptTarget.ESNext,
-        module: ts.ModuleKind.ESNext,
-        jsx: filePath.endsWith('.tsx') ? ts.JsxEmit.Preserve : undefined,
-        removeComments: false,
-        isolatedModules: true,
-      },
+      compilerOptions,
       fileName: filePath,
     })
 

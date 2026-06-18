@@ -283,7 +283,7 @@ This plan implements the DSL v2 compiler pipeline across three packages: `@tomat
     - Test that warnings are emitted for unrecognized statements without halting
     - _Requirements: 1.1, 2.1, 5.1, 6.1, 7.1, 8.1, 11.3, 15.1–15.12_
 
-- [ ] 14. Final Checkpoint - Ensure all tests pass
+- [x] 14. Final Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
