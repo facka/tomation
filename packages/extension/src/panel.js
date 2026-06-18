@@ -203,18 +203,24 @@ function renderHomeView() {
       var specEntry = project.specs[i];
       var spec = specEntry.spec;
 
-      // Check meta.url warning
-      if (spec && spec.meta && spec.meta.url) {
-        try {
-          var specHost = getHostFromUrl(spec.meta.url);
-          if (specHost && specHost !== currentHostname) {
-            warningEl.textContent = 'Warning: Spec "' + escapeHtml(specEntry.filename) +
-              '" targets ' + escapeHtml(specHost) +
-              ' but current tab is ' + escapeHtml(currentHostname);
-            warningEl.classList.add('visible');
+      // Check meta.urls (array) or meta.url (legacy single) warning
+      if (spec && spec.meta) {
+        var urls = spec.meta.urls || (spec.meta.url ? [spec.meta.url] : []);
+        if (urls.length > 0) {
+          try {
+            var anyMatch = urls.some(function (u) {
+              var h = getHostFromUrl(u);
+              return h && h === currentHostname;
+            });
+            if (!anyMatch) {
+              warningEl.textContent = 'Warning: Spec "' + escapeHtml(specEntry.filename) +
+                '" targets ' + escapeHtml(urls.join(', ')) +
+                ' but current tab is ' + escapeHtml(currentHostname);
+              warningEl.classList.add('visible');
+            }
+          } catch (e) {
+            // ignore parse errors for meta.urls
           }
-        } catch (e) {
-          // ignore parse errors for meta.url
         }
       }
 

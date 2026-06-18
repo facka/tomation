@@ -232,7 +232,7 @@ This plan implements the DSL v2 compiler pipeline across three packages: `@tomat
     - _Requirements: 12.1, 12.2, 12.3, 12.4_
 
 - [ ] 11. Extension Runtime — URL Array Hostname Matching
-  - [ ] 11.1 Update hostname matching in `packages/extension/src/background.js` to check `meta.urls` array
+  - [x] 11.1 Update hostname matching in `packages/extension/src/background.js` to check `meta.urls` array
     - Replace single `meta.url` check with `meta.urls.some(...)` check
     - No warning if current page hostname matches any URL in the array
     - _Requirements: 10.4_
