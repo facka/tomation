@@ -277,22 +277,121 @@ function onTestItemClick(e) {
 // --- Test Plan View ---
 
 /**
- * Build a human-readable label for a step.
- * @param {object} step
+ * Capitalize the first letter of a string.
+ * @param {string} str
  * @returns {string}
  */
-function buildStepLabel(step) {
-  var parts = [step.action];
+function capitalize(str) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+/**
+ * Build a step label as an HTML string with the element target in a separate badge span.
+ * The action name is capitalized. The element label is rendered as a styled badge
+ * with a title tooltip for hover details.
+ * @param {object} step
+ * @param {object} [pageElements] - spec.pageElements for label lookup
+ * @returns {string} HTML string
+ */
+function buildStepLabelHtml(step, pageElements) {
+  if (step.action === 'task' && step.name) {
+    var taskLabel = step.name.replace('__', '.');
+    return '<span class="step-action">Task</span> ' + escapeHtml(taskLabel);
+  }
+
+  var html = '<span class="step-action">' + escapeHtml(capitalize(step.action)) + '</span>';
+
   if (step.target) {
-    parts.push(step.target);
+    var displayName = resolveTargetLabel(step.target, pageElements);
+    var tooltip = buildElementTooltip(step.target, pageElements);
+    html += ' <span class="element-badge" title="' + escapeHtml(tooltip) + '">' + escapeHtml(displayName) + '</span>';
+  }
+
+  if (step.action === 'typePassword') {
+    html += ' <span class="step-value">****</span>';
+  } else if (step.value) {
+    html += ' <span class="step-value">"' + escapeHtml(step.value) + '"</span>';
+  }
+
+  if (step.action === 'navigate' && step.url) {
+    html += ' <span class="step-value">' + escapeHtml(step.url) + '</span>';
+  }
+
+  if (step.action === 'wait' && step.ms !== undefined) {
+    html += ' <span class="step-value">' + step.ms + 'ms</span>';
+  }
+
+  if (step.action === 'manual' && step.description) {
+    html += ' <span class="step-value">"' + escapeHtml(step.description) + '"</span>';
+  }
+
+  return html;
+}
+
+/**
+ * Build a human-readable label for a step (plain text, used for log entries).
+ * Resolves element targets to their labels from pageElements.
+ * @param {object} step
+ * @param {object} [pageElements] - spec.pageElements for label lookup
+ * @returns {string}
+ */
+function buildStepLabel(step, pageElements) {
+  var parts = [capitalize(step.action)];
+  if (step.target) {
+    var displayName = resolveTargetLabel(step.target, pageElements);
+    parts.push(displayName);
   }
   if (step.value) {
     parts.push('"' + step.value + '"');
   }
   if (step.action === 'task' && step.name) {
-    parts = ['task: ' + step.name];
+    var taskLabel = step.name.replace('__', '.');
+    parts = ['Task ' + taskLabel];
   }
   return parts.join(' ');
+}
+
+/**
+ * Resolve a namespaced element key to its human-readable label.
+ * Falls back to the key itself if no label is found.
+ * @param {string} target - namespaced key (e.g., "Login__submitButton")
+ * @param {object} [pageElements] - spec.pageElements map
+ * @returns {string}
+ */
+function resolveTargetLabel(target, pageElements) {
+  if (!target) return '';
+  if (pageElements && pageElements[target] && pageElements[target].label) {
+    return pageElements[target].label;
+  }
+  // Fallback: convert namespace key to readable form (Login__submitButton → Login.submitButton)
+  return target.replace('__', '.');
+}
+
+/**
+ * Build a tooltip string with element details (namespace, tag, matcher/xpath).
+ * @param {string} target - namespaced key
+ * @param {object} [pageElements] - spec.pageElements map
+ * @returns {string}
+ */
+function buildElementTooltip(target, pageElements) {
+  if (!target || !pageElements || !pageElements[target]) return target || '';
+  var el = pageElements[target];
+  var lines = [];
+  lines.push('Key: ' + target);
+  lines.push('Tag: ' + (el.tag || '*'));
+  if (el.xpath) {
+    lines.push('XPath: ' + el.xpath);
+  } else if (el.where && Object.keys(el.where).length > 0) {
+    var matchers = Object.keys(el.where).map(function(k) {
+      return k + '=' + JSON.stringify(el.where[k]);
+    }).join(', ');
+    lines.push('Where: ' + matchers);
+  }
+  if (el.childOf) {
+    lines.push('Child of: ' + el.childOf);
+  }
+  return lines.join('\n');
 }
 
 /**
@@ -308,6 +407,7 @@ function renderTestPlan() {
 
   var steps = currentTest.steps;
   var tasks = currentSpec.spec.tasks || {};
+  var pageElements = currentSpec.spec.pageElements || {};
 
   for (var i = 0; i < steps.length; i++) {
     var step = steps[i];
@@ -322,7 +422,7 @@ function renderTestPlan() {
       taskCb.setAttribute('data-is-task', 'true');
       taskCb.addEventListener('change', onTaskCheckboxChange);
       var taskLabel = document.createElement('label');
-      taskLabel.textContent = step.name;
+      taskLabel.innerHTML = '<span class="step-action">Task</span> ' + escapeHtml(step.name.replace('__', '.'));
       taskLabel.setAttribute('for', '');
       taskLi.appendChild(taskCb);
       taskLi.appendChild(taskLabel);
@@ -339,7 +439,7 @@ function renderTestPlan() {
         childCb.setAttribute('data-step-index', String(i));
         childCb.setAttribute('data-child-index', String(c));
         var childLabel = document.createElement('label');
-        childLabel.textContent = buildStepLabel(childSteps[c]);
+        childLabel.innerHTML = buildStepLabelHtml(childSteps[c], pageElements);
         childLi.appendChild(childCb);
         childLi.appendChild(childLabel);
         checklist.appendChild(childLi);
@@ -352,7 +452,7 @@ function renderTestPlan() {
       cb.checked = true;
       cb.setAttribute('data-step-index', String(i));
       var label = document.createElement('label');
-      label.textContent = buildStepLabel(step);
+      label.innerHTML = buildStepLabelHtml(step, pageElements);
       li.appendChild(cb);
       li.appendChild(label);
       checklist.appendChild(li);
@@ -527,11 +627,13 @@ function appendLogEntry(logData) {
   var logContainer = document.getElementById('log-container');
   if (!logContainer) return;
 
+  var pageElements = (currentSpec && currentSpec.spec && currentSpec.spec.pageElements) || {};
+
   // If this is a task header entry, render a group header row
   if (logData.taskName) {
     var headerDiv = document.createElement('div');
     headerDiv.className = 'log-entry task-header';
-    headerDiv.textContent = logData.taskName;
+    headerDiv.innerHTML = '<span class="step-action">Task</span> ' + escapeHtml(logData.taskName.replace('__', '.'));
     logContainer.appendChild(headerDiv);
     return;
   }
@@ -553,18 +655,20 @@ function appendLogEntry(logData) {
 
   div.className = classes;
 
-  // Build display text: action, target, value (masked for typePassword)
+  // Build display text: action, target (label badge), value (masked for typePassword)
   var parts = [];
   if (logData.action) {
-    parts.push(logData.action);
+    parts.push('<span class="step-action">' + escapeHtml(capitalize(logData.action)) + '</span>');
   }
   if (logData.target) {
-    parts.push(logData.target);
+    var displayTarget = resolveTargetLabel(logData.target, pageElements);
+    var tooltip = buildElementTooltip(logData.target, pageElements);
+    parts.push('<span class="element-badge" title="' + escapeHtml(tooltip) + '">' + escapeHtml(displayTarget) + '</span>');
   }
   if (logData.action === 'typePassword') {
-    parts.push('****');
+    parts.push('<span class="step-value">****</span>');
   } else if (logData.value) {
-    parts.push(escapeHtml(logData.value));
+    parts.push('<span class="step-value">' + escapeHtml(logData.value) + '</span>');
   }
 
   // Add pass/fail indicator with optional retry attempt count
@@ -584,7 +688,7 @@ function appendLogEntry(logData) {
     }
   }
 
-  div.innerHTML = escapeHtml(parts.join(' ')) + indicator;
+  div.innerHTML = parts.join(' ') + indicator;
 
   logContainer.appendChild(div);
 
