@@ -45,12 +45,47 @@ function matchesWhere(el, where) {
  * Find a DOM element matching the given descriptor.
  * Polls using requestAnimationFrame for up to 5 seconds.
  *
- * @param {object} descriptor - Element descriptor with `tag` and `where` properties
+ * When the descriptor contains an `xpath` field, uses document.evaluate()
+ * with XPathResult.FIRST_ORDERED_NODE_TYPE to locate the element, bypassing
+ * the normal tag+where polling logic.
+ *
+ * @param {object} descriptor - Element descriptor with `tag` and `where` properties, or `xpath` for XPath lookup
  * @param {Element|Document} [parentNode] - Optional parent node to scope the search
  * @returns {Promise<Element>} Resolves with the found element or rejects after timeout
  */
 function findElement(descriptor, parentNode) {
   var root = parentNode || document;
+
+  // XPath-based element lookup — bypass normal tag+where logic
+  if (descriptor.xpath) {
+    return new Promise(function (resolve, reject) {
+      var startTime = Date.now();
+
+      function poll() {
+        var result = document.evaluate(
+          descriptor.xpath,
+          root,
+          null,
+          XPathResult.FIRST_ORDERED_NODE_TYPE,
+          null
+        );
+        var node = result.singleNodeValue;
+        if (node) {
+          resolve(node);
+          return;
+        }
+        if (Date.now() - startTime >= TIMEOUT_5sec) {
+          reject(new Error('Element not found: XPath ' + descriptor.xpath));
+          return;
+        }
+        requestAnimationFrame(poll);
+      }
+
+      poll();
+    });
+  }
+
+  // Normal tag+where polling logic
   var tag = descriptor.tag;
   var where = descriptor.where;
 

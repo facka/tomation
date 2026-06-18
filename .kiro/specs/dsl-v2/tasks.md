@@ -214,11 +214,11 @@ This plan implements the DSL v2 compiler pipeline across three packages: `@tomat
     - Test `meta.urls` array parsing
     - _Requirements: 1.2, 9.1, 9.2, 9.3, 10.1, 10.2, 10.3_
 
-- [ ] 9. Checkpoint - Ensure all compiler tests pass
+- [x] 9. Checkpoint - Ensure all compiler tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 10. Extension Runtime — XPath Element Support
-  - [ ] 10.1 Extend `findElement()` in `packages/extension/src/runtime.js` to support XPath-based element lookup
+  - [x] 10.1 Extend `findElement()` in `packages/extension/src/runtime.js` to support XPath-based element lookup
     - When element descriptor has `xpath` field, use `document.evaluate()` with `XPathResult.FIRST_ORDERED_NODE_TYPE`
     - Bypass normal tag+where polling logic for XPath elements
     - Poll with `requestAnimationFrame` until node found or 5-second timeout expires
