@@ -165,7 +165,7 @@ This plan implements the DSL v2 compiler pipeline across three packages: `@tomat
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 7. Compiler — POM Extractor v2
-  - [ ] 7.1 Extend `packages/compiler/src/pom.js` to implement `extractPomV2(parsedFile)` 
+  - [x] 7.1 Extend `packages/compiler/src/pom.js` to implement `extractPomV2(parsedFile)` 
     - Derive namespace from file name using `deriveNamespace()`
     - Namespace element keys as `<Namespace>__<variableName>`
     - Namespace task keys as `<Namespace>__<taskName>`

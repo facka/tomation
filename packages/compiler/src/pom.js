@@ -183,7 +183,158 @@ function deriveNamespace(filePath) {
 }
 
 // ---------------------------------------------------------------------------
+// extractPomV2 — v2 POM extraction (file-name-based namespace)
+// Requirements: 8.1, 8.4, 4.2, 4.3
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract a flat, namespaced POM from a v2 ParsedFile produced by parseSource().
+ *
+ * V2 files use file-name-based namespacing (no `Page('Name')` wrappers).
+ * Elements are in parsedFile.elements[] and tasks in parsedFile.tasks[].
+ *
+ * The function:
+ *   - Derives the namespace from the file name using deriveNamespace()
+ *   - Namespaces element keys as `<Namespace>__<variableName>`
+ *   - Namespaces task keys as `<Namespace>__<taskName>`
+ *   - Resolves `childOf` variable references to namespaced keys
+ *
+ * @param {object} parsedFile - ParsedFile returned by parseSource() with v2 elements/tasks
+ * @returns {object} PomResult (same shape as extractPom output)
+ */
+function extractPomV2(parsedFile) {
+  const result = emptyResult(parsedFile.filePath);
+
+  // If the parser encountered a fatal error, surface it and bail out.
+  if (parsedFile.error) {
+    result.errors.push({
+      message: parsedFile.error.message,
+      filePath: parsedFile.filePath,
+      line: parsedFile.error.line,
+    });
+    return result;
+  }
+
+  // Non-POM files or files with no v2 elements/tasks produce an empty result.
+  const hasV2Elements = parsedFile.elements && parsedFile.elements.length > 0;
+  const hasV2Tasks = parsedFile.tasks && parsedFile.tasks.length > 0;
+  if (!hasV2Elements && !hasV2Tasks) {
+    return result;
+  }
+
+  // Derive namespace from file name
+  let namespace;
+  try {
+    namespace = deriveNamespace(parsedFile.filePath);
+  } catch (err) {
+    result.errors.push({
+      message: err.message,
+      filePath: parsedFile.filePath,
+      line: 0,
+    });
+    return result;
+  }
+
+  // Store namespace on the result for collision detection by callers
+  result.namespace = namespace;
+
+  const prefix = namespace + '__';
+
+  // Build a map of variableName → namespaced key for childOf resolution
+  const variableToKey = {};
+
+  // ---- elements ------------------------------------------------------------
+  if (parsedFile.elements) {
+    for (const elDef of parsedFile.elements) {
+      const namespacedKey = prefix + elDef.variableName;
+      variableToKey[elDef.variableName] = namespacedKey;
+
+      const entry = {
+        tag: elDef.tag,
+        label: elDef.label,
+        where: elDef.where || {},
+        _meta: {
+          filePath: parsedFile.filePath,
+          line: elDef.line,
+        },
+      };
+
+      if (elDef.xpath) {
+        entry.xpath = elDef.xpath;
+      }
+
+      result.pageElements[namespacedKey] = entry;
+    }
+
+    // Second pass: resolve childOf references to namespaced keys
+    for (const elDef of parsedFile.elements) {
+      if (elDef.childOf) {
+        const namespacedKey = prefix + elDef.variableName;
+        const parentKey = variableToKey[elDef.childOf];
+        if (parentKey) {
+          result.pageElements[namespacedKey].childOf = parentKey;
+        } else {
+          result.errors.push({
+            message: `Element '${elDef.variableName}' at ${parsedFile.filePath}:${elDef.line} references unknown parent '${elDef.childOf}'`,
+            filePath: parsedFile.filePath,
+            line: elDef.line,
+          });
+        }
+      }
+    }
+  }
+
+  // ---- tasks ---------------------------------------------------------------
+  if (parsedFile.tasks) {
+    for (const taskDef of parsedFile.tasks) {
+      const namespacedKey = prefix + taskDef.name;
+
+      result.tasks[namespacedKey] = {
+        steps: taskDef.steps || [],
+        params: taskDef.params || [],
+        _meta: {
+          filePath: parsedFile.filePath,
+          line: taskDef.line,
+        },
+      };
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Detect namespace collisions across multiple PomResult objects.
+ *
+ * When two POM files produce the same namespace, this function returns an
+ * error identifying both files (Requirement 8.4).
+ *
+ * @param {object[]} pomResults - Array of PomResult objects from extractPomV2()
+ * @returns {Array<{ message: string, filePath: string, line: number }>} collision errors
+ */
+function detectNamespaceCollisions(pomResults) {
+  const errors = [];
+  const seen = {}; // namespace → filePath
+
+  for (const pomResult of pomResults) {
+    if (!pomResult.namespace) continue;
+
+    if (seen[pomResult.namespace]) {
+      errors.push({
+        message: `Namespace collision: '${pomResult.namespace}' is produced by both '${seen[pomResult.namespace]}' and '${pomResult.filePath}'`,
+        filePath: pomResult.filePath,
+        line: 0,
+      });
+    } else {
+      seen[pomResult.namespace] = pomResult.filePath;
+    }
+  }
+
+  return errors;
+}
+
+// ---------------------------------------------------------------------------
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { extractPom, deriveNamespace };
+module.exports = { extractPom, extractPomV2, deriveNamespace, detectNamespaceCollisions };
