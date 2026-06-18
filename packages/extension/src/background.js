@@ -634,41 +634,63 @@ function runStepLoop() {
  * @returns {Promise}
  */
 function handleNavigateStep(step, currentIndex) {
-  return api.tabs.update(runState.lockedTabId, { url: step.url }).then(function () {
-    return new Promise(function (resolve, reject) {
-      var timeoutId = null;
-      var listener = null;
+  // Resolve relative URLs against the current page URL (not the extension URL)
+  var navigateUrl = step.url;
 
-      listener = function (message, sender) {
-        // Only accept RUNTIME_READY from the locked tab
-        var fromTab = sender && sender.tab && sender.tab.id === runState.lockedTabId;
-        if (message && message.type === 'RUNTIME_READY' && fromTab) {
-          clearTimeout(timeoutId);
+  function doNavigate(resolvedUrl) {
+    return api.tabs.update(runState.lockedTabId, { url: resolvedUrl }).then(function () {
+      return new Promise(function (resolve, reject) {
+        var timeoutId = null;
+        var listener = null;
+
+        listener = function (message, sender) {
+          // Only accept RUNTIME_READY from the locked tab
+          var fromTab = sender && sender.tab && sender.tab.id === runState.lockedTabId;
+          if (message && message.type === 'RUNTIME_READY' && fromTab) {
+            clearTimeout(timeoutId);
+            api.runtime.onMessage.removeListener(listener);
+            resolve();
+          }
+        };
+
+        api.runtime.onMessage.addListener(listener);
+
+        timeoutId = setTimeout(function () {
           api.runtime.onMessage.removeListener(listener);
-          resolve();
-        }
-      };
-
-      api.runtime.onMessage.addListener(listener);
-
-      timeoutId = setTimeout(function () {
-        api.runtime.onMessage.removeListener(listener);
-        reject(new Error('Navigation timeout: RUNTIME_READY not received within 10 seconds'));
-      }, 10000);
+          reject(new Error('Navigation timeout: RUNTIME_READY not received within 10 seconds'));
+        }, 10000);
+      });
+    }).then(function () {
+      // Navigation succeeded
+      runState.passCount++;
+      emitLog(currentIndex, step, true, undefined);
+      runState.stepIndex++;
+      return runStepLoop();
+    }).catch(function (err) {
+      // Navigation timed out or failed
+      runState.failCount++;
+      emitLog(currentIndex, step, false, err.message || 'Navigation failed');
+      unlockTab();
+      runState.running = false;
+      emitSummary('RUN_COMPLETE', currentIndex + 1, runState.passCount, runState.failCount);
     });
-  }).then(function () {
-    // Navigation succeeded
-    runState.passCount++;
-    emitLog(currentIndex, step, true, undefined);
-    runState.stepIndex++;
-    return runStepLoop();
-  }).catch(function (err) {
-    // Navigation timed out or failed
-    runState.failCount++;
-    emitLog(currentIndex, step, false, err.message || 'Navigation failed');
-    unlockTab();
-    runState.running = false;
-    emitSummary('RUN_COMPLETE', currentIndex + 1, runState.passCount, runState.failCount);
+  }
+
+  // If URL is already absolute (starts with http/https), use directly
+  if (/^https?:\/\//.test(navigateUrl)) {
+    return doNavigate(navigateUrl);
+  }
+
+  // Otherwise resolve relative to the current tab's URL
+  return api.tabs.get(runState.lockedTabId).then(function (tab) {
+    var baseUrl = tab.url || '';
+    try {
+      var resolved = new URL(navigateUrl, baseUrl).href;
+      return doNavigate(resolved);
+    } catch (e) {
+      // Fallback: use as-is if URL parsing fails
+      return doNavigate(navigateUrl);
+    }
   });
 }
 
