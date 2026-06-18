@@ -736,6 +736,31 @@ function extractStringOrTemplate(node) {
  * @param {string} filePath - current file path for error reporting
  * @returns {object|null} step descriptor or null if unrecognized
  */
+
+/**
+ * Extract an element reference from an AST node.
+ * Handles two patterns:
+ *   - Bare identifier: `submitButton` → "submitButton" (resolved later by POM extractor)
+ *   - Member expression: `Login.submitButton` → "Login__submitButton" (cross-file reference)
+ *
+ * @param {object} node - AST node (Identifier or MemberExpression)
+ * @returns {string|null} element reference string, or null if not a valid pattern
+ */
+function extractElementRef(node) {
+  if (!node) return null;
+  if (node.type === 'Identifier') {
+    return node.name;
+  }
+  if (
+    node.type === 'MemberExpression' &&
+    node.object && node.object.type === 'Identifier' &&
+    node.property && node.property.type === 'Identifier'
+  ) {
+    return node.object.name + '__' + node.property.name;
+  }
+  return null;
+}
+
 function extractV2Step(exprNode, filePath) {
   if (!exprNode) return null;
 
@@ -758,7 +783,7 @@ function extractV2Step(exprNode, filePath) {
         const valueArg = innerCall.arguments[0];
         const value = extractStringOrTemplate(valueArg);
         const targetArg = exprNode.arguments[0];
-        const target = targetArg && targetArg.type === 'Identifier' ? targetArg.name : null;
+        const target = extractElementRef(targetArg);
         if (target === null) return null;
         return { action, target, value: value !== null ? value : '' };
       }
@@ -798,27 +823,27 @@ function extractV2Step(exprNode, filePath) {
         case 'Click':
         case 'AssertExists':
         case 'AssertNotExists': {
-          const target = args[0] && args[0].type === 'Identifier' ? args[0].name : null;
+          const target = extractElementRef(args[0]);
           if (target === null) return null;
           const actionNameMap = { Click: 'click', AssertExists: 'assertExists', AssertNotExists: 'assertNotExists' };
           return { action: actionNameMap[fnName], target };
         }
 
         case 'WaitFor': {
-          const target = args[0] && args[0].type === 'Identifier' ? args[0].name : null;
+          const target = extractElementRef(args[0]);
           if (target === null) return null;
           return { action: 'waitFor', target, gone: false };
         }
 
         case 'WaitForGone': {
-          const target = args[0] && args[0].type === 'Identifier' ? args[0].name : null;
+          const target = extractElementRef(args[0]);
           if (target === null) return null;
           return { action: 'waitFor', target, gone: true };
         }
 
         // Two-argument target+value: AssertHasText(element, text)
         case 'AssertHasText': {
-          const target = args[0] && args[0].type === 'Identifier' ? args[0].name : null;
+          const target = extractElementRef(args[0]);
           if (target === null) return null;
           const value = extractStringOrTemplate(args[1]);
           return { action: 'assertHasText', target, value: value !== null ? value : '' };
@@ -1700,4 +1725,4 @@ function parseSource(source, filePath) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { parseFile, parseSource, extractV2Element, extractXPathElement, extractV2Task, extractV2Test, extractV2Step, extractIfStep, extractCondition };
+module.exports = { parseFile, parseSource, extractV2Element, extractXPathElement, extractV2Task, extractV2Test, extractV2Step, extractElementRef, extractIfStep, extractCondition };

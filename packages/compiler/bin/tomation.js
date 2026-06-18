@@ -33,12 +33,15 @@ var emitSpec = require('../src/emitter').emitSpec;
 // ---------------------------------------------------------------------------
 
 var USAGE = [
-  'Usage: tomation <command>',
+  'Usage: tomation <command> [options]',
   '',
   'Commands:',
   '  compile   Run full pipeline: resolve → parse → pom extract → dedup → flatten → validate → emit spec.json',
   '  check     Run full pipeline through validation only (no file write); exit 0 if valid, exit 1 if invalid',
   '  watch     Run compile, then watch all discovered source files; re-run full pipeline on any change',
+  '',
+  'Options:',
+  '  --verbose  Print detailed step-by-step progress and context data for debugging',
 ].join('\n');
 
 // ---------------------------------------------------------------------------
@@ -55,25 +58,37 @@ var DEFAULT_META = { name: 'Untitled', url: '', description: '' };
  * Handles mixed .ts and .js files. TypeScript files are type-stripped before parsing.
  *
  * @param {string} cwd
+ * @param {{ verbose?: boolean }} [options]
  * @returns {{ ok: boolean, spec?: object, files?: string[], error?: string }}
  */
-function runPipeline(cwd) {
+function runPipeline(cwd, options) {
+  var verbose = options && options.verbose;
+
+  function log(msg) {
+    if (verbose) console.error('[verbose] ' + msg);
+  }
+
   // Step 1: resolve files
+  log('Step 1/6: Resolving files from ' + cwd);
   var resolveResult = resolve(cwd);
   if (!resolveResult.ok) {
     return { ok: false, error: resolveResult.error };
   }
   var files = resolveResult.files;
+  log('  Resolved ' + files.length + ' file(s): ' + files.map(function(f) { return path.basename(f); }).join(', '));
 
   // Use meta from config if available, otherwise fall back to defaults
   var meta = resolveResult.meta || DEFAULT_META;
+  log('  Meta: ' + JSON.stringify(meta));
 
   // Step 2: read, strip types (if .ts/.tsx), and parse each file
+  log('Step 2/6: Reading, stripping types, and parsing files');
   var parsedFiles = [];
   var allWarnings = [];
   for (var i = 0; i < files.length; i++) {
     var filePath = files[i];
     var isTypeScript = filePath.endsWith('.ts') || filePath.endsWith('.tsx');
+    log('  Processing: ' + path.basename(filePath) + (isTypeScript ? ' (TypeScript)' : ' (JavaScript)'));
 
     var source;
     try {
@@ -84,28 +99,41 @@ function runPipeline(cwd) {
 
     // Strip TypeScript types if needed
     if (isTypeScript) {
+      log('    Stripping types...');
       var stripResult = stripTypes(source, filePath);
       if (stripResult.error) {
+        log('    ✗ Strip failed: ' + stripResult.error.message + ' (line ' + stripResult.error.line + ')');
         return {
           ok: false,
           error: 'TypeScript error in ' + filePath + ':' + stripResult.error.line + ': ' + stripResult.error.message
         };
       }
       source = stripResult.code;
+      log('    ✓ Types stripped (' + source.split('\n').length + ' lines)');
     }
 
     // Parse the (now plain JS) source
+    log('    Parsing...');
     var parsed = parseSource(source, filePath);
     if (parsed.error) {
+      log('    ✗ Parse failed: ' + parsed.error.message);
       return { ok: false, error: parsed.error.message };
     }
     if (parsed.warnings && parsed.warnings.length > 0) {
       allWarnings.push.apply(allWarnings, parsed.warnings);
+      log('    ⚠ ' + parsed.warnings.length + ' warning(s)');
+      log('Warnings: ')
+      log(JSON.stringify(parsed.warnings, 2, 4))
     }
+    var elementCount = (parsed.elements || []).length;
+    var taskCount = (parsed.tasks || []).length;
+    var testCount = (parsed.v2Tests || parsed.tests || []).length;
+    log('    ✓ Parsed: type=' + parsed.type + ', elements=' + elementCount + ', tasks=' + taskCount + ', tests=' + testCount);
     parsedFiles.push(parsed);
   }
 
   // Step 3: separate POM files and test files; extract POM results
+  log('Step 3/6: Extracting POM data and separating test files');
   var pomResults = [];
   var parsedTestFiles = [];
   for (var j = 0; j < parsedFiles.length; j++) {
@@ -116,13 +144,19 @@ function runPipeline(cwd) {
       var hasV2Patterns = (pf.elements && pf.elements.length > 0) || (pf.tasks && pf.tasks.length > 0);
       var pomResult;
       if (hasV2Patterns) {
+        log('  Extracting POM v2: ' + path.basename(pf.filePath));
         pomResult = extractPomV2(pf);
       } else {
+        log('  Extracting POM v1: ' + path.basename(pf.filePath));
         pomResult = extractPom(pf);
       }
       if (pomResult.errors && pomResult.errors.length > 0) {
+        log('  ✗ POM extraction error: ' + pomResult.errors[0].message);
         return { ok: false, error: pomResult.errors[0].message };
       }
+      var elemKeys = Object.keys(pomResult.pageElements || {});
+      var taskKeys = Object.keys(pomResult.tasks || {});
+      log('    ✓ Elements: [' + elemKeys.join(', ') + '], Tasks: [' + taskKeys.join(', ') + ']');
       pomResults.push(pomResult);
     } else {
       // Normalize v2Tests into the tests array for the flattener
@@ -130,6 +164,7 @@ function runPipeline(cwd) {
         if (!pf.tests) pf.tests = [];
         pf.tests.push.apply(pf.tests, pf.v2Tests);
       }
+      log('  Test file: ' + path.basename(pf.filePath) + ' (' + (pf.tests || []).length + ' test(s))');
       parsedTestFiles.push(pf);
     }
   }
@@ -137,23 +172,37 @@ function runPipeline(cwd) {
   // Step 3b: detect namespace collisions across v2 POM files
   var collisionErrors = detectNamespaceCollisions(pomResults);
   if (collisionErrors.length > 0) {
+    log('  ✗ Namespace collision: ' + collisionErrors[0].message);
     return { ok: false, error: collisionErrors[0].message };
   }
 
   // Step 4: deduplication
+  log('Step 4/6: Deduplicating keys');
   var dedupResult = deduplicateKeys(pomResults);
   if (!dedupResult.ok) {
+    log('  ✗ Dedup error: ' + dedupResult.error);
     return { ok: false, error: dedupResult.error };
   }
+  log('  ✓ No duplicate keys');
 
   // Step 5: flatten
+  log('Step 5/6: Flattening spec');
   var spec = flattenSpec(pomResults, parsedTestFiles, meta);
+  var specElemCount = Object.keys(spec.pageElements || {}).length;
+  var specTaskCount = Object.keys(spec.tasks || {}).length;
+  var specTestCount = (spec.tests || []).length;
+  log('  ✓ Flattened: ' + specElemCount + ' elements, ' + specTaskCount + ' tasks, ' + specTestCount + ' tests');
 
   // Step 6: validate
+  log('Step 6/6: Validating spec');
   var validationResult = validateSpec(spec);
   if (!validationResult.ok) {
+    log('  ✗ Validation error: ' + validationResult.error);
+    log('Spec: ')
+    log(JSON.stringify(spec, 2, 4))
     return { ok: false, error: validationResult.error };
   }
+  log('  ✓ Spec is valid');
 
   // Print warnings to stderr (non-fatal)
   for (var w = 0; w < allWarnings.length; w++) {
@@ -167,8 +216,8 @@ function runPipeline(cwd) {
 // compile command
 // ---------------------------------------------------------------------------
 
-function runCompile(cwd) {
-  var result = runPipeline(cwd);
+function runCompile(cwd, options) {
+  var result = runPipeline(cwd, options);
   if (!result.ok) {
     console.error(result.error);
     process.exit(1);
@@ -189,8 +238,8 @@ function runCompile(cwd) {
 // check command
 // ---------------------------------------------------------------------------
 
-function runCheck(cwd) {
-  var result = runPipeline(cwd);
+function runCheck(cwd, options) {
+  var result = runPipeline(cwd, options);
   if (!result.ok) {
     console.error(result.error);
     process.exit(1);
@@ -204,9 +253,9 @@ function runCheck(cwd) {
 // watch command
 // ---------------------------------------------------------------------------
 
-function runWatch(cwd) {
+function runWatch(cwd, options) {
   // Initial compile
-  var result = runPipeline(cwd);
+  var result = runPipeline(cwd, options);
   if (!result.ok) {
     console.error(result.error);
     // Don't exit — keep watching so the user can fix the error
@@ -256,7 +305,7 @@ function watchFiles(cwd, files) {
       }
       watchers = [];
 
-      var pipelineResult = runPipeline(cwd);
+      var pipelineResult = runPipeline(cwd, options);
       if (!pipelineResult.ok) {
         console.error('[watch] Rebuild failed: ' + pipelineResult.error);
         // Re-watch the same files (or new ones if resolve succeeded partially)
@@ -305,8 +354,10 @@ function watchFiles(cwd, files) {
 
 var subcommand = process.argv[2];
 var cwd = process.cwd();
+var verbose = process.argv.includes('--verbose');
+var options = { verbose: verbose };
 
-if (!subcommand) {
+if (!subcommand || subcommand === '--verbose') {
   console.error('Error: no command provided.\n');
   console.error(USAGE);
   process.exit(1);
@@ -314,13 +365,13 @@ if (!subcommand) {
 
 switch (subcommand) {
   case 'compile':
-    runCompile(cwd);
+    runCompile(cwd, options);
     break;
   case 'check':
-    runCheck(cwd);
+    runCheck(cwd, options);
     break;
   case 'watch':
-    runWatch(cwd);
+    runWatch(cwd, options);
     break;
   default:
     console.error('Error: unrecognized command "' + subcommand + '".\n');

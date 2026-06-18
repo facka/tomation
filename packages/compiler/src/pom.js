@@ -202,6 +202,46 @@ function deriveNamespace(filePath) {
  * @param {object} parsedFile - ParsedFile returned by parseSource() with v2 elements/tasks
  * @returns {object} PomResult (same shape as extractPom output)
  */
+
+/**
+ * Resolve element references in task/test steps.
+ * For each step with a `target` field:
+ *   - If it's a bare variable name in variableToKey, replace with the namespaced key
+ *   - If it already contains `__` (cross-file reference like "Login__submitButton"), leave as-is
+ *   - Otherwise, prefix with the current namespace (same-file element not yet in the map)
+ *
+ * Also handles nested steps in `if` conditions (recursive).
+ *
+ * @param {Array} steps - array of step objects from the parser
+ * @param {object} variableToKey - map of variableName → namespaced key
+ * @param {string} prefix - current namespace prefix (e.g., "Login__")
+ * @returns {Array} steps with resolved target references
+ */
+function resolveStepRefs(steps, variableToKey, prefix) {
+  return steps.map(function (step) {
+    const resolved = Object.assign({}, step);
+
+    // Resolve target references
+    if (resolved.target) {
+      if (variableToKey[resolved.target]) {
+        // Bare variable name from same file → namespaced key
+        resolved.target = variableToKey[resolved.target];
+      } else if (!resolved.target.includes('__')) {
+        // Bare name not in map — still prefix it (might be forward-declared)
+        resolved.target = prefix + resolved.target;
+      }
+      // If already contains __ (cross-file ref), leave as-is
+    }
+
+    // Recursively resolve if-step then branches
+    if (resolved.action === 'if' && resolved.then) {
+      resolved.then = resolveStepRefs(resolved.then, variableToKey, prefix);
+    }
+
+    return resolved;
+  });
+}
+
 function extractPomV2(parsedFile) {
   const result = emptyResult(parsedFile.filePath);
 
@@ -289,8 +329,12 @@ function extractPomV2(parsedFile) {
     for (const taskDef of parsedFile.tasks) {
       const namespacedKey = prefix + taskDef.name;
 
+      // Resolve element references in task steps:
+      // Bare variable names (e.g., "usernameInput") → namespaced keys ("Login__usernameInput")
+      const resolvedSteps = resolveStepRefs(taskDef.steps || [], variableToKey, prefix);
+
       result.tasks[namespacedKey] = {
-        steps: taskDef.steps || [],
+        steps: resolvedSteps,
         params: taskDef.params || [],
         _meta: {
           filePath: parsedFile.filePath,
