@@ -18,8 +18,11 @@ var fs = require('fs');
 var path = require('path');
 
 var resolve = require('../src/resolver').resolve;
-var parseFile = require('../src/parser').parseFile;
+var parseSource = require('../src/parser').parseSource;
 var extractPom = require('../src/pom').extractPom;
+var extractPomV2 = require('../src/pom').extractPomV2;
+var detectNamespaceCollisions = require('../src/pom').detectNamespaceCollisions;
+var stripTypes = require('../src/ts-stripper').stripTypes;
 var deduplicateKeys = require('../src/deduplicator').deduplicateKeys;
 var flattenSpec = require('../src/flattener').flattenSpec;
 var validateSpec = require('../src/validator').validateSpec;
@@ -48,6 +51,9 @@ var DEFAULT_META = { name: 'Untitled', url: '', description: '' };
  * Run the full compile pipeline up to (and including) validation.
  * Returns { ok: true, spec, files } on success or { ok: false, error } on failure.
  *
+ * v2 pipeline: resolve → stripTypes → parseSource → extractPomV2 → flatten → deduplicate → emit
+ * Handles mixed .ts and .js files. TypeScript files are type-stripped before parsing.
+ *
  * @param {string} cwd
  * @returns {{ ok: boolean, spec?: object, files?: string[], error?: string }}
  */
@@ -62,12 +68,39 @@ function runPipeline(cwd) {
   // Use meta from config if available, otherwise fall back to defaults
   var meta = resolveResult.meta || DEFAULT_META;
 
-  // Step 2: parse each file
+  // Step 2: read, strip types (if .ts/.tsx), and parse each file
   var parsedFiles = [];
+  var allWarnings = [];
   for (var i = 0; i < files.length; i++) {
-    var parsed = parseFile(files[i]);
+    var filePath = files[i];
+    var isTypeScript = filePath.endsWith('.ts') || filePath.endsWith('.tsx');
+
+    var source;
+    try {
+      source = fs.readFileSync(filePath, 'utf8');
+    } catch (e) {
+      return { ok: false, error: 'Failed to read ' + filePath + ': ' + e.message };
+    }
+
+    // Strip TypeScript types if needed
+    if (isTypeScript) {
+      var stripResult = stripTypes(source, filePath);
+      if (stripResult.error) {
+        return {
+          ok: false,
+          error: 'TypeScript error in ' + filePath + ':' + stripResult.error.line + ': ' + stripResult.error.message
+        };
+      }
+      source = stripResult.code;
+    }
+
+    // Parse the (now plain JS) source
+    var parsed = parseSource(source, filePath);
     if (parsed.error) {
       return { ok: false, error: parsed.error.message };
+    }
+    if (parsed.warnings && parsed.warnings.length > 0) {
+      allWarnings.push.apply(allWarnings, parsed.warnings);
     }
     parsedFiles.push(parsed);
   }
@@ -78,10 +111,33 @@ function runPipeline(cwd) {
   for (var j = 0; j < parsedFiles.length; j++) {
     var pf = parsedFiles[j];
     if (pf.type === 'pom') {
-      pomResults.push(extractPom(pf));
+      // Use v2 extractor if the file has v2 patterns (elements or tasks),
+      // otherwise fall back to v1 extractor for Page() syntax
+      var hasV2Patterns = (pf.elements && pf.elements.length > 0) || (pf.tasks && pf.tasks.length > 0);
+      var pomResult;
+      if (hasV2Patterns) {
+        pomResult = extractPomV2(pf);
+      } else {
+        pomResult = extractPom(pf);
+      }
+      if (pomResult.errors && pomResult.errors.length > 0) {
+        return { ok: false, error: pomResult.errors[0].message };
+      }
+      pomResults.push(pomResult);
     } else {
+      // Normalize v2Tests into the tests array for the flattener
+      if (pf.v2Tests && pf.v2Tests.length > 0) {
+        if (!pf.tests) pf.tests = [];
+        pf.tests.push.apply(pf.tests, pf.v2Tests);
+      }
       parsedTestFiles.push(pf);
     }
+  }
+
+  // Step 3b: detect namespace collisions across v2 POM files
+  var collisionErrors = detectNamespaceCollisions(pomResults);
+  if (collisionErrors.length > 0) {
+    return { ok: false, error: collisionErrors[0].message };
   }
 
   // Step 4: deduplication
@@ -97,6 +153,11 @@ function runPipeline(cwd) {
   var validationResult = validateSpec(spec);
   if (!validationResult.ok) {
     return { ok: false, error: validationResult.error };
+  }
+
+  // Print warnings to stderr (non-fatal)
+  for (var w = 0; w < allWarnings.length; w++) {
+    console.warn('⚠ ' + allWarnings[w].message);
   }
 
   return { ok: true, spec: validationResult.spec, files: files };

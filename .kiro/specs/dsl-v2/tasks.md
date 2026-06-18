@@ -271,7 +271,7 @@ This plan implements the DSL v2 compiler pipeline across three packages: `@tomat
     - _Requirements: 13.1–13.7_
 
 - [ ] 13. Integration — Full Pipeline Wiring
-  - [ ] 13.1 Wire the v2 pipeline in the compiler CLI entry point
+  - [x] 13.1 Wire the v2 pipeline in the compiler CLI entry point
     - Integrate: resolve → stripTypes → parseFile (v2) → extractPomV2 → flatten → deduplicate → emit
     - Ensure the pipeline handles mixed `.ts` and `.js` files
     - Ensure `spec.json` output format is unchanged
