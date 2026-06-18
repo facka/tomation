@@ -90,6 +90,24 @@ function resolveValue(value, params) {
 }
 
 /**
+ * Evaluate a conditional expression against the current params context.
+ *
+ * @param {object} condition - The condition object { param, op, value? }
+ * @param {object} params - The current params map
+ * @returns {boolean} - Whether the condition is met
+ */
+function evaluateCondition(condition, params) {
+  var val = params[condition.param];
+  switch (condition.op) {
+    case 'truthy':    return !!val;
+    case 'falsy':     return !val;
+    case 'equals':    return val === condition.value;
+    case 'notEquals': return val !== condition.value;
+    default:          return false;
+  }
+}
+
+/**
  * Flatten test steps by expanding task actions inline, resolving parameters,
  * and skipping unchecked steps. Returns an array of resolved step messages
  * ready to be sent as EXECUTE_STEP to the runtime.
@@ -146,6 +164,20 @@ function flattenSteps(testSteps, tasksMap, pageElements, checkedIndexes) {
 function expandStep(step, tasksMap, pageElements, params) {
   if (step.action === 'task') {
     return expandTaskStep(step, tasksMap, pageElements, params);
+  }
+
+  if (step.action === 'if') {
+    if (evaluateCondition(step.condition, params)) {
+      var result = [];
+      for (var i = 0; i < step.then.length; i++) {
+        var expanded = expandStep(step.then[i], tasksMap, pageElements, params);
+        for (var j = 0; j < expanded.length; j++) {
+          result.push(expanded[j]);
+        }
+      }
+      return result;
+    }
+    return [];
   }
 
   return [buildStepMessage(step, pageElements, params)];
@@ -983,6 +1015,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     generateRandom: generateRandom,
     resolveValue: resolveValue,
+    evaluateCondition: evaluateCondition,
     flattenSteps: flattenSteps,
     expandStep: expandStep,
     expandTaskStep: expandTaskStep,

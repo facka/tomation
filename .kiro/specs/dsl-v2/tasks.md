@@ -247,8 +247,8 @@ This plan implements the DSL v2 compiler pipeline across three packages: `@tomat
     - Test multiple URLs — first matches, last matches, none match
     - _Requirements: 10.4_
 
-- [ ] 12. Extension Background — Conditional Step Flattening
-  - [ ] 12.1 Extend the step flattener in `packages/extension/src/background.js` to evaluate `"if"` steps at runtime
+- [x] 12. Extension Background — Conditional Step Flattening
+  - [x] 12.1 Extend the step flattener in `packages/extension/src/background.js` to evaluate `"if"` steps at runtime
     - Implement `evaluateCondition(condition, params)` supporting truthy, falsy, equals, notEquals
     - Splice `then` steps into flat list when condition is true
     - Skip `then` steps entirely when condition is false
