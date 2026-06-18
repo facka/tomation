@@ -1,30 +1,59 @@
 'use strict';
 
 /**
- * resolver.js — reads tomation.config.js, discovers POM/test files,
+ * resolver.js — reads tomation.config.js/.ts, discovers POM/test files,
  * builds an import dependency graph, topologically sorts via Kahn's algorithm,
  * and detects cycles.
  *
  * Exported API:
  *   resolve(cwd) → { ok: true, files: string[] } | { ok: false, error: string }
  *
- * Requirements: 12.4, 13.4, 13.5
+ * Requirements: 1.2, 9.1, 9.2, 9.3, 12.4, 13.4, 13.5
  */
 
 const fs = require('fs');
 const path = require('path');
+const { stripTypes } = require('./ts-stripper.js');
 
 // ---------------------------------------------------------------------------
 // File discovery
 // ---------------------------------------------------------------------------
 
 /**
+ * File extensions for POM file discovery (matched in order).
+ * Includes both JS and TS variants.
+ */
+const POM_EXTENSIONS = ['.pom.js', '.pom.ts'];
+
+/**
+ * File extensions for test file discovery (matched in order).
+ * Includes both JS and TS variants.
+ */
+const TEST_EXTENSIONS = ['.test.js', '.test.ts'];
+
+/**
+ * All source file extensions recognized for discovery.
+ */
+const ALL_SOURCE_EXTENSIONS = ['.ts', '.tsx', '.pom.ts', '.test.ts', '.js', '.pom.js', '.test.js'];
+
+/**
+ * Extensions to try when resolving an import specifier (in priority order).
+ */
+const RESOLVE_EXTENSIONS = ['.ts', '.tsx', '.js', '.pom.ts', '.test.ts', '.pom.js', '.test.js'];
+
+/**
+ * Index file names to try when resolving a directory import.
+ */
+const INDEX_FILES = ['index.ts', 'index.js'];
+
+/**
  * Recursively collect all files with the given extension under dir.
  * @param {string} dir - absolute directory path
- * @param {string} ext - e.g. ".pom.js"
+ * @param {string} ext - e.g. ".pom.js" or an array of extensions
  * @returns {string[]} absolute file paths
  */
 function discoverFiles(dir, ext) {
+  const extensions = Array.isArray(ext) ? ext : [ext];
   const results = [];
   if (!fs.existsSync(dir)) {
     return results;
@@ -35,7 +64,7 @@ function discoverFiles(dir, ext) {
     if (entry.isDirectory()) {
       const nested = discoverFiles(full, ext);
       for (const f of nested) results.push(f);
-    } else if (entry.isFile() && entry.name.endsWith(ext)) {
+    } else if (entry.isFile() && extensions.some(e => entry.name.endsWith(e))) {
       results.push(full);
     }
   }
@@ -50,15 +79,15 @@ function discoverFiles(dir, ext) {
  * Parse import/require statements from file source to get imported module paths.
  * Handles:
  *   import ... from './foo'
- *   import ... from "./foo"
+ *   import ... from "~/foo"
  *   require('./foo')
- *   require("./foo")
+ *   require("~/foo")
  *
- * Returns only relative imports (starting with . or ..) since those are the
- * ones that create intra-project dependencies.
+ * Returns relative imports (starting with . or ..) and alias imports (starting
+ * with ~/) since those are the ones that create intra-project dependencies.
  *
  * @param {string} source - file contents
- * @returns {string[]} array of raw module specifiers (relative paths as written)
+ * @returns {string[]} array of raw module specifiers
  */
 function parseImports(source) {
   const specifiers = [];
@@ -76,33 +105,84 @@ function parseImports(source) {
     specifiers.push(m[1]);
   }
 
-  // Keep only relative imports
-  return specifiers.filter(s => s.startsWith('.'));
+  // Keep relative imports and ~/ alias imports
+  return specifiers.filter(s => s.startsWith('.') || s.startsWith('~/'));
 }
 
 /**
- * Resolve a relative import specifier to an absolute path.
- * Tries the specifier as-is, then with common JS extensions appended.
+ * Resolve an import specifier with extended extension support.
+ * Tries the specifier as-is, then with TypeScript and JS extensions appended,
+ * and finally as a directory with index files.
  *
- * @param {string} specifier - relative import path (e.g. './login.pom')
- * @param {string} fromFile  - absolute path of the importing file
+ * @param {string} base - absolute path to resolve against (specifier already resolved to absolute)
  * @returns {string|null} absolute resolved path, or null if not found
  */
-function resolveSpecifier(specifier, fromFile) {
-  const base = path.resolve(path.dirname(fromFile), specifier);
-  const candidates = [
-    base,
-    base + '.js',
-    base + '.pom.js',
-    base + '.test.js',
-    path.join(base, 'index.js')
-  ];
-  for (const candidate of candidates) {
+function resolveWithExtensions(base) {
+  // Try the path as-is first (e.g., already has extension)
+  if (fs.existsSync(base) && fs.statSync(base).isFile()) {
+    return base;
+  }
+
+  // Try appending each extension
+  for (const ext of RESOLVE_EXTENSIONS) {
+    const candidate = base + ext;
     if (fs.existsSync(candidate)) {
       return candidate;
     }
   }
+
+  // Try as a directory with index files
+  for (const idx of INDEX_FILES) {
+    const candidate = path.join(base, idx);
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
   return null;
+}
+
+/**
+ * Resolve a ~/alias import specifier to an absolute path.
+ * The ~/ prefix is replaced with the baseUrl directory.
+ *
+ * @param {string} specifier - import path starting with ~/
+ * @param {string} baseUrl - absolute path of the base directory for alias resolution
+ * @returns {{ resolved: string } | { error: string }} resolved absolute path or error
+ */
+function resolveAlias(specifier, baseUrl) {
+  // Strip the ~/ prefix and resolve relative to baseUrl
+  const relativePath = specifier.slice(2); // remove '~/'
+  const base = path.resolve(baseUrl, relativePath);
+  const resolved = resolveWithExtensions(base);
+
+  if (resolved) {
+    return { resolved };
+  }
+
+  return {
+    error: `Cannot resolve alias import '${specifier}' from base '${baseUrl}'`
+  };
+}
+
+/**
+ * Resolve a relative import specifier to an absolute path.
+ * Tries the specifier as-is, then with common extensions appended.
+ *
+ * @param {string} specifier - relative import path (e.g. './login.pom') or ~/ alias
+ * @param {string} fromFile  - absolute path of the importing file
+ * @param {string} [baseUrl] - absolute path for ~/ alias resolution
+ * @returns {string|null} absolute resolved path, or null if not found
+ */
+function resolveSpecifier(specifier, fromFile, baseUrl) {
+  if (specifier.startsWith('~/')) {
+    if (!baseUrl) return null;
+    const result = resolveAlias(specifier, baseUrl);
+    return result.resolved || null;
+  }
+
+  const base = path.resolve(path.dirname(fromFile), specifier);
+  return resolveWithExtensions(base);
 }
 
 // ---------------------------------------------------------------------------
@@ -117,10 +197,12 @@ function resolveSpecifier(specifier, fromFile) {
  *
  * @param {string[]} pomFiles
  * @param {string[]} testFiles
- * @returns {Map<string, object>} filePath → node
+ * @param {string} [baseUrl] - absolute path for ~/ alias resolution
+ * @returns {{ graph: Map<string, object>, errors: string[] }} filePath → node, plus any alias resolution errors
  */
-function buildGraph(pomFiles, testFiles) {
+function buildGraph(pomFiles, testFiles, baseUrl) {
   const graph = new Map();
+  const errors = [];
 
   const allFiles = [
     ...pomFiles.map(f => ({ filePath: f, type: 'pom' })),
@@ -138,9 +220,22 @@ function buildGraph(pomFiles, testFiles) {
     const rawImports = parseImports(source);
     const resolvedImports = [];
     for (const spec of rawImports) {
-      const resolved = resolveSpecifier(spec, filePath);
-      if (resolved !== null) {
-        resolvedImports.push(resolved);
+      if (spec.startsWith('~/')) {
+        if (!baseUrl) {
+          errors.push(`Cannot resolve '${spec}' in '${filePath}': no baseUrl configured`);
+          continue;
+        }
+        const result = resolveAlias(spec, baseUrl);
+        if (result.error) {
+          errors.push(`Cannot resolve '${spec}' in '${filePath}': ${result.error}`);
+          continue;
+        }
+        resolvedImports.push(result.resolved);
+      } else {
+        const resolved = resolveSpecifier(spec, filePath, baseUrl);
+        if (resolved !== null) {
+          resolvedImports.push(resolved);
+        }
       }
     }
 
@@ -152,7 +247,7 @@ function buildGraph(pomFiles, testFiles) {
     });
   }
 
-  return graph;
+  return { graph, errors };
 }
 
 // ---------------------------------------------------------------------------
@@ -302,17 +397,26 @@ function findCycleError(graph, inDegree) {
 /**
  * resolve(cwd)
  *
- * Reads tomation.config.js from cwd, discovers all .pom.js and .test.js files,
- * builds a dependency graph, topologically sorts them, and returns an ordered
- * list of file paths ready for sequential processing.
+ * Reads tomation.config.js or tomation.config.ts from cwd, discovers all
+ * POM and test files (.ts/.tsx/.js), builds a dependency graph, topologically
+ * sorts them, and returns an ordered list of file paths ready for sequential processing.
  *
  * @param {string} cwd - working directory (absolute path)
  * @returns {{ ok: true, files: string[] } | { ok: false, error: string }}
  */
 function resolve(cwd) {
-  // Requirement 12.4 — read tomation.config.js; fail if not found
-  const configPath = path.join(cwd, 'tomation.config.js');
-  if (!fs.existsSync(configPath)) {
+  // Try tomation.config.ts first, then tomation.config.js
+  const configPathTs = path.join(cwd, 'tomation.config.ts');
+  const configPathJs = path.join(cwd, 'tomation.config.js');
+
+  let configPath = null;
+  if (fs.existsSync(configPathTs)) {
+    configPath = configPathTs;
+  } else if (fs.existsSync(configPathJs)) {
+    configPath = configPathJs;
+  }
+
+  if (!configPath) {
     return {
       ok: false,
       error: 'tomation.config.js not found in current directory'
@@ -321,11 +425,33 @@ function resolve(cwd) {
 
   let config;
   try {
-    config = require(configPath);
+    if (configPath.endsWith('.ts')) {
+      // Strip types from .ts config before evaluating
+      const source = fs.readFileSync(configPath, 'utf8');
+      const stripResult = stripTypes(source, configPath);
+      if (stripResult.error) {
+        return {
+          ok: false,
+          error: `Failed to parse tomation.config.ts: ${stripResult.error.message} (line ${stripResult.error.line})`
+        };
+      }
+      // Evaluate the stripped JS — handle ES module default export
+      let code = stripResult.code;
+      // Convert `export default { ... }` to module.exports for eval
+      code = code.replace(/export\s+default\s+/, 'module.exports = ');
+      const Module = require('module');
+      const m = new Module(configPath);
+      m.filename = configPath;
+      m.paths = Module._nodeModulePaths(path.dirname(configPath));
+      m._compile(code, configPath);
+      config = m.exports;
+    } else {
+      config = require(configPath);
+    }
   } catch (e) {
     return {
       ok: false,
-      error: 'Failed to load tomation.config.js: ' + e.message
+      error: `Failed to load ${path.basename(configPath)}: ${e.message}`
     };
   }
 
@@ -337,20 +463,53 @@ function resolve(cwd) {
     ? path.resolve(cwd, config.tests)
     : path.join(cwd, 'tests');
 
-  // Requirement 12.4 — discover all .pom.js and .test.js files
-  const pomFiles = discoverFiles(pomDir, '.pom.js');
-  const testFiles = discoverFiles(testsDir, '.test.js');
+  // Resolve baseUrl for ~/ alias resolution (defaults to config file directory)
+  const baseUrl = config.baseUrl
+    ? path.resolve(cwd, config.baseUrl)
+    : cwd;
 
-  // Build dependency graph
-  const graph = buildGraph(pomFiles, testFiles);
+  // Discover all POM and test files (.ts, .tsx, .js variants)
+  const pomFiles = discoverFiles(pomDir, POM_EXTENSIONS);
+  const testFiles = discoverFiles(testsDir, TEST_EXTENSIONS);
 
-  // Requirement 13.4 — topological sort; Requirement 13.5 — cycle detection
+  // Build dependency graph (with ~/ alias resolution)
+  const { graph, errors } = buildGraph(pomFiles, testFiles, baseUrl);
+
+  // Report unresolvable ~/ imports as errors
+  if (errors.length > 0) {
+    return { ok: false, error: errors[0] };
+  }
+
+  // Topological sort; cycle detection
   const sortResult = topologicalSort(graph);
   if (!sortResult.ok) {
     return { ok: false, error: sortResult.error };
   }
 
-  return { ok: true, files: sortResult.sorted };
+  // Extract meta from config (supports both meta.urls array and legacy meta.url string)
+  let meta = undefined;
+  if (config.meta && typeof config.meta === 'object') {
+    meta = {};
+    if (typeof config.meta.name === 'string') meta.name = config.meta.name;
+    if (typeof config.meta.description === 'string') meta.description = config.meta.description;
+
+    // Support meta.urls as array of URL strings (v2 config format)
+    if (Array.isArray(config.meta.urls)) {
+      meta.urls = config.meta.urls.filter(u => typeof u === 'string');
+    }
+
+    // Support legacy meta.url as a single string — normalize to urls array
+    if (typeof config.meta.url === 'string' && !meta.urls) {
+      meta.urls = [config.meta.url];
+    }
+
+    // Also keep meta.url for backward compatibility (first URL in the array)
+    if (meta.urls && meta.urls.length > 0) {
+      meta.url = meta.urls[0];
+    }
+  }
+
+  return { ok: true, files: sortResult.sorted, meta: meta };
 }
 
-module.exports = { resolve, discoverFiles, parseImports, buildGraph, topologicalSort };
+module.exports = { resolve, discoverFiles, parseImports, buildGraph, topologicalSort, resolveSpecifier, resolveAlias, resolveWithExtensions };

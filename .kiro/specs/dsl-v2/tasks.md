@@ -186,15 +186,15 @@ This plan implements the DSL v2 compiler pipeline across three packages: `@tomat
     - Test namespace collision error
     - _Requirements: 4.2, 4.3, 8.1, 8.4_
 
-- [ ] 8. Compiler — Resolver v2 (TypeScript + Path Aliases + Config)
-  - [ ] 8.1 Extend `packages/compiler/src/resolver.js` to support `.ts`/`.tsx` file discovery and `~/` path aliases
+- [x] 8. Compiler — Resolver v2 (TypeScript + Path Aliases + Config)
+  - [x] 8.1 Extend `packages/compiler/src/resolver.js` to support `.ts`/`.tsx` file discovery and `~/` path aliases
     - Add `.ts`, `.tsx`, `.pom.ts`, `.test.ts` to file discovery patterns
     - Implement `resolveAlias()` handling `~/` → `baseUrl` resolution
     - Implement `resolveWithExtensions()` trying `.ts`, `.tsx`, `.js`, `.pom.ts`, `.test.ts`, `index.ts`, `index.js`
     - Emit error for unresolvable `~/` imports
     - _Requirements: 1.2, 9.1, 9.2, 9.3_
 
-  - [ ] 8.2 Implement config loading for `tomation.config.ts` with `meta.urls` array support
+  - [x] 8.2 Implement config loading for `tomation.config.ts` with `meta.urls` array support
     - Support both `tomation.config.ts` and `tomation.config.js`
     - Strip types from `.ts` config before evaluating
     - Parse `meta.urls` as array of URL strings

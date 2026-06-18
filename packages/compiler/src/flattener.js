@@ -37,7 +37,7 @@ var DEFAULT_META = { name: 'Untitled', url: '', description: '' };
  *
  * @param {Array<object>} pomResults       - Array of PomResult from extractPom()
  * @param {Array<object>} parsedTestFiles  - Array of ParsedFile (type 'test') from parseFile()
- * @param {object}        [meta]           - Optional metadata; defaults to { name: "Untitled", url: "", description: "" }
+ * @param {object}        [meta]           - Optional metadata; defaults to { name: "Untitled", url: "", description: "" }. Supports meta.urls as an array of URL strings.
  * @returns {object} Spec-shaped object
  */
 function flattenSpec(pomResults, parsedTestFiles, meta) {
@@ -47,6 +47,11 @@ function flattenSpec(pomResults, parsedTestFiles, meta) {
     url:         (meta && typeof meta.url         === 'string') ? meta.url         : DEFAULT_META.url,
     description: (meta && typeof meta.description === 'string') ? meta.description : DEFAULT_META.description,
   };
+
+  // Include urls array when provided (v2 config format)
+  if (meta && Array.isArray(meta.urls)) {
+    resolvedMeta.urls = meta.urls;
+  }
 
   // --- Merge pageElements from all POM results ---
   var pageElements = {};

@@ -59,6 +59,9 @@ function runPipeline(cwd) {
   }
   var files = resolveResult.files;
 
+  // Use meta from config if available, otherwise fall back to defaults
+  var meta = resolveResult.meta || DEFAULT_META;
+
   // Step 2: parse each file
   var parsedFiles = [];
   for (var i = 0; i < files.length; i++) {
@@ -88,7 +91,7 @@ function runPipeline(cwd) {
   }
 
   // Step 5: flatten
-  var spec = flattenSpec(pomResults, parsedTestFiles, DEFAULT_META);
+  var spec = flattenSpec(pomResults, parsedTestFiles, meta);
 
   // Step 6: validate
   var validationResult = validateSpec(spec);
