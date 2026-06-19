@@ -1,0 +1,394 @@
+{
+  "format": "tomation-spec",
+  "version": 1,
+  "meta": {
+    "name": "Playground Tests",
+    "url": "https://facka.github.io/tomation",
+    "description": "Tests for the Tomation playground apps",
+    "urls": [
+      "https://facka.github.io/tomation"
+    ]
+  },
+  "pageElements": {
+    "Login__usernameInput": {
+      "tag": "input",
+      "label": "Username",
+      "where": {
+        "id": "username"
+      }
+    },
+    "Login__passwordInput": {
+      "tag": "input",
+      "label": "Password",
+      "where": {
+        "id": "password"
+      }
+    },
+    "Login__submitButton": {
+      "tag": "button",
+      "label": "Submit",
+      "where": {
+        "id": "login-btn"
+      }
+    },
+    "Login__message": {
+      "tag": "div",
+      "label": "Message",
+      "where": {
+        "id": "message"
+      }
+    },
+    "Navigation__pageTitle": {
+      "tag": "h1",
+      "label": "Page Title",
+      "where": {
+        "id": "page-title"
+      }
+    },
+    "Navigation__stepIndicator": {
+      "tag": "div",
+      "label": "Step Indicator",
+      "where": {
+        "id": "step-indicator"
+      }
+    },
+    "Navigation__successMessage": {
+      "tag": "div",
+      "label": "Success Message",
+      "where": {
+        "id": "success-message"
+      }
+    },
+    "Todo__input": {
+      "tag": "input",
+      "label": "Todo Input",
+      "where": {
+        "id": "todo-input"
+      }
+    },
+    "Todo__addButton": {
+      "tag": "button",
+      "label": "Add Button",
+      "where": {
+        "id": "add-btn"
+      }
+    },
+    "Todo__list": {
+      "tag": "ul",
+      "label": "Todo List",
+      "where": {
+        "id": "todo-list"
+      }
+    },
+    "Todo__firstItem": {
+      "tag": "li",
+      "label": "First Item",
+      "where": {
+        "classIncludes": "todo-item"
+      }
+    },
+    "Todo__firstItemText": {
+      "tag": "span",
+      "label": "Item Text",
+      "where": {
+        "classIncludes": "todo-text"
+      }
+    },
+    "Todo__deleteButton": {
+      "tag": "button",
+      "label": "Delete Button",
+      "where": {
+        "classIncludes": "delete-btn"
+      }
+    }
+  },
+  "tasks": {
+    "Login__fillCredentials": {
+      "steps": [
+        {
+          "action": "type",
+          "target": "Login__usernameInput",
+          "value": "admin"
+        },
+        {
+          "action": "typePassword",
+          "target": "Login__passwordInput",
+          "value": "password123"
+        }
+      ],
+      "params": []
+    },
+    "Login__fillInvalidCredentials": {
+      "steps": [
+        {
+          "action": "type",
+          "target": "Login__usernameInput",
+          "value": "wronguser"
+        },
+        {
+          "action": "typePassword",
+          "target": "Login__passwordInput",
+          "value": "wrongpass"
+        }
+      ],
+      "params": []
+    },
+    "Login__submit": {
+      "steps": [
+        {
+          "action": "click",
+          "target": "Login__submitButton"
+        }
+      ],
+      "params": []
+    },
+    "Navigation__verifyStep1": {
+      "steps": [
+        {
+          "action": "assertHasText",
+          "target": "Navigation__pageTitle",
+          "value": "Welcome to the Wizard"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Navigation__stepIndicator",
+          "value": "Step 1 of 3"
+        }
+      ],
+      "params": []
+    },
+    "Navigation__verifyStep2": {
+      "steps": [
+        {
+          "action": "assertHasText",
+          "target": "Navigation__pageTitle",
+          "value": "Provide Your Information"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Navigation__stepIndicator",
+          "value": "Step 2 of 3"
+        }
+      ],
+      "params": []
+    },
+    "Navigation__verifyStep3": {
+      "steps": [
+        {
+          "action": "assertHasText",
+          "target": "Navigation__pageTitle",
+          "value": "Confirmation"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Navigation__successMessage",
+          "value": "Wizard completed successfully"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Navigation__stepIndicator",
+          "value": "Step 3 of 3"
+        }
+      ],
+      "params": []
+    },
+    "Todo__addItem": {
+      "steps": [
+        {
+          "action": "type",
+          "target": "Todo__input",
+          "value": ""
+        },
+        {
+          "action": "click",
+          "target": "Todo__addButton"
+        }
+      ],
+      "params": [
+        "text"
+      ]
+    }
+  },
+  "tests": [
+    {
+      "name": "Login with valid credentials",
+      "steps": [
+        {
+          "action": "task",
+          "name": "Login__fillCredentials"
+        },
+        {
+          "action": "task",
+          "name": "Login__submit"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Login__message",
+          "value": "Login successful"
+        }
+      ]
+    },
+    {
+      "name": "Login with invalid credentials shows error",
+      "steps": [
+        {
+          "action": "task",
+          "name": "Login__fillInvalidCredentials"
+        },
+        {
+          "action": "task",
+          "name": "Login__submit"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Login__message",
+          "value": "Invalid username or password"
+        }
+      ]
+    },
+    {
+      "name": "Login shows error on empty submit",
+      "steps": [
+        {
+          "action": "click",
+          "target": "Login__submitButton"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Login__message",
+          "value": "required"
+        }
+      ]
+    },
+    {
+      "name": "Full wizard navigation flow",
+      "steps": [
+        {
+          "action": "task",
+          "name": "Navigation__verifyStep1"
+        },
+        {
+          "action": "navigate",
+          "url": "page2.html"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "task",
+          "name": "Navigation__verifyStep2"
+        },
+        {
+          "action": "navigate",
+          "url": "page3.html"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "task",
+          "name": "Navigation__verifyStep3"
+        }
+      ]
+    },
+    {
+      "name": "Navigate directly to confirmation page",
+      "steps": [
+        {
+          "action": "navigate",
+          "url": "navigation/page3.html"
+        },
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "task",
+          "name": "Navigation__verifyStep3"
+        }
+      ]
+    },
+    {
+      "name": "Add a todo item and verify it exists",
+      "steps": [
+        {
+          "action": "task",
+          "name": "Todo__addItem",
+          "params": {
+            "text": "Buy groceries"
+          }
+        },
+        {
+          "action": "assertExists",
+          "target": "Todo__firstItem"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Todo__firstItemText",
+          "value": "Buy groceries"
+        }
+      ]
+    },
+    {
+      "name": "Delete a todo item and verify it is removed",
+      "steps": [
+        {
+          "action": "type",
+          "target": "Todo__input",
+          "value": "Walk the dog"
+        },
+        {
+          "action": "click",
+          "target": "Todo__addButton"
+        },
+        {
+          "action": "assertExists",
+          "target": "Todo__firstItem"
+        },
+        {
+          "action": "click",
+          "target": "Todo__deleteButton"
+        },
+        {
+          "action": "assertNotExists",
+          "target": "Todo__firstItem"
+        }
+      ]
+    },
+    {
+      "name": "Add multiple items and verify text content",
+      "steps": [
+        {
+          "action": "task",
+          "name": "Todo__addItem",
+          "params": {
+            "text": "Read a book"
+          }
+        },
+        {
+          "action": "task",
+          "name": "Todo__addItem",
+          "params": {
+            "text": "Write code"
+          }
+        },
+        {
+          "action": "assertExists",
+          "target": "Todo__firstItem"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Todo__list",
+          "value": "Read a book"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Todo__list",
+          "value": "Write code"
+        }
+      ]
+    }
+  ]
+}

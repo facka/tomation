@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tomation Playground</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 16px; }
+    h1 { margin-bottom: 0.5rem; }
+    p { margin-bottom: 2rem; color: #555; }
+    .app-list { list-style: none; }
+    .app-list li { margin-bottom: 12px; }
+    .app-list a {
+      display: block;
+      padding: 12px 16px;
+      background: #f5f5f5;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      text-decoration: none;
+      color: #333;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+    .app-list a:hover { background: #e8f0fe; border-color: #4a90d9; }
+    .app-list small { display: block; font-weight: 400; color: #666; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Tomation Playground</h1>
+  <p>Sample apps for testing with the Tomation browser extension.</p>
+  <ul class="app-list">
+    <li>
+      <a href="login/index.html">
+        Login
+        <small>Simple login form with validation</small>
+      </a>
+    </li>
+    <li>
+      <a href="navigation/index.html">
+        Navigation Wizard
+        <small>Multi-page wizard with back/next navigation</small>
+      </a>
+    </li>
+    <li>
+      <a href="todo/index.html">
+        Todo List
+        <small>Add, view, and delete todo items</small>
+      </a>
+    </li>
+  </ul>
+</body>
+</html>
