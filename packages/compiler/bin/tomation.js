@@ -319,6 +319,42 @@ function runPipeline(cwd, options) {
 }
 
 // ---------------------------------------------------------------------------
+// Output filename derivation
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert a string to kebab-case for use as a filename.
+ * @param {string} str
+ * @returns {string}
+ */
+function toKebabCase(str) {
+  return str
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')  // replace non-alphanumeric chars with hyphens
+    .replace(/-+/g, '-')           // collapse multiple hyphens
+    .replace(/^-|-$/g, '');        // trim leading/trailing hyphens
+}
+
+/**
+ * Derive the output filename from the spec's meta.name.
+ * If meta.name is present and not "Untitled", produces "<kebab-name>.tomation.json".
+ * Otherwise falls back to "spec.json" for backward compatibility.
+ *
+ * @param {object} spec - the compiled spec object
+ * @returns {string} filename (not a path)
+ */
+function deriveOutputFilename(spec) {
+  var name = spec && spec.meta && spec.meta.name;
+  if (name && typeof name === 'string' && name !== 'Untitled') {
+    var kebab = toKebabCase(name);
+    if (kebab.length > 0) {
+      return kebab + '.tomation.json';
+    }
+  }
+  return 'spec.json';
+}
+
+// ---------------------------------------------------------------------------
 // compile command
 // ---------------------------------------------------------------------------
 
@@ -329,14 +365,15 @@ function runCompile(cwd, options) {
     process.exit(1);
   }
 
-  var outputPath = path.join(cwd, 'spec.json');
+  var outputFilename = deriveOutputFilename(result.spec);
+  var outputPath = path.join(cwd, outputFilename);
   var emitResult = emitSpec(result.spec, outputPath);
   if (!emitResult.ok) {
     console.error(emitResult.error);
     process.exit(1);
   }
 
-  console.log('✓ spec.json written to ' + emitResult.outputPath);
+  console.log('✓ ' + outputFilename + ' written to ' + emitResult.outputPath);
   process.exit(0);
 }
 
@@ -370,7 +407,8 @@ function runWatch(cwd, options) {
     return;
   }
 
-  var outputPath = path.join(cwd, 'spec.json');
+  var outputFilename = deriveOutputFilename(result.spec);
+  var outputPath = path.join(cwd, outputFilename);
   var emitResult = emitSpec(result.spec, outputPath);
   if (!emitResult.ok) {
     console.error(emitResult.error);
@@ -379,7 +417,7 @@ function runWatch(cwd, options) {
     return;
   }
 
-  console.log('✓ spec.json written to ' + emitResult.outputPath);
+  console.log('✓ ' + outputFilename + ' written to ' + emitResult.outputPath);
   console.log('[watch] Watching ' + result.files.length + ' files...');
   watchFiles(cwd, result.files);
 }
@@ -419,7 +457,8 @@ function watchFiles(cwd, files) {
         return;
       }
 
-      var outputPath = path.join(cwd, 'spec.json');
+      var outputFilename = deriveOutputFilename(pipelineResult.spec);
+      var outputPath = path.join(cwd, outputFilename);
       var emitResult = emitSpec(pipelineResult.spec, outputPath);
       if (!emitResult.ok) {
         console.error('[watch] Rebuild failed: ' + emitResult.error);
