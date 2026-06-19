@@ -624,6 +624,55 @@ function switchToRunView() {
 }
 
 /**
+ * Append an "in progress" entry to the log showing the step is currently executing.
+ * This entry will be replaced/updated when the step completes.
+ * @param {object} data - { stepIndex, action, target, value }
+ */
+function appendInProgressEntry(data) {
+  var logContainer = document.getElementById('log-container');
+  if (!logContainer) return;
+
+  // Remove any existing in-progress entry
+  var existing = logContainer.querySelector('.log-entry.in-progress');
+  if (existing) existing.remove();
+
+  var pageElements = (currentSpec && currentSpec.spec && currentSpec.spec.pageElements) || {};
+
+  var div = document.createElement('div');
+  div.className = 'log-entry in-progress';
+  div.setAttribute('data-step-index', String(data.stepIndex));
+
+  var parts = [];
+  if (data.action) {
+    parts.push('<span class="step-action">' + escapeHtml(capitalize(data.action)) + '</span>');
+  }
+  if (data.target) {
+    var displayTarget = resolveTargetLabel(data.target, pageElements);
+    parts.push('<span class="element-badge">' + escapeHtml(displayTarget) + '</span>');
+  }
+  if (data.value && data.action !== 'typePassword') {
+    parts.push('<span class="step-value">' + escapeHtml(data.value) + '</span>');
+  }
+
+  div.innerHTML = parts.join(' ') + ' <span class="spinner">⟳</span>';
+
+  logContainer.appendChild(div);
+  logContainer.scrollTop = logContainer.scrollHeight;
+}
+
+/**
+ * Remove the "in progress" entry when the step completes (LOG arrives).
+ * @param {object} logData - the LOG message
+ */
+function finalizeInProgressEntry(logData) {
+  var logContainer = document.getElementById('log-container');
+  if (!logContainer) return;
+
+  var existing = logContainer.querySelector('.log-entry.in-progress[data-step-index="' + logData.stepIndex + '"]');
+  if (existing) existing.remove();
+}
+
+/**
  * Append a log entry to the run view log container.
  * @param {object} logData - { stepIndex, action, target, value, ok, error, taskName }
  */
@@ -841,7 +890,12 @@ function onBackgroundMessage(message) {
   if (!message || !message.type) return;
 
   switch (message.type) {
+    case 'STEP_STARTING':
+      appendInProgressEntry(message);
+      break;
+
     case 'LOG':
+      finalizeInProgressEntry(message);
       appendLogEntry(message);
       break;
 

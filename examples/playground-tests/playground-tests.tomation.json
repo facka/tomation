@@ -265,7 +265,7 @@
       "steps": [
         {
           "action": "navigate",
-          "url": "login/index.html"
+          "url": "navigation/index.html"
         },
         {
           "action": "wait",
@@ -277,7 +277,7 @@
         },
         {
           "action": "navigate",
-          "url": "navigation/page2.html"
+          "url": "page2.html"
         },
         {
           "action": "wait",
@@ -289,7 +289,7 @@
         },
         {
           "action": "navigate",
-          "url": "navigation/page3.html"
+          "url": "page3.html"
         },
         {
           "action": "wait",
@@ -306,7 +306,7 @@
       "steps": [
         {
           "action": "navigate",
-          "url": "navigation/page3.html"
+          "url": "./navigation/page3.html"
         },
         {
           "action": "wait",

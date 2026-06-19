@@ -1,6 +1,12 @@
 // runtime.js — content script / DOM executor
-// Implementation: Task 12
 var api = typeof browser !== 'undefined' ? browser : chrome;
+
+// Inject highlight CSS into the page so data-tomation-active elements are visible
+(function injectHighlightStyles() {
+  var style = document.createElement('style');
+  style.textContent = '[data-tomation-active="true"] { outline: 2px solid #5e6ad2 !important; outline-offset: 2px; box-shadow: 0 0 0 4px rgba(94, 106, 210, 0.2) !important; transition: outline 0.15s ease, box-shadow 0.15s ease; }';
+  (document.head || document.documentElement).appendChild(style);
+})();
 
 var TIMEOUT_5sec = 5000;
 /**
@@ -377,8 +383,14 @@ api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       }
       var element = findResult.element;
       highlightElement(element);
-      return executeAction(message, element).then(function (result) {
-        unhighlightElement(element);
+      // Brief delay so user can see the highlighted element before action executes
+      return new Promise(function (resolve) {
+        setTimeout(resolve, 400);
+      }).then(function () {
+        return executeAction(message, element);
+      }).then(function (result) {
+        // Keep highlight briefly after action so user sees the result
+        setTimeout(function () { unhighlightElement(element); }, 300);
         sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: result.ok, error: result.error });
       }).catch(function (err) {
         unhighlightElement(element);

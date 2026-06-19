@@ -427,6 +427,24 @@
 
     .log-entry.indented { padding-left: 24px; }
 
+    .log-entry.in-progress {
+      border-left: 3px solid var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent-text);
+    }
+
+    .log-entry.in-progress .spinner {
+      display: inline-block;
+      animation: spin 1s linear infinite;
+      font-size: 13px;
+      margin-left: 4px;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
     .log-entry.action-buttons {
       display: flex;
       gap: 6px;

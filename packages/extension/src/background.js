@@ -319,9 +319,9 @@ function findParentDescriptor(childOfId, pageElements) {
 
 /** Mapping of execution speed names to delay durations in milliseconds */
 var SPEED_DELAYS = {
-  'FAST': 0,
-  'NORMAL': 500,
-  'SLOW': 1500
+  'FAST': 150,
+  'NORMAL': 800,
+  'SLOW': 2000
 };
 
 /**
@@ -549,16 +549,19 @@ function runStepLoop() {
 
     // Handle navigate steps in the background (don't send to runtime)
     if (step.action === 'navigate') {
+      safeSendMessage({ type: 'STEP_STARTING', stepIndex: currentIndex, action: step.action, target: step.target || null, value: step.url || null });
       return handleNavigateStep(step, currentIndex);
     }
 
     // Handle wait steps in the background (don't send to runtime)
     if (step.action === 'wait') {
+      safeSendMessage({ type: 'STEP_STARTING', stepIndex: currentIndex, action: step.action, target: null, value: String(step.ms) });
       return handleWaitStep(step, currentIndex);
     }
 
     // Handle manual steps in the background (don't send to runtime)
     if (step.action === 'manual') {
+      safeSendMessage({ type: 'STEP_STARTING', stepIndex: currentIndex, action: step.action, target: null, value: step.description || null });
       return handleManualStep(step, currentIndex);
     }
 
@@ -568,6 +571,15 @@ function runStepLoop() {
       if (runState.stopRequested) {
         return finishRun();
       }
+
+      // Emit "step starting" to give the panel immediate feedback
+      safeSendMessage({
+        type: 'STEP_STARTING',
+        stepIndex: currentIndex,
+        action: step.action,
+        target: step.target || null,
+        value: step.value || null
+      });
 
       return sendStepToRuntime(step, currentIndex).then(function (result) {
         if (runState.stopRequested) {
