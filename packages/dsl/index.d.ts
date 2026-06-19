@@ -1,4 +1,4 @@
-// @tomation/dsl — TypeScript definitions (v2)
+// @tomation/dsl — TypeScript definitions
 
 // --- Matcher / Where Types ---
 
@@ -80,34 +80,6 @@ export type Step =
   | { action: "waitFor"; target: string; gone: boolean }
   | { action: "manual"; description: string };
 
-// --- Legacy Types (backward compatibility) ---
-
-/**
- * Defines a reusable task — an ordered list of steps with optional parameter names.
- */
-export interface TaskDefinition {
-  params?: string[];
-  steps: Step[];
-}
-
-/**
- * Defines a page — a named element map and optional task definitions.
- */
-export interface PageDefinition {
-  elements: Record<string, ElementDescriptor>;
-  tasks?: Record<string, TaskDefinition>;
-}
-
-/**
- * Defines a Page Object Model (legacy v1 API).
- * @param name - The page name used for namespacing.
- * @param definition - The page definition containing elements and tasks.
- */
-export declare function Page(
-  name: string,
-  definition: PageDefinition
-): { __pom: true; name: string; definition: PageDefinition };
-
 // --- Matcher Factories ---
 
 export declare function innerTextIs(text: string): { textIs: string };
@@ -174,13 +146,3 @@ export declare function Wait(ms: number): any;
 export declare function WaitFor(element: ElementDescriptor): any;
 export declare function WaitForGone(element: ElementDescriptor): any;
 export declare function Manual(description: string): any;
-
-// --- Legacy v1 el() helper ---
-
-/**
- * Defines an element descriptor (legacy v1 API).
- * @param descriptor - The element descriptor object.
- */
-export declare function el(
-  descriptor: ElementDescriptor
-): { __el: true } & ElementDescriptor;

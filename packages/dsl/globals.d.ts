@@ -13,45 +13,8 @@ import {
 } from "./index";
 
 declare global {
-  // --- v1 Legacy action globals (lowercase) ---
 
-  /** Clicks the element identified by the given key. */
-  function click(target: string): Step;
-
-  /** Types the given value into the element identified by the given key. */
-  function type(target: string, value: string): Step;
-
-  /** Types the given password value (masked in logs) into the identified element. */
-  function typePassword(target: string, value: string): Step;
-
-  /** Selects the given value in the identified select element. */
-  function select(target: string, value: string): Step;
-
-  /** Asserts that the identified element exists on the page. */
-  function assertExists(target: string): Step;
-
-  /** Asserts that the identified element does not exist on the page. */
-  function assertNotExists(target: string): Step;
-
-  /** Asserts that the identified element contains the given text. */
-  function assertHasText(target: string, value: string): Step;
-
-  /** Calls a reusable named task, optionally passing parameter values. */
-  function task(name: string, params?: Record<string, string>): Step;
-
-  /** Navigates the browser to the given URL. */
-  function navigate(url: string): Step;
-
-  /** Waits for the given number of milliseconds. */
-  function wait(ms: number): Step;
-
-  /** Waits for the identified element to appear or disappear. */
-  function waitFor(target: string, gone: boolean): Step;
-
-  /** Documents a manual step that a human must perform. */
-  function manual(description: string): Step;
-
-  // --- v2 Action globals (uppercase) ---
+  // --- Action globals ---
 
   /** Clicks the given element descriptor. */
   function Click(element: ElementDescriptor): any;
@@ -89,7 +52,7 @@ declare global {
   /** Documents a manual step that a human must perform. */
   function Manual(description: string): any;
 
-  // --- v2 Element builders ---
+  // --- Element builders ---
 
   /**
    * Creates an XPath-based element builder.
@@ -107,7 +70,7 @@ declare global {
     ELEMENT: (xpath: string) => XPathElementBuilder;
   };
 
-  // --- v2 Matcher factories ---
+  // --- Matcher factories ---
 
   function innerTextIs(text: string): { textIs: string };
   function innerTextContains(text: string): { textContains: string };
@@ -117,7 +80,7 @@ declare global {
   function typeIs(type: string): { type: string };
   function idIs(id: string): { id: string };
 
-  // --- v2 Task and Test ---
+  // --- Task and Test ---
 
   /**
    * Declares a named, reusable task with optional parameters.

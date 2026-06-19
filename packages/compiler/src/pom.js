@@ -3,13 +3,13 @@
 const path = require('path');
 
 /**
- * pom.js — POM extraction and PageName__key namespacing.
+ * pom.js — POM extraction and namespace-based key namespacing.
  *
  * Transforms the raw ParsedFile output from parser.js into a flat, namespaced
  * map of elements and tasks ready for deduplication and merging.
  *
  * Exported API:
- *   extractPom(parsedFile) → PomResult
+ *   extractPom(parsedFile, options) → PomResult
  *   deriveNamespace(filePath) → string
  *
  * PomResult shape:
@@ -34,7 +34,7 @@ const path = require('path');
  *   errors: Array<{ message: string, filePath: string, line: number }>
  * }
  *
- * Requirements: 8.1, 8.2, 8.3, 13.2, 13.3
+ * Requirements: 8.1, 8.2, 8.3, 8.4, 4.2, 4.3
  */
 
 // ---------------------------------------------------------------------------
@@ -53,85 +53,6 @@ function emptyResult(filePath) {
     tasks: {},
     errors: [],
   };
-}
-
-// ---------------------------------------------------------------------------
-// Main extractPom function
-// ---------------------------------------------------------------------------
-
-/**
- * Extract a flat, namespaced POM from a ParsedFile produced by parseFile().
- *
- * For each PageDef in parsedFile.pages:
- *   - Element local key `k`  → `PageName__k`  in pageElements
- *   - Task local key `k`     → `PageName__k`  in tasks
- *
- * The `line` property on each element/task is moved into `_meta` (together
- * with `filePath`) so consumers can report precise file+line errors without
- * that metadata polluting the spec data.
- *
- * Early-exit cases (both return an empty result):
- *   - parsedFile.error is non-null → error is added to errors[]
- *   - parsedFile.type !== 'pom' or parsedFile.pages.length === 0 → silent empty result
- *
- * @param {object} parsedFile - ParsedFile returned by parseFile()
- * @returns {object} PomResult
- */
-function extractPom(parsedFile) {
-  const result = emptyResult(parsedFile.filePath);
-
-  // If the parser encountered a fatal error, surface it and bail out.
-  if (parsedFile.error) {
-    result.errors.push({
-      message: parsedFile.error.message,
-      filePath: parsedFile.filePath,
-      line: parsedFile.error.line,
-    });
-    return result;
-  }
-
-  // Non-POM files (e.g. test files) and POM files with no pages are valid —
-  // they simply produce no output.
-  if (parsedFile.type !== 'pom' || parsedFile.pages.length === 0) {
-    return result;
-  }
-
-  for (const page of parsedFile.pages) {
-    const prefix = page.name + '__';
-
-    // ---- elements ----------------------------------------------------------
-    for (const [localKey, elDef] of Object.entries(page.elements)) {
-      const namespacedKey = prefix + localKey;
-
-      // Destructure `line` out so it doesn't appear in the spec data entry.
-      const { line, ...elData } = elDef;
-
-      result.pageElements[namespacedKey] = {
-        ...elData,
-        _meta: {
-          filePath: parsedFile.filePath,
-          line: line !== undefined ? line : page.line,
-        },
-      };
-    }
-
-    // ---- tasks -------------------------------------------------------------
-    for (const [localKey, taskDef] of Object.entries(page.tasks)) {
-      const namespacedKey = prefix + localKey;
-
-      const { line, ...taskData } = taskDef;
-
-      result.tasks[namespacedKey] = {
-        ...taskData,
-        _meta: {
-          filePath: parsedFile.filePath,
-          line: line !== undefined ? line : page.line,
-        },
-      };
-    }
-  }
-
-  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -211,14 +132,14 @@ function deriveNamespace(filePath, pomDir) {
 }
 
 // ---------------------------------------------------------------------------
-// extractPomV2 — v2 POM extraction (file-name-based namespace)
+// extractPom — POM extraction (file-name-based namespace)
 // Requirements: 8.1, 8.4, 4.2, 4.3
 // ---------------------------------------------------------------------------
 
 /**
- * Extract a flat, namespaced POM from a v2 ParsedFile produced by parseSource().
+ * Extract a flat, namespaced POM from a ParsedFile produced by parseSource().
  *
- * V2 files use file-name-based namespacing (no `Page('Name')` wrappers).
+ * Files use file-name-based namespacing.
  * Elements are in parsedFile.elements[] and tasks in parsedFile.tasks[].
  *
  * The function:
@@ -227,10 +148,10 @@ function deriveNamespace(filePath, pomDir) {
  *   - Namespaces task keys as `<Namespace>__<taskName>`
  *   - Resolves `childOf` variable references to namespaced keys
  *
- * @param {object} parsedFile - ParsedFile returned by parseSource() with v2 elements/tasks
+ * @param {object} parsedFile - ParsedFile returned by parseSource() with elements/tasks
  * @param {object} [options] - Optional settings
  * @param {string} [options.pomDir] - Absolute path to the POM root directory
- * @returns {object} PomResult (same shape as extractPom output)
+ * @returns {object} PomResult
  */
 
 /**
@@ -272,7 +193,7 @@ function resolveStepRefs(steps, variableToKey, prefix) {
   });
 }
 
-function extractPomV2(parsedFile, options) {
+function extractPom(parsedFile, options) {
   const result = emptyResult(parsedFile.filePath);
   const pomDir = (options && options.pomDir) || null;
 
@@ -286,10 +207,10 @@ function extractPomV2(parsedFile, options) {
     return result;
   }
 
-  // Non-POM files or files with no v2 elements/tasks produce an empty result.
-  const hasV2Elements = parsedFile.elements && parsedFile.elements.length > 0;
-  const hasV2Tasks = parsedFile.tasks && parsedFile.tasks.length > 0;
-  if (!hasV2Elements && !hasV2Tasks) {
+  // Non-POM files or files with no elements/tasks produce an empty result.
+  const hasElements = parsedFile.elements && parsedFile.elements.length > 0;
+  const hasTasks = parsedFile.tasks && parsedFile.tasks.length > 0;
+  if (!hasElements && !hasTasks) {
     return result;
   }
 
@@ -384,7 +305,7 @@ function extractPomV2(parsedFile, options) {
  * When two POM files produce the same namespace, this function returns an
  * error identifying both files (Requirement 8.4).
  *
- * @param {object[]} pomResults - Array of PomResult objects from extractPomV2()
+ * @param {object[]} pomResults - Array of PomResult objects from extractPom()
  * @returns {Array<{ message: string, filePath: string, line: number }>} collision errors
  */
 function detectNamespaceCollisions(pomResults) {
@@ -412,4 +333,4 @@ function detectNamespaceCollisions(pomResults) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { extractPom, extractPomV2, deriveNamespace, detectNamespaceCollisions };
+module.exports = { extractPom, deriveNamespace, detectNamespaceCollisions };

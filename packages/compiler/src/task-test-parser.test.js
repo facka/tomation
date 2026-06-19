@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for v2 Task/Test declaration extraction in parser.js
+ * Tests for Task/Test declaration extraction in parser.js
  *
  * Validates: Requirements 5.1, 5.2, 6.1
  */
@@ -117,11 +117,11 @@ test('parseSource: Test extracts name and empty steps', () => {
   const result = parseSource(src, 'login.test.js');
 
   assert.equal(result.error, null);
-  assert.equal(result.v2Tests.length, 1);
-  assert.equal(result.v2Tests[0].name, 'should login successfully');
-  assert.deepEqual(result.v2Tests[0].steps, []);
-  assert.equal(typeof result.v2Tests[0].line, 'number');
-  assert.ok(result.v2Tests[0].line > 0);
+  assert.equal(result.tests.length, 1);
+  assert.equal(result.tests[0].name, 'should login successfully');
+  assert.deepEqual(result.tests[0].steps, []);
+  assert.equal(typeof result.tests[0].line, 'number');
+  assert.ok(result.tests[0].line > 0);
 });
 
 test('parseSource: Test marks file type as test', () => {
@@ -136,20 +136,20 @@ test('parseSource: Test with function expression is accepted', () => {
   const result = parseSource(src, 'login.test.js');
 
   assert.equal(result.error, null);
-  assert.equal(result.v2Tests.length, 1);
-  assert.equal(result.v2Tests[0].name, 'should work');
+  assert.equal(result.tests.length, 1);
+  assert.equal(result.tests[0].name, 'should work');
 });
 
 // ---------------------------------------------------------------------------
 // Error handling
 // ---------------------------------------------------------------------------
 
-test('parseSource: Task without name string emits no error (v1 compatibility)', () => {
-  // v1 Task([...]) pattern — should not produce an error
+test('parseSource: Task without name string emits no error', () => {
+  // Task([...]) pattern without a name string — should not produce an error
   const src = `const t = Task([click('btn')]);`;
   const result = parseSource(src, 'page.pom.js');
 
-  // Should not have errors for v1 Task usage
+  // Should not have errors for Task usage without name
   const taskErrors = result.warnings.filter(w => w.message.includes('Task()'));
   assert.equal(taskErrors.length, 0);
   assert.equal(result.tasks.length, 0);
@@ -177,7 +177,7 @@ test('parseSource: Test without name emits warning', () => {
   const src = `Test();`;
   const result = parseSource(src, 'login.test.js');
 
-  assert.equal(result.v2Tests.length, 0);
+  assert.equal(result.tests.length, 0);
   assert.ok(result.warnings.length > 0);
   assert.ok(result.warnings.some(w => w.message.includes('requires a name')));
 });
@@ -186,7 +186,7 @@ test('parseSource: Test with non-string first arg emits warning', () => {
   const src = `Test(123, () => { });`;
   const result = parseSource(src, 'login.test.js');
 
-  assert.equal(result.v2Tests.length, 0);
+  assert.equal(result.tests.length, 0);
   assert.ok(result.warnings.length > 0);
   assert.ok(result.warnings.some(w => w.message.includes('must be a string')));
 });
@@ -195,7 +195,7 @@ test('parseSource: Test with name but non-function second arg emits warning', ()
   const src = `Test('my test', 'not a function');`;
   const result = parseSource(src, 'login.test.js');
 
-  assert.equal(result.v2Tests.length, 0);
+  assert.equal(result.tests.length, 0);
   assert.ok(result.warnings.length > 0);
   assert.ok(result.warnings.some(w => w.message.includes('must be a function')));
 });
@@ -227,9 +227,9 @@ Test('should logout', () => { });
   const result = parseSource(src, 'auth.test.js');
 
   assert.equal(result.error, null);
-  assert.equal(result.v2Tests.length, 2);
-  assert.equal(result.v2Tests[0].name, 'should login');
-  assert.equal(result.v2Tests[1].name, 'should logout');
+  assert.equal(result.tests.length, 2);
+  assert.equal(result.tests[0].name, 'should login');
+  assert.equal(result.tests[1].name, 'should logout');
 });
 
 test('parseSource: Tasks and elements coexist in same file', () => {
@@ -245,14 +245,14 @@ Task('Login', ({username}) => { });
   assert.equal(result.type, 'pom');
 });
 
-test('parseSource: result includes tasks and v2Tests fields', () => {
+test('parseSource: result includes tasks and tests fields', () => {
   const src = `const x = 1;`;
   const result = parseSource(src, 'test.js');
 
   assert.ok('tasks' in result);
-  assert.ok('v2Tests' in result);
+  assert.ok('tests' in result);
   assert.ok(Array.isArray(result.tasks));
-  assert.ok(Array.isArray(result.v2Tests));
+  assert.ok(Array.isArray(result.tests));
 });
 
 // ---------------------------------------------------------------------------
@@ -278,8 +278,8 @@ test('parseSource: Test line number is correct', () => {
   ].join('\n');
   const result = parseSource(src, 'login.test.js');
 
-  assert.equal(result.v2Tests.length, 1);
-  assert.equal(result.v2Tests[0].line, 2);
+  assert.equal(result.tests.length, 1);
+  assert.equal(result.tests[0].line, 2);
 });
 
 // ---------------------------------------------------------------------------

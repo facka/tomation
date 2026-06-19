@@ -21,7 +21,6 @@ var resolve = require('../src/resolver').resolve;
 var resolveSpecifier = require('../src/resolver').resolveSpecifier;
 var parseSource = require('../src/parser').parseSource;
 var extractPom = require('../src/pom').extractPom;
-var extractPomV2 = require('../src/pom').extractPomV2;
 var detectNamespaceCollisions = require('../src/pom').detectNamespaceCollisions;
 var stripTypes = require('../src/ts-stripper').stripTypes;
 var deduplicateKeys = require('../src/deduplicator').deduplicateKeys;
@@ -56,7 +55,7 @@ var USAGE = [
  * When a step target is "VariableName__property" and VariableName is found
  * in the importMap, it's rewritten to "Namespace__property".
  *
- * @param {object} parsedFile - parsed file with tests/v2Tests/tasks
+ * @param {object} parsedFile - parsed file with tests/tasks
  * @param {object} importMap - { localName: namespace }
  */
 function rewriteStepTargets(parsedFile, importMap) {
@@ -123,7 +122,7 @@ var DEFAULT_META = { name: 'Untitled', url: '', description: '' };
  * Run the full compile pipeline up to (and including) validation.
  * Returns { ok: true, spec, files } on success or { ok: false, error } on failure.
  *
- * v2 pipeline: resolve → stripTypes → parseSource → extractPomV2 → flatten → deduplicate → emit
+ * Pipeline: resolve → stripTypes → parseSource → extractPom → flatten → deduplicate → emit
  * Handles mixed .ts and .js files. TypeScript files are type-stripped before parsing.
  *
  * @param {string} cwd
@@ -197,7 +196,7 @@ function runPipeline(cwd, options) {
     }
     var elementCount = (parsed.elements || []).length;
     var taskCount = (parsed.tasks || []).length;
-    var testCount = (parsed.v2Tests || parsed.tests || []).length;
+    var testCount = (parsed.tests || []).length;
     log('    ✓ Parsed: type=' + parsed.type + ', elements=' + elementCount + ', tasks=' + taskCount + ', tests=' + testCount);
     parsedFiles.push(parsed);
   }
@@ -209,17 +208,8 @@ function runPipeline(cwd, options) {
   for (var j = 0; j < parsedFiles.length; j++) {
     var pf = parsedFiles[j];
     if (pf.type === 'pom') {
-      // Use v2 extractor if the file has v2 patterns (elements or tasks),
-      // otherwise fall back to v1 extractor for Page() syntax
-      var hasV2Patterns = (pf.elements && pf.elements.length > 0) || (pf.tasks && pf.tasks.length > 0);
-      var pomResult;
-      if (hasV2Patterns) {
-        log('  Extracting POM v2: ' + path.basename(pf.filePath));
-        pomResult = extractPomV2(pf, { pomDir: pomDir });
-      } else {
-        log('  Extracting POM v1: ' + path.basename(pf.filePath));
-        pomResult = extractPom(pf);
-      }
+      log('  Extracting POM: ' + path.basename(pf.filePath));
+      var pomResult = extractPom(pf, { pomDir: pomDir });
       if (pomResult.errors && pomResult.errors.length > 0) {
         log('  ✗ POM extraction error: ' + pomResult.errors[0].message);
         return { ok: false, error: pomResult.errors[0].message };
@@ -229,17 +219,12 @@ function runPipeline(cwd, options) {
       log('    ✓ Elements: [' + elemKeys.join(', ') + '], Tasks: [' + taskKeys.join(', ') + ']');
       pomResults.push(pomResult);
     } else {
-      // Normalize v2Tests into the tests array for the flattener
-      if (pf.v2Tests && pf.v2Tests.length > 0) {
-        if (!pf.tests) pf.tests = [];
-        pf.tests.push.apply(pf.tests, pf.v2Tests);
-      }
       log('  Test file: ' + path.basename(pf.filePath) + ' (' + (pf.tests || []).length + ' test(s))');
       parsedTestFiles.push(pf);
     }
   }
 
-  // Step 3b: detect namespace collisions across v2 POM files
+  // Step 3b: detect namespace collisions across POM files
   var collisionErrors = detectNamespaceCollisions(pomResults);
   if (collisionErrors.length > 0) {
     log('  ✗ Namespace collision: ' + collisionErrors[0].message);
@@ -338,7 +323,7 @@ function toKebabCase(str) {
 /**
  * Derive the output filename from the spec's meta.name.
  * If meta.name is present and not "Untitled", produces "<kebab-name>.tomation.json".
- * Otherwise falls back to "spec.json" for backward compatibility.
+ * Otherwise falls back to "spec.json".
  *
  * @param {object} spec - the compiled spec object
  * @returns {string} filename (not a path)

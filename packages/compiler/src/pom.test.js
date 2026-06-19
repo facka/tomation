@@ -4,20 +4,20 @@
  * Property-based tests for pom.js — namespacing consistency.
  *
  * Feature: tomation, Property 6: Compiler Namespacing Consistency
- * Validates: Requirements 13.2, 13.3
+ * Validates: Requirements 8.1, 8.4, 4.2, 4.3
  */
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fc = require('fast-check');
-const { extractPom } = require('./pom.js');
+const { extractPom, deriveNamespace } = require('./pom.js');
 
 // ---------------------------------------------------------------------------
 // Arbitraries
 // ---------------------------------------------------------------------------
 
 /**
- * Valid identifier-style strings for page names and keys.
+ * Valid identifier-style strings for variable names and keys.
  * Starts with a letter, followed by 0–19 alphanumeric/underscore chars.
  */
 const identArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9_]{0,19}$/).filter(s => s.length > 0);
@@ -41,118 +41,68 @@ const whereArb = fc
   });
 
 /**
- * A valid element definition (no line, just tag + where).
+ * A valid element definition matching the parser output shape.
  */
 const elementDefArb = fc.record({
+  variableName: identArb,
   tag: fc.constantFrom('input', 'button', 'div', 'form', 'select', 'span'),
+  label: fc.string({ minLength: 1, maxLength: 30 }),
   where: whereArb,
+  line: fc.constant(1),
 });
 
 /**
- * A valid task definition (no line, just steps array).
+ * A valid task definition matching the parser output shape.
  */
-const taskDefArb = fc.constant({ steps: [] });
+const taskDefArb = fc.record({
+  name: identArb,
+  steps: fc.constant([]),
+  params: fc.constant([]),
+  line: fc.constant(1),
+});
 
 /**
- * Build a fake ParsedFile for a single page, given:
- *   - pageName: string
- *   - elementKeys: string[]  (distinct)
- *   - taskKeys: string[]     (distinct)
- *
- * Returns a parsedFile object ready to be fed into extractPom().
+ * Build a fake ParsedFile for extractPom(), given elements and tasks arrays.
  */
-function buildParsedFile(pageName, elementEntries, taskEntries) {
-  const elements = {};
-  for (const [key, def] of elementEntries) {
-    elements[key] = { ...def, line: 1 };
-  }
-
-  const tasks = {};
-  for (const [key, def] of taskEntries) {
-    tasks[key] = { ...def, line: 1 };
-  }
-
+function buildParsedFile(elements, tasks, filePath) {
   return {
-    filePath: '/test/fake.pom.js',
+    filePath: filePath || '/test/fake.pom.ts',
     type: 'pom',
-    pages: [
-      {
-        name: pageName,
-        line: 1,
-        elements,
-        tasks,
-      },
-    ],
+    elements: elements,
+    tasks: tasks,
+    tests: [],
     error: null,
+    warnings: [],
   };
 }
 
 /**
- * Arbitrary: a page name + up to 5 distinct element keys, each paired with an element def.
+ * Arbitrary: up to 5 distinct element definitions.
  */
-const pageWithElementsArb = fc
-  .uniqueArray(identArb, { minLength: 1, maxLength: 5 })
-  .chain(elementKeys =>
-    fc
-      .tuple(
-        identArb, // page name
-        fc.tuple(...elementKeys.map(() => elementDefArb))
-      )
-      .map(([pageName, defs]) => ({
-        pageName,
-        elementEntries: elementKeys.map((k, i) => [k, defs[i]]),
-      }))
-  );
+const elementsArb = fc.uniqueArray(elementDefArb, {
+  minLength: 1,
+  maxLength: 5,
+  selector: e => e.variableName,
+});
 
 /**
- * Arbitrary: a page name + up to 5 distinct task keys, each paired with a task def.
+ * Arbitrary: up to 5 distinct task definitions.
  */
-const pageWithTasksArb = fc
-  .uniqueArray(identArb, { minLength: 1, maxLength: 5 })
-  .chain(taskKeys =>
-    fc
-      .tuple(
-        identArb, // page name
-        fc.tuple(...taskKeys.map(() => taskDefArb))
-      )
-      .map(([pageName, defs]) => ({
-        pageName,
-        taskEntries: taskKeys.map((k, i) => [k, defs[i]]),
-      }))
-  );
-
-/**
- * Arbitrary: a page with BOTH distinct element keys AND distinct task keys (1–5 each).
- */
-const pageWithBothArb = fc
-  .tuple(
-    fc.uniqueArray(identArb, { minLength: 1, maxLength: 5 }),
-    fc.uniqueArray(identArb, { minLength: 1, maxLength: 5 })
-  )
-  .chain(([elementKeys, taskKeys]) =>
-    fc
-      .tuple(
-        identArb,
-        fc.tuple(...elementKeys.map(() => elementDefArb)),
-        fc.tuple(...taskKeys.map(() => taskDefArb))
-      )
-      .map(([pageName, elDefs, taskDefs]) => ({
-        pageName,
-        elementEntries: elementKeys.map((k, i) => [k, elDefs[i]]),
-        taskEntries: taskKeys.map((k, i) => [k, taskDefs[i]]),
-      }))
-  );
+const tasksArb = fc.uniqueArray(taskDefArb, {
+  minLength: 1,
+  maxLength: 5,
+  selector: t => t.name,
+});
 
 // ---------------------------------------------------------------------------
 // Property 6a — Namespacing Consistency (elements)
 // Feature: tomation, Property 6: Compiler Namespacing Consistency
-// Validates: Requirements 13.2
 // ---------------------------------------------------------------------------
 
-test('Property 6a: every pageElements output key is exactly PageName__key', () => {
+test('Property 6a: every pageElements output key is exactly Namespace__variableName', () => {
   fc.assert(
-    fc.property(pageWithElementsArb, ({ pageName, elementEntries }) => {
-      const parsedFile = buildParsedFile(pageName, elementEntries, []);
+    fc.property(elementsArb, (elements) => {
+      const parsedFile = buildParsedFile(elements, []);
       const result = extractPom(parsedFile);
 
       // No errors should be produced
@@ -160,21 +110,23 @@ test('Property 6a: every pageElements output key is exactly PageName__key', () =
 
       const outputKeys = Object.keys(result.pageElements);
 
-      // There must be as many output keys as input element keys
-      if (outputKeys.length !== elementEntries.length) return false;
+      // There must be as many output keys as input elements
+      if (outputKeys.length !== elements.length) return false;
 
-      // Every output key must be exactly `PageName__localKey`
-      const separator = '__';
-      for (const [localKey] of elementEntries) {
-        const expected = `${pageName}${separator}${localKey}`;
+      // Derive the expected namespace
+      const namespace = deriveNamespace(parsedFile.filePath);
+      const prefix = namespace + '__';
+
+      // Every output key must be exactly `Namespace__variableName`
+      for (const elDef of elements) {
+        const expected = prefix + elDef.variableName;
         if (!(expected in result.pageElements)) return false;
       }
 
-      // Every output key must start with `pageName__` and have a non-empty suffix
+      // Every output key must start with the namespace prefix
       for (const key of outputKeys) {
-        const expectedPrefix = pageName + separator;
-        if (!key.startsWith(expectedPrefix)) return false;
-        const localPart = key.slice(expectedPrefix.length);
+        if (!key.startsWith(prefix)) return false;
+        const localPart = key.slice(prefix.length);
         if (localPart.length === 0) return false;
       }
 
@@ -187,13 +139,12 @@ test('Property 6a: every pageElements output key is exactly PageName__key', () =
 // ---------------------------------------------------------------------------
 // Property 6b — Namespacing Consistency (tasks)
 // Feature: tomation, Property 6: Compiler Namespacing Consistency
-// Validates: Requirements 13.3
 // ---------------------------------------------------------------------------
 
-test('Property 6b: every tasks output key is exactly PageName__key', () => {
+test('Property 6b: every tasks output key is exactly Namespace__taskName', () => {
   fc.assert(
-    fc.property(pageWithTasksArb, ({ pageName, taskEntries }) => {
-      const parsedFile = buildParsedFile(pageName, [], taskEntries);
+    fc.property(tasksArb, (tasks) => {
+      const parsedFile = buildParsedFile([], tasks);
       const result = extractPom(parsedFile);
 
       // No errors should be produced
@@ -201,21 +152,23 @@ test('Property 6b: every tasks output key is exactly PageName__key', () => {
 
       const outputKeys = Object.keys(result.tasks);
 
-      // There must be as many output keys as input task keys
-      if (outputKeys.length !== taskEntries.length) return false;
+      // There must be as many output keys as input tasks
+      if (outputKeys.length !== tasks.length) return false;
 
-      // Every output key must be exactly `PageName__localKey`
-      const separator = '__';
-      for (const [localKey] of taskEntries) {
-        const expected = `${pageName}${separator}${localKey}`;
+      // Derive the expected namespace
+      const namespace = deriveNamespace(parsedFile.filePath);
+      const prefix = namespace + '__';
+
+      // Every output key must be exactly `Namespace__taskName`
+      for (const taskDef of tasks) {
+        const expected = prefix + taskDef.name;
         if (!(expected in result.tasks)) return false;
       }
 
-      // Every output key must start with `pageName__` and have a non-empty suffix
+      // Every output key must start with the namespace prefix
       for (const key of outputKeys) {
-        const expectedPrefix = pageName + separator;
-        if (!key.startsWith(expectedPrefix)) return false;
-        const localPart = key.slice(expectedPrefix.length);
+        if (!key.startsWith(prefix)) return false;
+        const localPart = key.slice(prefix.length);
         if (localPart.length === 0) return false;
       }
 
@@ -228,13 +181,12 @@ test('Property 6b: every tasks output key is exactly PageName__key', () => {
 // ---------------------------------------------------------------------------
 // Property 6c — No key collisions within a single POM
 // Feature: tomation, Property 6: Compiler Namespacing Consistency
-// Validates: Requirements 13.2, 13.3
 // ---------------------------------------------------------------------------
 
 test('Property 6c: no key collisions — all namespaced keys in a single POM output are unique', () => {
   fc.assert(
-    fc.property(pageWithBothArb, ({ pageName, elementEntries, taskEntries }) => {
-      const parsedFile = buildParsedFile(pageName, elementEntries, taskEntries);
+    fc.property(fc.tuple(elementsArb, tasksArb), ([elements, tasks]) => {
+      const parsedFile = buildParsedFile(elements, tasks);
       const result = extractPom(parsedFile);
 
       if (result.errors.length > 0) return false;
@@ -262,64 +214,52 @@ test('Property 6c: no key collisions — all namespaced keys in a single POM out
 
 test('unit: single element is namespaced correctly', () => {
   const parsedFile = buildParsedFile(
-    'LoginPage',
-    [['submitBtn', { tag: 'button', where: { id: 'submit' } }]],
+    [{ variableName: 'submitBtn', tag: 'button', label: 'Submit', where: { id: 'submit' }, line: 1 }],
     []
   );
   const result = extractPom(parsedFile);
   assert.equal(result.errors.length, 0);
-  assert.ok('LoginPage__submitBtn' in result.pageElements);
+  assert.ok('Fake__submitBtn' in result.pageElements);
   assert.equal(Object.keys(result.pageElements).length, 1);
 });
 
 test('unit: single task is namespaced correctly', () => {
   const parsedFile = buildParsedFile(
-    'LoginPage',
     [],
-    [['login', { steps: [] }]]
+    [{ name: 'login', steps: [], params: [], line: 1 }]
   );
   const result = extractPom(parsedFile);
   assert.equal(result.errors.length, 0);
-  assert.ok('LoginPage__login' in result.tasks);
+  assert.ok('Fake__login' in result.tasks);
   assert.equal(Object.keys(result.tasks).length, 1);
 });
 
 test('unit: multiple elements produce distinct namespaced keys', () => {
   const parsedFile = buildParsedFile(
-    'HomePage',
     [
-      ['header', { tag: 'div', where: { id: 'header' } }],
-      ['footer', { tag: 'div', where: { id: 'footer' } }],
-      ['navBtn', { tag: 'button', where: { id: 'nav' } }],
+      { variableName: 'header', tag: 'div', label: 'Header', where: { id: 'header' }, line: 1 },
+      { variableName: 'footer', tag: 'div', label: 'Footer', where: { id: 'footer' }, line: 2 },
+      { variableName: 'navBtn', tag: 'button', label: 'Nav', where: { id: 'nav' }, line: 3 },
     ],
     []
   );
   const result = extractPom(parsedFile);
   assert.equal(result.errors.length, 0);
-  assert.ok('HomePage__header' in result.pageElements);
-  assert.ok('HomePage__footer' in result.pageElements);
-  assert.ok('HomePage__navBtn' in result.pageElements);
+  assert.ok('Fake__header' in result.pageElements);
+  assert.ok('Fake__footer' in result.pageElements);
+  assert.ok('Fake__navBtn' in result.pageElements);
   assert.equal(Object.keys(result.pageElements).length, 3);
-});
-
-test('unit: page name with underscores in key produces correct double-underscore separator', () => {
-  // The separator is always __ regardless of page name content
-  const parsedFile = buildParsedFile(
-    'MyPage',
-    [['my_element', { tag: 'input', where: { id: 'x' } }]],
-    []
-  );
-  const result = extractPom(parsedFile);
-  assert.equal(result.errors.length, 0);
-  assert.ok('MyPage__my_element' in result.pageElements);
 });
 
 test('unit: parsedFile with error produces no pageElements or tasks', () => {
   const parsedFile = {
-    filePath: '/test/bad.pom.js',
+    filePath: '/test/bad.pom.ts',
     type: 'pom',
-    pages: [],
-    error: { message: 'Parse error in /test/bad.pom.js:1: Unexpected token', line: 1 },
+    elements: [],
+    tasks: [],
+    tests: [],
+    error: { message: 'Parse error in /test/bad.pom.ts:1: Unexpected token', line: 1 },
+    warnings: [],
   };
   const result = extractPom(parsedFile);
   assert.equal(Object.keys(result.pageElements).length, 0);
@@ -327,13 +267,15 @@ test('unit: parsedFile with error produces no pageElements or tasks', () => {
   assert.equal(result.errors.length, 1);
 });
 
-test('unit: non-pom type produces empty result', () => {
+test('unit: non-pom type with no elements/tasks produces empty result', () => {
   const parsedFile = {
-    filePath: '/test/my.test.js',
+    filePath: '/test/my.test.ts',
     type: 'test',
-    pages: [],
+    elements: [],
+    tasks: [],
     tests: [],
     error: null,
+    warnings: [],
   };
   const result = extractPom(parsedFile);
   assert.equal(Object.keys(result.pageElements).length, 0);

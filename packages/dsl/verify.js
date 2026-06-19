@@ -1,4 +1,4 @@
-// Verification script for DSL v2 task 1.1
+// Verification script for DSL task 1.1
 // Tests all sub-tasks against the requirements
 
 const dsl = require('./index.js');
@@ -236,7 +236,7 @@ assert(manStep.description === 'Check the page visually', 'Manual description is
 // --- 9. Exports completeness ---
 console.log('\n--- Export completeness ---');
 const expectedExports = [
-  'Page', 'is', 'Element',
+  'is', 'Element',
   'innerTextIs', 'innerTextContains', 'classIncludes', 'placeholderIs', 'nameIs', 'typeIs', 'idIs',
   'Task', 'Test',
   'Click', 'Type', 'TypePassword', 'Select',

@@ -1,10 +1,4 @@
-// @tomation/dsl — v2 runtime stubs
-
-// --- Legacy API (kept for backward compatibility) ---
-
-function Page(name, definition) {
-  return { __pom: true, name: name, definition: definition };
-}
+// @tomation/dsl — runtime stubs
 
 // --- Element Builders ---
 
@@ -186,9 +180,7 @@ function Manual(description) {
 // --- Exports ---
 
 module.exports = {
-  // Legacy
-  Page: Page,
-  // v2 Element builders
+  // Element builders
   is: is,
   Element: Element,
   // Matcher factories
