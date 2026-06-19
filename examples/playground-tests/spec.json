@@ -197,7 +197,7 @@
         {
           "action": "type",
           "target": "Todo__input",
-          "value": ""
+          "value": "{{text}}"
         },
         {
           "action": "click",
@@ -264,12 +264,20 @@
       "name": "Full wizard navigation flow",
       "steps": [
         {
+          "action": "navigate",
+          "url": "login/index.html"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
           "action": "task",
           "name": "Navigation__verifyStep1"
         },
         {
           "action": "navigate",
-          "url": "page2.html"
+          "url": "navigation/page2.html"
         },
         {
           "action": "wait",
@@ -281,7 +289,7 @@
         },
         {
           "action": "navigate",
-          "url": "page3.html"
+          "url": "navigation/page3.html"
         },
         {
           "action": "wait",

@@ -710,6 +710,8 @@ function extractStringOrTemplate(node) {
   const plain = extractString(node);
   if (plain !== null) return plain;
   if (node.type === 'TemplateLiteral') return extractTemplateValue(node);
+  // Handle variable references (e.g., destructured params) → template placeholder
+  if (node.type === 'Identifier') return '{{' + node.name + '}}';
   return null;
 }
 

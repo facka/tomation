@@ -281,3 +281,89 @@ test('parseSource: Test line number is correct', () => {
   assert.equal(result.v2Tests.length, 1);
   assert.equal(result.v2Tests[0].line, 2);
 });
+
+// ---------------------------------------------------------------------------
+// Param variable references in action values
+// ---------------------------------------------------------------------------
+
+test('parseSource: Type(paramVar).in(element) produces template value {{paramVar}}', () => {
+  const src = `
+Task('addItem', (params) => {
+  const { text } = params
+  Type(text).in(input)
+  Click(addButton)
+})
+`;
+  const result = parseSource(src, 'todo.pom.js');
+
+  assert.equal(result.error, null);
+  assert.equal(result.tasks.length, 1);
+  assert.equal(result.tasks[0].name, 'addItem');
+  assert.deepEqual(result.tasks[0].params, ['text']);
+
+  const steps = result.tasks[0].steps;
+  assert.equal(steps.length, 2);
+  assert.equal(steps[0].action, 'type');
+  assert.equal(steps[0].target, 'input');
+  assert.equal(steps[0].value, '{{text}}', 'value should be template reference to param');
+  assert.equal(steps[1].action, 'click');
+  assert.equal(steps[1].target, 'addButton');
+});
+
+test('parseSource: TypePassword(paramVar).in(element) produces template value', () => {
+  const src = `
+Task('login', (params) => {
+  const { password } = params
+  TypePassword(password).in(passwordInput)
+})
+`;
+  const result = parseSource(src, 'login.pom.js');
+
+  assert.equal(result.error, null);
+  const steps = result.tasks[0].steps;
+  assert.equal(steps[0].action, 'typePassword');
+  assert.equal(steps[0].value, '{{password}}');
+});
+
+test('parseSource: Select(paramVar).in(element) produces template value', () => {
+  const src = `
+Task('selectOption', ({option}) => {
+  Select(option).in(dropdown)
+})
+`;
+  const result = parseSource(src, 'form.pom.js');
+
+  assert.equal(result.error, null);
+  const steps = result.tasks[0].steps;
+  assert.equal(steps[0].action, 'select');
+  assert.equal(steps[0].value, '{{option}}');
+});
+
+test('parseSource: Navigate(paramVar) produces template value', () => {
+  const src = `
+Task('goTo', ({url}) => {
+  Navigate(url)
+})
+`;
+  const result = parseSource(src, 'nav.pom.js');
+
+  assert.equal(result.error, null);
+  const steps = result.tasks[0].steps;
+  assert.equal(steps[0].action, 'navigate');
+  assert.equal(steps[0].url, '{{url}}');
+});
+
+test('parseSource: string literal values still work alongside param references', () => {
+  const src = `
+Task('login', ({username}) => {
+  Type(username).in(usernameInput)
+  Type('hardcoded').in(otherInput)
+})
+`;
+  const result = parseSource(src, 'login.pom.js');
+
+  assert.equal(result.error, null);
+  const steps = result.tasks[0].steps;
+  assert.equal(steps[0].value, '{{username}}', 'param ref should be templated');
+  assert.equal(steps[1].value, 'hardcoded', 'string literal should stay as-is');
+});
