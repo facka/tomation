@@ -614,9 +614,11 @@ function switchToRunView() {
   var pauseBtn = document.getElementById('pause-btn');
   var continueBtn = document.getElementById('continue-btn');
   var stopBtn = document.getElementById('stop-btn');
+  var closeBtn = document.getElementById('close-run-btn');
   if (pauseBtn) { pauseBtn.disabled = false; }
   if (continueBtn) { continueBtn.disabled = true; }
   if (stopBtn) { stopBtn.disabled = false; }
+  if (closeBtn) { closeBtn.style.display = 'none'; }
 
   showView('run');
 }
@@ -746,6 +748,10 @@ function showRunSummary(data) {
   if (pauseBtn) { pauseBtn.disabled = true; }
   if (continueBtn) { continueBtn.disabled = true; }
   if (stopBtn) { stopBtn.disabled = true; }
+
+  // Show close button
+  var closeBtn = document.getElementById('close-run-btn');
+  if (closeBtn) { closeBtn.style.display = ''; }
 }
 
 /**
@@ -1064,6 +1070,9 @@ function init() {
       pauseBtn.disabled = true;
       var continueBtn = document.getElementById('continue-btn');
       if (continueBtn) { continueBtn.disabled = false; }
+      // Show close button when paused
+      var closeBtn = document.getElementById('close-run-btn');
+      if (closeBtn) { closeBtn.style.display = ''; }
     });
   }
 
@@ -1075,6 +1084,9 @@ function init() {
       continueBtn.disabled = true;
       var pauseBtn2 = document.getElementById('pause-btn');
       if (pauseBtn2) { pauseBtn2.disabled = false; }
+      // Hide close button when resuming
+      var closeBtn = document.getElementById('close-run-btn');
+      if (closeBtn) { closeBtn.style.display = 'none'; }
     });
   }
 
@@ -1084,6 +1096,19 @@ function init() {
     stopBtn.addEventListener('click', function () {
       api.runtime.sendMessage({ type: 'STOP' });
       stopBtn.disabled = true;
+      // Show close button when stopped
+      var closeBtn = document.getElementById('close-run-btn');
+      if (closeBtn) { closeBtn.style.display = ''; }
+    });
+  }
+
+  // Wire up Close button (go back to home from run view)
+  var closeRunBtn = document.getElementById('close-run-btn');
+  if (closeRunBtn) {
+    closeRunBtn.addEventListener('click', function () {
+      isRunning = false;
+      showView('home');
+      renderHomeView();
     });
   }
 
