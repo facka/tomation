@@ -626,7 +626,7 @@ function switchToRunView() {
 /**
  * Append an "in progress" entry to the log showing the step is currently executing.
  * This entry will be replaced/updated when the step completes.
- * @param {object} data - { stepIndex, action, target, value }
+ * @param {object} data - { stepIndex, action, target, value, url, ms, description, name, params }
  */
 function appendInProgressEntry(data) {
   var logContainer = document.getElementById('log-container');
@@ -642,19 +642,8 @@ function appendInProgressEntry(data) {
   div.className = 'log-entry in-progress';
   div.setAttribute('data-step-index', String(data.stepIndex));
 
-  var parts = [];
-  if (data.action) {
-    parts.push('<span class="step-action">' + escapeHtml(capitalize(data.action)) + '</span>');
-  }
-  if (data.target) {
-    var displayTarget = resolveTargetLabel(data.target, pageElements);
-    parts.push('<span class="element-badge">' + escapeHtml(displayTarget) + '</span>');
-  }
-  if (data.value && data.action !== 'typePassword') {
-    parts.push('<span class="step-value">' + escapeHtml(data.value) + '</span>');
-  }
-
-  div.innerHTML = parts.join(' ') + ' <span class="spinner">⟳</span>';
+  var html = buildLogEntryHtml(data, pageElements);
+  div.innerHTML = html + ' <span class="spinner">⟳</span>';
 
   logContainer.appendChild(div);
   logContainer.scrollTop = logContainer.scrollHeight;
@@ -673,8 +662,113 @@ function finalizeInProgressEntry(logData) {
 }
 
 /**
+ * Format a params object for display in the log.
+ * - 0 params: returns empty string
+ * - 1-2 params: inline display { key: "val", key2: "val2" }
+ * - 3+ params: badge with count, full details in title tooltip
+ * Masks password-like values.
+ *
+ * @param {object} params
+ * @returns {string} HTML string
+ */
+function formatParams(params) {
+  if (!params || typeof params !== 'object') return '';
+  var keys = Object.keys(params);
+  if (keys.length === 0) return '';
+
+  var sensitiveKeys = /password|secret|token|key|auth/i;
+
+  function maskValue(key, val) {
+    if (sensitiveKeys.test(key)) return '****';
+    if (typeof val === 'string' && val.length > 30) return val.slice(0, 27) + '...';
+    return String(val);
+  }
+
+  if (keys.length <= 2) {
+    var inlineParts = keys.map(function(k) {
+      return escapeHtml(k) + ': "' + escapeHtml(maskValue(k, params[k])) + '"';
+    });
+    return ' <span class="step-params">{ ' + inlineParts.join(', ') + ' }</span>';
+  }
+
+  // 3+ params: show count badge with full tooltip
+  var tooltipParts = keys.map(function(k) {
+    return k + ': ' + maskValue(k, params[k]);
+  });
+  var tooltip = tooltipParts.join('\n');
+  return ' <span class="step-params-badge" title="' + escapeHtml(tooltip) + '">(' + keys.length + ' params)</span>';
+}
+
+/**
+ * Build the HTML content for a log entry based on action type.
+ * @param {object} logData
+ * @param {object} pageElements
+ * @returns {string} HTML string (without indicator)
+ */
+function buildLogEntryHtml(logData, pageElements) {
+  var action = logData.action;
+  var parts = [];
+
+  parts.push('<span class="step-action">' + escapeHtml(capitalize(action)) + '</span>');
+
+  switch (action) {
+    case 'navigate':
+      if (logData.url) {
+        parts.push('<span class="step-value">' + escapeHtml(logData.url) + '</span>');
+      }
+      break;
+
+    case 'wait':
+      if (logData.ms != null) {
+        parts.push('<span class="step-value">' + logData.ms + 'ms</span>');
+      }
+      break;
+
+    case 'manual':
+      if (logData.description) {
+        parts.push('<span class="step-value">"' + escapeHtml(logData.description) + '"</span>');
+      }
+      break;
+
+    case 'task':
+      if (logData.name) {
+        var taskLabel = logData.name.replace(/__/g, '.').replace(/\//g, ' > ');
+        parts.push('<span class="element-badge">' + escapeHtml(taskLabel) + '</span>');
+      }
+      parts.push(formatParams(logData.params));
+      break;
+
+    case 'typePassword':
+      if (logData.target) {
+        var tgt = resolveTargetLabel(logData.target, pageElements);
+        var tip = buildElementTooltip(logData.target, pageElements);
+        parts.push('<span class="element-badge" title="' + escapeHtml(tip) + '">' + escapeHtml(tgt) + '</span>');
+      }
+      parts.push('<span class="step-value">****</span>');
+      break;
+
+    default:
+      // Actions with target: click, type, select, assertExists, assertNotExists, assertHasText, waitFor
+      if (logData.target) {
+        var displayTarget = resolveTargetLabel(logData.target, pageElements);
+        var tooltip = buildElementTooltip(logData.target, pageElements);
+        parts.push('<span class="element-badge" title="' + escapeHtml(tooltip) + '">' + escapeHtml(displayTarget) + '</span>');
+      }
+      if (logData.value) {
+        parts.push('<span class="step-value">"' + escapeHtml(logData.value) + '"</span>');
+      }
+      if (action === 'waitFor' && logData.gone) {
+        parts.push('<span class="step-value">(gone)</span>');
+      }
+      break;
+  }
+
+  return parts.join(' ');
+}
+
+/**
  * Append a log entry to the run view log container.
- * @param {object} logData - { stepIndex, action, target, value, ok, error, taskName }
+ * @param {object} logData - { stepIndex, action, target, value, ok, error, taskName, url, ms, description, name, params }
  */
 function appendLogEntry(logData) {
   var logContainer = document.getElementById('log-container');
@@ -686,7 +780,8 @@ function appendLogEntry(logData) {
   if (logData.taskName) {
     var headerDiv = document.createElement('div');
     headerDiv.className = 'log-entry task-header';
-    headerDiv.innerHTML = '<span class="step-action">Task</span> ' + escapeHtml(logData.taskName.replace('__', '.'));
+    var headerLabel = logData.taskName.replace(/__/g, '.').replace(/\//g, ' > ');
+    headerDiv.innerHTML = '<span class="step-action">Task</span> ' + escapeHtml(headerLabel);
     logContainer.appendChild(headerDiv);
     return;
   }
@@ -694,37 +789,21 @@ function appendLogEntry(logData) {
   var div = document.createElement('div');
   var classes = 'log-entry';
 
-  // Add pass/fail class
   if (logData.ok === true) {
     classes += ' pass';
   } else if (logData.ok === false) {
     classes += ' fail';
   }
 
-  // Add indented class if this step is inside a task
   if (logData.indented) {
     classes += ' indented';
   }
 
   div.className = classes;
 
-  // Build display text: action, target (label badge), value (masked for typePassword)
-  var parts = [];
-  if (logData.action) {
-    parts.push('<span class="step-action">' + escapeHtml(capitalize(logData.action)) + '</span>');
-  }
-  if (logData.target) {
-    var displayTarget = resolveTargetLabel(logData.target, pageElements);
-    var tooltip = buildElementTooltip(logData.target, pageElements);
-    parts.push('<span class="element-badge" title="' + escapeHtml(tooltip) + '">' + escapeHtml(displayTarget) + '</span>');
-  }
-  if (logData.action === 'typePassword') {
-    parts.push('<span class="step-value">****</span>');
-  } else if (logData.value) {
-    parts.push('<span class="step-value">' + escapeHtml(logData.value) + '</span>');
-  }
+  var html = buildLogEntryHtml(logData, pageElements);
 
-  // Add pass/fail indicator with optional retry attempt count
+  // Add pass/fail indicator
   var indicator = '';
   if (logData.ok === true) {
     indicator = ' ✓';
@@ -741,11 +820,9 @@ function appendLogEntry(logData) {
     }
   }
 
-  div.innerHTML = parts.join(' ') + indicator;
+  div.innerHTML = html + indicator;
 
   logContainer.appendChild(div);
-
-  // Auto-scroll to bottom
   logContainer.scrollTop = logContainer.scrollHeight;
 }
 

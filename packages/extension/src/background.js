@@ -451,6 +451,13 @@ function emitLog(stepIndex, step, ok, error) {
     value: step.value || null,
     ok: ok
   };
+  // Include action-specific fields
+  if (step.url) logMsg.url = step.url;
+  if (step.ms != null) logMsg.ms = step.ms;
+  if (step.description) logMsg.description = step.description;
+  if (step.name) logMsg.name = step.name;
+  if (step.params) logMsg.params = step.params;
+  if (step.gone != null) logMsg.gone = step.gone;
   if (error) {
     logMsg.error = error;
   }
@@ -549,19 +556,19 @@ function runStepLoop() {
 
     // Handle navigate steps in the background (don't send to runtime)
     if (step.action === 'navigate') {
-      safeSendMessage({ type: 'STEP_STARTING', stepIndex: currentIndex, action: step.action, target: step.target || null, value: step.url || null });
+      safeSendMessage({ type: 'STEP_STARTING', stepIndex: currentIndex, action: 'navigate', url: step.url });
       return handleNavigateStep(step, currentIndex);
     }
 
     // Handle wait steps in the background (don't send to runtime)
     if (step.action === 'wait') {
-      safeSendMessage({ type: 'STEP_STARTING', stepIndex: currentIndex, action: step.action, target: null, value: String(step.ms) });
+      safeSendMessage({ type: 'STEP_STARTING', stepIndex: currentIndex, action: 'wait', ms: step.ms });
       return handleWaitStep(step, currentIndex);
     }
 
     // Handle manual steps in the background (don't send to runtime)
     if (step.action === 'manual') {
-      safeSendMessage({ type: 'STEP_STARTING', stepIndex: currentIndex, action: step.action, target: null, value: step.description || null });
+      safeSendMessage({ type: 'STEP_STARTING', stepIndex: currentIndex, action: 'manual', description: step.description });
       return handleManualStep(step, currentIndex);
     }
 
@@ -573,13 +580,20 @@ function runStepLoop() {
       }
 
       // Emit "step starting" to give the panel immediate feedback
-      safeSendMessage({
+      var startMsg = {
         type: 'STEP_STARTING',
         stepIndex: currentIndex,
-        action: step.action,
-        target: step.target || null,
-        value: step.value || null
-      });
+        action: step.action
+      };
+      if (step.target) startMsg.target = step.target;
+      if (step.value) startMsg.value = step.value;
+      if (step.url) startMsg.url = step.url;
+      if (step.ms != null) startMsg.ms = step.ms;
+      if (step.description) startMsg.description = step.description;
+      if (step.name) startMsg.name = step.name;
+      if (step.params) startMsg.params = step.params;
+      if (step.gone != null) startMsg.gone = step.gone;
+      safeSendMessage(startMsg);
 
       return sendStepToRuntime(step, currentIndex).then(function (result) {
         if (runState.stopRequested) {
