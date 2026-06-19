@@ -308,6 +308,33 @@
       cursor: pointer;
     }
 
+    .config-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .info-btn {
+      background: none;
+      border: 1px solid #ccc;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 11px;
+      line-height: 16px;
+      text-align: center;
+      cursor: help;
+      color: #666;
+      padding: 0;
+      flex-shrink: 0;
+    }
+
+    .info-btn:hover {
+      background: #e8f0fe;
+      border-color: #4a90d9;
+      color: #1a56db;
+    }
+
     .config-row select {
       margin-left: 4px;
       font-size: 12px;
@@ -400,15 +427,10 @@
       <h3>Configuration</h3>
       <div class="config-row">
         <label>
-          <input type="checkbox" id="config-continue-on-failure" />
-          Allow continue on failure
+          <input type="checkbox" id="config-debug-mode" />
+          Debug Mode
         </label>
-      </div>
-      <div class="config-row">
-        <label>
-          <input type="checkbox" id="config-retry-on-failure" />
-          Allow retry on failure
-        </label>
+        <button type="button" class="info-btn" id="debug-info-btn" title="When enabled, failed steps can be retried or skipped without stopping the test run.">ℹ</button>
       </div>
       <div class="config-row">
         <label>

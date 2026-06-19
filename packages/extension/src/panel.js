@@ -481,15 +481,12 @@ function getConfigKey() {
 function loadTestPlanConfiguration() {
   var key = getConfigKey();
   getTestPlanConfig(key).then(function (config) {
-    var continueEl = document.getElementById('config-continue-on-failure');
-    var retryEl = document.getElementById('config-retry-on-failure');
+    var debugEl = document.getElementById('config-debug-mode');
     var speedEl = document.getElementById('config-execution-speed');
 
-    if (continueEl) {
-      continueEl.checked = config.allowContinueOnFailure;
-    }
-    if (retryEl) {
-      retryEl.checked = config.allowRetryOnFailure;
+    if (debugEl) {
+      // Debug mode is on if both continue and retry were enabled
+      debugEl.checked = config.allowContinueOnFailure && config.allowRetryOnFailure;
     }
     if (speedEl) {
       speedEl.value = config.executionSpeed;
@@ -501,13 +498,14 @@ function loadTestPlanConfiguration() {
  * Read the current configuration state from the UI controls and persist it.
  */
 function onConfigChange() {
-  var continueEl = document.getElementById('config-continue-on-failure');
-  var retryEl = document.getElementById('config-retry-on-failure');
+  var debugEl = document.getElementById('config-debug-mode');
   var speedEl = document.getElementById('config-execution-speed');
 
+  var debugMode = debugEl ? debugEl.checked : false;
+
   var config = {
-    allowContinueOnFailure: continueEl ? continueEl.checked : false,
-    allowRetryOnFailure: retryEl ? retryEl.checked : false,
+    allowContinueOnFailure: debugMode,
+    allowRetryOnFailure: debugMode,
     executionSpeed: speedEl ? speedEl.value : 'NORMAL'
   };
 
@@ -555,13 +553,14 @@ function onRunClick() {
     }
   }
 
-  var continueEl = document.getElementById('config-continue-on-failure');
-  var retryEl = document.getElementById('config-retry-on-failure');
+  var debugEl = document.getElementById('config-debug-mode');
   var speedEl = document.getElementById('config-execution-speed');
 
+  var debugMode = debugEl ? debugEl.checked : false;
+
   var config = {
-    allowContinueOnFailure: continueEl ? continueEl.checked : false,
-    allowRetryOnFailure: retryEl ? retryEl.checked : false,
+    allowContinueOnFailure: debugMode,
+    allowRetryOnFailure: debugMode,
     executionSpeed: speedEl ? speedEl.value : 'NORMAL'
   };
 
@@ -1038,14 +1037,10 @@ function init() {
   }
 
   // Wire up configuration controls change listeners
-  var configContinue = document.getElementById('config-continue-on-failure');
-  var configRetry = document.getElementById('config-retry-on-failure');
+  var configDebug = document.getElementById('config-debug-mode');
   var configSpeed = document.getElementById('config-execution-speed');
-  if (configContinue) {
-    configContinue.addEventListener('change', onConfigChange);
-  }
-  if (configRetry) {
-    configRetry.addEventListener('change', onConfigChange);
+  if (configDebug) {
+    configDebug.addEventListener('change', onConfigChange);
   }
   if (configSpeed) {
     configSpeed.addEventListener('change', onConfigChange);
