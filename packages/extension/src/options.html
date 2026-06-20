@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tomation — Options</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.4;
+      color: #1a1a1a;
+      background: #ffffff;
+      padding: 24px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    h2 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-block;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .btn:hover {
+      background: #f0f0f0;
+    }
+
+    .btn-primary {
+      background: #1a73e8;
+      color: #fff;
+      border-color: #1a73e8;
+    }
+
+    .btn-primary:hover {
+      background: #1557b0;
+    }
+
+    .btn-danger {
+      background: #d93025;
+      color: #fff;
+      border-color: #d93025;
+    }
+
+    .btn-danger:hover {
+      background: #b3261e;
+    }
+
+    .btn-sm {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+
+    /* Project card */
+    .project-card {
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .project-header {
+      background: #f5f5f5;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .project-name {
+      font-weight: 600;
+      font-size: 13px;
+      flex: 1;
+    }
+
+    .project-hostname {
+      font-size: 11px;
+      color: #666;
+      margin-left: 8px;
+    }
+
+    .project-header .btn {
+      flex-shrink: 0;
+    }
+
+    /* Inline rename input */
+    .rename-input {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border: 1px solid #1a73e8;
+      border-radius: 4px;
+      outline: none;
+      flex: 1;
+    }
+
+    /* Spec list */
+    .spec-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .spec-list li {
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .spec-list li:last-child {
+      border-bottom: none;
+    }
+
+    .spec-filename {
+      flex: 1;
+      font-size: 12px;
+    }
+
+    .spec-loaded {
+      font-size: 11px;
+      color: #666;
+      margin-right: 12px;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 40px 12px;
+      color: #666;
+    }
+
+    /* Modal overlay */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.visible {
+      display: flex;
+    }
+
+    .modal-dialog {
+      background: #fff;
+      border-radius: 8px;
+      padding: 24px;
+      max-width: 420px;
+      width: 90%;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-dialog h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .modal-dialog p {
+      font-size: 13px;
+      color: #555;
+      margin-bottom: 16px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    /* Hidden file input */
+    .file-input-hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tomation — Options</h1>
+
+  <div class="toolbar">
+    <button id="export-btn" class="btn btn-primary">Export All</button>
+    <button id="import-btn" class="btn">Import</button>
+    <input type="file" id="import-file-input" class="file-input-hidden" accept=".json" />
+  </div>
+
+  <div id="projects-container"></div>
+
+  <!-- Conflict modal -->
+  <div id="conflict-modal" class="modal-overlay">
+    <div class="modal-dialog">
+      <h3>Import Conflict</h3>
+      <p id="conflict-message"></p>
+      <div class="modal-actions">
+        <button id="conflict-merge-btn" class="btn btn-primary">Merge Specs</button>
+        <button id="conflict-replace-btn" class="btn btn-danger">Replace</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="storage.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

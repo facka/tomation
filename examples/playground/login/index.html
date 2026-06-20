@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Tomation Playground</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #f5f5f5; }
+    .login-container { background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 320px; }
+    h1 { margin-bottom: 1.5rem; text-align: center; font-size: 1.5rem; }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; margin-bottom: 0.25rem; font-size: 0.875rem; color: #333; }
+    input { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
+    input:focus { outline: none; border-color: #4a90d9; }
+    button { width: 100%; padding: 0.6rem; background: #4a90d9; color: #fff; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; }
+    button:hover { background: #357abd; }
+    #message { margin-top: 1rem; padding: 0.5rem; border-radius: 4px; text-align: center; display: none; }
+    #message.success { display: block; background: #d4edda; color: #155724; }
+    #message.error { display: block; background: #f8d7da; color: #721c24; }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h1>Login</h1>
+    <form id="login-form">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" placeholder="Enter username">
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="Enter password">
+      </div>
+      <button type="submit" id="login-btn">Log In</button>
+    </form>
+    <div id="message"></div>
+  </div>
+
+  <script>
+    var form = document.getElementById('login-form');
+    var messageEl = document.getElementById('message');
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var username = document.getElementById('username').value.trim();
+      var password = document.getElementById('password').value;
+
+      messageEl.className = '';
+      messageEl.style.display = 'none';
+      messageEl.textContent = '';
+
+      if (!username || !password) {
+        messageEl.className = 'error';
+        messageEl.style.display = 'block';
+        messageEl.textContent = 'Username and password are required';
+        return;
+      }
+
+      if (username === 'admin' && password === 'password123') {
+        messageEl.className = 'success';
+        messageEl.style.display = 'block';
+        messageEl.textContent = 'Login successful! Welcome, admin.';
+      } else {
+        messageEl.className = 'error';
+        messageEl.style.display = 'block';
+        messageEl.textContent = 'Invalid username or password';
+      }
+    });
+  </script>
+</body>
+</html>

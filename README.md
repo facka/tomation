@@ -1,81 +1,118 @@
-## Tomation - Framework for automating tasks in browsers
+# Tomation
 
-Tomation is an innovative framework designed for streamlining the automation of tasks within a web browser environment.
+A TypeScript-first browser automation framework that lets you write readable, maintainable UI tests using a declarative DSL — then run them directly in the browser via a lightweight extension.
 
-The core concept behind Tomation is its seamless integration as a browser extension, offering an efficient solution for test management and execution log handling.
+Tomation separates **what** you're testing from **how** elements are found on the page. You declare elements using a tag-based builder pattern, compose reusable tasks, and write tests that read like plain English. The compiler transforms your TypeScript source into a portable `.tomation.json` file that the browser extension executes step-by-step.
+
+## Demo
+
+![Tomation Demo](./docs/demo.gif)
 
 ## Installation
 
-Clone project locally and link it to your project.
+### Browser Extension
 
-At `tomation` run
+<!-- TODO: Update with store links once published -->
+- **Chrome**: Coming soon
+- **Firefox**: Coming soon
+
+For development, load the extension from `packages/extension/dist` as an unpacked extension.
+
+### Compiler
+
 ```bash
-npm link 
+npm install @tomation/compiler @tomation/dsl
 ```
 
-In your project run
-```bash
-npm link tomation
-```
+## Quick Start
 
-## Usage
-
-It's recommended to use Page Object Model (POM) to implement automated tests. Create a file to automate a login page for example.
-login-page.ts
+### 1. Create a config file
 
 ```typescript
-import { Task, Click, Type, TypePassword } from 'tomation'
+// tomation.config.ts
+export default {
+  meta: {
+    name: 'My App Tests',
+    urls: ['http://localhost:3000'],
+  },
+  pom: './pom',
+  tests: './tests',
+  baseUrl: './',
+}
+```
 
-// --- UI Elements ---
-const loginButton = is.BUTTON
-  .where(innerTextIs('Login'))
-  .as('Login Button')
+### 2. Define page elements (POM)
 
-const usernameInput = is.INPUT
-  .where((elem: HTMLElement) => elem?.parentElement?.parentElement?.children[1]?.textContent?.trim() === 'Username')
-  .as('Username Input')
+```typescript
+// pom/login.pom.ts
+import { is, idIs, Task, Type, TypePassword, Click } from '@tomation/dsl'
 
-const passwordInput = is.INPUT
-  .where((elem: HTMLElement) => elem?.parentElement?.parentElement?.children[1]?.textContent?.trim() === 'Password')
-  .as('Password Input')
+const usernameInput = is.INPUT.where(idIs('username')).as('Username')
+const passwordInput = is.INPUT.where(idIs('password')).as('Password')
+const submitButton = is.BUTTON.where(idIs('login-btn')).as('Submit')
+const errorMessage = is.DIV.where(idIs('error-msg')).as('Error Message')
 
-// --- UI Actions ---
-const login = Task('Login task', (params: { username: string, password: string }) => {
-  Type(params.username).in(usernameInput)
-  TypePassword(params.password).in(passwordInput)
-  Click(loginButton)
+Task('fillCredentials', (params) => {
+  const { username, password } = params
+  Type(username).in(usernameInput)
+  TypePassword(password).in(passwordInput)
 })
 
-export default {
-  // UI Elements
-  loginButton,
-  usernameInput,
-  passwordInput,
-  // Actions
-  login,
-}
+Task('submit', () => {
+  Click(submitButton)
+})
 ```
+
+### 3. Write tests
 
 ```typescript
-import LoginPage from '~/login-page'
+// tests/login.test.ts
+import { Test, Click, AssertExists, AssertHasText } from '@tomation/dsl'
+import Login from '~/pom/login.pom'
 
-function LoginTest() {
-  Test('Login', () => {
-    LoginPage.login({
-      username: 'admin',
-      password: '12345',
-    })
-  })
-}
+Test('Login with valid credentials', () => {
+  Login.fillCredentials({ username: 'admin', password: 'secret' })
+  Login.submit()
+  AssertExists(Login.errorMessage)
+})
 
-export {
-  LoginTest
-}
-
+Test('Login shows error on empty submit', () => {
+  Click(Login.submitButton)
+  AssertHasText(Login.errorMessage, 'required')
+})
 ```
 
-## Contributing
+### 4. Compile
 
-Pull requests are welcome. For major changes, please open an issue first
-to discuss what you would like to change.
+```bash
+npx tomation compile
+```
 
+This produces a `.tomation.json` file (named from your `meta.name`) that the browser extension uses to execute your tests.
+
+### 5. Run
+
+Open the Tomation browser extension panel, load your `.tomation.json`, and run tests interactively with step-by-step execution, pause/resume, and retry controls.
+
+## Key Features
+
+- **TypeScript-first** — Full editor autocomplete, type safety, and go-to-definition
+- **Declarative element selectors** — `is.BUTTON.where(idIs('login')).as('Login Button')`
+- **XPath support** — `Element('//div[@role="alert"]').as('Alert')`
+- **Reusable tasks** — Compose multi-step workflows with parameters and conditionals
+- **Folder-based namespacing** — Organize POM files in folders without naming conflicts
+- **Browser extension runtime** — Execute tests directly in the browser with visual feedback
+- **Watch mode** — `npx tomation watch` for live recompilation during development
+
+## Project Structure
+
+```
+packages/
+  compiler/    # CLI that compiles .ts POM/test files → .tomation.json
+  dsl/         # Runtime stubs + TypeScript types for authoring
+  extension/   # Browser extension (Chrome/Firefox) for test execution
+examples/
+  playground/         # Static HTML apps for testing (deployed to GitHub Pages)
+  playground-tests/   # Tomation test scripts for the playground apps
+  my-app-tests/       # Example project with login flow tests
+```
