@@ -555,7 +555,7 @@ function extractStep(exprNode, filePath) {
     const innerCall = exprNode.callee.object;
     if (innerCall && innerCall.type === 'CallExpression' && innerCall.callee && innerCall.callee.type === 'Identifier') {
       const actionName = innerCall.callee.name;
-      const actionMap = { Type: 'type', TypePassword: 'typePassword', Select: 'select' };
+      const actionMap = { Type: 'type', TypePassword: 'typePassword', Select: 'select', Upload: 'upload' };
       const action = actionMap[actionName];
       if (action) {
         const valueArg = innerCall.arguments[0];
@@ -564,6 +564,16 @@ function extractStep(exprNode, filePath) {
         const target = extractElementRef(targetArg);
         if (target === null) return null;
         return { action, target, value: value !== null ? value : '' };
+      }
+      // Press(key, options).in(element) → pressKey with target
+      if (actionName === 'Press') {
+        const key = extractStringOrTemplate(innerCall.arguments[0]);
+        if (key === null) return null;
+        const opts = extractSimpleObject(innerCall.arguments[1]) || {};
+        const targetArg = exprNode.arguments[0];
+        const target = extractElementRef(targetArg);
+        if (target === null) return null;
+        return { action: 'pressKey', target: target, key: key, options: opts };
       }
     }
   }
@@ -646,11 +656,30 @@ function extractStep(exprNode, filePath) {
           return { action: 'manual', description: description !== null ? description : '' };
         }
 
-        // Type/TypePassword/Select without .in() chain — shouldn't normally occur,
+        // PressKey(key, options) — keyboard action without target
+        case 'PressKey': {
+          const key = extractStringOrTemplate(args[0]);
+          if (key === null) return null;
+          const opts = extractSimpleObject(args[1]) || {};
+          return { action: 'pressKey', key: key, options: opts };
+        }
+
+        // Shortcut press functions
+        case 'PressUp':    return { action: 'pressKey', key: 'ArrowUp', options: {} };
+        case 'PressDown':  return { action: 'pressKey', key: 'ArrowDown', options: {} };
+        case 'PressLeft':  return { action: 'pressKey', key: 'ArrowLeft', options: {} };
+        case 'PressRight': return { action: 'pressKey', key: 'ArrowRight', options: {} };
+        case 'PressTab':   return { action: 'pressKey', key: 'Tab', options: {} };
+        case 'PressEnter': return { action: 'pressKey', key: 'Enter', options: {} };
+        case 'PressEsc':   return { action: 'pressKey', key: 'Escape', options: {} };
+        case 'PressSpace': return { action: 'pressKey', key: ' ', options: {} };
+
+        // Type/TypePassword/Select/Upload without .in() chain — shouldn't normally occur,
         // but return null to skip gracefully
         case 'Type':
         case 'TypePassword':
         case 'Select':
+        case 'Upload':
           return null;
 
         default:

@@ -357,6 +357,7 @@ var runState = {
   lockedTabId: null,
   currentTestName: '',
   steps: [],
+  spec: null,
   stepIndex: 0,
   passCount: 0,
   failCount: 0,
@@ -507,6 +508,7 @@ function startRun(tabId, test, spec, checkedSteps, config) {
   runState.running = true;
   runState.currentTestName = test.name || '';
   runState.steps = resolvedSteps;
+  runState.spec = spec;
   runState.stepIndex = 0;
   runState.passCount = 0;
   runState.failCount = 0;
@@ -570,6 +572,12 @@ function runStepLoop() {
     if (step.action === 'manual') {
       safeSendMessage({ type: 'STEP_STARTING', stepIndex: currentIndex, action: 'manual', description: step.description });
       return handleManualStep(step, currentIndex);
+    }
+
+    // Handle upload steps in the background — fetch file, then send to runtime with data
+    if (step.action === 'upload') {
+      safeSendMessage({ type: 'STEP_STARTING', stepIndex: currentIndex, action: 'upload', target: step.target, value: step.value });
+      return handleUploadStep(step, currentIndex);
     }
 
     // Apply speed delay before dispatching step to runtime
@@ -768,6 +776,94 @@ function handleManualStep(step, currentIndex) {
     }
     runState.passCount++;
     emitLog(currentIndex, step, true, undefined);
+    runState.stepIndex++;
+    return runStepLoop();
+  });
+}
+
+/**
+ * Handle an upload step: fetch the file from testFiles URL, then send to runtime
+ * with the file data as a base64 string. The runtime creates a real File object.
+ *
+ * @param {object} step - The upload step { action: "upload", target: "...", value: "filename.pdf" }
+ * @param {number} currentIndex - The current step index
+ * @returns {Promise}
+ */
+function handleUploadStep(step, currentIndex) {
+  var fileName = step.value || '';
+  var testFilesBase = runState.spec && runState.spec.meta && runState.spec.meta.testFiles;
+
+  // If no testFiles URL configured, fall back to sending just the filename (stub file)
+  if (!testFilesBase) {
+    // Send to runtime without file data — runtime will create an empty stub
+    return sendUploadToRuntime(step, currentIndex, null, null);
+  }
+
+  // Build full URL and fetch the file
+  var fileUrl = testFilesBase.replace(/\/$/, '') + '/' + fileName;
+
+  return fetch(fileUrl).then(function (response) {
+    if (!response.ok) {
+      throw new Error('Failed to fetch test file: ' + response.status + ' ' + fileUrl);
+    }
+    return response.blob();
+  }).then(function (blob) {
+    // Convert blob to base64 for message passing
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        resolve({ data: reader.result, type: blob.type });
+      };
+      reader.onerror = function () {
+        reject(new Error('Failed to read file data'));
+      };
+      reader.readAsDataURL(blob);
+    });
+  }).then(function (fileInfo) {
+    return sendUploadToRuntime(step, currentIndex, fileInfo.data, fileInfo.type);
+  }).catch(function (err) {
+    runState.failCount++;
+    emitLog(currentIndex, step, false, err.message || 'Upload failed');
+    unlockTab();
+    runState.running = false;
+    emitSummary('RUN_COMPLETE', currentIndex + 1, runState.passCount, runState.failCount);
+  });
+}
+
+/**
+ * Send the upload step to the runtime with optional file data.
+ */
+function sendUploadToRuntime(step, currentIndex, fileDataUrl, mimeType) {
+  var msg = {
+    type: 'EXECUTE_STEP',
+    action: 'upload',
+    stepIndex: currentIndex,
+    target: step.target,
+    value: step.value,
+  };
+  if (fileDataUrl) {
+    msg.fileDataUrl = fileDataUrl;
+    msg.mimeType = mimeType;
+  }
+
+  return api.tabs.sendMessage(runState.lockedTabId, msg).then(function (result) {
+    if (runState.stopRequested) return finishRun();
+
+    var ok = result && result.ok;
+    var error = result && result.error;
+
+    if (ok) { runState.passCount++; }
+    else { runState.failCount++; }
+
+    emitLog(currentIndex, step, !!ok, error || undefined);
+
+    if (!ok) {
+      unlockTab();
+      runState.running = false;
+      emitSummary('RUN_COMPLETE', currentIndex + 1, runState.passCount, runState.failCount);
+      return;
+    }
+
     runState.stepIndex++;
     return runStepLoop();
   });

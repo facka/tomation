@@ -48,9 +48,14 @@ function flattenSpec(pomResults, parsedTestFiles, meta) {
     description: (meta && typeof meta.description === 'string') ? meta.description : DEFAULT_META.description,
   };
 
-  // Include urls array when provided (v2 config format)
+  // Include urls array when provided
   if (meta && Array.isArray(meta.urls)) {
     resolvedMeta.urls = meta.urls;
+  }
+
+  // Include testFiles base URL when provided (for file upload support)
+  if (meta && typeof meta.testFiles === 'string') {
+    resolvedMeta.testFiles = meta.testFiles;
   }
 
   // --- Merge pageElements from all POM results ---

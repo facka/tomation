@@ -2,7 +2,7 @@
 
 A TypeScript-first browser automation framework that lets you write readable, maintainable UI tests using a declarative DSL — then run them directly in the browser via a lightweight extension.
 
-Tomation separates **what** you're testing from **how** elements are found on the page. You declare elements using a tag-based builder pattern, compose reusable tasks, and write tests that read like plain English. The compiler transforms your TypeScript source into a portable `spec.json` that the browser extension executes step-by-step.
+Tomation separates **what** you're testing from **how** elements are found on the page. You declare elements using a tag-based builder pattern, compose reusable tasks, and write tests that read like plain English. The compiler transforms your TypeScript source into a portable `.tomation.json` file that the browser extension executes step-by-step.
 
 ## Demo
 
@@ -88,11 +88,11 @@ Test('Login shows error on empty submit', () => {
 npx tomation compile
 ```
 
-This produces a `spec.json` file that the browser extension uses to execute your tests.
+This produces a `.tomation.json` file (named from your `meta.name`) that the browser extension uses to execute your tests.
 
 ### 5. Run
 
-Open the Tomation browser extension panel, load your `spec.json`, and run tests interactively with step-by-step execution, pause/resume, and retry controls.
+Open the Tomation browser extension panel, load your `.tomation.json`, and run tests interactively with step-by-step execution, pause/resume, and retry controls.
 
 ## Key Features
 
@@ -108,9 +108,11 @@ Open the Tomation browser extension panel, load your `spec.json`, and run tests 
 
 ```
 packages/
-  compiler/    # CLI that compiles .ts POM/test files → spec.json
+  compiler/    # CLI that compiles .ts POM/test files → .tomation.json
   dsl/         # Runtime stubs + TypeScript types for authoring
   extension/   # Browser extension (Chrome/Firefox) for test execution
 examples/
-  my-app-tests/  # Example project with login flow tests
+  playground/         # Static HTML apps for testing (deployed to GitHub Pages)
+  playground-tests/   # Tomation test scripts for the playground apps
+  my-app-tests/       # Example project with login flow tests
 ```

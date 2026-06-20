@@ -63,6 +63,13 @@ export interface XPathElementBuilder {
 
 // --- Step Types ---
 
+export interface PressKeyOptions {
+  alt?: boolean;
+  ctrl?: boolean;
+  meta?: boolean;
+  shift?: boolean;
+}
+
 /**
  * A discriminated union covering all supported automation action types.
  */
@@ -78,7 +85,9 @@ export type Step =
   | { action: "navigate"; url: string }
   | { action: "wait"; ms: number }
   | { action: "waitFor"; target: string; gone: boolean }
-  | { action: "manual"; description: string };
+  | { action: "manual"; description: string }
+  | { action: "upload"; target: string; value: string }
+  | { action: "pressKey"; key: string; target?: string; options?: PressKeyOptions };
 
 // --- Matcher Factories ---
 
@@ -146,3 +155,33 @@ export declare function Wait(ms: number): any;
 export declare function WaitFor(element: ElementDescriptor): any;
 export declare function WaitForGone(element: ElementDescriptor): any;
 export declare function Manual(description: string): any;
+
+// --- File Upload ---
+
+export declare function Upload(filePath: string): { in(element: ElementDescriptor): any };
+
+// --- Keyboard Actions ---
+
+/**
+ * Press a specific key with optional modifiers.
+ * @param key - The key to press (e.g., 'a', 'Enter', 'Tab')
+ * @param options - Modifier keys: { alt, ctrl, meta, shift }
+ */
+export declare function PressKey(key: string, options?: PressKeyOptions): any;
+
+/**
+ * Press a key, optionally targeting a specific element.
+ * @param key - The key to press
+ * @param options - Modifier keys: { alt, ctrl, meta, shift }
+ */
+export declare function Press(key: string, options?: PressKeyOptions): { in(element: ElementDescriptor): any };
+
+// Shortcut press functions
+export declare function PressUp(): any;
+export declare function PressDown(): any;
+export declare function PressLeft(): any;
+export declare function PressRight(): any;
+export declare function PressTab(): any;
+export declare function PressEnter(): any;
+export declare function PressEsc(): any;
+export declare function PressSpace(): any;

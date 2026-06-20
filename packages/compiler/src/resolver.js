@@ -486,27 +486,32 @@ function resolve(cwd) {
     return { ok: false, error: sortResult.error };
   }
 
-  // Extract meta from config (supports both meta.urls array and legacy meta.url string)
+  // Extract meta from config
   let meta = undefined;
   if (config.meta && typeof config.meta === 'object') {
     meta = {};
     if (typeof config.meta.name === 'string') meta.name = config.meta.name;
     if (typeof config.meta.description === 'string') meta.description = config.meta.description;
 
-    // Support meta.urls as array of URL strings (v2 config format)
+    // Support meta.urls as array of URL strings
     if (Array.isArray(config.meta.urls)) {
       meta.urls = config.meta.urls.filter(u => typeof u === 'string');
     }
 
-    // Support legacy meta.url as a single string — normalize to urls array
+    // Support meta.url as a single string — normalize to urls array
     if (typeof config.meta.url === 'string' && !meta.urls) {
       meta.urls = [config.meta.url];
     }
 
-    // Also keep meta.url for backward compatibility (first URL in the array)
     if (meta.urls && meta.urls.length > 0) {
       meta.url = meta.urls[0];
     }
+  }
+
+  // Read testFiles base URL from config (for file upload support)
+  if (typeof config.testFiles === 'string') {
+    if (!meta) meta = {};
+    meta.testFiles = config.testFiles;
   }
 
   return { ok: true, files: sortResult.sorted, meta: meta, pomDir: pomDir, baseUrl: baseUrl };

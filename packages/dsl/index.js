@@ -177,6 +177,57 @@ function Manual(description) {
   return { __step: true, action: 'manual', description: description };
 }
 
+// --- File Upload ---
+
+function Upload(filePath) {
+  return {
+    __step: true,
+    action: 'upload',
+    value: filePath,
+    in: function (element) {
+      return { __step: true, action: 'upload', target: element, value: filePath };
+    }
+  };
+}
+
+// --- Keyboard Actions ---
+
+/**
+ * Press a specific key with optional modifiers.
+ * @param {string} key - The key to press (e.g., 'a', 'Enter', 'Tab')
+ * @param {object} [options] - Modifier keys: { alt, ctrl, meta, shift }
+ */
+function PressKey(key, options) {
+  return { __step: true, action: 'pressKey', key: key, options: options || {} };
+}
+
+/**
+ * Generic Press action — same as PressKey but can target a specific element.
+ * @param {string} key - The key to press
+ * @param {object} [options] - Modifier keys: { alt, ctrl, meta, shift }
+ */
+function Press(key, options) {
+  return {
+    __step: true,
+    action: 'pressKey',
+    key: key,
+    options: options || {},
+    in: function (element) {
+      return { __step: true, action: 'pressKey', target: element, key: key, options: options || {} };
+    }
+  };
+}
+
+// Shortcut press functions
+function PressUp() { return { __step: true, action: 'pressKey', key: 'ArrowUp', options: {} }; }
+function PressDown() { return { __step: true, action: 'pressKey', key: 'ArrowDown', options: {} }; }
+function PressLeft() { return { __step: true, action: 'pressKey', key: 'ArrowLeft', options: {} }; }
+function PressRight() { return { __step: true, action: 'pressKey', key: 'ArrowRight', options: {} }; }
+function PressTab() { return { __step: true, action: 'pressKey', key: 'Tab', options: {} }; }
+function PressEnter() { return { __step: true, action: 'pressKey', key: 'Enter', options: {} }; }
+function PressEsc() { return { __step: true, action: 'pressKey', key: 'Escape', options: {} }; }
+function PressSpace() { return { __step: true, action: 'pressKey', key: ' ', options: {} }; }
+
 // --- Exports ---
 
 module.exports = {
@@ -207,4 +258,15 @@ module.exports = {
   WaitFor: WaitFor,
   WaitForGone: WaitForGone,
   Manual: Manual,
+  Upload: Upload,
+  PressKey: PressKey,
+  Press: Press,
+  PressUp: PressUp,
+  PressDown: PressDown,
+  PressLeft: PressLeft,
+  PressRight: PressRight,
+  PressTab: PressTab,
+  PressEnter: PressEnter,
+  PressEsc: PressEsc,
+  PressSpace: PressSpace,
 };

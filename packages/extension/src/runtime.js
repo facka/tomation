@@ -220,6 +220,12 @@ function executeAction(step, element) {
       // These actions are handled by the background script, not the runtime
       return Promise.resolve({ ok: true });
 
+    case 'upload':
+      return handleUpload(element, step);
+
+    case 'pressKey':
+      return handlePressKey(element, step.key, step.options);
+
     default:
       return Promise.resolve({ ok: false, error: 'Unknown action: ' + action });
   }
@@ -342,10 +348,118 @@ function handleWaitFor(step) {
 }
 
 // ---------------------------------------------------------------------------
+// Upload handler
+// ---------------------------------------------------------------------------
+
+/**
+ * Handle upload action — set a file on an input[type="file"] element.
+ * If fileDataUrl is provided (fetched by background from testFiles URL),
+ * creates a real File with actual content. Otherwise creates an empty stub.
+ */
+function handleUpload(element, message) {
+  try {
+    if (element.tagName !== 'INPUT' || element.type !== 'file') {
+      return Promise.resolve({ ok: false, error: 'Upload target must be an input[type="file"] element' });
+    }
+    var fileName = (message.value || '').split('/').pop() || 'file';
+    var mimeType = message.mimeType || 'application/octet-stream';
+
+    if (message.fileDataUrl) {
+      // Convert data URL to blob, then to File
+      return fetch(message.fileDataUrl).then(function (res) {
+        return res.blob();
+      }).then(function (blob) {
+        var file = new File([blob], fileName, { type: mimeType });
+        var dt = new DataTransfer();
+        dt.items.add(file);
+        element.files = dt.files;
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+        return { ok: true };
+      }).catch(function (err) {
+        return { ok: false, error: 'Upload failed: ' + err.message };
+      });
+    }
+
+    // Fallback: create empty stub file
+    var file = new File([''], fileName, { type: mimeType });
+    var dt = new DataTransfer();
+    dt.items.add(file);
+    element.files = dt.files;
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+    return Promise.resolve({ ok: true });
+  } catch (e) {
+    return Promise.resolve({ ok: false, error: 'Upload failed: ' + e.message });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// PressKey handler
+// ---------------------------------------------------------------------------
+
+/**
+ * Handle pressKey action — dispatch keyboard events on the target element.
+ * @param {Element} element - DOM element to receive the key event
+ * @param {string} key - Key value (e.g., 'Enter', 'Tab', 'ArrowUp', 'a')
+ * @param {object} options - Modifier keys: { alt, ctrl, meta, shift }
+ */
+function handlePressKey(element, key, options) {
+  try {
+    var opts = options || {};
+    var eventInit = {
+      key: key,
+      code: deriveKeyCode(key),
+      bubbles: true,
+      cancelable: true,
+      altKey: !!opts.alt,
+      ctrlKey: !!opts.ctrl,
+      metaKey: !!opts.meta,
+      shiftKey: !!opts.shift,
+    };
+    element.dispatchEvent(new KeyboardEvent('keydown', eventInit));
+    element.dispatchEvent(new KeyboardEvent('keyup', eventInit));
+    // For printable characters, also dispatch keypress
+    if (key.length === 1) {
+      element.dispatchEvent(new KeyboardEvent('keypress', eventInit));
+    }
+    return Promise.resolve({ ok: true });
+  } catch (e) {
+    return Promise.resolve({ ok: false, error: 'PressKey failed: ' + e.message });
+  }
+}
+
+/**
+ * Derive a KeyboardEvent.code value from a key name.
+ */
+function deriveKeyCode(key) {
+  var codeMap = {
+    'Enter': 'Enter',
+    'Tab': 'Tab',
+    'Escape': 'Escape',
+    ' ': 'Space',
+    'ArrowUp': 'ArrowUp',
+    'ArrowDown': 'ArrowDown',
+    'ArrowLeft': 'ArrowLeft',
+    'ArrowRight': 'ArrowRight',
+    'Backspace': 'Backspace',
+    'Delete': 'Delete',
+    'Home': 'Home',
+    'End': 'End',
+    'PageUp': 'PageUp',
+    'PageDown': 'PageDown',
+  };
+  if (codeMap[key]) return codeMap[key];
+  // Single character — derive from letter
+  if (key.length === 1 && key >= 'a' && key <= 'z') return 'Key' + key.toUpperCase();
+  if (key.length === 1 && key >= 'A' && key <= 'Z') return 'Key' + key.toUpperCase();
+  if (key.length === 1 && key >= '0' && key <= '9') return 'Digit' + key;
+  return key;
+}
+
+// ---------------------------------------------------------------------------
 // Message listener: receives EXECUTE_STEP from background, runs DOM actions
 // ---------------------------------------------------------------------------
 
-var ACTIONS_NEEDING_ELEMENT = ['click', 'type', 'typePassword', 'select', 'assertExists', 'assertHasText', 'waitFor'];
+var ACTIONS_NEEDING_ELEMENT = ['click', 'type', 'typePassword', 'select', 'assertExists', 'assertHasText', 'waitFor', 'upload'];
 
 api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.type !== 'EXECUTE_STEP') {
@@ -371,6 +485,36 @@ api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     }).catch(function (err) {
       sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: false, error: err.message || String(err) });
     });
+    return true;
+  }
+
+  // pressKey: can work with or without a target element
+  if (action === 'pressKey') {
+    if (message.target) {
+      // Target specified — find element, highlight, press key on it
+      findElementWithParent(message).then(function (findResult) {
+        if (!findResult.ok) {
+          sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: false, error: findResult.error });
+          return;
+        }
+        var element = findResult.element;
+        highlightElement(element);
+        return new Promise(function (resolve) { setTimeout(resolve, 400); }).then(function () {
+          return handlePressKey(element, message.key, message.options);
+        }).then(function (result) {
+          setTimeout(function () { unhighlightElement(element); }, 300);
+          sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: result.ok, error: result.error });
+        });
+      }).catch(function (err) {
+        sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: false, error: err.message || String(err) });
+      });
+    } else {
+      // No target — press key on the active element or document body
+      var targetEl = document.activeElement || document.body;
+      handlePressKey(targetEl, message.key, message.options).then(function (result) {
+        sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: result.ok, error: result.error });
+      });
+    }
     return true;
   }
 
