@@ -6,48 +6,336 @@
   <title>Tomation Playground</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 16px; }
-    h1 { margin-bottom: 0.5rem; }
-    p { margin-bottom: 2rem; color: #555; }
-    .app-list { list-style: none; }
-    .app-list li { margin-bottom: 12px; }
-    .app-list a {
-      display: block;
-      padding: 12px 16px;
-      background: #f5f5f5;
-      border: 1px solid #e0e0e0;
-      border-radius: 6px;
-      text-decoration: none;
-      color: #333;
-      font-weight: 500;
-      transition: background 0.15s;
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+      color: #1c2024;
+      background: #fafafa;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
     }
-    .app-list a:hover { background: #e8f0fe; border-color: #4a90d9; }
-    .app-list small { display: block; font-weight: 400; color: #666; margin-top: 4px; }
+    .container { max-width: 720px; margin: 0 auto; padding: 48px 24px; }
+
+    /* Hero */
+    .hero { text-align: center; margin-bottom: 48px; }
+    .hero h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 12px; }
+    .hero p { font-size: 16px; color: #5c6370; max-width: 520px; margin: 0 auto; }
+    .badge { display: inline-block; background: #eef0ff; color: #5e6ad2; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px; margin-bottom: 16px; }
+
+    /* Cards */
+    .examples { display: flex; flex-direction: column; gap: 16px; }
+    .card {
+      background: #fff;
+      border: 1px solid #e4e7eb;
+      border-radius: 12px;
+      padding: 20px 24px;
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+    .card:hover { border-color: #d0d5db; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+    .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .card h3 { font-size: 16px; font-weight: 600; }
+    .card p { font-size: 14px; color: #5c6370; margin-bottom: 12px; }
+    .card-actions { display: flex; gap: 8px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; font-size: 13px; font-weight: 500;
+      border: 1px solid #e4e7eb; border-radius: 6px;
+      background: #fff; color: #1c2024; cursor: pointer;
+      text-decoration: none; transition: all 0.12s;
+    }
+    .btn:hover { background: #f0f2f5; border-color: #d0d5db; }
+    .btn-primary { background: #5e6ad2; color: #fff; border-color: #5e6ad2; }
+    .btn-primary:hover { background: #4e5ab8; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: #fff; border-radius: 12px;
+      width: 90%; max-width: 680px; max-height: 80vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid #e4e7eb;
+    }
+    .modal-header h3 { font-size: 15px; font-weight: 600; }
+    .modal-close {
+      background: none; border: none; font-size: 20px;
+      cursor: pointer; color: #5c6370; padding: 4px 8px; border-radius: 4px;
+    }
+    .modal-close:hover { background: #f0f2f5; }
+    .modal-tabs {
+      display: flex; border-bottom: 1px solid #e4e7eb;
+      padding: 0 20px;
+    }
+    .modal-tab {
+      padding: 10px 14px; font-size: 13px; font-weight: 500;
+      border: none; background: none; cursor: pointer;
+      color: #5c6370; border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+    }
+    .modal-tab.active { color: #5e6ad2; border-bottom-color: #5e6ad2; }
+    .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+    .modal-body pre {
+      background: #f8f9fa; border: 1px solid #e4e7eb; border-radius: 8px;
+      padding: 16px; font-size: 13px; line-height: 1.5;
+      font-family: "SF Mono", "JetBrains Mono", "Fira Code", monospace;
+      overflow-x: auto; white-space: pre; tab-size: 2;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Footer */
+    .footer { text-align: center; margin-top: 48px; color: #8b929a; font-size: 13px; }
+    .footer a { color: #5e6ad2; text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
-  <h1>Tomation Playground</h1>
-  <p>Sample apps for testing with the Tomation browser extension.</p>
-  <ul class="app-list">
-    <li>
-      <a href="login/index.html">
-        Login
-        <small>Simple login form with validation</small>
-      </a>
-    </li>
-    <li>
-      <a href="navigation/index.html">
-        Navigation Wizard
-        <small>Multi-page wizard with back/next navigation</small>
-      </a>
-    </li>
-    <li>
-      <a href="todo/index.html">
-        Todo List
-        <small>Add, view, and delete todo items</small>
-      </a>
-    </li>
-  </ul>
+  <div class="container">
+    <div class="hero">
+      <span class="badge">Playground</span>
+      <h1>Tomation</h1>
+      <p>A TypeScript-first browser automation framework. Write readable UI tests, compile them, and run them directly in the browser.</p>
+    </div>
+
+    <div class="examples">
+      <div class="card">
+        <div class="card-header"><h3>Login</h3></div>
+        <p>Simple login form with validation — tests credential flows and error messages.</p>
+        <div class="card-actions">
+          <a href="login/index.html" class="btn btn-primary">Open App</a>
+          <button class="btn" onclick="showCode('login')">View Tests</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>Navigation Wizard</h3></div>
+        <p>Multi-page wizard with back/next navigation — tests page transitions and assertions across routes.</p>
+        <div class="card-actions">
+          <a href="navigation/index.html" class="btn btn-primary">Open App</a>
+          <button class="btn" onclick="showCode('navigation')">View Tests</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>Todo List</h3></div>
+        <p>Add, view, and delete todo items — tests dynamic DOM interactions and element presence assertions.</p>
+        <div class="card-actions">
+          <a href="todo/index.html" class="btn btn-primary">Open App</a>
+          <button class="btn" onclick="showCode('todo')">View Tests</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>Install the <a href="https://github.com/facka/tomation">Tomation extension</a> to run these tests in the browser side panel.</p>
+    </div>
+  </div>
+
+  <!-- Code Modal -->
+  <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 id="modal-title">Test Source</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-tabs" id="modal-tabs"></div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    var sources = {
+      login: {
+        title: 'Login Tests',
+        tabs: [
+          { name: 'login.test.ts', code: `import { Test, Click, AssertHasText } from '@tomation/dsl'
+import Login from '~/pom/login.pom'
+
+Test('Login with valid credentials', () => {
+  Login.fillCredentials()
+  Login.submit()
+  AssertHasText(Login.message, 'Login successful')
+})
+
+Test('Login with invalid credentials shows error', () => {
+  Login.fillInvalidCredentials()
+  Login.submit()
+  AssertHasText(Login.message, 'Invalid username or password')
+})
+
+Test('Login shows error on empty submit', () => {
+  Click(Login.submitButton)
+  AssertHasText(Login.message, 'required')
+})` },
+          { name: 'login.pom.ts', code: `import { is, idIs, Task, Type, TypePassword, Click } from '@tomation/dsl'
+
+const usernameInput = is.INPUT.where(idIs('username')).as('Username')
+const passwordInput = is.INPUT.where(idIs('password')).as('Password')
+const submitButton = is.BUTTON.where(idIs('login-btn')).as('Submit')
+const message = is.DIV.where(idIs('message')).as('Message')
+
+Task('fillCredentials', () => {
+  Type('admin').in(usernameInput)
+  TypePassword('password123').in(passwordInput)
+})
+
+Task('fillInvalidCredentials', () => {
+  Type('wronguser').in(usernameInput)
+  TypePassword('wrongpass').in(passwordInput)
+})
+
+Task('submit', () => {
+  Click(submitButton)
+})` }
+        ]
+      },
+      navigation: {
+        title: 'Navigation Tests',
+        tabs: [
+          { name: 'navigation.test.ts', code: `import { Test, Navigate, Wait } from '@tomation/dsl'
+import Navigation from '~/pom/navigation.pom'
+
+Test('Full wizard navigation flow', () => {
+  Navigate('navigation/index.html')
+  Wait(500)
+  Navigation.verifyStep1()
+  Navigate('page2.html')
+  Wait(500)
+  Navigation.verifyStep2()
+  Navigate('page3.html')
+  Wait(500)
+  Navigation.verifyStep3()
+})
+
+Test('Navigate directly to confirmation page', () => {
+  Navigate('./navigation/page3.html')
+  Wait(300)
+  Navigation.verifyStep3()
+})` },
+          { name: 'navigation.pom.ts', code: `import { is, idIs, Task, AssertHasText } from '@tomation/dsl'
+
+const pageTitle = is.H1.where(idIs('page-title')).as('Page Title')
+const stepIndicator = is.DIV.where(idIs('step-indicator')).as('Step Indicator')
+const successMessage = is.DIV.where(idIs('success-message')).as('Success Message')
+
+Task('verifyStep1', () => {
+  AssertHasText(pageTitle, 'Welcome to the Wizard')
+  AssertHasText(stepIndicator, 'Step 1 of 3')
+})
+
+Task('verifyStep2', () => {
+  AssertHasText(pageTitle, 'Provide Your Information')
+  AssertHasText(stepIndicator, 'Step 2 of 3')
+})
+
+Task('verifyStep3', () => {
+  AssertHasText(pageTitle, 'Confirmation')
+  AssertHasText(successMessage, 'Wizard completed successfully')
+  AssertHasText(stepIndicator, 'Step 3 of 3')
+})` }
+        ]
+      },
+      todo: {
+        title: 'Todo List Tests',
+        tabs: [
+          { name: 'todo.test.ts', code: `import { Test, Click, Type, AssertExists, AssertNotExists, AssertHasText } from '@tomation/dsl'
+import Todo from '~/pom/todo.pom'
+
+Test('Add a todo item and verify it exists', () => {
+  Todo.addItem({ text: 'Buy groceries' })
+  AssertExists(Todo.firstItem)
+  AssertHasText(Todo.firstItemText, 'Buy groceries')
+})
+
+Test('Delete a todo item and verify it is removed', () => {
+  Type('Walk the dog').in(Todo.input)
+  Click(Todo.addButton)
+  AssertExists(Todo.firstItem)
+  Click(Todo.deleteButton)
+  AssertNotExists(Todo.firstItem)
+})
+
+Test('Add multiple items and verify text content', () => {
+  Todo.addItem({ text: 'Read a book' })
+  Todo.addItem({ text: 'Write code' })
+  AssertExists(Todo.firstItem)
+  AssertHasText(Todo.list, 'Read a book')
+  AssertHasText(Todo.list, 'Write code')
+})` },
+          { name: 'todo.pom.ts', code: `import { is, idIs, classIncludes, Task, Type, Click } from '@tomation/dsl'
+
+const input = is.INPUT.where(idIs('todo-input')).as('Todo Input')
+const addButton = is.BUTTON.where(idIs('add-btn')).as('Add Button')
+const list = is.UL.where(idIs('todo-list')).as('Todo List')
+const firstItem = is.LI.where(classIncludes('todo-item')).as('First Item')
+const firstItemText = is.SPAN.where(classIncludes('todo-text')).as('Item Text')
+const deleteButton = is.BUTTON.where(classIncludes('delete-btn')).as('Delete Button')
+
+Task('addItem', (params) => {
+  const { text } = params
+  Type(text).in(input)
+  Click(addButton)
+})` }
+        ]
+      }
+    };
+
+    function showCode(example) {
+      var data = sources[example];
+      if (!data) return;
+
+      document.getElementById('modal-title').textContent = data.title;
+
+      var tabsEl = document.getElementById('modal-tabs');
+      var bodyEl = document.getElementById('modal-body');
+      tabsEl.innerHTML = '';
+      bodyEl.innerHTML = '';
+
+      for (var i = 0; i < data.tabs.length; i++) {
+        var tab = data.tabs[i];
+        var btn = document.createElement('button');
+        btn.className = 'modal-tab' + (i === 0 ? ' active' : '');
+        btn.textContent = tab.name;
+        btn.setAttribute('data-index', i);
+        btn.onclick = function() { switchTab(this.getAttribute('data-index'), example); };
+        tabsEl.appendChild(btn);
+
+        var content = document.createElement('div');
+        content.className = 'tab-content' + (i === 0 ? ' active' : '');
+        content.setAttribute('data-tab-index', i);
+        var pre = document.createElement('pre');
+        pre.textContent = tab.code;
+        content.appendChild(pre);
+        bodyEl.appendChild(content);
+      }
+
+      document.getElementById('modal-overlay').classList.add('active');
+    }
+
+    function switchTab(index, example) {
+      var tabs = document.querySelectorAll('.modal-tab');
+      var contents = document.querySelectorAll('.tab-content');
+      for (var i = 0; i < tabs.length; i++) {
+        tabs[i].classList.toggle('active', i == index);
+        contents[i].classList.toggle('active', i == index);
+      }
+    }
+
+    function closeModal(event) {
+      if (event && event.target !== document.getElementById('modal-overlay')) return;
+      document.getElementById('modal-overlay').classList.remove('active');
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeModal();
+    });
+  </script>
 </body>
 </html>
