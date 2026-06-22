@@ -1,4 +1,4 @@
-// @tomation/dsl — runtime stubs
+// @tomationjs/dsl — runtime stubs
 
 // --- Element Builders ---
 

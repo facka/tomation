@@ -1,5 +1,5 @@
 {
-  "name": "@tomation/dsl",
+  "name": "@tomationjs/dsl",
   "version": "1.0.0",
   "description": "TypeScript type definitions and runtime stubs for the Tomation DSL",
   "main": "index.js",

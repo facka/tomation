@@ -1,4 +1,4 @@
-import { is, idIs, Task, AssertHasText } from '@tomation/dsl'
+import { is, idIs, Task, AssertHasText } from '@tomationjs/dsl'
 
 const pageTitle = is.H1.where(idIs('page-title')).as('Page Title')
 const stepIndicator = is.DIV.where(idIs('step-indicator')).as('Step Indicator')

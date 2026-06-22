@@ -1,4 +1,4 @@
-import { Test, Click, AssertHasText } from '@tomation/dsl'
+import { Test, Click, AssertHasText } from '@tomationjs/dsl'
 import Login from '~/pom/login.pom'
 
 Test('Login with valid credentials', () => {

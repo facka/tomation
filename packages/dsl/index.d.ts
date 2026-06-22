@@ -1,4 +1,4 @@
-// @tomation/dsl — TypeScript definitions
+// @tomationjs/dsl — TypeScript definitions
 
 // --- Matcher / Where Types ---
 

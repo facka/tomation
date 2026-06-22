@@ -1,4 +1,4 @@
-import { is, idIs, Task, Type, TypePassword, Click } from '@tomation/dsl'
+import { is, idIs, Task, Type, TypePassword, Click } from '@tomationjs/dsl'
 
 const usernameInput = is.INPUT.where(idIs('username')).as('Username')
 const passwordInput = is.INPUT.where(idIs('password')).as('Password')

@@ -155,7 +155,7 @@
       login: {
         title: 'Login Tests',
         tabs: [
-          { name: 'login.test.ts', code: `import { Test, Click, AssertHasText } from '@tomation/dsl'
+          { name: 'login.test.ts', code: `import { Test, Click, AssertHasText } from '@tomationjs/dsl'
 import Login from '~/pom/login.pom'
 
 Test('Login with valid credentials', () => {
@@ -174,7 +174,7 @@ Test('Login shows error on empty submit', () => {
   Click(Login.submitButton)
   AssertHasText(Login.message, 'required')
 })` },
-          { name: 'login.pom.ts', code: `import { is, idIs, Task, Type, TypePassword, Click } from '@tomation/dsl'
+          { name: 'login.pom.ts', code: `import { is, idIs, Task, Type, TypePassword, Click } from '@tomationjs/dsl'
 
 const usernameInput = is.INPUT.where(idIs('username')).as('Username')
 const passwordInput = is.INPUT.where(idIs('password')).as('Password')
@@ -202,7 +202,7 @@ export default { usernameInput, passwordInput, submitButton, message, fillCreden
       navigation: {
         title: 'Navigation Tests',
         tabs: [
-          { name: 'navigation.test.ts', code: `import { Test, Navigate, Wait } from '@tomation/dsl'
+          { name: 'navigation.test.ts', code: `import { Test, Navigate, Wait } from '@tomationjs/dsl'
 import Navigation from '~/pom/navigation.pom'
 
 Test('Full wizard navigation flow', () => {
@@ -222,7 +222,7 @@ Test('Navigate directly to confirmation page', () => {
   Wait(300)
   Navigation.verifyStep3()
 })` },
-          { name: 'navigation.pom.ts', code: `import { is, idIs, Task, AssertHasText } from '@tomation/dsl'
+          { name: 'navigation.pom.ts', code: `import { is, idIs, Task, AssertHasText } from '@tomationjs/dsl'
 
 const pageTitle = is.H1.where(idIs('page-title')).as('Page Title')
 const stepIndicator = is.DIV.where(idIs('step-indicator')).as('Step Indicator')
@@ -250,7 +250,7 @@ export default { pageTitle, stepIndicator, successMessage, verifyStep1, verifySt
       todo: {
         title: 'Todo List Tests',
         tabs: [
-          { name: 'todo.test.ts', code: `import { Test, Click, Type, AssertExists, AssertNotExists, AssertHasText } from '@tomation/dsl'
+          { name: 'todo.test.ts', code: `import { Test, Click, Type, AssertExists, AssertNotExists, AssertHasText } from '@tomationjs/dsl'
 import Todo from '~/pom/todo.pom'
 
 Test('Add a todo item and verify it exists', () => {
@@ -274,7 +274,7 @@ Test('Add multiple items and verify text content', () => {
   AssertHasText(Todo.list, 'Read a book')
   AssertHasText(Todo.list, 'Write code')
 })` },
-          { name: 'todo.pom.ts', code: `import { is, idIs, classIncludes, Task, Type, Click } from '@tomation/dsl'
+          { name: 'todo.pom.ts', code: `import { is, idIs, classIncludes, Task, Type, Click } from '@tomationjs/dsl'
 
 const input = is.INPUT.where(idIs('todo-input')).as('Todo Input')
 const addButton = is.BUTTON.where(idIs('add-btn')).as('Add Button')

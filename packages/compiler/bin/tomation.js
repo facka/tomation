@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * tomation.js — CLI entry point for @tomation/compiler
+ * tomation.js — CLI entry point for @tomationjs/compiler
  *
  * Usage: tomation <command>
  *

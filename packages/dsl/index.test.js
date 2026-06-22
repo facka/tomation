@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for @tomation/dsl — Element builders, matcher factories, and action stubs.
+ * Tests for @tomationjs/dsl — Element builders, matcher factories, and action stubs.
  *
  * Validates: Requirements 2.1, 2.2, 3.1, 3.2, 4.1
  */

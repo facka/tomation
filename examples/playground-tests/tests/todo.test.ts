@@ -1,4 +1,4 @@
-import { Test, Click, Type, AssertExists, AssertNotExists, AssertHasText } from '@tomation/dsl'
+import { Test, Click, Type, AssertExists, AssertNotExists, AssertHasText } from '@tomationjs/dsl'
 import Todo from '~/pom/todo.pom'
 
 Test('Add a todo item and verify it exists', () => {

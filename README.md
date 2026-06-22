@@ -21,7 +21,7 @@ For development, load the extension from `packages/extension/dist` as an unpacke
 ### Compiler
 
 ```bash
-npm install @tomation/compiler @tomation/dsl
+npm install @tomationjs/compiler @tomationjs/dsl
 ```
 
 ## Quick Start
@@ -45,7 +45,7 @@ export default {
 
 ```typescript
 // pom/login.pom.ts
-import { is, idIs, Task, Type, TypePassword, Click } from '@tomation/dsl'
+import { is, idIs, Task, Type, TypePassword, Click } from '@tomationjs/dsl'
 
 const usernameInput = is.INPUT.where(idIs('username')).as('Username')
 const passwordInput = is.INPUT.where(idIs('password')).as('Password')
@@ -69,7 +69,7 @@ export default { usernameInput, passwordInput, submitButton, errorMessage, fillC
 
 ```typescript
 // tests/login.test.ts
-import { Test, Click, AssertExists, AssertHasText } from '@tomation/dsl'
+import { Test, Click, AssertExists, AssertHasText } from '@tomationjs/dsl'
 import Login from '~/pom/login.pom'
 
 Test('Login with valid credentials', () => {

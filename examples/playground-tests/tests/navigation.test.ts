@@ -1,4 +1,4 @@
-import { Test, Navigate, Wait } from '@tomation/dsl'
+import { Test, Navigate, Wait } from '@tomationjs/dsl'
 import Navigation from '~/pom/navigation.pom'
 
 Test('Full wizard navigation flow', () => {

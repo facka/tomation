@@ -1,4 +1,4 @@
-// @tomation/dsl — ambient global declarations
+// @tomationjs/dsl — ambient global declarations
 // These are injected into .test.ts / .pom.ts files by the runner so authors
 // can use the DSL without explicit imports.
 

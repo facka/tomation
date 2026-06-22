@@ -1,4 +1,4 @@
-import { is, idIs, classIncludes, Task, Type, Click } from '@tomation/dsl'
+import { is, idIs, classIncludes, Task, Type, Click } from '@tomationjs/dsl'
 
 const input = is.INPUT.where(idIs('todo-input')).as('Todo Input')
 const addButton = is.BUTTON.where(idIs('add-btn')).as('Add Button')
