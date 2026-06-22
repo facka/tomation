@@ -7,7 +7,7 @@ const firstItem = is.LI.where(classIncludes('todo-item')).as('First Item')
 const firstItemText = is.SPAN.where(classIncludes('todo-text')).as('Item Text')
 const deleteButton = is.BUTTON.where(classIncludes('delete-btn')).as('Delete Button')
 
-const addItem = Task((params) => {
+const addItem = Task((params: { text: string }) => {
   const { text } = params
   Type(text).in(input)
   Click(addButton)

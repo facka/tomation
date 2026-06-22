@@ -121,20 +121,30 @@ export declare const is: {
 
 // --- Task and Test ---
 
-interface TaskBuilder {
+/**
+ * A task builder returned by Task(fn).
+ * Callable (for invoking the task from tests) and has .as() for setting a display label.
+ */
+interface TaskBuilder<P = void> {
   __task: true;
-  fn: (params: any) => void;
-  as(label: string): TaskDescriptor;
+  fn: P extends void ? () => void : (params: P) => void;
+  as(label: string): TaskDescriptor<P>;
 }
 
-interface TaskDescriptor {
+/**
+ * A task with a display label (returned by .as()).
+ * Callable for invoking the task from tests.
+ */
+interface TaskDescriptor<P = void> {
   __task: true;
-  fn: (params: any) => void;
+  fn: P extends void ? () => void : (params: P) => void;
   label: string;
 }
 
-export declare function Task(fn: (params: any) => void): TaskBuilder & ((params?: any) => void);
-export declare function Task<P>(fn: (params: P) => void): TaskBuilder & ((params?: P) => void);
+// Task with no params
+export declare function Task(fn: () => void): TaskBuilder<void> & (() => void);
+// Task with typed params
+export declare function Task<P>(fn: (params: P) => void): TaskBuilder<P> & ((params: P) => void);
 
 /**
  * Declares a named test scenario.
