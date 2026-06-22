@@ -121,15 +121,20 @@ export declare const is: {
 
 // --- Task and Test ---
 
-/**
- * Declares a named, reusable task with optional parameters.
- * @param name - The task name.
- * @param fn - The task function receiving params.
- */
-export declare function Task(
-  name: string,
-  fn: (params: any) => void
-): { __task: true; name: string; fn: (params: any) => void };
+interface TaskBuilder {
+  __task: true;
+  fn: (params: any) => void;
+  as(label: string): TaskDescriptor;
+}
+
+interface TaskDescriptor {
+  __task: true;
+  fn: (params: any) => void;
+  label: string;
+}
+
+export declare function Task(fn: (params: any) => void): TaskBuilder & ((params?: any) => void);
+export declare function Task<P>(fn: (params: P) => void): TaskBuilder & ((params?: P) => void);
 
 /**
  * Declares a named test scenario.

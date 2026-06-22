@@ -285,7 +285,7 @@ function extractPom(parsedFile, options) {
       // Bare variable names (e.g., "usernameInput") → namespaced keys ("Login__usernameInput")
       const resolvedSteps = resolveStepRefs(taskDef.steps || [], variableToKey, prefix);
 
-      result.tasks[namespacedKey] = {
+      var taskEntry = {
         steps: resolvedSteps,
         params: taskDef.params || [],
         _meta: {
@@ -293,6 +293,10 @@ function extractPom(parsedFile, options) {
           line: taskDef.line,
         },
       };
+      if (taskDef.label) {
+        taskEntry.label = taskDef.label;
+      }
+      result.tasks[namespacedKey] = taskEntry;
     }
   }
 

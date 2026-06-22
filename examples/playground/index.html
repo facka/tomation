@@ -181,19 +181,22 @@ const passwordInput = is.INPUT.where(idIs('password')).as('Password')
 const submitButton = is.BUTTON.where(idIs('login-btn')).as('Submit')
 const message = is.DIV.where(idIs('message')).as('Message')
 
-Task('fillCredentials', () => {
-  Type('admin').in(usernameInput)
-  TypePassword('password123').in(passwordInput)
-})
+const fillCredentials = Task((params) => {
+  const { username, password } = params
+  Type(username).in(usernameInput)
+  TypePassword(password).in(passwordInput)
+}).as('Fill Credentials')
 
-Task('fillInvalidCredentials', () => {
+const fillInvalidCredentials = Task(() => {
   Type('wronguser').in(usernameInput)
   TypePassword('wrongpass').in(passwordInput)
-})
+}).as('Fill Invalid Credentials')
 
-Task('submit', () => {
+const submit = Task(() => {
   Click(submitButton)
-})` }
+}).as('Submit Form')
+
+export default { usernameInput, passwordInput, submitButton, message, fillCredentials, fillInvalidCredentials, submit }` }
         ]
       },
       navigation: {
@@ -225,21 +228,23 @@ const pageTitle = is.H1.where(idIs('page-title')).as('Page Title')
 const stepIndicator = is.DIV.where(idIs('step-indicator')).as('Step Indicator')
 const successMessage = is.DIV.where(idIs('success-message')).as('Success Message')
 
-Task('verifyStep1', () => {
+const verifyStep1 = Task(() => {
   AssertHasText(pageTitle, 'Welcome to the Wizard')
   AssertHasText(stepIndicator, 'Step 1 of 3')
-})
+}).as('Verify Step 1')
 
-Task('verifyStep2', () => {
+const verifyStep2 = Task(() => {
   AssertHasText(pageTitle, 'Provide Your Information')
   AssertHasText(stepIndicator, 'Step 2 of 3')
-})
+}).as('Verify Step 2')
 
-Task('verifyStep3', () => {
+const verifyStep3 = Task(() => {
   AssertHasText(pageTitle, 'Confirmation')
   AssertHasText(successMessage, 'Wizard completed successfully')
   AssertHasText(stepIndicator, 'Step 3 of 3')
-})` }
+}).as('Verify Step 3')
+
+export default { pageTitle, stepIndicator, successMessage, verifyStep1, verifyStep2, verifyStep3 }` }
         ]
       },
       todo: {
@@ -278,11 +283,13 @@ const firstItem = is.LI.where(classIncludes('todo-item')).as('First Item')
 const firstItemText = is.SPAN.where(classIncludes('todo-text')).as('Item Text')
 const deleteButton = is.BUTTON.where(classIncludes('delete-btn')).as('Delete Button')
 
-Task('addItem', (params) => {
+const addItem = Task((params) => {
   const { text } = params
   Type(text).in(input)
   Click(addButton)
-})` }
+}).as('Add Item')
+
+export default { input, addButton, list, firstItem, firstItemText, deleteButton, addItem }` }
         ]
       }
     };

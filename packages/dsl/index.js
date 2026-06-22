@@ -98,8 +98,14 @@ function idIs(id) {
 
 // --- Task and Test ---
 
-function Task(name, fn) {
-  return { __task: true, name: name, fn: fn };
+function Task(fn) {
+  return {
+    __task: true,
+    fn: fn,
+    as: function (label) {
+      return { __task: true, fn: fn, label: label };
+    }
+  };
 }
 
 function Test(name, fn) {

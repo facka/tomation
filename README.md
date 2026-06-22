@@ -52,15 +52,17 @@ const passwordInput = is.INPUT.where(idIs('password')).as('Password')
 const submitButton = is.BUTTON.where(idIs('login-btn')).as('Submit')
 const errorMessage = is.DIV.where(idIs('error-msg')).as('Error Message')
 
-Task('fillCredentials', (params) => {
+const fillCredentials = Task((params) => {
   const { username, password } = params
   Type(username).in(usernameInput)
   TypePassword(password).in(passwordInput)
-})
+}).as('Fill Credentials')
 
-Task('submit', () => {
+const submit = Task(() => {
   Click(submitButton)
-})
+}).as('Submit')
+
+export default { usernameInput, passwordInput, submitButton, errorMessage, fillCredentials, submit }
 ```
 
 ### 3. Write tests

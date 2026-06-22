@@ -5,16 +5,19 @@ const passwordInput = is.INPUT.where(idIs('password')).as('Password')
 const submitButton = is.BUTTON.where(idIs('login-btn')).as('Submit')
 const message = is.DIV.where(idIs('message')).as('Message')
 
-Task('fillCredentials', () => {
-  Type('admin').in(usernameInput)
-  TypePassword('password123').in(passwordInput)
-})
+const fillCredentials = Task((params) => {
+  const { username, password } = params
+  Type(username).in(usernameInput)
+  TypePassword(password).in(passwordInput)
+}).as('Fill Credentials')
 
-Task('fillInvalidCredentials', () => {
+const fillInvalidCredentials = Task(() => {
   Type('wronguser').in(usernameInput)
   TypePassword('wrongpass').in(passwordInput)
-})
+}).as('Fill Invalid Credentials')
 
-Task('submit', () => {
+const submit = Task(() => {
   Click(submitButton)
-})
+}).as('Submit Form')
+
+export default { usernameInput, passwordInput, submitButton, message, fillCredentials, fillInvalidCredentials, submit }

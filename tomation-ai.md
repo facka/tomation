@@ -13,7 +13,7 @@ Library summary:
 - Actions don't need async/await — managed internally by the runtime
 - The compiler outputs a `.tomation.json` file consumed by the browser extension
 
-Key APIs: Task, Test, Click, Type, TypePassword, Select, Upload, Press, PressKey, is, Element, innerTextIs, idIs, classIncludes
+Key APIs: Task(fn).as('label'), Test, Click, Type, TypePassword, Select, Upload, Press, PressKey, is, Element, innerTextIs, idIs, classIncludes
 
 Rules:
 - Create Page Object Models (POM) files with `.pom.ts` extension
@@ -35,15 +35,17 @@ const submitButton = is.BUTTON.where(idIs('login-btn')).as('Submit')
 const errorMessage = is.DIV.where(idIs('error-msg')).as('Error Message')
 
 // --- Tasks ---
-Task('fillCredentials', (params) => {
+const fillCredentials = Task((params) => {
   const { username, password } = params
   Type(username).in(usernameInput)
   TypePassword(password).in(passwordInput)
-})
+}).as('Fill Credentials')
 
-Task('submit', () => {
+const submit = Task(() => {
   Click(submitButton)
-})
+}).as('Submit')
+
+export default { usernameInput, passwordInput, submitButton, errorMessage, fillCredentials, submit }
 ```
 
 Example of a test file:

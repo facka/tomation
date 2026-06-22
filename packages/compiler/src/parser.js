@@ -977,61 +977,99 @@ function extractBodyDestructuring(stmt) {
 }
 
 /**
- * Extract a TaskDef from a CallExpression node matching:
- *   Task('name', (params) => { ... })
- *   Task('name', ({username, password}) => { ... })
- *   Task('name', function(params) { ... })
+ * Extract a TaskDef from a VariableDeclarator node matching:
+ *   const X = Task((params) => { ... }).as('Label')
+ *   const X = Task(function(params) { ... }).as('Label')
+ *   const X = Task((params) => { ... })  (no label — variable name used as fallback)
  *
- * @param {object} node - CallExpression AST node
+ * The variable name becomes the task key (for namespacing).
+ * The .as('Label') provides a display label for the panel.
+ *
+ * @param {object} declarator - VariableDeclarator AST node
  * @param {string} filePath - current file path for error reporting
- * @returns {{ task: object|null, error: object|null }}
+ * @param {string} source - original source for snippet extraction
+ * @returns {{ task: object|null, error: object|null, warnings: Array }}
  */
-function extractTask(node, filePath, source) {
-  if (!node || node.type !== 'CallExpression') return { task: null, error: null };
+function extractTask(declarator, filePath, source) {
+  if (!declarator || declarator.type !== 'VariableDeclarator') return { task: null, error: null };
+  if (!declarator.init) return { task: null, error: null };
 
-  const callee = node.callee;
-  if (!callee || callee.type !== 'Identifier' || callee.name !== 'Task') return { task: null, error: null };
+  var variableName = declarator.id && declarator.id.type === 'Identifier' ? declarator.id.name : null;
+  if (!variableName) return { task: null, error: null };
 
-  const args = node.arguments || [];
+  var taskCallNode = null;
+  var label = null;
 
-  // First argument must be a string (the task name)
+  // Pattern 1: Task(fn).as('Label') — .as() chain
+  if (
+    declarator.init.type === 'CallExpression' &&
+    isMethodCall(declarator.init, 'as')
+  ) {
+    // Check if the object of .as() is a Task() call
+    var asObj = declarator.init.callee.object;
+    if (
+      asObj && asObj.type === 'CallExpression' &&
+      asObj.callee && asObj.callee.type === 'Identifier' &&
+      asObj.callee.name === 'Task'
+    ) {
+      taskCallNode = asObj;
+      label = extractString(declarator.init.arguments[0]);
+    }
+  }
+
+  // Pattern 2: Task(fn) — direct call without .as()
+  if (
+    !taskCallNode &&
+    declarator.init.type === 'CallExpression' &&
+    declarator.init.callee &&
+    declarator.init.callee.type === 'Identifier' &&
+    declarator.init.callee.name === 'Task'
+  ) {
+    taskCallNode = declarator.init;
+  }
+
+  if (!taskCallNode) return { task: null, error: null };
+
+  var args = taskCallNode.arguments || [];
+
+  // First argument must be a function
   if (args.length < 1) {
     return {
       task: null,
       error: {
-        message: `Task() at ${filePath}:${lineOf(node)} requires a name string as the first argument`,
+        message: `Task() at ${filePath}:${lineOf(taskCallNode)} requires a function argument`,
         filePath,
-        line: lineOf(node),
+        line: lineOf(taskCallNode),
       },
     };
   }
 
-  const name = extractString(args[0]);
-  if (name === null) {
-    // Could be a Task([...]) call without a name — don't emit error, just skip
-    return { task: null, error: null };
+  var fn = args[0];
+
+  // Support old syntax Task('name', fn) for backward compat during transition
+  if (fn.type === 'Literal' && typeof fn.value === 'string') {
+    // Old syntax: Task('name', fn) — use string as label, fn is second arg
+    label = fn.value;
+    fn = args[1];
+    if (!fn) {
+      return {
+        task: null,
+        error: {
+          message: `Task('${label}') at ${filePath}:${lineOf(taskCallNode)} requires a function as the second argument`,
+          filePath,
+          line: lineOf(taskCallNode),
+        },
+      };
+    }
   }
 
-  // Second argument must be a function (arrow or function expression)
-  if (args.length < 2) {
-    return {
-      task: null,
-      error: {
-        message: `Task('${name}') at ${filePath}:${lineOf(node)} requires a function as the second argument`,
-        filePath,
-        line: lineOf(node),
-      },
-    };
-  }
-
-  const fn = args[1];
   if (fn.type !== 'ArrowFunctionExpression' && fn.type !== 'FunctionExpression') {
     return {
       task: null,
       error: {
-        message: `Task('${name}') at ${filePath}:${lineOf(node)} second argument must be a function`,
+        message: `Task() at ${filePath}:${lineOf(taskCallNode)} argument must be a function`,
         filePath,
-        line: lineOf(node),
+        line: lineOf(taskCallNode),
       },
     };
   }
@@ -1056,7 +1094,7 @@ function extractTask(node, filePath, source) {
   // Merge: params from fn signature + body destructuring
   const allParams = [...params, ...bodyParams];
 
-  // Extract steps from the function body (extractSteps will also track body destructuring)
+  // Extract steps from the function body
   const warnings = [];
   const steps = fn.body && fn.body.type === 'BlockStatement'
     ? extractSteps(fn.body, filePath, trackedParams, warnings, source)
@@ -1064,10 +1102,11 @@ function extractTask(node, filePath, source) {
 
   return {
     task: {
-      name,
+      name: variableName,
+      label: label || null,
       params: allParams,
       steps,
-      line: lineOf(node),
+      line: lineOf(declarator),
     },
     error: null,
     warnings,
@@ -1315,14 +1354,11 @@ function parseSource(source, filePath) {
     }
   });
 
-  // Walk the AST for Task/Test declarations: Task('name', fn) / Test('name', fn)
+  // Walk the AST for Task declarations: const X = Task(fn).as('Label') / const X = Task(fn)
   walk(ast, node => {
-    if (node.type !== 'CallExpression') return;
-    const callee = node.callee;
-    if (!callee || callee.type !== 'Identifier') return;
-
-    if (callee.name === 'Task') {
-      const { task, error, warnings } = extractTask(node, filePath, source);
+    if (node.type !== 'VariableDeclaration') return;
+    for (const declarator of node.declarations) {
+      const { task, error, warnings } = extractTask(declarator, filePath, source);
       if (error) {
         result.warnings.push(error);
       }
@@ -1333,8 +1369,14 @@ function parseSource(source, filePath) {
         result.tasks.push(task);
         result.type = 'pom';
       }
-      return false; // don't recurse into Task() arguments
     }
+  });
+
+  // Walk the AST for Test declarations: Test('name', fn)
+  walk(ast, node => {
+    if (node.type !== 'CallExpression') return;
+    const callee = node.callee;
+    if (!callee || callee.type !== 'Identifier') return;
 
     if (callee.name === 'Test') {
       const { test, error, warnings } = extractTest(node, filePath, source);
