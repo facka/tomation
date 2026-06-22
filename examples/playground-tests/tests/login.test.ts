@@ -2,7 +2,7 @@ import { Test, Click, AssertHasText } from '@tomation/dsl'
 import Login from '~/pom/login.pom'
 
 Test('Login with valid credentials', () => {
-  Login.fillCredentials()
+  Login.fillCredentials({ username: 'admin', password: 'password123' })
   Login.submit()
   AssertHasText(Login.message, 'Login successful')
 })

@@ -129,6 +129,7 @@ interface TaskBuilder<P = void> {
   __task: true;
   fn: P extends void ? () => void : (params: P) => void;
   as(label: string): TaskDescriptor<P>;
+  (params: P): void;
 }
 
 /**
@@ -139,6 +140,7 @@ interface TaskDescriptor<P = void> {
   __task: true;
   fn: P extends void ? () => void : (params: P) => void;
   label: string;
+  (params: P): void;
 }
 
 // Task with no params
