@@ -6,7 +6,7 @@ Implement automatic tab-following during test execution in the Tomation extensio
 
 ## Tasks
 
-- [ ] 1. Add pure utility functions and state extensions
+- [x] 1. Add pure utility functions and state extensions
   - [ ] 1.1 Implement `extractHostname` and `isMatchingHostname` pure functions
     - Add `extractHostname(url)` that returns the lowercase hostname from a URL string, or empty string for invalid URLs
     - Add `isMatchingHostname(hostname, metaUrls)` that returns true if the lowercase hostname matches any hostname extracted from the metaUrls array (case-insensitive comparison)

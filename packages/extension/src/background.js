@@ -372,6 +372,43 @@ var runState = {
   }
 };
 
+// ---------------------------------------------------------------------------
+// Tab Tracker — Pure Utility Functions
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract the lowercase hostname from a URL string.
+ * Returns empty string for invalid or unparseable URLs.
+ *
+ * @param {string} url - A URL string to parse
+ * @returns {string} The lowercase hostname, or '' if invalid
+ */
+function extractHostname(url) {
+  try {
+    return new URL(url).hostname.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Check if a hostname matches any hostname extracted from metaUrls.
+ * Comparison is case-insensitive.
+ *
+ * @param {string} hostname - The hostname to check (already lowercase)
+ * @param {string[]} metaUrls - Array of URL strings from spec meta.urls
+ * @returns {boolean} True if hostname matches at least one meta URL hostname
+ */
+function isMatchingHostname(hostname, metaUrls) {
+  if (!hostname || !metaUrls || metaUrls.length === 0) return false;
+  var target = hostname.toLowerCase();
+  for (var i = 0; i < metaUrls.length; i++) {
+    var metaHost = extractHostname(metaUrls[i]);
+    if (metaHost && metaHost === target) return true;
+  }
+  return false;
+}
+
 /**
  * Reset run state to defaults.
  */
@@ -1171,6 +1208,8 @@ if (typeof module !== 'undefined' && module.exports) {
     DEFAULT_RUN_CONFIG: DEFAULT_RUN_CONFIG,
     runState: runState,
     resetRunState: resetRunState,
+    extractHostname: extractHostname,
+    isMatchingHostname: isMatchingHostname,
     lockTab: lockTab,
     unlockTab: unlockTab,
     sendStepToRuntime: sendStepToRuntime,
