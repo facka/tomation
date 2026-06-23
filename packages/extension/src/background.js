@@ -726,6 +726,7 @@ function startRun(tabId, test, spec, checkedSteps, config) {
   runState.failCount = 0;
 
   return lockTab(tabId).then(function () {
+    initTabTracker();
     return runStepLoop();
   });
 }
@@ -761,6 +762,20 @@ function runStepLoop() {
 
   return waitForPause.then(function () {
     // After unpausing, check if stop was requested while paused
+    if (runState.stopRequested) {
+      return finishRun();
+    }
+
+    // If a tab switch is pending, wait for it to complete before dispatching
+    var waitForTabSwitch;
+    if (runState.pendingTabSwitch && runState.pendingTabSwitch.promise) {
+      waitForTabSwitch = runState.pendingTabSwitch.promise;
+    } else {
+      waitForTabSwitch = Promise.resolve();
+    }
+
+    return waitForTabSwitch.then(function () {
+    // Check stop again after tab switch wait
     if (runState.stopRequested) {
       return finishRun();
     }
@@ -857,6 +872,7 @@ function runStepLoop() {
           }
 
           // v1 behavior: halt run on failure immediately
+          teardownTabTracker();
           unlockTab();
           runState.running = false;
           emitSummary('RUN_COMPLETE', currentIndex + 1, runState.passCount, runState.failCount);
@@ -868,6 +884,7 @@ function runStepLoop() {
         return runStepLoop();
       });
     });
+    }); // end waitForTabSwitch.then
   });
 }
 
@@ -916,6 +933,7 @@ function handleNavigateStep(step, currentIndex) {
       // Navigation timed out or failed
       runState.failCount++;
       emitLog(currentIndex, step, false, err.message || 'Navigation failed');
+      teardownTabTracker();
       unlockTab();
       runState.running = false;
       emitSummary('RUN_COMPLETE', currentIndex + 1, runState.passCount, runState.failCount);
@@ -1187,6 +1205,7 @@ function handleSkipStep(msg) {
  * Unlocks tab and emits appropriate summary.
  */
 function finishRun() {
+  teardownTabTracker();
   unlockTab();
   runState.running = false;
 
@@ -1277,9 +1296,15 @@ function handleMessage(message, sender, sendResponse) {
     case 'SKIP_STEP':
       handleSkipStep(message);
       break;
-    // STEP_RESULT and RUNTIME_READY are handled inline by sendStepToRuntime
-    // and handleNavigateStep respectively via their own listeners.
-    // No additional routing needed here.
+    case 'RUNTIME_READY':
+      // If a tab switch is pending and the sender matches the expected tab, complete the switch
+      if (runState.pendingTabSwitch && sender && sender.tab && sender.tab.id === runState.pendingTabSwitch.tabId) {
+        switchToTab(sender.tab.id);
+      }
+      break;
+    // STEP_RESULT is handled inline by sendStepToRuntime via its own listener.
+    // RUNTIME_READY for navigation is handled inline by handleNavigateStep.
+    // The case above only handles tab-switch resolution for newly created tabs.
   }
 }
 

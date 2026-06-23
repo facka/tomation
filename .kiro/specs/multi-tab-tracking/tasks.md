@@ -95,7 +95,7 @@ Implement automatic tab-following during test execution in the Tomation extensio
 - [x] 5. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. Integrate tab tracker into run lifecycle and step loop
+- [x] 6. Integrate tab tracker into run lifecycle and step loop
   - [ ] 6.1 Integrate `initTabTracker` into `startRun`
     - After `resetRunState()` and before `runStepLoop()`, call `initTabTracker()` to set up listeners and initialize tab stack with the locked tab
     - _Requirements: 1.1, 5.1_
