@@ -369,7 +369,10 @@ var runState = {
     allowContinueOnFailure: false,
     allowRetryOnFailure: false,
     executionSpeed: 'FAST'
-  }
+  },
+  tabStack: [],
+  pendingTabSwitch: null,
+  metaHostnames: null
 };
 
 // ---------------------------------------------------------------------------
@@ -431,6 +434,178 @@ function resetRunState() {
     allowRetryOnFailure: false,
     executionSpeed: 'FAST'
   };
+  runState.tabStack = [];
+  runState.pendingTabSwitch = null;
+  runState.metaHostnames = null;
+}
+
+// ---------------------------------------------------------------------------
+// Tab Tracker — Lifecycle Functions
+// ---------------------------------------------------------------------------
+
+// Store references to listener functions so we can remove them
+var _tabCreatedListener = null;
+var _tabRemovedListener = null;
+
+/**
+ * Initialize the tab tracker for a new test run.
+ * Registers chrome.tabs.onCreated and onRemoved listeners,
+ * initializes tabStack with the current locked tab,
+ * and computes metaHostnames from spec meta.urls.
+ */
+function initTabTracker() {
+  // Initialize tab stack with the initial locked tab
+  runState.tabStack = [runState.lockedTabId];
+
+  // Compute metaHostnames set from spec meta.urls
+  var urls = (runState.spec && runState.spec.meta && runState.spec.meta.urls) || [];
+  var hostnameSet = {};
+  for (var i = 0; i < urls.length; i++) {
+    var h = extractHostname(urls[i]);
+    if (h) hostnameSet[h] = true;
+  }
+  runState.metaHostnames = hostnameSet;
+
+  // Register listeners (store references for removal)
+  _tabCreatedListener = handleTabCreated;
+  _tabRemovedListener = handleTabRemoved;
+  api.tabs.onCreated.addListener(_tabCreatedListener);
+  api.tabs.onRemoved.addListener(_tabRemovedListener);
+}
+
+/**
+ * Tear down the tab tracker when a test run ends.
+ * Removes event listeners and clears tab tracking state.
+ */
+function teardownTabTracker() {
+  if (_tabCreatedListener) {
+    api.tabs.onCreated.removeListener(_tabCreatedListener);
+    _tabCreatedListener = null;
+  }
+  if (_tabRemovedListener) {
+    api.tabs.onRemoved.removeListener(_tabRemovedListener);
+    _tabRemovedListener = null;
+  }
+  runState.tabStack = [];
+  runState.pendingTabSwitch = null;
+  runState.metaHostnames = null;
+}
+
+// ---------------------------------------------------------------------------
+// Tab Tracker — Event Handlers
+// ---------------------------------------------------------------------------
+
+/**
+ * Handle a newly created tab during a test run.
+ * If the tab's hostname matches any hostname in meta.urls and no pending
+ * switch is already active, sets up a pendingTabSwitch state and waits for
+ * RUNTIME_READY from that tab (with a 10-second timeout).
+ *
+ * @param {object} tab - The chrome.tabs.Tab object for the new tab
+ */
+function handleTabCreated(tab) {
+  // Only track tabs while a run is active
+  if (!runState.running) return;
+
+  // Extract hostname from the new tab's URL
+  var hostname = extractHostname(tab.url || tab.pendingUrl || '');
+
+  // Check hostname against cached meta hostnames (pre-computed in initTabTracker)
+  if (!hostname || !runState.metaHostnames || !runState.metaHostnames[hostname]) {
+    return; // Non-matching tab — no state change
+  }
+
+  // If a pending switch is already active, ignore this tab (first match wins)
+  if (runState.pendingTabSwitch) return;
+
+  // Set pending tab switch state — step loop will await this promise
+  var tabId = tab.id;
+  var timeoutId = null;
+  var resolveSwitch = null;
+
+  var switchPromise = new Promise(function (resolve) {
+    resolveSwitch = resolve;
+  });
+
+  timeoutId = setTimeout(function () {
+    // Timeout: clear pending switch and resume on current tab
+    console.warn('[Tab_Tracker] Timeout waiting for RUNTIME_READY from tab ' + tabId);
+    runState.pendingTabSwitch = null;
+    resolveSwitch();
+  }, 10000);
+
+  runState.pendingTabSwitch = {
+    tabId: tabId,
+    resolve: resolveSwitch,
+    timeoutId: timeoutId,
+    promise: switchPromise
+  };
+}
+
+/**
+ * Handle a tab being removed during a test run.
+ * If the closed tab is the locked tab, performs fallback logic.
+ *
+ * @param {number} tabId - The ID of the removed tab
+ */
+function handleTabRemoved(tabId) {
+  // Only handle during an active run
+  if (!runState.running) return;
+
+  // If the removed tab is not the locked tab, ignore
+  if (tabId !== runState.lockedTabId) return;
+
+  // Fallback logic — implemented in task 4
+  fallbackToPreviousTab();
+}
+
+/**
+ * Switch execution to a new tab.
+ * Pushes the current lockedTabId onto the tab stack, locks the new tab,
+ * resolves the pendingTabSwitch promise so the step loop can resume,
+ * and clears the timeout.
+ *
+ * @param {number} tabId - The new tab to switch to
+ * @returns {Promise}
+ */
+function switchToTab(tabId) {
+  // Push current locked tab onto stack
+  runState.tabStack.push(runState.lockedTabId);
+
+  // Clear the timeout since the switch succeeded
+  if (runState.pendingTabSwitch && runState.pendingTabSwitch.timeoutId) {
+    clearTimeout(runState.pendingTabSwitch.timeoutId);
+  }
+
+  // Capture the resolve function before clearing state
+  var resolve = runState.pendingTabSwitch && runState.pendingTabSwitch.resolve;
+
+  // Clear pending state
+  runState.pendingTabSwitch = null;
+
+  // Lock the new tab and resolve the wait promise
+  return lockTab(tabId).then(function () {
+    if (resolve) resolve();
+  });
+}
+
+/**
+ * Fall back to the previous tab when the locked tab is closed.
+ * Pops from the tab stack. If the stack is non-empty, locks the new
+ * top tab and resumes execution. If the stack is empty, fails the run
+ * with a descriptive error.
+ */
+function fallbackToPreviousTab() {
+  // The stack contains previous tabs; the locked tab is NOT in the stack
+  if (runState.tabStack.length > 0) {
+    var previousTab = runState.tabStack.pop();
+    lockTab(previousTab);
+  } else {
+    // No fallback available — increment fail count and finish with failure
+    runState.failCount++;
+    console.warn('Active tab closed and no fallback tab available');
+    finishRun();
+  }
 }
 
 /**

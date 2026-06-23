@@ -7,7 +7,7 @@ Implement automatic tab-following during test execution in the Tomation extensio
 ## Tasks
 
 - [x] 1. Add pure utility functions and state extensions
-  - [ ] 1.1 Implement `extractHostname` and `isMatchingHostname` pure functions
+  - [x] 1.1 Implement `extractHostname` and `isMatchingHostname` pure functions
     - Add `extractHostname(url)` that returns the lowercase hostname from a URL string, or empty string for invalid URLs
     - Add `isMatchingHostname(hostname, metaUrls)` that returns true if the lowercase hostname matches any hostname extracted from the metaUrls array (case-insensitive comparison)
     - Add these functions to `packages/extension/src/background.js` before the Tab_Tracker lifecycle functions
@@ -25,13 +25,13 @@ Implement automatic tab-following during test execution in the Tomation extensio
     - Test file: `packages/extension/src/tab-tracker.test.js`
     - **Validates: Requirements 2.2, 2.3, 2.4**
 
-- [ ] 2. Implement tab stack state and lifecycle management
-  - [ ] 2.1 Extend `runState` and `resetRunState` with tab tracking fields
+- [x] 2. Implement tab stack state and lifecycle management
+  - [x] 2.1 Extend `runState` and `resetRunState` with tab tracking fields
     - Add `tabStack: []`, `pendingTabSwitch: null`, and `metaHostnames: null` to `runState`
     - Update `resetRunState()` to clear these fields
     - _Requirements: 5.1, 5.3_
 
-  - [ ] 2.2 Implement `initTabTracker` and `teardownTabTracker` functions
+  - [x] 2.2 Implement `initTabTracker` and `teardownTabTracker` functions
     - `initTabTracker()` registers `chrome.tabs.onCreated` and `chrome.tabs.onRemoved` listeners, initializes `tabStack` with the initial locked tab, and computes `metaHostnames` from `runState.spec.meta.urls`
     - `teardownTabTracker()` removes listeners, clears `tabStack`, `metaHostnames`, and `pendingTabSwitch`
     - _Requirements: 1.1, 1.3, 5.1, 5.3_
@@ -42,7 +42,7 @@ Implement automatic tab-following during test execution in the Tomation extensio
     - Test file: `packages/extension/src/tab-tracker.test.js`
     - **Validates: Requirements 5.1**
 
-- [ ] 3. Implement tab creation handler and tab switching
+- [x] 3. Implement tab creation handler and tab switching
   - [ ] 3.1 Implement `handleTabCreated` function
     - Check `runState.running` first — return immediately if false
     - Extract hostname from the new tab's URL using `extractHostname`
@@ -71,7 +71,7 @@ Implement automatic tab-following during test execution in the Tomation extensio
     - Test file: `packages/extension/src/tab-tracker.test.js`
     - **Validates: Requirements 7.1, 7.2, 7.3**
 
-- [ ] 4. Implement tab removal handler and fallback logic
+- [x] 4. Implement tab removal handler and fallback logic
   - [ ] 4.1 Implement `handleTabRemoved` function
     - Check if `tabId === runState.lockedTabId`
     - If not the locked tab, return immediately
@@ -92,7 +92,7 @@ Implement automatic tab-following during test execution in the Tomation extensio
     - Test file: `packages/extension/src/tab-tracker.test.js`
     - **Validates: Requirements 6.2, 6.3**
 
-- [ ] 5. Checkpoint - Ensure all tests pass
+- [x] 5. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 6. Integrate tab tracker into run lifecycle and step loop
