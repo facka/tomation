@@ -446,10 +446,11 @@ function resetRunState() {
 // Store references to listener functions so we can remove them
 var _tabCreatedListener = null;
 var _tabRemovedListener = null;
+var _tabActivatedListener = null;
 
 /**
  * Initialize the tab tracker for a new test run.
- * Registers chrome.tabs.onCreated and onRemoved listeners,
+ * Registers chrome.tabs.onCreated, onRemoved, and onActivated listeners,
  * initializes tabStack with the current locked tab,
  * and computes metaHostnames from spec meta.urls.
  */
@@ -469,11 +470,15 @@ function initTabTracker() {
   // Register listeners (store references for removal)
   _tabCreatedListener = handleTabCreated;
   _tabRemovedListener = handleTabRemoved;
+  _tabActivatedListener = handleTabActivated;
   if (api.tabs.onCreated) {
     api.tabs.onCreated.addListener(_tabCreatedListener);
   }
   if (api.tabs.onRemoved) {
     api.tabs.onRemoved.addListener(_tabRemovedListener);
+  }
+  if (api.tabs.onActivated) {
+    api.tabs.onActivated.addListener(_tabActivatedListener);
   }
 }
 
@@ -489,6 +494,10 @@ function teardownTabTracker() {
   if (_tabRemovedListener && api.tabs.onRemoved) {
     api.tabs.onRemoved.removeListener(_tabRemovedListener);
     _tabRemovedListener = null;
+  }
+  if (_tabActivatedListener && api.tabs.onActivated) {
+    api.tabs.onActivated.removeListener(_tabActivatedListener);
+    _tabActivatedListener = null;
   }
   runState.tabStack = [];
   runState.pendingTabSwitch = null;
@@ -511,16 +520,21 @@ function handleTabCreated(tab) {
   // Only track tabs while a run is active
   if (!runState.running) return;
 
-  // Extract hostname from the new tab's URL
-  var hostname = extractHostname(tab.url || tab.pendingUrl || '');
-
-  // Check hostname against cached meta hostnames (pre-computed in initTabTracker)
-  if (!hostname || !runState.metaHostnames || !runState.metaHostnames[hostname]) {
-    return; // Non-matching tab — no state change
-  }
-
   // If a pending switch is already active, ignore this tab (first match wins)
   if (runState.pendingTabSwitch) return;
+
+  // Check if the new tab was opened by the locked tab (e.g., target="_blank" click)
+  // OR if we can already identify it as a matching hostname
+  var hostname = extractHostname(tab.url || tab.pendingUrl || '');
+  var isFromLockedTab = tab.openerTabId === runState.lockedTabId;
+  var isMatchingUrl = hostname && runState.metaHostnames && runState.metaHostnames[hostname];
+
+  // Only set up pending switch if:
+  // 1. The tab was opened by the locked tab (most common case: link click), OR
+  // 2. The URL is already known and matches meta.urls
+  if (!isFromLockedTab && !isMatchingUrl) {
+    return; // Unrelated tab — no state change
+  }
 
   // Set pending tab switch state — step loop will await this promise
   var tabId = tab.id;
@@ -561,6 +575,27 @@ function handleTabRemoved(tabId) {
 
   // Fallback logic — implemented in task 4
   fallbackToPreviousTab();
+}
+
+/**
+ * Handle user switching to a different tab during a test run.
+ * Re-activates the locked tab to prevent user from interfering.
+ *
+ * @param {object} activeInfo - { tabId, windowId }
+ */
+function handleTabActivated(activeInfo) {
+  if (!runState.running) return;
+  if (!runState.lockedTabId) return;
+
+  // If the user activated a tab that isn't the locked tab, switch back
+  if (activeInfo.tabId !== runState.lockedTabId) {
+    // Don't fight if a pending tab switch is happening (we're about to switch anyway)
+    if (runState.pendingTabSwitch) return;
+
+    api.tabs.update(runState.lockedTabId, { active: true }).catch(function () {
+      // Ignore errors (tab might have been closed)
+    });
+  }
 }
 
 /**
@@ -885,7 +920,11 @@ function runStepLoop() {
 
         // Advance to next step
         runState.stepIndex++;
-        return runStepLoop();
+        // Yield to macrotask queue to allow chrome.tabs.onCreated to fire
+        // before the next step is dispatched (handles target="_blank" tab opens)
+        return new Promise(function (resolve) { setTimeout(resolve, 0); }).then(function () {
+          return runStepLoop();
+        });
       });
     });
     }); // end waitForTabSwitch.then
@@ -1304,6 +1343,15 @@ function handleMessage(message, sender, sendResponse) {
       // If a tab switch is pending and the sender matches the expected tab, complete the switch
       if (runState.pendingTabSwitch && sender && sender.tab && sender.tab.id === runState.pendingTabSwitch.tabId) {
         switchToTab(sender.tab.id);
+      }
+      // If no pending switch but RUNTIME_READY comes from a different tab with matching hostname,
+      // this handles the case where onCreated fired before the URL was known
+      else if (runState.running && !runState.pendingTabSwitch && sender && sender.tab && sender.tab.id !== runState.lockedTabId) {
+        var readyHostname = extractHostname(sender.tab.url || '');
+        if (readyHostname && runState.metaHostnames && runState.metaHostnames[readyHostname]) {
+          // Matching tab sent RUNTIME_READY — set up and immediately resolve a tab switch
+          switchToTab(sender.tab.id);
+        }
       }
       break;
     // STEP_RESULT is handled inline by sendStepToRuntime via its own listener.

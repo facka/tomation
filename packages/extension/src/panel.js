@@ -1126,7 +1126,13 @@ function getHostFromUrl(urlStr) {
     var u = new URL(urlStr);
     return u.hostname;
   } catch (e) {
-    return null;
+    // If it's not a valid URL, try prepending https:// and parsing again
+    try {
+      var u2 = new URL('https://' + urlStr);
+      return u2.hostname;
+    } catch (e2) {
+      return null;
+    }
   }
 }
 
