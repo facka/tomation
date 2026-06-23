@@ -11,16 +11,17 @@ const assert = require('node:assert/strict');
 const { parseSource } = require('./parser.js');
 
 // ---------------------------------------------------------------------------
-// Requirement 5.1: Task('name', fn) extracts task name and params
+// Requirement 5.1: Task(fn) extracts task name and params
 // ---------------------------------------------------------------------------
 
 test('parseSource: Task with destructured params extracts name and param names', () => {
-  const src = `Task('Login', ({username, password}) => { });`;
+  const src = `const login = Task(({username, password}) => { }).as('Login');`;
   const result = parseSource(src, 'login.pom.js');
 
   assert.equal(result.error, null);
   assert.equal(result.tasks.length, 1);
-  assert.equal(result.tasks[0].name, 'Login');
+  assert.equal(result.tasks[0].name, 'login');
+  assert.equal(result.tasks[0].label, 'Login');
   assert.deepEqual(result.tasks[0].params, ['username', 'password']);
   assert.deepEqual(result.tasks[0].steps, []);
   assert.equal(typeof result.tasks[0].line, 'number');
@@ -28,37 +29,37 @@ test('parseSource: Task with destructured params extracts name and param names',
 });
 
 test('parseSource: Task with no params extracts empty param list', () => {
-  const src = `Task('Logout', () => { });`;
+  const src = `const logout = Task(() => { }).as('Logout');`;
   const result = parseSource(src, 'login.pom.js');
 
   assert.equal(result.error, null);
   assert.equal(result.tasks.length, 1);
-  assert.equal(result.tasks[0].name, 'Logout');
+  assert.equal(result.tasks[0].name, 'logout');
   assert.deepEqual(result.tasks[0].params, []);
 });
 
 test('parseSource: Task with single identifier param extracts empty param list (no destructuring)', () => {
-  const src = `Task('DoSomething', (params) => { });`;
+  const src = `const doSomething = Task((params) => { });`;
   const result = parseSource(src, 'actions.pom.js');
 
   assert.equal(result.error, null);
   assert.equal(result.tasks.length, 1);
-  assert.equal(result.tasks[0].name, 'DoSomething');
+  assert.equal(result.tasks[0].name, 'doSomething');
   assert.deepEqual(result.tasks[0].params, []);
 });
 
 test('parseSource: Task with function expression (not arrow) is accepted', () => {
-  const src = `Task('Login', function({username, password}) { });`;
+  const src = `const login = Task(function({username, password}) { }).as('Login');`;
   const result = parseSource(src, 'login.pom.js');
 
   assert.equal(result.error, null);
   assert.equal(result.tasks.length, 1);
-  assert.equal(result.tasks[0].name, 'Login');
+  assert.equal(result.tasks[0].name, 'login');
   assert.deepEqual(result.tasks[0].params, ['username', 'password']);
 });
 
 test('parseSource: Task marks file type as pom', () => {
-  const src = `Task('Login', () => { });`;
+  const src = `const login = Task(() => { });`;
   const result = parseSource(src, 'login.js');
 
   assert.equal(result.type, 'pom');
@@ -70,23 +71,23 @@ test('parseSource: Task marks file type as pom', () => {
 
 test('parseSource: Task tracks body destructuring const { x, y } = params', () => {
   const src = `
-Task('Login', (params) => {
+const login = Task((params) => {
   const { username, password } = params;
-});
+}).as('Login');
 `;
   const result = parseSource(src, 'login.pom.js');
 
   assert.equal(result.error, null);
   assert.equal(result.tasks.length, 1);
-  assert.equal(result.tasks[0].name, 'Login');
+  assert.equal(result.tasks[0].name, 'login');
   assert.deepEqual(result.tasks[0].params, ['username', 'password']);
 });
 
 test('parseSource: Task merges fn param destructuring with body destructuring', () => {
   const src = `
-Task('ComplexTask', ({baseUrl}) => {
+const complexTask = Task(({baseUrl}) => {
   const { username, password } = params;
-});
+}).as('ComplexTask');
 `;
   const result = parseSource(src, 'complex.pom.js');
 
@@ -97,9 +98,9 @@ Task('ComplexTask', ({baseUrl}) => {
 
 test('parseSource: Task body destructuring from any identifier is tracked', () => {
   const src = `
-Task('Login', (options) => {
+const login = Task((options) => {
   const { email, code } = options;
-});
+}).as('Login');
 `;
   const result = parseSource(src, 'login.pom.js');
 
@@ -144,19 +145,17 @@ test('parseSource: Test with function expression is accepted', () => {
 // Error handling
 // ---------------------------------------------------------------------------
 
-test('parseSource: Task without name string emits no error', () => {
-  // Task([...]) pattern without a name string — should not produce an error
+test('parseSource: Task with non-function argument emits warning (array arg)', () => {
   const src = `const t = Task([click('btn')]);`;
   const result = parseSource(src, 'page.pom.js');
 
-  // Should not have errors for Task usage without name
-  const taskErrors = result.warnings.filter(w => w.message.includes('Task()'));
-  assert.equal(taskErrors.length, 0);
   assert.equal(result.tasks.length, 0);
+  assert.ok(result.warnings.length > 0);
+  assert.ok(result.warnings.some(w => w.message.includes('must be a function') || w.message.includes('requires a function')));
 });
 
-test('parseSource: Task with name but no function emits warning', () => {
-  const src = `Task('Login');`;
+test('parseSource: Task with no arguments emits error', () => {
+  const src = `const login = Task();`;
   const result = parseSource(src, 'login.pom.js');
 
   assert.equal(result.tasks.length, 0);
@@ -164,13 +163,13 @@ test('parseSource: Task with name but no function emits warning', () => {
   assert.ok(result.warnings.some(w => w.message.includes('requires a function')));
 });
 
-test('parseSource: Task with name but non-function second arg emits warning', () => {
-  const src = `Task('Login', 'not a function');`;
+test('parseSource: Task with non-function argument emits error', () => {
+  const src = `const login = Task('not a function');`;
   const result = parseSource(src, 'login.pom.js');
 
   assert.equal(result.tasks.length, 0);
   assert.ok(result.warnings.length > 0);
-  assert.ok(result.warnings.some(w => w.message.includes('must be a function')));
+  assert.ok(result.warnings.some(w => w.message.includes('must be a function') || w.message.includes('requires a function')));
 });
 
 test('parseSource: Test without name emits warning', () => {
@@ -206,17 +205,17 @@ test('parseSource: Test with name but non-function second arg emits warning', ()
 
 test('parseSource: multiple Task declarations in same file are all extracted', () => {
   const src = `
-Task('Login', ({username, password}) => { });
-Task('Logout', () => { });
-Task('Register', ({email, name}) => { });
+const login = Task(({username, password}) => { }).as('Login');
+const logout = Task(() => { }).as('Logout');
+const register = Task(({email, name}) => { }).as('Register');
 `;
   const result = parseSource(src, 'auth.pom.js');
 
   assert.equal(result.error, null);
   assert.equal(result.tasks.length, 3);
-  assert.equal(result.tasks[0].name, 'Login');
-  assert.equal(result.tasks[1].name, 'Logout');
-  assert.equal(result.tasks[2].name, 'Register');
+  assert.equal(result.tasks[0].name, 'login');
+  assert.equal(result.tasks[1].name, 'logout');
+  assert.equal(result.tasks[2].name, 'register');
 });
 
 test('parseSource: multiple Test declarations in same file are all extracted', () => {
@@ -235,7 +234,7 @@ Test('should logout', () => { });
 test('parseSource: Tasks and elements coexist in same file', () => {
   const src = `
 const loginBtn = is.BUTTON.where(innerTextIs('Login')).as('Login Button');
-Task('Login', ({username}) => { });
+const login = Task(({username}) => { }).as('Login');
 `;
   const result = parseSource(src, 'login.pom.js');
 
@@ -263,7 +262,7 @@ test('parseSource: Task line number is correct', () => {
   const src = [
     '// line 1',
     '// line 2',
-    "Task('Login', ({username}) => { });", // line 3
+    "const login = Task(({username}) => { }).as('Login');", // line 3
   ].join('\n');
   const result = parseSource(src, 'login.pom.js');
 
@@ -288,11 +287,11 @@ test('parseSource: Test line number is correct', () => {
 
 test('parseSource: Type(paramVar).in(element) produces template value {{paramVar}}', () => {
   const src = `
-Task('addItem', (params) => {
+const addItem = Task((params) => {
   const { text } = params
   Type(text).in(input)
   Click(addButton)
-})
+}).as('addItem')
 `;
   const result = parseSource(src, 'todo.pom.js');
 
@@ -312,10 +311,10 @@ Task('addItem', (params) => {
 
 test('parseSource: TypePassword(paramVar).in(element) produces template value', () => {
   const src = `
-Task('login', (params) => {
+const login = Task((params) => {
   const { password } = params
   TypePassword(password).in(passwordInput)
-})
+}).as('login')
 `;
   const result = parseSource(src, 'login.pom.js');
 
@@ -327,9 +326,9 @@ Task('login', (params) => {
 
 test('parseSource: Select(paramVar).in(element) produces template value', () => {
   const src = `
-Task('selectOption', ({option}) => {
+const selectOption = Task(({option}) => {
   Select(option).in(dropdown)
-})
+}).as('selectOption')
 `;
   const result = parseSource(src, 'form.pom.js');
 
@@ -341,9 +340,9 @@ Task('selectOption', ({option}) => {
 
 test('parseSource: Navigate(paramVar) produces template value', () => {
   const src = `
-Task('goTo', ({url}) => {
+const goTo = Task(({url}) => {
   Navigate(url)
-})
+}).as('goTo')
 `;
   const result = parseSource(src, 'nav.pom.js');
 
@@ -355,10 +354,10 @@ Task('goTo', ({url}) => {
 
 test('parseSource: string literal values still work alongside param references', () => {
   const src = `
-Task('login', ({username}) => {
+const login = Task(({username}) => {
   Type(username).in(usernameInput)
   Type('hardcoded').in(otherInput)
-})
+}).as('login')
 `;
   const result = parseSource(src, 'login.pom.js');
 

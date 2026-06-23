@@ -22,7 +22,15 @@ global.chrome = {
   tabs: {
     query: function () { return Promise.resolve([]); },
     update: function () { return Promise.resolve(); },
-    sendMessage: function () { return Promise.resolve({ ok: true }); }
+    sendMessage: function () { return Promise.resolve({ ok: true }); },
+    onCreated: {
+      addListener: function () {},
+      removeListener: function () {}
+    },
+    onRemoved: {
+      addListener: function () {},
+      removeListener: function () {}
+    }
   }
 };
 global.getProject = function () { return Promise.resolve(null); };
@@ -369,8 +377,9 @@ test('Property 5 (tab lock): Tab is unlocked after a passing run', function () {
         var spec = { tasks: {}, pageElements: { el: { tag: 'input', where: { id: 'el' } } } };
         var checkedIndexes = [];
         for (var i = 0; i < steps.length; i++) { checkedIndexes.push(i); }
+        var config = { allowContinueOnFailure: false, allowRetryOnFailure: false, executionSpeed: null };
 
-        return bg.startRun(42, test_obj, spec, checkedIndexes).then(function () {
+        return bg.startRun(42, test_obj, spec, checkedIndexes, config).then(function () {
           // After run completes, tab should be unlocked
           assert.equal(bg.runState.lockedTabId, null,
             'lockedTabId should be null after passing run');
@@ -428,8 +437,9 @@ test('Property 5 (tab lock): Tab is unlocked after a failing run', function () {
         var spec = { tasks: {}, pageElements: { el: { tag: 'input', where: { id: 'el' } } } };
         var checkedIndexes = [];
         for (var i = 0; i < steps.length; i++) { checkedIndexes.push(i); }
+        var config = { allowContinueOnFailure: false, allowRetryOnFailure: false, executionSpeed: null };
 
-        return bg.startRun(99, test_obj, spec, checkedIndexes).then(function () {
+        return bg.startRun(99, test_obj, spec, checkedIndexes, config).then(function () {
           // After run fails, tab should be unlocked
           assert.equal(bg.runState.lockedTabId, null,
             'lockedTabId should be null after failing run');
@@ -482,8 +492,9 @@ test('Property 5 (tab lock): Tab is unlocked after a stopped run', function () {
         var spec = { tasks: {}, pageElements: { el: { tag: 'input', where: { id: 'el' } } } };
         var checkedIndexes = [];
         for (var i = 0; i < steps.length; i++) { checkedIndexes.push(i); }
+        var config = { allowContinueOnFailure: false, allowRetryOnFailure: false, executionSpeed: null };
 
-        return bg.startRun(77, test_obj, spec, checkedIndexes).then(function () {
+        return bg.startRun(77, test_obj, spec, checkedIndexes, config).then(function () {
           // After stop, tab should be unlocked
           assert.equal(bg.runState.lockedTabId, null,
             'lockedTabId should be null after stopped run');
@@ -535,8 +546,9 @@ test('Property 8 (LOG count): Exactly N LOG messages emitted for N passing steps
         var spec = { tasks: {}, pageElements: { el: { tag: 'input', where: { id: 'el' } } } };
         var checkedIndexes = [];
         for (var i = 0; i < steps.length; i++) { checkedIndexes.push(i); }
+        var config = { allowContinueOnFailure: false, allowRetryOnFailure: false, executionSpeed: null };
 
-        return bg.startRun(10, test_obj, spec, checkedIndexes).then(function () {
+        return bg.startRun(10, test_obj, spec, checkedIndexes, config).then(function () {
           // Exactly N LOG messages for N steps
           assert.equal(logMessages.length, steps.length,
             'Expected ' + steps.length + ' LOG messages but got ' + logMessages.length);

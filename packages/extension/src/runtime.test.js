@@ -688,8 +688,8 @@ test('message listener: click action finds element, highlights, executes, unhigh
   // Should return true for async
   assert.equal(returnValue, true);
 
-  // Wait for promises to resolve
-  await new Promise(function (resolve) { setTimeout(resolve, 50); });
+  // Wait for highlight delay (400ms) + action + unhighlight delay (300ms)
+  await new Promise(function (resolve) { setTimeout(resolve, 900); });
 
   assert.equal(response.type, 'STEP_RESULT');
   assert.equal(response.stepIndex, 4);
@@ -716,7 +716,7 @@ test('message listener: type action sets value on found element', async function
     function (r) { response = r; }
   );
 
-  await new Promise(function (resolve) { setTimeout(resolve, 50); });
+  await new Promise(function (resolve) { setTimeout(resolve, 600); });
 
   assert.equal(response.ok, true);
   assert.equal(response.stepIndex, 5);

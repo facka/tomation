@@ -113,7 +113,7 @@ Implement automatic tab-following during test execution in the Tomation extensio
     - In the existing `handleMessage` function, when a RUNTIME_READY message arrives and `pendingTabSwitch` is active and the sender tab matches the expected tab, call `switchToTab` to complete the switch
     - _Requirements: 3.1, 3.2, 3.3_
 
-- [ ] 7. Implement timeout handling for tab switch
+- [x] 7. Implement timeout handling for tab switch
   - [ ] 7.1 Add 10-second timeout to pending tab switch
     - When `pendingTabSwitch` is set, start a `setTimeout` of 10000ms
     - On timeout: clear `pendingTabSwitch`, log a warning via `console.warn`, and resolve the step-loop wait so execution continues on the current tab
@@ -127,7 +127,7 @@ Implement automatic tab-following during test execution in the Tomation extensio
     - Test file: `packages/extension/src/tab-tracker.test.js`
     - _Requirements: 4.1, 4.2, 4.3_
 
-- [ ] 8. Final checkpoint - Ensure all tests pass
+- [x] 8. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

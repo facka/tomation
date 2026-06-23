@@ -167,7 +167,7 @@ test('renderTestPlan task header shows task name (Req 6.2)', function () {
   var firstItem = checklist.querySelectorAll('li')[0];
   var label = firstItem.querySelector('label');
 
-  assert.equal(label.textContent, 'Login__fillCredentials');
+  assert.equal(label.textContent, 'Task Login.fillCredentials');
 });
 
 test('renderTestPlan all checkboxes start checked (Req 6.3)', function () {
@@ -283,7 +283,7 @@ test('renderTestPlan handles regular (non-task) steps correctly', function () {
   assert.equal(lastItem.className, '', 'Regular step should not be indented');
 
   var label = lastItem.querySelector('label');
-  assert.equal(label.textContent, 'assertExists Login__errorMessage');
+  assert.equal(label.textContent, 'AssertExists Login.errorMessage');
 });
 
 
@@ -431,7 +431,7 @@ test('appendLogEntry renders a passing step with checkmark (Req 7.2)', function 
   assert.equal(entries.length, 1);
   assert.ok(entries[0].classList.contains('pass'));
   assert.ok(entries[0].innerHTML.indexOf('✓') !== -1);
-  assert.ok(entries[0].innerHTML.indexOf('click') !== -1);
+  assert.ok(entries[0].innerHTML.indexOf('Click') !== -1);
 });
 
 test('appendLogEntry renders a failing step with X mark (Req 7.2)', function () {
@@ -483,7 +483,7 @@ test('appendLogEntry renders task header row (Req 7.3)', function () {
   var entries = logContainer.querySelectorAll('.log-entry');
   assert.equal(entries.length, 1);
   assert.ok(entries[0].classList.contains('task-header'));
-  assert.equal(entries[0].textContent, 'Login__fillCredentials');
+  assert.equal(entries[0].textContent, 'Task Login.fillCredentials');
 });
 
 test('appendLogEntry renders indented child step (Req 7.3)', function () {

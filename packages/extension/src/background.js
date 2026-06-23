@@ -469,8 +469,12 @@ function initTabTracker() {
   // Register listeners (store references for removal)
   _tabCreatedListener = handleTabCreated;
   _tabRemovedListener = handleTabRemoved;
-  api.tabs.onCreated.addListener(_tabCreatedListener);
-  api.tabs.onRemoved.addListener(_tabRemovedListener);
+  if (api.tabs.onCreated) {
+    api.tabs.onCreated.addListener(_tabCreatedListener);
+  }
+  if (api.tabs.onRemoved) {
+    api.tabs.onRemoved.addListener(_tabRemovedListener);
+  }
 }
 
 /**
@@ -478,11 +482,11 @@ function initTabTracker() {
  * Removes event listeners and clears tab tracking state.
  */
 function teardownTabTracker() {
-  if (_tabCreatedListener) {
+  if (_tabCreatedListener && api.tabs.onCreated) {
     api.tabs.onCreated.removeListener(_tabCreatedListener);
     _tabCreatedListener = null;
   }
-  if (_tabRemovedListener) {
+  if (_tabRemovedListener && api.tabs.onRemoved) {
     api.tabs.onRemoved.removeListener(_tabRemovedListener);
     _tabRemovedListener = null;
   }

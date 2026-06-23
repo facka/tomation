@@ -17,7 +17,15 @@ global.chrome = {
   tabs: {
     query: function () { return Promise.resolve([]); },
     update: function () { return Promise.resolve(); },
-    sendMessage: function () { return Promise.resolve({ ok: true }); }
+    sendMessage: function () { return Promise.resolve({ ok: true }); },
+    onCreated: {
+      addListener: function () {},
+      removeListener: function () {}
+    },
+    onRemoved: {
+      addListener: function () {},
+      removeListener: function () {}
+    }
   }
 };
 
@@ -522,7 +530,7 @@ test('startRun flattens steps, locks tab, and runs step loop to completion', fun
   };
   global.chrome.runtime.sendMessage = function (msg) {
     if (msg.type === 'LOG') sentLogs.push(msg);
-    else sentSummary = msg;
+    else if (msg.type === 'RUN_COMPLETE' || msg.type === 'RUN_STOPPED') sentSummary = msg;
   };
 
   var testObj = {
@@ -578,7 +586,7 @@ test('startRun halts on step failure and emits RUN_COMPLETE with failure', funct
   };
   global.chrome.runtime.sendMessage = function (msg) {
     if (msg.type === 'LOG') sentLogs.push(msg);
-    else sentSummary = msg;
+    else if (msg.type === 'RUN_COMPLETE' || msg.type === 'RUN_STOPPED') sentSummary = msg;
   };
 
   var testObj = {
@@ -632,7 +640,7 @@ test('stopRun sets stopRequested flag and run emits RUN_STOPPED', function () {
     }
   };
   global.chrome.runtime.sendMessage = function (msg) {
-    if (msg.type !== 'LOG') sentSummary = msg;
+    if (msg.type === 'RUN_COMPLETE' || msg.type === 'RUN_STOPPED') sentSummary = msg;
   };
 
   var testObj = {
@@ -790,7 +798,7 @@ test('pause during a run suspends step dispatch until continue', function () {
     }
   };
   global.chrome.runtime.sendMessage = function (msg) {
-    if (msg.type !== 'LOG') sentSummary = msg;
+    if (msg.type === 'RUN_COMPLETE' || msg.type === 'RUN_STOPPED') sentSummary = msg;
   };
 
   var testObj = {
@@ -810,7 +818,7 @@ test('pause during a run suspends step dispatch until continue', function () {
 
   var runPromise = bg.startRun(10, testObj, spec, [0, 1, 2]);
 
-  // After a microtask tick, step 1 should be done but step 2 should be paused
+  // After the speed delay + microtask tick, step 1 should be done but step 2 should be paused
   return new Promise(function (resolve) {
     setTimeout(function () {
       // Only 1 step sent so far (the pause happened after first step's sendMessage)
@@ -827,7 +835,7 @@ test('pause during a run suspends step dispatch until continue', function () {
         assert.equal(sentSummary.passed, 3);
         resolve();
       });
-    }, 50);
+    }, 200);
   });
 });
 
@@ -849,7 +857,7 @@ test('stop while paused unblocks and halts the run', function () {
     }
   };
   global.chrome.runtime.sendMessage = function (msg) {
-    if (msg.type !== 'LOG') sentSummary = msg;
+    if (msg.type === 'RUN_COMPLETE' || msg.type === 'RUN_STOPPED') sentSummary = msg;
   };
 
   var testObj = {
@@ -882,7 +890,7 @@ test('stop while paused unblocks and halts the run', function () {
         assert.equal(bg.runState.running, false);
         resolve();
       });
-    }, 50);
+    }, 200);
   });
 });
 
@@ -917,7 +925,7 @@ test('navigate step calls api.tabs.update with url and waits for RUNTIME_READY',
   };
   global.chrome.runtime.sendMessage = function (msg) {
     if (msg.type === 'LOG') sentLogs.push(msg);
-    else sentSummary = msg;
+    else if (msg.type === 'RUN_COMPLETE' || msg.type === 'RUN_STOPPED') sentSummary = msg;
   };
 
   var testObj = {
@@ -995,7 +1003,7 @@ test('navigate step times out after 10 seconds if no RUNTIME_READY', function ()
   };
   global.chrome.runtime.sendMessage = function (msg) {
     if (msg.type === 'LOG') sentLogs.push(msg);
-    else sentSummary = msg;
+    else if (msg.type === 'RUN_COMPLETE' || msg.type === 'RUN_STOPPED') sentSummary = msg;
   };
 
   var testObj = {
@@ -1058,7 +1066,7 @@ test('navigate step ignores RUNTIME_READY from wrong tab', function () {
   };
   global.chrome.runtime.sendMessage = function (msg) {
     if (msg.type === 'LOG') sentLogs.push(msg);
-    else sentSummary = msg;
+    else if (msg.type === 'RUN_COMPLETE' || msg.type === 'RUN_STOPPED') sentSummary = msg;
   };
 
   var testObj = {
@@ -1112,7 +1120,7 @@ test('wait step pauses for specified ms and then advances', function () {
   };
   global.chrome.runtime.sendMessage = function (msg) {
     if (msg.type === 'LOG') sentLogs.push(msg);
-    else sentSummary = msg;
+    else if (msg.type === 'RUN_COMPLETE' || msg.type === 'RUN_STOPPED') sentSummary = msg;
   };
 
   var testObj = {
@@ -1160,7 +1168,7 @@ test('wait step respects stopRequested during wait', function () {
     removeListener: function () {}
   };
   global.chrome.runtime.sendMessage = function (msg) {
-    if (msg.type !== 'LOG') sentSummary = msg;
+    if (msg.type === 'RUN_COMPLETE' || msg.type === 'RUN_STOPPED') sentSummary = msg;
   };
 
   var testObj = {
@@ -1214,7 +1222,7 @@ test('startRun handles mixed navigate and regular steps in sequence', function (
   };
   global.chrome.runtime.sendMessage = function (msg) {
     if (msg.type === 'LOG') sentLogs.push(msg);
-    else sentSummary = msg;
+    else if (msg.type === 'RUN_COMPLETE' || msg.type === 'RUN_STOPPED') sentSummary = msg;
   };
 
   var testObj = {
@@ -1254,7 +1262,7 @@ test('startRun handles mixed navigate and regular steps in sequence', function (
         assert.equal(sentSummary.passed, 3);
         resolve();
       });
-    }, 30);
+    }, 200);
   });
 });
 
@@ -1278,7 +1286,7 @@ test('manual step emits MANUAL_PAUSE and waits for continue', function () {
   global.chrome.runtime.sendMessage = function (msg) {
     if (msg.type === 'LOG') sentLogs.push(msg);
     else if (msg.type === 'MANUAL_PAUSE') sentMessages.push(msg);
-    else sentSummary = msg;
+    else if (msg.type === 'RUN_COMPLETE' || msg.type === 'RUN_STOPPED') sentSummary = msg;
   };
 
   var testObj = {
@@ -1327,7 +1335,7 @@ test('manual step emits MANUAL_PAUSE and waits for continue', function () {
         assert.equal(sentSummary.failed, 0);
         resolve();
       });
-    }, 50);
+    }, 250);
   });
 });
 
@@ -1347,7 +1355,7 @@ test('manual step respects stopRequested when continued', function () {
   global.chrome.runtime.sendMessage = function (msg) {
     if (msg.type === 'LOG') sentLogs.push(msg);
     else if (msg.type === 'MANUAL_PAUSE') sentMessages.push(msg);
-    else sentSummary = msg;
+    else if (msg.type === 'RUN_COMPLETE' || msg.type === 'RUN_STOPPED') sentSummary = msg;
   };
 
   var testObj = {
@@ -1453,7 +1461,7 @@ test('handleRunTest queries active tab and starts run with correct spec/test', f
   };
   global.chrome.runtime.sendMessage = function (msg) {
     if (msg.type === 'LOG') sentLogs.push(msg);
-    else sentSummary = msg;
+    else if (msg.type === 'RUN_COMPLETE' || msg.type === 'RUN_STOPPED') sentSummary = msg;
   };
 
   var mockSpec = {
@@ -1480,7 +1488,7 @@ test('handleRunTest queries active tab and starts run with correct spec/test', f
 
   bg.handleRunTest({ type: 'RUN_TEST', testIndex: 1, checkedSteps: [0] });
 
-  // Allow promises to resolve
+  // Allow promises to resolve (click step has 150ms FAST speed delay)
   return new Promise(function (resolve) {
     setTimeout(function () {
       // The second test (index 1) should have been run
@@ -1489,7 +1497,7 @@ test('handleRunTest queries active tab and starts run with correct spec/test', f
       assert.equal(sentLogs[0].ok, true);
       assert.equal(sentSummary.type, 'RUN_COMPLETE');
       resolve();
-    }, 100);
+    }, 250);
   });
 });
 
