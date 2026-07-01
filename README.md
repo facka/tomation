@@ -6,7 +6,7 @@ Tomation separates **what** you're testing from **how** elements are found on th
 
 ## Demo
 
-![Tomation Demo](./docs/demo.gif)
+![Tomation Demo](./docs/tomation-demo-todo-list.gif)
 
 ## Installation
 
