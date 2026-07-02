@@ -11,6 +11,7 @@
 
 var fs = require('fs');
 var path = require('path');
+var BASE_MANIFEST = require('./base-manifest');
 
 var ROOT = __dirname;
 var DIST = path.join(ROOT, 'dist');
@@ -32,26 +33,6 @@ var PLAYGROUND_DIRS = ['login', 'todo', 'navigation'];
 // ---------------------------------------------------------------------------
 // Manifest templates
 // ---------------------------------------------------------------------------
-
-var BASE_MANIFEST = {
-  name: 'Tomation',
-  version: '0.0.1',
-  description: 'Browser automation and testing via a sidebar panel',
-  permissions: ['storage', 'tabs'],
-  content_scripts: [
-    {
-      matches: ['<all_urls>'],
-      js: ['src/runtime.js'],
-      run_at: 'document_idle'
-    }
-  ],
-  options_page: 'src/options.html',
-  icons: {
-    '16': 'icons/icon-16.png',
-    '48': 'icons/icon-48.png',
-    '128': 'icons/icon-128.png'
-  }
-};
 
 function chromeManifest() {
   return Object.assign({}, BASE_MANIFEST, {
