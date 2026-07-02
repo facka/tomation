@@ -169,20 +169,19 @@ test('Property (project rendering): For any project with N specs and M total tes
 });
 
 // ---------------------------------------------------------------------------
-// Property: meta.url mismatch warning — warning visible when host differs
+// Property: meta.url inclusion match — warning hidden when current hostname includes meta host
 // Validates: Requirements 8.6
 // Feature: tomation, Property (8.3, 8.6)
 // ---------------------------------------------------------------------------
 
-test('Property (meta.url mismatch warning): For any spec with meta.url host != currentHostname, warning element is visible', async function () {
+test('Property (meta.url inclusion match): For any spec with meta.url host included in currentHostname, warning element is hidden', async function () {
   await fc.assert(
     fc.asyncProperty(
       hostnameArb,
-      hostnameArb.filter(function (h) { return h.length > 3; }),
+      fc.stringMatching(/^[a-z][a-z0-9]{1,8}$/),
       safeStringArb,
-      async function (currentHost, specHost, filename) {
-        // Ensure the two hostnames are different
-        fc.pre(currentHost !== specHost);
+      async function (specHost, subdomainLabel, filename) {
+        var currentHost = subdomainLabel + '.' + specHost;
 
         var env = createTestEnv();
 
@@ -218,9 +217,9 @@ test('Property (meta.url mismatch warning): For any spec with meta.url host != c
         var warningEl = env.document.getElementById('warning-banner');
         var hasVisible = warningEl.classList.contains('visible');
 
-        assert.equal(hasVisible, true,
-          'Warning banner should be visible when spec host "' + specHost +
-          '" differs from current hostname "' + currentHost + '"');
+        assert.equal(hasVisible, false,
+          'Warning banner should be hidden when current hostname "' + currentHost +
+          '" includes spec host "' + specHost + '"');
       }
     ),
     { numRuns: 100 }

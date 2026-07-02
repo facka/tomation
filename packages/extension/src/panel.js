@@ -209,8 +209,8 @@ function renderHomeView() {
         if (urls.length > 0) {
           try {
             var anyMatch = urls.some(function (u) {
-              var h = getHostFromUrl(u);
-              return h && h === currentHostname;
+              var h = getHostFromUrl(u).trim().toLowerCase();
+              return h && h.includes(currentHostname.trim().toLowerCase());
             });
             if (!anyMatch) {
               warningEl.textContent = 'Warning: Spec "' + escapeHtml(specEntry.filename) +
