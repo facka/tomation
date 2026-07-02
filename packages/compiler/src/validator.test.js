@@ -243,6 +243,60 @@ test('accepts task action with known name', () => {
   assert.equal(r.ok, true);
 });
 
+test('rejects unknown task action referenced inside if-step branch', () => {
+  const r = validateSpec(minimalValid({
+    tests: [{
+      name: 'T',
+      steps: [{
+        action: 'if',
+        condition: { param: 'flag', op: 'truthy' },
+        then: [{ action: 'task', name: 'missingTask' }]
+      }]
+    }]
+  }));
+  assert.equal(r.ok, false);
+  assert.equal(r.error, 'Step references unknown task: missingTask');
+});
+
+test('rejects direct self-cycle in tasks', () => {
+  const r = validateSpec(minimalValid({
+    tasks: {
+      loop: { steps: [{ action: 'task', name: 'loop' }] }
+    }
+  }));
+  assert.equal(r.ok, false);
+  assert.match(r.error, /Circular task reference detected:/);
+});
+
+test('rejects indirect task cycle A -> B -> A', () => {
+  const r = validateSpec(minimalValid({
+    tasks: {
+      taskA: { steps: [{ action: 'task', name: 'taskB' }] },
+      taskB: { steps: [{ action: 'task', name: 'taskA' }] }
+    }
+  }));
+  assert.equal(r.ok, false);
+  assert.match(r.error, /Circular task reference detected:/);
+});
+
+test('accepts nested task references when graph is acyclic', () => {
+  const r = validateSpec(minimalValid({
+    tasks: {
+      leaf: { steps: [] },
+      mid: {
+        steps: [{
+          action: 'if',
+          condition: { param: 'flag', op: 'truthy' },
+          then: [{ action: 'task', name: 'leaf' }]
+        }]
+      },
+      root: { steps: [{ action: 'task', name: 'mid' }] }
+    },
+    tests: [{ name: 'T', steps: [{ action: 'task', name: 'root' }] }]
+  }));
+  assert.equal(r.ok, true);
+});
+
 // ── Success path ──────────────────────────────────────────────────────────────
 
 test('returns { ok: true, spec } on valid spec', () => {

@@ -508,10 +508,12 @@ function extractStringOrTemplate(node) {
  *   WaitFor(element)               → { action: "waitFor", target: "varName", gone: false }
  *   WaitForGone(element)           → { action: "waitFor", target: "varName", gone: true }
  *   Manual(description)            → { action: "manual", description: "..." }
+ *   taskName(params)               → { action: "task", name: "taskName", params: {...} }
  *   PageName.taskName(params)      → { action: "task", name: "PageName__taskName", params: {...} }
  *
  * @param {object} exprNode - expression AST node (typically CallExpression or MemberExpression call)
  * @param {string} filePath - current file path for error reporting
+ * @param {Set<string>} [declaredTaskNames] - task names declared in this file
  * @returns {object|null} step descriptor or null if unrecognized
  */
 
@@ -539,7 +541,7 @@ function extractElementRef(node) {
   return null;
 }
 
-function extractStep(exprNode, filePath) {
+function extractStep(exprNode, filePath, declaredTaskNames) {
   if (!exprNode) return null;
 
   // Pattern: Type(value).in(element) / TypePassword(value).in(element) / Select(value).in(element)
@@ -682,8 +684,23 @@ function extractStep(exprNode, filePath) {
         case 'Upload':
           return null;
 
-        default:
+        default: {
+          // Bare task invocation: taskName() / taskName({ ...params })
+          // Only treat as task if this function is declared as a Task in this file.
+          if (!declaredTaskNames || !declaredTaskNames.has(fnName)) {
+            return null;
+          }
+          if (args.length === 0) {
+            return { action: 'task', name: fnName };
+          }
+          if (args.length === 1 && args[0] && args[0].type === 'ObjectExpression') {
+            const step = { action: 'task', name: fnName };
+            const params = extractTaskInvocationParams(args[0]);
+            if (params && Object.keys(params).length > 0) step.params = params;
+            return step;
+          }
           return null;
+        }
       }
     }
   }
@@ -797,9 +814,10 @@ function extractCondition(testNode, trackedParams) {
  * @param {string} filePath - current file path for error reporting
  * @param {Set<string>} trackedParams - set of known param names from destructuring
  * @param {Array} warnings - array to push warnings into
+ * @param {Set<string>} [declaredTaskNames] - task names declared in this file
  * @returns {object|null} conditional step or null if condition is unsupported
  */
-function extractIfStep(stmt, filePath, trackedParams, warnings, source) {
+function extractIfStep(stmt, filePath, trackedParams, warnings, source, declaredTaskNames) {
   if (!stmt || stmt.type !== 'IfStatement') return null;
 
   // Warn about else blocks (not supported)
@@ -826,7 +844,7 @@ function extractIfStep(stmt, filePath, trackedParams, warnings, source) {
   // Recursively extract steps from the if-block body
   const consequent = stmt.consequent;
   const body = consequent && consequent.type === 'BlockStatement' ? consequent : null;
-  const thenSteps = body ? extractSteps(body, filePath, trackedParams, warnings, source) : [];
+  const thenSteps = body ? extractSteps(body, filePath, trackedParams, warnings, source, declaredTaskNames) : [];
 
   if (thenSteps.length === 0) return null;
 
@@ -844,9 +862,10 @@ function extractIfStep(stmt, filePath, trackedParams, warnings, source) {
  * @param {Set<string>} [trackedParams] - set of known param names from destructuring
  * @param {Array} [warnings] - array to push warnings into
  * @param {string} [source] - original source code for snippet extraction
+ * @param {Set<string>} [declaredTaskNames] - task names declared in this file
  * @returns {Array} array of step objects
  */
-function extractSteps(body, filePath, trackedParams, warnings, source) {
+function extractSteps(body, filePath, trackedParams, warnings, source, declaredTaskNames) {
   if (!body || body.type !== 'BlockStatement') return [];
   if (!trackedParams) trackedParams = new Set();
   if (!warnings) warnings = [];
@@ -875,7 +894,7 @@ function extractSteps(body, filePath, trackedParams, warnings, source) {
 
     // Handle if-statements → conditional steps
     if (stmt.type === 'IfStatement') {
-      const ifStep = extractIfStep(stmt, filePath, trackedParams, warnings, source);
+      const ifStep = extractIfStep(stmt, filePath, trackedParams, warnings, source, declaredTaskNames);
       if (ifStep) {
         steps.push(ifStep);
       }
@@ -884,7 +903,7 @@ function extractSteps(body, filePath, trackedParams, warnings, source) {
 
     // Process expression statements
     if (stmt.type === 'ExpressionStatement') {
-      const step = extractStep(stmt.expression, filePath);
+      const step = extractStep(stmt.expression, filePath, declaredTaskNames);
       if (step) {
         steps.push(step);
       } else {
@@ -988,9 +1007,10 @@ function extractBodyDestructuring(stmt) {
  * @param {object} declarator - VariableDeclarator AST node
  * @param {string} filePath - current file path for error reporting
  * @param {string} source - original source for snippet extraction
+ * @param {Set<string>} [declaredTaskNames] - task names declared in this file
  * @returns {{ task: object|null, error: object|null, warnings: Array }}
  */
-function extractTask(declarator, filePath, source) {
+function extractTask(declarator, filePath, source, declaredTaskNames) {
   if (!declarator || declarator.type !== 'VariableDeclarator') return { task: null, error: null };
   if (!declarator.init) return { task: null, error: null };
 
@@ -1097,7 +1117,7 @@ function extractTask(declarator, filePath, source) {
   // Extract steps from the function body
   const warnings = [];
   const steps = fn.body && fn.body.type === 'BlockStatement'
-    ? extractSteps(fn.body, filePath, trackedParams, warnings, source)
+    ? extractSteps(fn.body, filePath, trackedParams, warnings, source, declaredTaskNames)
     : [];
 
   return {
@@ -1120,9 +1140,10 @@ function extractTask(declarator, filePath, source) {
  *
  * @param {object} node - CallExpression AST node
  * @param {string} filePath - current file path for error reporting
+ * @param {Set<string>} [declaredTaskNames] - task names declared in this file
  * @returns {{ test: object|null, error: object|null }}
  */
-function extractTest(node, filePath, source) {
+function extractTest(node, filePath, source, declaredTaskNames) {
   if (!node || node.type !== 'CallExpression') return { test: null, error: null };
 
   const callee = node.callee;
@@ -1181,7 +1202,7 @@ function extractTest(node, filePath, source) {
   // Extract steps from the function body
   const warnings = [];
   const steps = fn.body && fn.body.type === 'BlockStatement'
-    ? extractSteps(fn.body, filePath, new Set(), warnings, source)
+    ? extractSteps(fn.body, filePath, new Set(), warnings, source, declaredTaskNames)
     : [];
 
   return {
@@ -1317,6 +1338,46 @@ function parseSource(source, filePath) {
     }
   });
 
+  // Pre-collect declared task names so bare local task calls (e.g., login())
+  // can be recognized during step extraction, including forward references.
+  var declaredTaskNames = new Set();
+  walk(ast, node => {
+    if (node.type !== 'VariableDeclaration') return;
+    for (const declarator of node.declarations) {
+      if (!declarator || declarator.type !== 'VariableDeclarator') continue;
+      if (!declarator.id || declarator.id.type !== 'Identifier') continue;
+      if (!declarator.init || declarator.init.type !== 'CallExpression') continue;
+
+      var isTaskDeclaration = false;
+
+      // Pattern: const x = Task(fn)
+      if (
+        declarator.init.callee &&
+        declarator.init.callee.type === 'Identifier' &&
+        declarator.init.callee.name === 'Task'
+      ) {
+        isTaskDeclaration = true;
+      }
+
+      // Pattern: const x = Task(fn).as('Label')
+      if (
+        !isTaskDeclaration &&
+        isMethodCall(declarator.init, 'as') &&
+        declarator.init.callee.object &&
+        declarator.init.callee.object.type === 'CallExpression' &&
+        declarator.init.callee.object.callee &&
+        declarator.init.callee.object.callee.type === 'Identifier' &&
+        declarator.init.callee.object.callee.name === 'Task'
+      ) {
+        isTaskDeclaration = true;
+      }
+
+      if (isTaskDeclaration) {
+        declaredTaskNames.add(declarator.id.name);
+      }
+    }
+  });
+
   // Walk the AST for element declarations: const X = is.TAG.where(...).as('Label')
   // and XPath element declarations: const X = Element(xpath).as('Label') / is.ELEMENT(xpath).as('Label')
   walk(ast, node => {
@@ -1358,7 +1419,7 @@ function parseSource(source, filePath) {
   walk(ast, node => {
     if (node.type !== 'VariableDeclaration') return;
     for (const declarator of node.declarations) {
-      const { task, error, warnings } = extractTask(declarator, filePath, source);
+      const { task, error, warnings } = extractTask(declarator, filePath, source, declaredTaskNames);
       if (error) {
         result.warnings.push(error);
       }
@@ -1379,7 +1440,7 @@ function parseSource(source, filePath) {
     if (!callee || callee.type !== 'Identifier') return;
 
     if (callee.name === 'Test') {
-      const { test, error, warnings } = extractTest(node, filePath, source);
+      const { test, error, warnings } = extractTest(node, filePath, source, declaredTaskNames);
       if (error) {
         result.warnings.push(error);
       }

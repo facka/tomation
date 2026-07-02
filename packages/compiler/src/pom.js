@@ -166,9 +166,10 @@ function deriveNamespace(filePath, pomDir) {
  * @param {Array} steps - array of step objects from the parser
  * @param {object} variableToKey - map of variableName → namespaced key
  * @param {string} prefix - current namespace prefix (e.g., "Login__")
+ * @param {object} localTaskNames - set-like map of local task names declared in this POM
  * @returns {Array} steps with resolved target references
  */
-function resolveStepRefs(steps, variableToKey, prefix) {
+function resolveStepRefs(steps, variableToKey, prefix, localTaskNames) {
   return steps.map(function (step) {
     const resolved = Object.assign({}, step);
 
@@ -184,9 +185,17 @@ function resolveStepRefs(steps, variableToKey, prefix) {
       // If already contains __ (cross-file ref), leave as-is
     }
 
+    // Resolve local bare task names to namespaced task keys.
+    // Cross-file names are already namespaced by the parser/import rewrite.
+    if (resolved.action === 'task' && typeof resolved.name === 'string' && !resolved.name.includes('__')) {
+      if (localTaskNames[resolved.name]) {
+        resolved.name = prefix + resolved.name;
+      }
+    }
+
     // Recursively resolve if-step then branches
     if (resolved.action === 'if' && resolved.then) {
-      resolved.then = resolveStepRefs(resolved.then, variableToKey, prefix);
+      resolved.then = resolveStepRefs(resolved.then, variableToKey, prefix, localTaskNames);
     }
 
     return resolved;
@@ -231,6 +240,14 @@ function extractPom(parsedFile, options) {
   result.namespace = namespace;
 
   const prefix = namespace + '__';
+
+  // Build a set-like map of local task names for bare task-call resolution.
+  const localTaskNames = {};
+  if (parsedFile.tasks) {
+    for (const taskDef of parsedFile.tasks) {
+      localTaskNames[taskDef.name] = true;
+    }
+  }
 
   // Build a map of variableName → namespaced key for childOf resolution
   const variableToKey = {};
@@ -283,7 +300,7 @@ function extractPom(parsedFile, options) {
 
       // Resolve element references in task steps:
       // Bare variable names (e.g., "usernameInput") → namespaced keys ("Login__usernameInput")
-      const resolvedSteps = resolveStepRefs(taskDef.steps || [], variableToKey, prefix);
+      const resolvedSteps = resolveStepRefs(taskDef.steps || [], variableToKey, prefix, localTaskNames);
 
       var taskEntry = {
         steps: resolvedSteps,

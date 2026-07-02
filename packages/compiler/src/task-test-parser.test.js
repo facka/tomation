@@ -65,6 +65,51 @@ test('parseSource: Task marks file type as pom', () => {
   assert.equal(result.type, 'pom');
 });
 
+test('parseSource: Task body supports bare local task invocation', () => {
+  const src = `
+const fillCredentials = Task(() => {
+  Type('alice').in(usernameInput)
+}).as('Fill credentials');
+
+const submitLogin = Task(() => {
+  Click(submitButton)
+}).as('Submit');
+
+const login = Task(() => {
+  fillCredentials()
+  submitLogin({ retry: 1 })
+}).as('Login');
+`;
+  const result = parseSource(src, 'login.pom.js');
+
+  assert.equal(result.error, null);
+  assert.equal(result.tasks.length, 3);
+
+  const loginTask = result.tasks.find(function (t) { return t.name === 'login'; });
+  assert.ok(loginTask, 'login task should be extracted');
+  assert.equal(loginTask.steps.length, 2);
+  assert.deepEqual(loginTask.steps[0], { action: 'task', name: 'fillCredentials' });
+  assert.deepEqual(loginTask.steps[1], { action: 'task', name: 'submitLogin', params: { retry: 1 } });
+});
+
+test('parseSource: bare call to non-task function stays unrecognized', () => {
+  const src = `
+const login = Task(() => {
+  helper()
+  Click(submitButton)
+}).as('Login');
+`;
+  const result = parseSource(src, 'login.pom.js');
+
+  assert.equal(result.error, null);
+  assert.equal(result.tasks.length, 1);
+  assert.equal(result.tasks[0].steps.length, 1);
+  assert.equal(result.tasks[0].steps[0].action, 'click');
+  assert.ok(result.warnings.some(function (w) {
+    return w.message.includes('Unrecognized statement');
+  }), 'helper() should be reported as unrecognized');
+});
+
 // ---------------------------------------------------------------------------
 // Requirement 5.2: const { x, y } = params destructuring is tracked
 // ---------------------------------------------------------------------------
@@ -139,6 +184,24 @@ test('parseSource: Test with function expression is accepted', () => {
   assert.equal(result.error, null);
   assert.equal(result.tests.length, 1);
   assert.equal(result.tests[0].name, 'should work');
+});
+
+test('parseSource: Test body supports bare local task invocation', () => {
+  const src = `
+const login = Task(() => {
+  Click(loginBtn)
+}).as('Login');
+
+Test('runs login task', () => {
+  login()
+})
+`;
+  const result = parseSource(src, 'login.test.js');
+
+  assert.equal(result.error, null);
+  assert.equal(result.tests.length, 1);
+  assert.equal(result.tests[0].steps.length, 1);
+  assert.deepEqual(result.tests[0].steps[0], { action: 'task', name: 'login' });
 });
 
 // ---------------------------------------------------------------------------

@@ -234,6 +234,30 @@ test('unit: single task is namespaced correctly', () => {
   assert.equal(Object.keys(result.tasks).length, 1);
 });
 
+test('unit: bare local task step is namespaced in extracted output', () => {
+  const parsedFile = buildParsedFile(
+    [],
+    [
+      { name: 'fillCredentials', steps: [], params: [], line: 1 },
+      {
+        name: 'login',
+        steps: [
+          { action: 'task', name: 'fillCredentials' },
+          { action: 'navigate', url: 'https://example.com' }
+        ],
+        params: [],
+        line: 2
+      }
+    ]
+  );
+
+  const result = extractPom(parsedFile);
+  assert.equal(result.errors.length, 0);
+  assert.ok('Fake__login' in result.tasks);
+  assert.equal(result.tasks.Fake__login.steps[0].action, 'task');
+  assert.equal(result.tasks.Fake__login.steps[0].name, 'Fake__fillCredentials');
+});
+
 test('unit: multiple elements produce distinct namespaced keys', () => {
   const parsedFile = buildParsedFile(
     [

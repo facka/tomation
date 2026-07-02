@@ -170,6 +170,12 @@ function validateSpec(obj) {
     }
   }
 
+  // Detect circular task references after basic reference validation.
+  var cycleError = detectTaskCycles(tasks);
+  if (cycleError !== null) {
+    return { ok: false, error: cycleError };
+  }
+
   return { ok: true, spec: obj };
 }
 
@@ -207,8 +213,106 @@ function validateSteps(steps, pageElementKeySet, taskKeySet) {
         return 'Step references unknown task: ' + name;
       }
     }
+
+    // Validate nested conditional branches recursively.
+    if (step.action === 'if' && Array.isArray(step.then)) {
+      var nestedResult = validateSteps(step.then, pageElementKeySet, taskKeySet);
+      if (nestedResult !== null) {
+        return nestedResult;
+      }
+    }
   }
   return null;
+}
+
+/**
+ * Detect cycles in task-to-task dependencies.
+ * Returns an error string when a cycle is found, otherwise null.
+ *
+ * @param {Object} tasks
+ * @returns {string|null}
+ */
+function detectTaskCycles(tasks) {
+  var taskKeys = Object.keys(tasks || {});
+  if (taskKeys.length === 0) return null;
+
+  var depsByTask = {};
+  for (var i = 0; i < taskKeys.length; i++) {
+    var taskKey = taskKeys[i];
+    var task = tasks[taskKey] || {};
+    depsByTask[taskKey] = collectTaskRefs(task.steps || []);
+  }
+
+  var state = {}; // 0/undefined=unvisited, 1=visiting, 2=visited
+  var stack = [];
+  var stackIndex = {};
+
+  function dfs(node) {
+    state[node] = 1;
+    stackIndex[node] = stack.length;
+    stack.push(node);
+
+    var deps = depsByTask[node] || [];
+    for (var di = 0; di < deps.length; di++) {
+      var dep = deps[di];
+      // Unknown task references are handled by validateSteps; ignore here.
+      if (!(dep in depsByTask)) continue;
+
+      if (state[dep] === 1) {
+        var startIdx = stackIndex[dep];
+        var cyclePath = stack.slice(startIdx).concat([dep]);
+        return 'Circular task reference detected: ' + cyclePath.join(' -> ');
+      }
+
+      if (state[dep] !== 2) {
+        var err = dfs(dep);
+        if (err) return err;
+      }
+    }
+
+    stack.pop();
+    delete stackIndex[node];
+    state[node] = 2;
+    return null;
+  }
+
+  for (var ti = 0; ti < taskKeys.length; ti++) {
+    var start = taskKeys[ti];
+    if (state[start] === 2) continue;
+    var error = dfs(start);
+    if (error) return error;
+  }
+
+  return null;
+}
+
+/**
+ * Collect task action names from steps recursively (including if.then blocks).
+ *
+ * @param {Array} steps
+ * @returns {Array<string>}
+ */
+function collectTaskRefs(steps) {
+  var refs = [];
+  if (!Array.isArray(steps)) return refs;
+
+  for (var i = 0; i < steps.length; i++) {
+    var step = steps[i];
+    if (!step || typeof step !== 'object') continue;
+
+    if (step.action === 'task' && typeof step.name === 'string') {
+      refs.push(step.name);
+    }
+
+    if (step.action === 'if' && Array.isArray(step.then)) {
+      var nested = collectTaskRefs(step.then);
+      for (var ni = 0; ni < nested.length; ni++) {
+        refs.push(nested[ni]);
+      }
+    }
+  }
+
+  return refs;
 }
 
 module.exports = { validateSpec };
