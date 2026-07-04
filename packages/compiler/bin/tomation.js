@@ -16,6 +16,7 @@
 
 var fs = require('fs');
 var path = require('path');
+var compilerVersion = require('../package.json').version || 'unknown';
 
 var resolve = require('../src/resolver').resolve;
 var resolveSpecifier = require('../src/resolver').resolveSpecifier;
@@ -486,6 +487,9 @@ var subcommand = process.argv[2];
 var cwd = process.cwd();
 var verbose = process.argv.includes('--verbose');
 var options = { verbose: verbose };
+
+// Always print compiler version so logs clearly identify the running build.
+console.error('[tomation] compiler v' + compilerVersion);
 
 if (!subcommand || subcommand === '--verbose') {
   console.error('Error: no command provided.\n');
