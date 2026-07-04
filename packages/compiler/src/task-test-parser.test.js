@@ -429,3 +429,190 @@ const login = Task(({username}) => {
   assert.equal(steps[0].value, '{{username}}', 'param ref should be templated');
   assert.equal(steps[1].value, 'hardcoded', 'string literal should stay as-is');
 });
+
+// ---------------------------------------------------------------------------
+// Forward reference recognition
+// Validates: Requirements 6.1, 6.2
+// ---------------------------------------------------------------------------
+
+test('parseSource: task declared first can invoke a task declared later (forward reference)', () => {
+  const src = `
+const taskA = Task(() => {
+  taskB()
+}).as('Task A');
+
+const taskB = Task(() => {
+  Click(submitButton)
+}).as('Task B');
+`;
+  const result = parseSource(src, 'forward.pom.js');
+
+  assert.equal(result.error, null);
+  assert.equal(result.tasks.length, 2);
+
+  const taskA = result.tasks.find(function (t) { return t.name === 'taskA'; });
+  assert.ok(taskA, 'taskA should be extracted');
+  assert.equal(taskA.steps.length, 1);
+  assert.deepEqual(taskA.steps[0], { action: 'task', name: 'taskB' });
+
+  // No warnings should be produced for the forward reference invocation
+  const forwardRefWarnings = result.warnings.filter(function (w) {
+    return w.message.includes('taskB') && w.message.includes('Unrecognized');
+  });
+  assert.equal(forwardRefWarnings.length, 0, 'forward reference to taskB should not produce unrecognized warnings');
+});
+
+// ---------------------------------------------------------------------------
+// Local task invocation with various argument forms
+// Requirements: 2.1, 2.2, 3.1, 3.2
+// ---------------------------------------------------------------------------
+
+test('parseSource: local task invocation with shorthand object params produces template references', () => {
+  const src = `
+const login = Task(({username, password}) => {
+  Type(username).in(usernameInput)
+  Type(password).in(passwordInput)
+}).as('Login');
+
+const fullLogin = Task(({username, password}) => {
+  login({username, password})
+}).as('Full Login');
+`;
+  const result = parseSource(src, 'login.pom.js');
+
+  assert.equal(result.error, null);
+  assert.equal(result.tasks.length, 2);
+
+  const fullLoginTask = result.tasks.find(function (t) { return t.name === 'fullLogin'; });
+  assert.ok(fullLoginTask, 'fullLogin task should be extracted');
+  assert.equal(fullLoginTask.steps.length, 1);
+  assert.deepEqual(fullLoginTask.steps[0], {
+    action: 'task',
+    name: 'login',
+    params: { username: '{{username}}', password: '{{password}}' }
+  });
+});
+
+test('parseSource: local task invocation with inline string literal params', () => {
+  const src = `
+const login = Task(({username, password}) => {
+  Type(username).in(usernameInput)
+}).as('Login');
+
+const adminLogin = Task(() => {
+  login({ username: 'admin', password: 'secret123' })
+}).as('Admin Login');
+`;
+  const result = parseSource(src, 'login.pom.js');
+
+  assert.equal(result.error, null);
+  assert.equal(result.tasks.length, 2);
+
+  const adminLoginTask = result.tasks.find(function (t) { return t.name === 'adminLogin'; });
+  assert.ok(adminLoginTask, 'adminLogin task should be extracted');
+  assert.equal(adminLoginTask.steps.length, 1);
+  assert.deepEqual(adminLoginTask.steps[0], {
+    action: 'task',
+    name: 'login',
+    params: { username: 'admin', password: 'secret123' }
+  });
+});
+
+test('parseSource: local task invocation with inline numeric literal params', () => {
+  const src = `
+const retryAction = Task(({retry}) => {
+  Click(submitBtn)
+}).as('Retry Action');
+
+const runWithRetry = Task(() => {
+  retryAction({ retry: 3 })
+}).as('Run With Retry');
+`;
+  const result = parseSource(src, 'actions.pom.js');
+
+  assert.equal(result.error, null);
+  assert.equal(result.tasks.length, 2);
+
+  const runTask = result.tasks.find(function (t) { return t.name === 'runWithRetry'; });
+  assert.ok(runTask, 'runWithRetry task should be extracted');
+  assert.equal(runTask.steps.length, 1);
+  assert.deepEqual(runTask.steps[0], {
+    action: 'task',
+    name: 'retryAction',
+    params: { retry: 3 }
+  });
+});
+
+test('parseSource: local task invocation with bare Identifier argument produces warning', () => {
+  const src = `
+const login = Task(({username}) => {
+  Type(username).in(usernameInput)
+}).as('Login');
+
+const wrapper = Task(() => {
+  const params = { username: 'test' }
+  login(params)
+}).as('Wrapper');
+`;
+  const result = parseSource(src, 'login.pom.js');
+
+  assert.equal(result.error, null);
+  assert.equal(result.tasks.length, 2);
+
+  const wrapperTask = result.tasks.find(function (t) { return t.name === 'wrapper'; });
+  assert.ok(wrapperTask, 'wrapper task should be extracted');
+  // Bare Identifier arg is not supported — no task step emitted
+  assert.equal(wrapperTask.steps.length, 0);
+  // Warning should be emitted for unrecognized statement
+  assert.ok(result.warnings.some(function (w) {
+    return w.message.includes('Unrecognized statement');
+  }), 'login(params) with bare Identifier arg should produce Unrecognized statement warning');
+});
+
+// ---------------------------------------------------------------------------
+// Test body local task invocation with params
+// ---------------------------------------------------------------------------
+
+test('parseSource: Test body invokes local task with ObjectExpression params', () => {
+  const src = `
+const login = Task(({username, password}) => {
+  Type(username).in(usernameInput)
+  Type(password).in(passwordInput)
+  Click(submitBtn)
+}).as('Login');
+
+Test('should login with credentials', () => {
+  login({ username: 'alice', password: 'secret123' })
+})
+`;
+  const result = parseSource(src, 'login.test.js');
+
+  assert.equal(result.error, null);
+  assert.equal(result.tests.length, 1);
+  assert.equal(result.tests[0].steps.length, 1);
+  assert.deepEqual(result.tests[0].steps[0], {
+    action: 'task',
+    name: 'login',
+    params: { username: 'alice', password: 'secret123' },
+  });
+});
+
+test('parseSource: Test body with bare Identifier argument in local task call produces warning', () => {
+  const src = `
+const login = Task(({username, password}) => {
+  Click(submitBtn)
+}).as('Login');
+
+Test('should login with params var', () => {
+  login(params)
+})
+`;
+  const result = parseSource(src, 'login.test.js');
+
+  assert.equal(result.error, null);
+  assert.equal(result.tests.length, 1);
+  assert.equal(result.tests[0].steps.length, 0, 'bare Identifier should not produce a step');
+  assert.ok(result.warnings.some(function (w) {
+    return w.message.includes('Unrecognized statement');
+  }), 'login(params) should produce an unrecognized statement warning');
+});

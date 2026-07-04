@@ -699,6 +699,8 @@ function extractStep(exprNode, filePath, declaredTaskNames) {
             if (params && Object.keys(params).length > 0) step.params = params;
             return step;
           }
+          // Any other argument form (e.g., bare Identifier like login(params))
+          // is not supported — fall through to null which triggers warning upstream
           return null;
         }
       }
