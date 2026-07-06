@@ -517,6 +517,276 @@ function extractStringOrTemplate(node) {
  * @returns {object|null} step descriptor or null if unrecognized
  */
 
+// ---------------------------------------------------------------------------
+// Date helper and runtime template extraction
+// ---------------------------------------------------------------------------
+
+/**
+ * Known day-offset helper names and their offsets (in days).
+ */
+const DAY_OFFSET_HELPERS = {
+  today: 0,
+  tomorrow: 1,
+  yesterday: -1,
+  nextWeek: 7,
+  lastWeek: -7,
+  nextMonth: 30,
+  lastMonth: -30,
+};
+
+/**
+ * Known month-boundary helper names and their boundary type.
+ */
+const MONTH_BOUNDARY_HELPERS = {
+  firstDateOfMonth: 'first',
+  lastDateOfMonth: 'last',
+};
+
+/**
+ * Extract a date helper call descriptor from a CallExpression AST node.
+ * Returns a descriptor object if the node is a recognized date helper call,
+ * or null if it's not a date helper.
+ *
+ * @param {object} node - CallExpression AST node
+ * @param {string} filePath - source file path for warnings
+ * @param {Array} warnings - mutable warnings array
+ * @returns {object|null} date helper descriptor or null
+ */
+function extractDateHelperCall(node, filePath, warnings) {
+  if (!node || node.type !== 'CallExpression') return null;
+  if (!node.callee || node.callee.type !== 'Identifier') return null;
+
+  const name = node.callee.name;
+  const args = node.arguments || [];
+  const line = lineOf(node);
+
+  // Day-offset helpers: today(), tomorrow(), yesterday(), nextWeek(), lastWeek(), nextMonth(), lastMonth()
+  if (name in DAY_OFFSET_HELPERS) {
+    const descriptor = {
+      type: 'dateHelper',
+      kind: 'dayOffset',
+      offset: DAY_OFFSET_HELPERS[name],
+    };
+
+    if (args.length > 1) {
+      warnings.push({
+        message: `'${name}' accepts at most 1 argument at ${filePath}:${line}`,
+        filePath,
+        line,
+      });
+    }
+
+    if (args.length >= 1) {
+      const formatArg = args[0];
+      if (formatArg.type === 'Literal' && typeof formatArg.value === 'string') {
+        descriptor.format = formatArg.value;
+      } else if (formatArg.type === 'TemplateLiteral' && formatArg.expressions.length === 0) {
+        // Simple backtick string with no expressions
+        descriptor.format = formatArg.quasis[0].value.cooked;
+      } else {
+        warnings.push({
+          message: `Date helper '${name}' format argument must be a string at ${filePath}:${line}`,
+          filePath,
+          line,
+        });
+      }
+    }
+
+    return descriptor;
+  }
+
+  // Month-boundary helpers: firstDateOfMonth(offset, format?), lastDateOfMonth(offset, format?)
+  if (name in MONTH_BOUNDARY_HELPERS) {
+    const descriptor = {
+      type: 'dateHelper',
+      kind: 'monthBoundary',
+      boundary: MONTH_BOUNDARY_HELPERS[name],
+      monthOffset: 0,
+    };
+
+    if (args.length > 2) {
+      warnings.push({
+        message: `'${name}' accepts at most 2 arguments at ${filePath}:${line}`,
+        filePath,
+        line,
+      });
+    }
+
+    if (args.length === 0) {
+      warnings.push({
+        message: `'${name}' requires an integer offset argument at ${filePath}:${line}`,
+        filePath,
+        line,
+      });
+    } else {
+      const offsetArg = args[0];
+      if (offsetArg.type === 'Literal' && typeof offsetArg.value === 'number' && Number.isInteger(offsetArg.value)) {
+        descriptor.monthOffset = offsetArg.value;
+      } else if (offsetArg.type === 'UnaryExpression' && offsetArg.operator === '-' &&
+                 offsetArg.argument && offsetArg.argument.type === 'Literal' &&
+                 typeof offsetArg.argument.value === 'number' && Number.isInteger(offsetArg.argument.value)) {
+        descriptor.monthOffset = -offsetArg.argument.value;
+      } else {
+        warnings.push({
+          message: `'${name}' first argument must be an integer at ${filePath}:${line}`,
+          filePath,
+          line,
+        });
+      }
+    }
+
+    if (args.length >= 2) {
+      const formatArg = args[1];
+      if (formatArg.type === 'Literal' && typeof formatArg.value === 'string') {
+        descriptor.format = formatArg.value;
+      } else if (formatArg.type === 'TemplateLiteral' && formatArg.expressions.length === 0) {
+        descriptor.format = formatArg.quasis[0].value.cooked;
+      } else {
+        warnings.push({
+          message: `Date helper '${name}' format argument must be a string at ${filePath}:${line}`,
+          filePath,
+          line,
+        });
+      }
+    }
+
+    return descriptor;
+  }
+
+  return null;
+}
+
+/**
+ * Extract a runtime template descriptor from a TemplateLiteral AST node
+ * that has one or more expressions. Builds a `parts` array that interleaves
+ * static string segments with expression descriptors.
+ *
+ * @param {object} node - TemplateLiteral AST node
+ * @param {string} filePath - source file path for warnings
+ * @param {Array} warnings - mutable warnings array
+ * @returns {object} runtime template descriptor
+ */
+function extractRuntimeTemplate(node, filePath, warnings) {
+  const parts = [];
+
+  for (let i = 0; i < node.quasis.length; i++) {
+    // Add the static string segment
+    parts.push(node.quasis[i].value.cooked);
+
+    if (i < node.expressions.length) {
+      const expr = node.expressions[i];
+
+      if (expr.type === 'Identifier') {
+        // Parameter reference: ${username}
+        parts.push({ type: 'param', name: expr.name });
+      } else if (expr.type === 'CallExpression' && expr.callee && expr.callee.type === 'Identifier') {
+        // Possible date helper call: ${tomorrow()}
+        const dateDescriptor = extractDateHelperCall(expr, filePath, warnings);
+        if (dateDescriptor) {
+          parts.push(dateDescriptor);
+        } else {
+          // Unrecognized function call in template
+          warnings.push({
+            message: `Unknown function '${expr.callee.name}' in value position at ${filePath}:${lineOf(expr)}`,
+            filePath,
+            line: lineOf(expr),
+          });
+          parts.push({ type: 'param', name: expr.callee.name + '()' });
+        }
+      } else if (expr.type === 'BinaryExpression' && ['+', '-', '*', '/'].includes(expr.operator)) {
+        // Arithmetic expression: ${count + 1}
+        parts.push({ type: 'expression', source: reconstructSource(expr) });
+      } else {
+        // Unsupported expression type
+        warnings.push({
+          message: `Unsupported expression type in template at ${filePath}:${lineOf(expr)}`,
+          filePath,
+          line: lineOf(expr),
+        });
+        parts.push({ type: 'param', name: reconstructSource(expr) });
+      }
+    }
+  }
+
+  return { type: 'runtimeTemplate', parts };
+}
+
+/**
+ * Reconstruct source text from a simple expression AST node.
+ * Handles identifiers, literals, binary expressions, and unary expressions.
+ *
+ * @param {object} node - AST expression node
+ * @returns {string} reconstructed source text
+ */
+function reconstructSource(node) {
+  if (!node) return '';
+  if (node.type === 'Identifier') return node.name;
+  if (node.type === 'Literal') return String(node.raw || node.value);
+  if (node.type === 'UnaryExpression') {
+    return node.operator + reconstructSource(node.argument);
+  }
+  if (node.type === 'BinaryExpression') {
+    return reconstructSource(node.left) + ' ' + node.operator + ' ' + reconstructSource(node.right);
+  }
+  if (node.type === 'CallExpression' && node.callee && node.callee.type === 'Identifier') {
+    const args = (node.arguments || []).map(a => reconstructSource(a)).join(', ');
+    return node.callee.name + '(' + args + ')';
+  }
+  return '?';
+}
+
+/**
+ * Extract a value expression from an AST node in a DSL value position.
+ * Handles: string literals, template literals (with/without expressions),
+ * date helper calls, and identifier references.
+ *
+ * Returns either a plain string (for string literals and zero-expression templates),
+ * a descriptor object (for date helpers and runtime templates), or null.
+ *
+ * @param {object} node - AST node
+ * @param {string} filePath - source file path for warnings
+ * @param {Array} warnings - mutable warnings array
+ * @returns {string|object|null} plain string, descriptor object, or null
+ */
+function extractValueExpression(node, filePath, warnings) {
+  if (!node) return null;
+
+  // Plain string literal
+  const plain = extractString(node);
+  if (plain !== null) return plain;
+
+  // Template literal
+  if (node.type === 'TemplateLiteral') {
+    // Zero expressions → plain string
+    if (node.expressions.length === 0) {
+      return node.quasis[0].value.cooked;
+    }
+    // One or more expressions → runtime template descriptor
+    return extractRuntimeTemplate(node, filePath, warnings);
+  }
+
+  // Date helper call expression
+  if (node.type === 'CallExpression') {
+    const dateDescriptor = extractDateHelperCall(node, filePath, warnings);
+    if (dateDescriptor) return dateDescriptor;
+
+    // Unrecognized function call in value position
+    if (node.callee && node.callee.type === 'Identifier') {
+      warnings.push({
+        message: `Unknown function '${node.callee.name}' in value position at ${filePath}:${lineOf(node)}`,
+        filePath,
+        line: lineOf(node),
+      });
+    }
+    return null;
+  }
+
+  // Identifier reference (e.g., destructured param variable)
+  if (node.type === 'Identifier') return '{{' + node.name + '}}';
+
+  return null;
+}
+
 /**
  * Extract an element reference from an AST node.
  * Handles two patterns:
@@ -541,8 +811,9 @@ function extractElementRef(node) {
   return null;
 }
 
-function extractStep(exprNode, filePath, declaredTaskNames) {
+function extractStep(exprNode, filePath, declaredTaskNames, warnings) {
   if (!exprNode) return null;
+  if (!warnings) warnings = [];
 
   // Pattern: Type(value).in(element) / TypePassword(value).in(element) / Select(value).in(element)
   // AST shape: CallExpression with callee being MemberExpression (X.in) where X is a CallExpression
@@ -561,7 +832,7 @@ function extractStep(exprNode, filePath, declaredTaskNames) {
       const action = actionMap[actionName];
       if (action) {
         const valueArg = innerCall.arguments[0];
-        const value = extractStringOrTemplate(valueArg);
+        const value = extractValueExpression(valueArg, filePath, warnings);
         const targetArg = exprNode.arguments[0];
         const target = extractElementRef(targetArg);
         if (target === null) return null;
@@ -635,13 +906,13 @@ function extractStep(exprNode, filePath, declaredTaskNames) {
         case 'AssertHasText': {
           const target = extractElementRef(args[0]);
           if (target === null) return null;
-          const value = extractStringOrTemplate(args[1]);
+          const value = extractValueExpression(args[1], filePath, warnings);
           return { action: 'assertHasText', target, value: value !== null ? value : '' };
         }
 
         // Value-only: Navigate(url)
         case 'Navigate': {
-          const url = extractStringOrTemplate(args[0]);
+          const url = extractValueExpression(args[0], filePath, warnings);
           if (url === null) return null;
           return { action: 'navigate', url };
         }
@@ -654,7 +925,7 @@ function extractStep(exprNode, filePath, declaredTaskNames) {
 
         // Value-only: Manual(description)
         case 'Manual': {
-          const description = extractStringOrTemplate(args[0]);
+          const description = extractValueExpression(args[0], filePath, warnings);
           return { action: 'manual', description: description !== null ? description : '' };
         }
 
@@ -905,7 +1176,7 @@ function extractSteps(body, filePath, trackedParams, warnings, source, declaredT
 
     // Process expression statements
     if (stmt.type === 'ExpressionStatement') {
-      const step = extractStep(stmt.expression, filePath, declaredTaskNames);
+      const step = extractStep(stmt.expression, filePath, declaredTaskNames, warnings);
       if (step) {
         steps.push(step);
       } else {
@@ -1464,4 +1735,4 @@ function parseSource(source, filePath) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractStep, extractElementRef, extractIfStep, extractCondition };
+module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractStep, extractElementRef, extractIfStep, extractCondition, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };
