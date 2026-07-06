@@ -202,3 +202,15 @@ export declare function PressTab(): any;
 export declare function PressEnter(): any;
 export declare function PressEsc(): any;
 export declare function PressSpace(): any;
+
+// --- Date Helper Functions ---
+
+export declare function today(format?: string): string;
+export declare function tomorrow(format?: string): string;
+export declare function yesterday(format?: string): string;
+export declare function nextWeek(format?: string): string;
+export declare function lastWeek(format?: string): string;
+export declare function nextMonth(format?: string): string;
+export declare function lastMonth(format?: string): string;
+export declare function firstDateOfMonth(offset: number, format?: string): string;
+export declare function lastDateOfMonth(offset: number, format?: string): string;

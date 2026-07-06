@@ -183,6 +183,91 @@ function Manual(description) {
   return { __step: true, action: 'manual', description: description };
 }
 
+// --- Date Helpers ---
+
+/**
+ * Day-offset date helper — returns today's date formatted.
+ * @param {string} [format] - optional format string (e.g., 'MM/DD/YYYY')
+ * @returns {string} placeholder (compiler intercepts this call)
+ */
+function today(format) {
+  return '__dateHelper:today' + (format ? ':' + format : '');
+}
+
+/**
+ * Day-offset date helper — returns tomorrow's date formatted.
+ * @param {string} [format] - optional format string
+ * @returns {string} placeholder
+ */
+function tomorrow(format) {
+  return '__dateHelper:tomorrow' + (format ? ':' + format : '');
+}
+
+/**
+ * Day-offset date helper — returns yesterday's date formatted.
+ * @param {string} [format] - optional format string
+ * @returns {string} placeholder
+ */
+function yesterday(format) {
+  return '__dateHelper:yesterday' + (format ? ':' + format : '');
+}
+
+/**
+ * Day-offset date helper — returns the date 7 days from now.
+ * @param {string} [format] - optional format string
+ * @returns {string} placeholder
+ */
+function nextWeek(format) {
+  return '__dateHelper:nextWeek' + (format ? ':' + format : '');
+}
+
+/**
+ * Day-offset date helper — returns the date 7 days ago.
+ * @param {string} [format] - optional format string
+ * @returns {string} placeholder
+ */
+function lastWeek(format) {
+  return '__dateHelper:lastWeek' + (format ? ':' + format : '');
+}
+
+/**
+ * Day-offset date helper — returns the date 30 days from now.
+ * @param {string} [format] - optional format string
+ * @returns {string} placeholder
+ */
+function nextMonth(format) {
+  return '__dateHelper:nextMonth' + (format ? ':' + format : '');
+}
+
+/**
+ * Day-offset date helper — returns the date 30 days ago.
+ * @param {string} [format] - optional format string
+ * @returns {string} placeholder
+ */
+function lastMonth(format) {
+  return '__dateHelper:lastMonth' + (format ? ':' + format : '');
+}
+
+/**
+ * Month-boundary date helper — returns the first day of a month.
+ * @param {number} offset - month offset (0 = current, positive = future, negative = past)
+ * @param {string} [format] - optional format string
+ * @returns {string} placeholder
+ */
+function firstDateOfMonth(offset, format) {
+  return '__dateHelper:firstDateOfMonth:' + offset + (format ? ':' + format : '');
+}
+
+/**
+ * Month-boundary date helper — returns the last day of a month.
+ * @param {number} offset - month offset (0 = current, positive = future, negative = past)
+ * @param {string} [format] - optional format string
+ * @returns {string} placeholder
+ */
+function lastDateOfMonth(offset, format) {
+  return '__dateHelper:lastDateOfMonth:' + offset + (format ? ':' + format : '');
+}
+
 // --- File Upload ---
 
 function Upload(filePath) {
@@ -275,4 +360,14 @@ module.exports = {
   PressEnter: PressEnter,
   PressEsc: PressEsc,
   PressSpace: PressSpace,
+  // Date helpers
+  today: today,
+  tomorrow: tomorrow,
+  yesterday: yesterday,
+  nextWeek: nextWeek,
+  lastWeek: lastWeek,
+  nextMonth: nextMonth,
+  lastMonth: lastMonth,
+  firstDateOfMonth: firstDateOfMonth,
+  lastDateOfMonth: lastDateOfMonth,
 };

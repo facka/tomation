@@ -80,6 +80,35 @@ declare global {
   function typeIs(type: string): { type: string };
   function idIs(id: string): { id: string };
 
+  // --- Date helpers ---
+
+  /** Returns today's date formatted with the given format (default: YYYY-MM-DD). */
+  function today(format?: string): string;
+
+  /** Returns tomorrow's date formatted with the given format (default: YYYY-MM-DD). */
+  function tomorrow(format?: string): string;
+
+  /** Returns yesterday's date formatted with the given format (default: YYYY-MM-DD). */
+  function yesterday(format?: string): string;
+
+  /** Returns the date 7 days from now formatted with the given format (default: YYYY-MM-DD). */
+  function nextWeek(format?: string): string;
+
+  /** Returns the date 7 days ago formatted with the given format (default: YYYY-MM-DD). */
+  function lastWeek(format?: string): string;
+
+  /** Returns the date 30 days from now formatted with the given format (default: YYYY-MM-DD). */
+  function nextMonth(format?: string): string;
+
+  /** Returns the date 30 days ago formatted with the given format (default: YYYY-MM-DD). */
+  function lastMonth(format?: string): string;
+
+  /** Returns the first date of the month at the given offset from the current month. */
+  function firstDateOfMonth(offset: number, format?: string): string;
+
+  /** Returns the last date of the month at the given offset from the current month. */
+  function lastDateOfMonth(offset: number, format?: string): string;
+
   // --- Task and Test ---
 
   /**
