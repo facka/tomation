@@ -815,6 +815,111 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings) {
   if (!exprNode) return null;
   if (!warnings) warnings = [];
 
+  // Pattern: SaveText(el).as(key) / SaveAttribute(el, attr).as(key) / SaveValue(el).as(key) / Save(expr).as(key)
+  // AST shape: CallExpression with callee being MemberExpression (X.as) where X is a CallExpression
+  if (
+    exprNode.type === 'CallExpression' &&
+    exprNode.callee &&
+    exprNode.callee.type === 'MemberExpression' &&
+    exprNode.callee.property &&
+    exprNode.callee.property.type === 'Identifier' &&
+    exprNode.callee.property.name === 'as'
+  ) {
+    const innerCall = exprNode.callee.object;
+    if (innerCall && innerCall.type === 'CallExpression' && innerCall.callee && innerCall.callee.type === 'Identifier') {
+      const fnName = innerCall.callee.name;
+      if (fnName === 'SaveText' || fnName === 'SaveAttribute' || fnName === 'SaveValue' || fnName === 'Save') {
+        // Validate .as(key) argument
+        const asArgs = exprNode.arguments;
+        if (!asArgs || asArgs.length === 0) {
+          warnings.push({
+            message: `context key name is required`,
+            filePath,
+            line: lineOf(exprNode),
+          });
+          return null;
+        }
+        const keyNode = asArgs[0];
+        const keyName = extractString(keyNode);
+        if (keyName === null) {
+          warnings.push({
+            message: `context key name is required`,
+            filePath,
+            line: lineOf(exprNode),
+          });
+          return null;
+        }
+        if (keyName === '') {
+          warnings.push({
+            message: `context key name must be non-empty`,
+            filePath,
+            line: lineOf(exprNode),
+          });
+          return null;
+        }
+
+        if (fnName === 'SaveText') {
+          const target = extractElementRef(innerCall.arguments[0]);
+          if (target === null) return null;
+          return { action: 'saveText', target, contextKey: keyName };
+        }
+
+        if (fnName === 'SaveAttribute') {
+          const target = extractElementRef(innerCall.arguments[0]);
+          if (target === null) return null;
+          const attrName = extractString(innerCall.arguments[1]);
+          if (attrName === null) return null;
+          return { action: 'saveAttribute', target, attributeName: attrName, contextKey: keyName };
+        }
+
+        if (fnName === 'SaveValue') {
+          const target = extractElementRef(innerCall.arguments[0]);
+          if (target === null) return null;
+          return { action: 'saveValue', target, contextKey: keyName };
+        }
+
+        if (fnName === 'Save') {
+          const exprArg = innerCall.arguments[0];
+          if (!exprArg) {
+            warnings.push({
+              message: `Save() requires an expression argument`,
+              filePath,
+              line: lineOf(innerCall),
+            });
+            return null;
+          }
+          const value = extractValueExpression(exprArg, filePath, warnings);
+          if (value === null) {
+            warnings.push({
+              message: `Save() argument must be a string, date helper, or template literal at ${filePath}:${lineOf(exprArg)}`,
+              filePath,
+              line: lineOf(exprArg),
+            });
+            return null;
+          }
+          return { action: 'saveExpression', value, key: keyName };
+        }
+      }
+    }
+  }
+
+  // Pattern: Bare SaveText/SaveAttribute/SaveValue/Save without .as() chain — emit warning
+  if (
+    exprNode.type === 'CallExpression' &&
+    exprNode.callee &&
+    exprNode.callee.type === 'Identifier'
+  ) {
+    const bareName = exprNode.callee.name;
+    if (bareName === 'SaveText' || bareName === 'SaveAttribute' || bareName === 'SaveValue' || bareName === 'Save') {
+      warnings.push({
+        message: `context key name is required`,
+        filePath,
+        line: lineOf(exprNode),
+      });
+      return null;
+    }
+  }
+
   // Pattern: Type(value).in(element) / TypePassword(value).in(element) / Select(value).in(element)
   // AST shape: CallExpression with callee being MemberExpression (X.in) where X is a CallExpression
   if (

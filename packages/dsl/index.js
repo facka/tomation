@@ -268,6 +268,40 @@ function lastDateOfMonth(offset, format) {
   return '__dateHelper:lastDateOfMonth:' + offset + (format ? ':' + format : '');
 }
 
+// --- Save Actions ---
+
+function SaveText(element) {
+  return {
+    as: function (keyName) {
+      return { __step: true, action: 'saveText', target: element, contextKey: keyName };
+    }
+  };
+}
+
+function SaveAttribute(element, attributeName) {
+  return {
+    as: function (keyName) {
+      return { __step: true, action: 'saveAttribute', target: element, attributeName: attributeName, contextKey: keyName };
+    }
+  };
+}
+
+function SaveValue(element) {
+  return {
+    as: function (keyName) {
+      return { __step: true, action: 'saveValue', target: element, contextKey: keyName };
+    }
+  };
+}
+
+function Save(expression) {
+  return {
+    as: function (keyName) {
+      return { __step: true, action: 'saveExpression', value: expression, key: keyName };
+    }
+  };
+}
+
 // --- File Upload ---
 
 function Upload(filePath) {
@@ -360,6 +394,11 @@ module.exports = {
   PressEnter: PressEnter,
   PressEsc: PressEsc,
   PressSpace: PressSpace,
+  // Save actions
+  SaveText: SaveText,
+  SaveAttribute: SaveAttribute,
+  SaveValue: SaveValue,
+  Save: Save,
   // Date helpers
   today: today,
   tomorrow: tomorrow,

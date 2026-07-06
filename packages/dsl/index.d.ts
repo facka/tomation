@@ -203,6 +203,23 @@ export declare function PressEnter(): any;
 export declare function PressEsc(): any;
 export declare function PressSpace(): any;
 
+// --- Save Action Builder ---
+
+/**
+ * Builder returned by SaveText/SaveAttribute/SaveValue/Save.
+ * Use .as(keyName) to assign the saved value to a context key.
+ */
+export interface SaveBuilder {
+  as(keyName: string): any;
+}
+
+// --- Save Actions ---
+
+export declare function SaveText(element: any): SaveBuilder;
+export declare function SaveAttribute(element: any, attributeName: string): SaveBuilder;
+export declare function SaveValue(element: any): SaveBuilder;
+export declare function Save(expression: any): SaveBuilder;
+
 // --- Date Helper Functions ---
 
 export declare function today(format?: string): string;
