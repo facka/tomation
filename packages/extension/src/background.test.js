@@ -1594,3 +1594,167 @@ test('initMessageRouter registers listeners', function () {
   assert.equal(addedMessageListener, bg.handleMessage);
   assert.equal(addedConnectListener, bg.handlePanelConnect);
 });
+
+// ---------------------------------------------------------------------------
+// Integration: Date helper descriptors via resolveValue (Task 6.4)
+// ---------------------------------------------------------------------------
+
+test('resolveValue: day-offset offset=0 returns today in YYYY-MM-DD', function () {
+  var now = new Date();
+  var expected = now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0');
+
+  var result = bg.resolveValue({ type: 'dateHelper', kind: 'dayOffset', offset: 0 }, {});
+  assert.equal(result, expected);
+});
+
+test('resolveValue: day-offset offset=1 returns tomorrow in YYYY-MM-DD', function () {
+  var tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  var expected = tomorrow.getFullYear() + '-' +
+    String(tomorrow.getMonth() + 1).padStart(2, '0') + '-' +
+    String(tomorrow.getDate()).padStart(2, '0');
+
+  var result = bg.resolveValue({ type: 'dateHelper', kind: 'dayOffset', offset: 1 }, {});
+  assert.equal(result, expected);
+});
+
+test('resolveValue: day-offset offset=-1 returns yesterday in YYYY-MM-DD', function () {
+  var yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  var expected = yesterday.getFullYear() + '-' +
+    String(yesterday.getMonth() + 1).padStart(2, '0') + '-' +
+    String(yesterday.getDate()).padStart(2, '0');
+
+  var result = bg.resolveValue({ type: 'dateHelper', kind: 'dayOffset', offset: -1 }, {});
+  assert.equal(result, expected);
+});
+
+// ---------------------------------------------------------------------------
+// Integration: Month-boundary first-of-month via resolveValue
+// ---------------------------------------------------------------------------
+
+test('resolveValue: monthBoundary first, monthOffset=0 ends with -01', function () {
+  var result = bg.resolveValue({
+    type: 'dateHelper', kind: 'monthBoundary', boundary: 'first', monthOffset: 0
+  }, {});
+  assert.ok(result.endsWith('-01'), 'Expected result to end with -01, got: ' + result);
+});
+
+test('resolveValue: monthBoundary first, monthOffset=-1 is previous month first day', function () {
+  var now = new Date();
+  var targetMonth = now.getMonth() - 1;
+  var targetYear = now.getFullYear();
+  targetYear += Math.floor(targetMonth / 12);
+  targetMonth = ((targetMonth % 12) + 12) % 12;
+
+  var expected = targetYear + '-' +
+    String(targetMonth + 1).padStart(2, '0') + '-01';
+
+  var result = bg.resolveValue({
+    type: 'dateHelper', kind: 'monthBoundary', boundary: 'first', monthOffset: -1
+  }, {});
+  assert.equal(result, expected);
+});
+
+// ---------------------------------------------------------------------------
+// Integration: Month-boundary last-of-month via resolveValue
+// ---------------------------------------------------------------------------
+
+test('resolveValue: monthBoundary last, monthOffset=0 returns valid last day (28-31)', function () {
+  var result = bg.resolveValue({
+    type: 'dateHelper', kind: 'monthBoundary', boundary: 'last', monthOffset: 0
+  }, {});
+  var day = parseInt(result.split('-')[2], 10);
+  assert.ok(day >= 28 && day <= 31, 'Expected day 28-31, got: ' + day);
+});
+
+test('resolveValue: monthBoundary last, monthOffset=0 with custom format', function () {
+  var now = new Date();
+  var lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  var expectedDay = String(lastDay.getDate()).padStart(2, '0');
+  var expectedMonth = String(lastDay.getMonth() + 1).padStart(2, '0');
+  var expectedYear = String(lastDay.getFullYear());
+
+  var result = bg.resolveValue({
+    type: 'dateHelper', kind: 'monthBoundary', boundary: 'last', monthOffset: 0, format: 'DD/MM/YYYY'
+  }, {});
+  assert.equal(result, expectedDay + '/' + expectedMonth + '/' + expectedYear);
+});
+
+// ---------------------------------------------------------------------------
+// Integration: Runtime template with nested date helper and param references
+// ---------------------------------------------------------------------------
+
+test('resolveValue: runtimeTemplate with static, param, and dateHelper parts', function () {
+  var now = new Date();
+  var todayStr = now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0');
+
+  var descriptor = {
+    type: 'runtimeTemplate',
+    parts: [
+      'Appointment on ',
+      { type: 'dateHelper', kind: 'dayOffset', offset: 0 },
+      ' for ',
+      { type: 'param', name: 'patient' },
+      ''
+    ]
+  };
+  var params = { patient: 'John Doe' };
+
+  var result = bg.resolveValue(descriptor, params);
+  assert.equal(result, 'Appointment on ' + todayStr + ' for John Doe');
+});
+
+// ---------------------------------------------------------------------------
+// Integration: Multiple date helpers with different format strings
+// ---------------------------------------------------------------------------
+
+test('resolveValue: day-offset with MM/DD/YYYY format', function () {
+  var now = new Date();
+  var expected = String(now.getMonth() + 1).padStart(2, '0') + '/' +
+    String(now.getDate()).padStart(2, '0') + '/' +
+    now.getFullYear();
+
+  var result = bg.resolveValue({
+    type: 'dateHelper', kind: 'dayOffset', offset: 0, format: 'MM/DD/YYYY'
+  }, {});
+  assert.equal(result, expected);
+});
+
+test('resolveValue: day-offset with DD-MM-YYYY format', function () {
+  var now = new Date();
+  var expected = String(now.getDate()).padStart(2, '0') + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    now.getFullYear();
+
+  var result = bg.resolveValue({
+    type: 'dateHelper', kind: 'dayOffset', offset: 0, format: 'DD-MM-YYYY'
+  }, {});
+  assert.equal(result, expected);
+});
+
+test('resolveValue: multiple format strings in a single test plan context', function () {
+  var now = new Date();
+
+  var isoResult = bg.resolveValue({
+    type: 'dateHelper', kind: 'dayOffset', offset: 0
+  }, {});
+  var usResult = bg.resolveValue({
+    type: 'dateHelper', kind: 'dayOffset', offset: 0, format: 'MM/DD/YYYY'
+  }, {});
+  var euResult = bg.resolveValue({
+    type: 'dateHelper', kind: 'dayOffset', offset: 0, format: 'DD-MM-YYYY'
+  }, {});
+
+  var year = String(now.getFullYear());
+  var month = String(now.getMonth() + 1).padStart(2, '0');
+  var day = String(now.getDate()).padStart(2, '0');
+
+  assert.equal(isoResult, year + '-' + month + '-' + day);
+  assert.equal(usResult, month + '/' + day + '/' + year);
+  assert.equal(euResult, day + '-' + month + '-' + year);
+});

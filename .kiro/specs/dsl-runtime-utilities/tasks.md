@@ -22,8 +22,8 @@ This plan implements date helper functions and runtime template strings for the 
     - Add exported function declarations matching the globals for day-offset and month-boundary helpers
     - _Requirements: 7.1, 7.2, 7.3, 7.4_
 
-- [ ] 2. Implement compiler parsing for date helpers
-  - [ ] 2.1 Add `extractValueExpression` function to `packages/compiler/src/parser.js`
+- [x] 2. Implement compiler parsing for date helpers
+  - [x] 2.1 Add `extractValueExpression` function to `packages/compiler/src/parser.js`
     - Implement the new `extractValueExpression(node, filePath, warnings)` function that handles string literals, template literals, date helper calls, and identifier references
     - Define `DAY_OFFSET_HELPERS` map (`today:0`, `tomorrow:1`, `yesterday:-1`, `nextWeek:7`, `lastWeek:-7`, `nextMonth:30`, `lastMonth:-30`)
     - Define `MONTH_BOUNDARY_HELPERS` map (`firstDateOfMonth:'first'`, `lastDateOfMonth:'last'`)
@@ -42,7 +42,7 @@ This plan implements date helper functions and runtime template strings for the 
     - Generate random integer offsets, boundary type, and optional format strings, verify descriptor has correct `type`, `kind`, `boundary`, `monthOffset`, and `format` fields
     - **Validates: Requirements 1.5, 3.2, 4.1, 8.3**
 
-  - [ ] 2.4 Implement `extractRuntimeTemplate` function in `packages/compiler/src/parser.js`
+  - [x] 2.4 Implement `extractRuntimeTemplate` function in `packages/compiler/src/parser.js`
     - Handle TemplateLiteral nodes with ≥1 expression, building the `parts` array
     - Classify each expression: Identifier → `{type:"param", name}`, date helper call → nested dateHelper descriptor, arithmetic → `{type:"expression", source}`
     - Emit warnings for unsupported expression types with file path and line number
@@ -53,16 +53,16 @@ This plan implements date helper functions and runtime template strings for the 
     - Generate random template structures (N expressions, mixed types), verify parts array has `2N+1` elements with correct interleaving
     - **Validates: Requirements 5.1, 5.3, 5.4, 5.5, 8.4, 8.5**
 
-  - [ ] 2.6 Wire `extractValueExpression` into `extractStep` in `packages/compiler/src/parser.js`
+  - [x] 2.6 Wire `extractValueExpression` into `extractStep` in `packages/compiler/src/parser.js`
     - Replace calls to `extractStringOrTemplate` with `extractValueExpression` for value arguments of Type, TypePassword, Select, AssertHasText, Navigate, and Manual actions
     - Ensure step descriptor `value`/`url`/`description` fields can now be either string or object
     - _Requirements: 4.1, 8.1, 8.6_
 
-- [ ] 3. Checkpoint - Verify compiler changes
+- [~] 3. Checkpoint - Verify compiler changes
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. Implement runtime resolution in background.js
-  - [ ] 4.1 Add `formatDate` function to `packages/extension/src/background.js`
+- [x] 4. Implement runtime resolution in background.js
+  - [x] 4.1 Add `formatDate` function to `packages/extension/src/background.js`
     - Implement token-based date formatting supporting `YYYY`, `MM`, `DD`, `M`, `D` tokens with literal separators preserved
     - Default format is `YYYY-MM-DD`
     - Leave unrecognized tokens as literal text and log a warning
@@ -73,7 +73,7 @@ This plan implements date helper functions and runtime template strings for the 
     - Generate random dates and valid format strings, verify correct token substitution and zero-padding
     - **Validates: Requirements 2.4, 2.5, 3.4**
 
-  - [ ] 4.3 Add `resolveDateHelper` function to `packages/extension/src/background.js`
+  - [x] 4.3 Add `resolveDateHelper` function to `packages/extension/src/background.js`
     - Implement day-offset resolution: add `offset` days to the current date
     - Implement month-boundary resolution: compute first or last day of the target month (handling varying month lengths and leap years)
     - Call `formatDate` with the resolved date and the descriptor's format field
@@ -94,12 +94,12 @@ This plan implements date helper functions and runtime template strings for the 
     - Generate random reference dates and month offsets, verify result is the last calendar day (accounting for varying lengths and leap years)
     - **Validates: Requirements 2.3**
 
-  - [ ] 4.7 Add `evaluateExpression` function to `packages/extension/src/background.js`
+  - [x] 4.7 Add `evaluateExpression` function to `packages/extension/src/background.js`
     - Implement safe arithmetic evaluation supporting `+`, `-`, `*`, `/`, parentheses, identifier substitution from params, and numeric literals
     - Return empty string and log warning on NaN, Infinity, or division by zero
     - _Requirements: 6.3, 6.5_
 
-  - [ ] 4.8 Add `resolveRuntimeTemplate` function to `packages/extension/src/background.js`
+  - [x] 4.8 Add `resolveRuntimeTemplate` function to `packages/extension/src/background.js`
     - Iterate the `parts` array, resolving each element: strings pass through, `param` descriptors substitute from params, `dateHelper` descriptors delegate to `resolveDateHelper`, `expression` descriptors delegate to `evaluateExpression`
     - Coerce each result to string and concatenate
     - Substitute empty string and log warning for undefined params
@@ -110,7 +110,7 @@ This plan implements date helper functions and runtime template strings for the 
     - Generate random template descriptors and param contexts, verify concatenation matches expected output
     - **Validates: Requirements 5.7, 6.1, 6.2, 6.3**
 
-  - [ ] 4.10 Extend `resolveValue` in `packages/extension/src/background.js` to dispatch object-typed values
+  - [x] 4.10 Extend `resolveValue` in `packages/extension/src/background.js` to dispatch object-typed values
     - Add object detection at the top of `resolveValue`: if `typeof value === 'object' && value.type`, dispatch to `resolveDateHelper` or `resolveRuntimeTemplate`
     - Existing string handling remains unchanged
     - _Requirements: 8.6_
@@ -120,11 +120,11 @@ This plan implements date helper functions and runtime template strings for the 
     - Generate random mixed values (plain strings and object descriptors), verify correct dispatch path
     - **Validates: Requirements 8.6**
 
-- [ ] 5. Checkpoint - Verify runtime changes
+- [~] 5. Checkpoint - Verify runtime changes
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. Integration wiring and compiler warning coverage
-  - [ ] 6.1 Add unit tests for compiler warning scenarios in `packages/compiler/src/parser.test.js`
+- [x] 6. Integration wiring and compiler warning coverage
+  - [x] 6.1 Add unit tests for compiler warning scenarios in `packages/compiler/src/parser.test.js`
     - Test non-string format argument warning for day-offset helpers
     - Test missing integer argument warning for month-boundary helpers
     - Test extra arguments warning
@@ -138,19 +138,19 @@ This plan implements date helper functions and runtime template strings for the 
     - Trigger random warning scenarios, verify each warning has non-empty `filePath` and positive `line`
     - **Validates: Requirements 4.4**
 
-  - [ ] 6.3 Add unit tests for backward compatibility in `packages/compiler/src/parser.test.js`
+  - [x] 6.3 Add unit tests for backward compatibility in `packages/compiler/src/parser.test.js`
     - Verify existing plain string values produce unchanged JSON output after the refactor
     - Verify zero-expression backtick templates emit plain strings
     - Verify date helper calls outside value positions are not emitted as descriptors
     - _Requirements: 8.1, 5.2, 1.6_
 
-  - [ ] 6.4 Add integration tests in `packages/extension/src/background.test.js`
+  - [x] 6.4 Add integration tests in `packages/extension/src/background.test.js`
     - Test end-to-end: compiled date helper descriptor → `resolveValue` → formatted date string
     - Test runtime template with nested date helper and param references
     - Test multiple date helpers with different format strings in a single test plan
     - _Requirements: 2.1, 2.2, 2.3, 5.7, 6.1, 6.2_
 
-- [ ] 7. Final checkpoint - Ensure all tests pass
+- [~] 7. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
