@@ -226,6 +226,19 @@ function executeAction(step, element) {
     case 'pressKey':
       return handlePressKey(element, step.key, step.options);
 
+    case 'saveText':
+      return Promise.resolve({ ok: true, savedValue: element.textContent.trim() });
+
+    case 'saveAttribute':
+      var attrVal = element.getAttribute(step.attributeName);
+      if (attrVal === null) {
+        return Promise.resolve({ ok: false, error: 'Attribute "' + step.attributeName + '" not found on element' });
+      }
+      return Promise.resolve({ ok: true, savedValue: attrVal });
+
+    case 'saveValue':
+      return Promise.resolve({ ok: true, savedValue: element.value || '' });
+
     default:
       return Promise.resolve({ ok: false, error: 'Unknown action: ' + action });
   }
@@ -459,7 +472,7 @@ function deriveKeyCode(key) {
 // Message listener: receives EXECUTE_STEP from background, runs DOM actions
 // ---------------------------------------------------------------------------
 
-var ACTIONS_NEEDING_ELEMENT = ['click', 'type', 'typePassword', 'select', 'assertExists', 'assertHasText', 'waitFor', 'upload'];
+var ACTIONS_NEEDING_ELEMENT = ['click', 'type', 'typePassword', 'select', 'assertExists', 'assertHasText', 'waitFor', 'upload', 'saveText', 'saveAttribute', 'saveValue'];
 
 api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.type !== 'EXECUTE_STEP') {
@@ -535,7 +548,7 @@ api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       }).then(function (result) {
         // Keep highlight briefly after action so user sees the result
         setTimeout(function () { unhighlightElement(element); }, 300);
-        sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: result.ok, error: result.error });
+        sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: result.ok, error: result.error, savedValue: result.savedValue });
       }).catch(function (err) {
         unhighlightElement(element);
         sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: false, error: err.message || String(err) });
