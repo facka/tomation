@@ -341,14 +341,16 @@ function resolveRuntimeTemplate(descriptor, params) {
 }
 
 /**
- * Resolve all {{paramName}} tokens and $random values in a string.
+ * Resolve all {{ctx.keyName}} tokens, {{paramName}} tokens, and $random values in a string.
+ * Context tokens ({{ctx.*}}) are resolved first and produce a hard error if a key is missing.
  * Missing params are substituted with "" and a warning is logged.
  *
  * @param {string} value - The string to resolve
  * @param {object} params - The params map from the task invocation
- * @returns {string} - Fully resolved string with no remaining tokens
+ * @param {object} [contextStore] - The per-run context store (key → value)
+ * @returns {string|object} - Fully resolved string, or { __ctxError: "..." } on missing context key
  */
-function resolveValue(value, params) {
+function resolveValue(value, params, contextStore) {
   if (value === undefined || value === null) return value;
 
   // Object-typed runtime values (dateHelper, runtimeTemplate)
@@ -369,8 +371,22 @@ function resolveValue(value, params) {
     return generateRandom(8);
   }
 
+  // Resolve {{ctx.keyName}} tokens FIRST (fail on missing)
+  var ctxError = null;
+  var resolved = value.replace(/\{\{ctx\.([^}]+)\}\}/g, function (match, keyName) {
+    if (contextStore && contextStore.hasOwnProperty(keyName)) {
+      return contextStore[keyName];
+    }
+    ctxError = 'Context key "' + keyName + '" has not been saved yet';
+    return match; // leave token for error reporting
+  });
+
+  if (ctxError) {
+    return { __ctxError: ctxError }; // signal error to caller
+  }
+
   // Resolve {{paramName}} tokens
-  var resolved = value.replace(/\{\{([^}]+)\}\}/g, function (match, paramName) {
+  resolved = resolved.replace(/\{\{([^}]+)\}\}/g, function (match, paramName) {
     if (params && params.hasOwnProperty(paramName)) {
       return params[paramName];
     }
@@ -477,6 +493,13 @@ function expandStep(step, tasksMap, pageElements, params) {
     return [];
   }
 
+  // saveExpression steps are handled entirely in the background at execution time;
+  // bypass buildStepMessage so that value resolution happens in runStepLoop
+  // (where contextStore contains values saved by preceding steps).
+  if (step.action === 'saveExpression') {
+    return [{ action: 'saveExpression', value: step.value, key: step.key }];
+  }
+
   return [buildStepMessage(step, pageElements, params)];
 }
 
@@ -514,7 +537,7 @@ function expandTaskStep(step, tasksMap, pageElements, parentParams) {
     for (var si = 0; si < stepParamKeys.length; si++) {
       pk = stepParamKeys[si];
       // Resolve param values themselves (they may contain {{tokens}} from outer context)
-      mergedParams[pk] = resolveValue(step.params[pk], parentParams);
+      mergedParams[pk] = resolveValue(step.params[pk], parentParams, runState.contextStore);
     }
   }
 
@@ -549,7 +572,7 @@ function buildStepMessage(step, pageElements, params) {
 
   // Resolve value field
   if (step.value !== undefined) {
-    msg.value = resolveValue(step.value, params);
+    msg.value = resolveValue(step.value, params, runState.contextStore);
   }
 
   // Copy over action-specific fields
@@ -557,7 +580,7 @@ function buildStepMessage(step, pageElements, params) {
     msg.target = step.target;
   }
   if (step.url !== undefined) {
-    msg.url = resolveValue(step.url, params);
+    msg.url = resolveValue(step.url, params, runState.contextStore);
   }
   if (step.ms !== undefined) {
     msg.ms = step.ms;
@@ -566,7 +589,7 @@ function buildStepMessage(step, pageElements, params) {
     msg.gone = step.gone;
   }
   if (step.description !== undefined) {
-    msg.description = resolveValue(step.description, params);
+    msg.description = resolveValue(step.description, params, runState.contextStore);
   }
   if (step.name !== undefined) {
     msg.name = step.name;
@@ -669,7 +692,8 @@ var runState = {
   },
   tabStack: [],
   pendingTabSwitch: null,
-  metaHostnames: null
+  metaHostnames: null,
+  contextStore: {}
 };
 
 // ---------------------------------------------------------------------------
@@ -734,6 +758,7 @@ function resetRunState() {
   runState.tabStack = [];
   runState.pendingTabSwitch = null;
   runState.metaHostnames = null;
+  runState.contextStore = {};
 }
 
 // ---------------------------------------------------------------------------
@@ -1054,6 +1079,7 @@ function startRun(tabId, test, spec, checkedSteps, config) {
   );
 
   runState.running = true;
+  runState.contextStore = {};
   runState.currentTestName = test.name || '';
   runState.steps = resolvedSteps;
   runState.spec = spec;
@@ -1143,6 +1169,45 @@ function runStepLoop() {
       return handleUploadStep(step, currentIndex);
     }
 
+    // Handle saveExpression steps entirely in the background (no message sent to runtime)
+    if (step.action === 'saveExpression') {
+      var resolvedValue = resolveValue(step.value, {}, runState.contextStore);
+      if (resolvedValue !== null && resolvedValue !== undefined) {
+        if (typeof resolvedValue === 'object' && resolvedValue.__ctxError) {
+          // Context key reference error within the expression
+          emitLog(currentIndex, step, false, resolvedValue.__ctxError);
+          runState.failCount++;
+          // Check if retry/skip is enabled
+          if (runState.config.allowRetryOnFailure || runState.config.allowContinueOnFailure) {
+            runState.awaitingAction = true;
+            runState.failedStepIndex = currentIndex;
+            safeSendMessage({
+              type: 'STEP_FAILED_AWAITING_ACTION',
+              stepIndex: currentIndex,
+              action: step.action,
+              target: null,
+              value: step.value || null,
+              error: resolvedValue.__ctxError
+            });
+            return;
+          }
+          // Halt run on failure
+          teardownTabTracker();
+          unlockTab();
+          runState.running = false;
+          emitSummary('RUN_COMPLETE', currentIndex + 1, runState.passCount, runState.failCount);
+          return;
+        }
+        runState.contextStore[step.key] = String(resolvedValue);
+      } else {
+        runState.contextStore[step.key] = '';
+      }
+      emitLog(currentIndex, step, true);
+      runState.passCount++;
+      runState.stepIndex++;
+      return runStepLoop();
+    }
+
     // Apply speed delay before dispatching step to runtime
     return applySpeedDelay(runState.config.executionSpeed).then(function () {
       // Check stop again after the delay
@@ -1176,6 +1241,13 @@ function runStepLoop() {
 
         if (ok) {
           runState.passCount++;
+
+          // Store savedValue in context store for DOM save actions
+          if (step.action === 'saveText' || step.action === 'saveAttribute' || step.action === 'saveValue') {
+            if (result.savedValue !== undefined) {
+              runState.contextStore[step.contextKey] = result.savedValue;
+            }
+          }
         } else {
           runState.failCount++;
         }
@@ -1548,6 +1620,7 @@ function finishRun() {
   teardownTabTracker();
   unlockTab();
   runState.running = false;
+  runState.contextStore = {};
 
   var total = runState.stepIndex;
   var passed = runState.passCount;
