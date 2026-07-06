@@ -56,6 +56,291 @@ function generateRandom(len) {
 }
 
 /**
+ * Format a Date using token substitution.
+ * Tokens: YYYY, MM, DD, M, D. Everything else is literal.
+ * @param {Date} date
+ * @param {string} [formatStr='YYYY-MM-DD']
+ * @returns {string}
+ */
+function formatDate(date, formatStr) {
+  if (formatStr === undefined) formatStr = 'YYYY-MM-DD';
+  var year = date.getFullYear();
+  var month = date.getMonth() + 1;
+  var day = date.getDate();
+
+  // Ordered from longest token to shortest to avoid partial matches
+  var tokens = {
+    'YYYY': String(year),
+    'MM': (month < 10 ? '0' : '') + month,
+    'DD': (day < 10 ? '0' : '') + day,
+    'M': String(month),
+    'D': String(day)
+  };
+
+  var result = '';
+  var i = 0;
+  while (i < formatStr.length) {
+    var matched = false;
+    // Try each token from longest to shortest
+    var tokenNames = ['YYYY', 'MM', 'DD', 'M', 'D'];
+    for (var t = 0; t < tokenNames.length; t++) {
+      var token = tokenNames[t];
+      if (formatStr.substr(i, token.length) === token) {
+        result += tokens[token];
+        i += token.length;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      // Check if this is an alphabetic sequence (potential unrecognized token)
+      var ch = formatStr.charAt(i);
+      if (ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z') {
+        // Gather the full alphabetic sequence
+        var start = i;
+        while (i < formatStr.length) {
+          var c = formatStr.charAt(i);
+          if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
+            i++;
+          } else {
+            break;
+          }
+        }
+        var unknownToken = formatStr.substring(start, i);
+        console.warn('[tomation] Unrecognized format token "' + unknownToken + '"');
+        result += unknownToken;
+      } else {
+        // Literal separator character (/, -, ., space, etc.)
+        result += ch;
+        i++;
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Resolve a dateHelper descriptor to a date string.
+ * @param {object} descriptor - { type, kind, offset?, boundary?, monthOffset?, format? }
+ * @returns {string} formatted date string
+ */
+function resolveDateHelper(descriptor) {
+  var now = new Date();
+  var resolved;
+
+  if (descriptor.kind === 'dayOffset') {
+    resolved = new Date(now.getFullYear(), now.getMonth(), now.getDate() + descriptor.offset);
+  } else if (descriptor.kind === 'monthBoundary') {
+    var targetMonth = now.getMonth() + descriptor.monthOffset;
+    var targetYear = now.getFullYear();
+
+    // Normalize month/year when targetMonth goes out of 0-11 range
+    targetYear += Math.floor(targetMonth / 12);
+    targetMonth = ((targetMonth % 12) + 12) % 12;
+
+    if (descriptor.boundary === 'first') {
+      resolved = new Date(targetYear, targetMonth, 1);
+    } else {
+      // Last day of month: day 0 of the next month gives last day of target month
+      resolved = new Date(targetYear, targetMonth + 1, 0);
+    }
+  } else {
+    resolved = now;
+  }
+
+  return formatDate(resolved, descriptor.format);
+}
+
+/**
+ * Evaluate an arithmetic expression string with param substitution.
+ * Supports: +, -, *, /, parentheses, identifiers (from params), numbers.
+ * Uses a simple recursive descent parser — no eval().
+ * @param {string} source - expression source text
+ * @param {object} params - parameter context
+ * @returns {string} result coerced to string, or '' on error
+ */
+function evaluateExpression(source, params) {
+  var pos = 0;
+  var src = source;
+
+  function skipWhitespace() {
+    while (pos < src.length && (src.charAt(pos) === ' ' || src.charAt(pos) === '\t')) {
+      pos++;
+    }
+  }
+
+  function parseNumber() {
+    skipWhitespace();
+    var start = pos;
+    // Handle leading negative for number literals only when not an operator context
+    if (pos < src.length && src.charAt(pos) === '.') {
+      pos++;
+    }
+    while (pos < src.length && src.charAt(pos) >= '0' && src.charAt(pos) <= '9') {
+      pos++;
+    }
+    if (pos < src.length && src.charAt(pos) === '.') {
+      pos++;
+      while (pos < src.length && src.charAt(pos) >= '0' && src.charAt(pos) <= '9') {
+        pos++;
+      }
+    }
+    if (pos === start) return null;
+    return parseFloat(src.substring(start, pos));
+  }
+
+  function parseIdentifier() {
+    skipWhitespace();
+    var start = pos;
+    var ch = src.charAt(pos);
+    if (!((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch === '_' || ch === '$')) {
+      return null;
+    }
+    pos++;
+    while (pos < src.length) {
+      ch = src.charAt(pos);
+      if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch === '_' || ch === '$') {
+        pos++;
+      } else {
+        break;
+      }
+    }
+    return src.substring(start, pos);
+  }
+
+  function parsePrimary() {
+    skipWhitespace();
+    if (pos >= src.length) return NaN;
+
+    var ch = src.charAt(pos);
+
+    // Parenthesized sub-expression
+    if (ch === '(') {
+      pos++; // consume '('
+      var val = parseAddSub();
+      skipWhitespace();
+      if (pos < src.length && src.charAt(pos) === ')') {
+        pos++; // consume ')'
+      }
+      return val;
+    }
+
+    // Unary minus
+    if (ch === '-') {
+      pos++;
+      var operand = parsePrimary();
+      return -operand;
+    }
+
+    // Unary plus
+    if (ch === '+') {
+      pos++;
+      return parsePrimary();
+    }
+
+    // Number literal
+    var num = parseNumber();
+    if (num !== null) return num;
+
+    // Reset pos if parseNumber consumed nothing (it shouldn't but be safe)
+    // Identifier → lookup from params
+    var ident = parseIdentifier();
+    if (ident !== null) {
+      var paramVal = (params && params.hasOwnProperty(ident)) ? params[ident] : 0;
+      return Number(paramVal);
+    }
+
+    // Unrecognized character
+    return NaN;
+  }
+
+  function parseMulDiv() {
+    var left = parsePrimary();
+    skipWhitespace();
+    while (pos < src.length && (src.charAt(pos) === '*' || src.charAt(pos) === '/')) {
+      var op = src.charAt(pos);
+      pos++;
+      var right = parsePrimary();
+      if (op === '*') {
+        left = left * right;
+      } else {
+        if (right === 0) {
+          console.warn('[tomation] Expression "' + source + '" division by zero');
+          return NaN;
+        }
+        left = left / right;
+      }
+      skipWhitespace();
+    }
+    return left;
+  }
+
+  function parseAddSub() {
+    var left = parseMulDiv();
+    skipWhitespace();
+    while (pos < src.length && (src.charAt(pos) === '+' || src.charAt(pos) === '-')) {
+      var op = src.charAt(pos);
+      pos++;
+      var right = parseMulDiv();
+      if (op === '+') {
+        left = left + right;
+      } else {
+        left = left - right;
+      }
+      skipWhitespace();
+    }
+    return left;
+  }
+
+  var result = parseAddSub();
+
+  if (result !== result || result === Infinity || result === -Infinity) {
+    // NaN check: result !== result is true only for NaN
+    if (result === result) {
+      // It's Infinity/-Infinity (not NaN), but check if it was division by zero
+      // Division by zero already warned above, but Infinity can also come from other sources
+      console.warn('[tomation] Expression "' + source + '" produced non-finite result');
+    } else {
+      console.warn('[tomation] Expression "' + source + '" produced non-finite result');
+    }
+    return '';
+  }
+
+  return String(result);
+}
+
+/**
+ * Resolve a runtimeTemplate descriptor to a string.
+ * @param {object} descriptor - { type: "runtimeTemplate", parts: Array }
+ * @param {object} params - current parameter context
+ * @returns {string} concatenated result
+ */
+function resolveRuntimeTemplate(descriptor, params) {
+  var parts = descriptor.parts;
+  var result = '';
+  for (var i = 0; i < parts.length; i++) {
+    var part = parts[i];
+    if (typeof part === 'string') {
+      result += part;
+    } else if (part && part.type === 'param') {
+      if (params && params.hasOwnProperty(part.name)) {
+        result += String(params[part.name]);
+      } else {
+        console.warn('[tomation] Missing param "' + part.name + '" — substituting empty string');
+        result += '';
+      }
+    } else if (part && part.type === 'dateHelper') {
+      result += String(resolveDateHelper(part));
+    } else if (part && part.type === 'expression') {
+      result += String(evaluateExpression(part.source, params));
+    } else {
+      result += String(part);
+    }
+  }
+  return result;
+}
+
+/**
  * Resolve all {{paramName}} tokens and $random values in a string.
  * Missing params are substituted with "" and a warning is logged.
  *
@@ -65,6 +350,18 @@ function generateRandom(len) {
  */
 function resolveValue(value, params) {
   if (value === undefined || value === null) return value;
+
+  // Object-typed runtime values (dateHelper, runtimeTemplate)
+  if (typeof value === 'object' && value !== null && value.type) {
+    switch (value.type) {
+      case 'dateHelper': return resolveDateHelper(value);
+      case 'runtimeTemplate': return resolveRuntimeTemplate(value, params);
+      default:
+        console.warn('[tomation] Unknown value descriptor type "' + value.type + '"');
+        return '';
+    }
+  }
+
   if (typeof value !== 'string') return value;
 
   // Resolve $random
