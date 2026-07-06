@@ -594,6 +594,15 @@ function buildStepMessage(step, pageElements, params) {
   if (step.name !== undefined) {
     msg.name = step.name;
   }
+  if (step.contextKey !== undefined) {
+    msg.contextKey = step.contextKey;
+  }
+  if (step.attributeName !== undefined) {
+    msg.attributeName = step.attributeName;
+  }
+  if (step.key !== undefined) {
+    msg.key = step.key;
+  }
 
   // Attach element descriptors for steps with a target
   if (step.target && pageElements) {

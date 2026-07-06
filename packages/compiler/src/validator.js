@@ -1,6 +1,33 @@
 'use strict';
 
 /**
+ * Known valid step action strings.
+ * Used for documentation and future validation of step actions.
+ */
+var KNOWN_ACTIONS = {
+  click: true,
+  type: true,
+  typePassword: true,
+  navigate: true,
+  wait: true,
+  waitGone: true,
+  assert: true,
+  assertText: true,
+  assertValue: true,
+  assertVisible: true,
+  assertNotVisible: true,
+  select: true,
+  hover: true,
+  clear: true,
+  task: true,
+  'if': true,
+  saveText: true,
+  saveAttribute: true,
+  saveValue: true,
+  saveExpression: true
+};
+
+/**
  * validateSpec(obj)
  *
  * Validates a parsed spec object against the tomation-spec format.
@@ -315,4 +342,4 @@ function collectTaskRefs(steps) {
   return refs;
 }
 
-module.exports = { validateSpec };
+module.exports = { validateSpec, KNOWN_ACTIONS };
