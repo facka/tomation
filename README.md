@@ -106,6 +106,77 @@ Open the Tomation browser extension panel, load your `.tomation.json`, and run t
 - **Browser extension runtime** — Execute tests directly in the browser with visual feedback
 - **Watch mode** — `npx tomation watch` for live recompilation during development
 
+## DSL Reference
+
+### Date Helpers
+
+Date helpers resolve to formatted date strings at test execution time, so your tests stay valid regardless of when they run.
+
+#### Day-offset helpers
+
+```typescript
+Type(today()).in(dateInput)           // today's date: 2025-07-06
+Type(tomorrow()).in(dateInput)        // +1 day
+Type(yesterday()).in(dateInput)       // -1 day
+Type(nextWeek()).in(dateInput)        // +7 days
+Type(lastWeek()).in(dateInput)        // -7 days
+Type(nextMonth()).in(dateInput)       // +30 days
+Type(lastMonth()).in(dateInput)       // -30 days
+```
+
+#### Month-boundary helpers
+
+```typescript
+Type(firstDateOfMonth(0)).in(dateInput)    // 1st of current month
+Type(lastDateOfMonth(0)).in(dateInput)     // last day of current month
+Type(firstDateOfMonth(-1)).in(dateInput)   // 1st of previous month
+Type(lastDateOfMonth(1)).in(dateInput)     // last day of next month
+```
+
+#### Custom format strings
+
+All date helpers accept an optional format string. The default is `YYYY-MM-DD`.
+
+```typescript
+Type(today('MM/DD/YYYY')).in(dateInput)              // 07/06/2025
+Type(tomorrow('DD-MM-YYYY')).in(dateInput)           // 07-07-2025
+Type(firstDateOfMonth(0, 'M/D/YYYY')).in(dateInput)  // 7/1/2025
+```
+
+Supported tokens: `YYYY` (4-digit year), `MM` (zero-padded month), `DD` (zero-padded day), `M` (month), `D` (day). Separators (`/`, `-`, `.`) are preserved as-is.
+
+### Runtime Template Strings
+
+Template literals with `${}` expressions are evaluated at runtime, enabling dynamic value construction.
+
+#### Parameter references
+
+```typescript
+Type(`Hello ${username}`).in(greetingInput)
+```
+
+#### Date helpers inside templates
+
+```typescript
+Type(`Appointment on ${tomorrow()} at ${time}`).in(noteInput)
+```
+
+#### Arithmetic expressions
+
+```typescript
+Type(`Item ${count + 1}`).in(itemInput)
+Type(`Total: ${price * quantity}`).in(totalInput)
+```
+
+#### Combined example
+
+```typescript
+const bookAppointment = Task((params) => {
+  const { doctor, slot } = params
+  Type(`Dr. ${doctor} - ${tomorrow('MM/DD')} at ${slot}`).in(appointmentField)
+}).as('Book Appointment')
+```
+
 ## Project Structure
 
 ```
