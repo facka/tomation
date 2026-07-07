@@ -96,6 +96,42 @@ function idIs(id) {
   return { id: id };
 }
 
+function valueIs(val) {
+  return { value: val };
+}
+
+function ariaLabel(val) {
+  return { ariaLabel: val };
+}
+
+function roleIs(val) {
+  return { role: val };
+}
+
+function titleIs(val) {
+  return { title: val };
+}
+
+function hrefContains(val) {
+  return { hrefContains: val };
+}
+
+function isDisabled() {
+  return { isDisabled: true };
+}
+
+function nthChild(n) {
+  return { nthChild: n };
+}
+
+function dataAttr(name, val) {
+  return { dataAttr: { name: name, value: val } };
+}
+
+function closestLabelIs(tag, text) {
+  return { closestLabel: { tag: tag, text: text } };
+}
+
 // --- Task and Test ---
 
 function Task(fn) {
@@ -367,6 +403,15 @@ module.exports = {
   nameIs: nameIs,
   typeIs: typeIs,
   idIs: idIs,
+  valueIs: valueIs,
+  ariaLabel: ariaLabel,
+  roleIs: roleIs,
+  titleIs: titleIs,
+  hrefContains: hrefContains,
+  isDisabled: isDisabled,
+  nthChild: nthChild,
+  dataAttr: dataAttr,
+  closestLabelIs: closestLabelIs,
   // Task and Test
   Task: Task,
   Test: Test,

@@ -13,6 +13,15 @@ export interface WhereDescriptor {
   placeholder?: string;
   name?: string;
   type?: string;
+  value?: string;
+  dataAttr?: { name: string; value: string };
+  ariaLabel?: string;
+  role?: string;
+  title?: string;
+  hrefContains?: string;
+  isDisabled?: boolean;
+  nthChild?: number;
+  closestLabel?: { tag: string; text: string };
 }
 
 /**
@@ -25,7 +34,16 @@ export type WhereMatcher =
   | { placeholder: string }
   | { name: string }
   | { type: string }
-  | { id: string };
+  | { id: string }
+  | { value: string }
+  | { dataAttr: { name: string; value: string } }
+  | { ariaLabel: string }
+  | { role: string }
+  | { title: string }
+  | { hrefContains: string }
+  | { isDisabled: true }
+  | { nthChild: number }
+  | { closestLabel: { tag: string; text: string } };
 
 // --- Element Descriptors ---
 
@@ -98,6 +116,15 @@ export declare function placeholderIs(ph: string): { placeholder: string };
 export declare function nameIs(name: string): { name: string };
 export declare function typeIs(type: string): { type: string };
 export declare function idIs(id: string): { id: string };
+export declare function valueIs(val: string): { value: string };
+export declare function dataAttr(name: string, val: string): { dataAttr: { name: string; value: string } };
+export declare function ariaLabel(val: string): { ariaLabel: string };
+export declare function roleIs(val: string): { role: string };
+export declare function titleIs(val: string): { title: string };
+export declare function hrefContains(val: string): { hrefContains: string };
+export declare function isDisabled(): { isDisabled: true };
+export declare function nthChild(n: number): { nthChild: number };
+export declare function closestLabelIs(tag: string, text: string): { closestLabel: { tag: string; text: string } };
 
 // --- XPath Element Constructor ---
 
