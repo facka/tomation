@@ -172,15 +172,87 @@ function isMethodCall(node, methodName) {
  * e.g., innerTextIs('Login') → { textIs: 'Login' }
  *
  * @param {object} callNode - CallExpression for the matcher factory
+ * @param {Array} [warnings] - mutable warnings array
+ * @param {string} [filePath] - current file path for warning messages
  * @returns {object} where descriptor or empty object
  */
-function extractMatcherCall(callNode) {
+function extractMatcherCall(callNode, warnings, filePath) {
   if (!callNode || callNode.type !== 'CallExpression') return {};
   const callee = callNode.callee;
   const calleeName = callee.type === 'Identifier' ? callee.name : null;
   if (!calleeName) return {};
 
-  const arg = extractString(callNode.arguments[0]);
+  if (!warnings) warnings = [];
+  const args = callNode.arguments;
+  const line = lineOf(callNode);
+
+  // --- Special-shape matchers ---
+
+  // 0-arg: isDisabled
+  if (calleeName === 'isDisabled') {
+    if (args.length > 0) {
+      warnings.push({
+        message: `'isDisabled' accepts zero arguments at ${filePath}:${line}`,
+        filePath,
+        line,
+      });
+    }
+    return { isDisabled: true };
+  }
+
+  // Numeric-arg: nthChild
+  if (calleeName === 'nthChild') {
+    const n = extractNumber(args[0]);
+    if (n === null || !Number.isInteger(n) || n < 1) {
+      warnings.push({
+        message: `'nthChild' requires a positive integer argument at ${filePath}:${line}`,
+        filePath,
+        line,
+      });
+      return {};
+    }
+    return { nthChild: n };
+  }
+
+  // 2-arg string: dataAttr
+  if (calleeName === 'dataAttr') {
+    const name = extractString(args[0]);
+    const val = extractString(args[1]);
+    if (name === null || val === null) {
+      warnings.push({
+        message: `'dataAttr' requires two string arguments at ${filePath}:${line}`,
+        filePath,
+        line,
+      });
+      return {};
+    }
+    if (name.startsWith('data-')) {
+      warnings.push({
+        message: `'dataAttr' name should be the suffix only (e.g., 'testid' not 'data-testid') at ${filePath}:${line}`,
+        filePath,
+        line,
+      });
+    }
+    return { dataAttr: { name: name, value: val } };
+  }
+
+  // 2-arg string: closestLabelIs
+  if (calleeName === 'closestLabelIs') {
+    const tag = extractString(args[0]);
+    const text = extractString(args[1]);
+    if (tag === null || text === null) {
+      warnings.push({
+        message: `'closestLabelIs' requires two string arguments at ${filePath}:${line}`,
+        filePath,
+        line,
+      });
+      return {};
+    }
+    return { closestLabel: { tag: tag, text: text } };
+  }
+
+  // --- Standard 1-arg string matchers ---
+  const arg = extractString(args[0]);
   if (arg === null) return {};
 
   const matcherMap = {
@@ -191,6 +263,12 @@ function extractMatcherCall(callNode) {
     nameIs: 'name',
     typeIs: 'type',
     idIs: 'id',
+    // New single-arg matchers
+    valueIs: 'value',
+    ariaLabel: 'ariaLabel',
+    roleIs: 'role',
+    titleIs: 'title',
+    hrefContains: 'hrefContains',
   };
 
   const key = matcherMap[calleeName];
@@ -208,11 +286,13 @@ function extractMatcherCall(callNode) {
  *
  * @param {object} node - VariableDeclarator AST node
  * @param {string} filePath - current file path for error reporting
+ * @param {Array} [warnings] - mutable warnings array for matcher extraction diagnostics
  * @returns {{ element: object|null, error: object|null }}
  */
-function extractElement(node, filePath) {
+function extractElement(node, filePath, warnings) {
   if (node.type !== 'VariableDeclarator') return { element: null, error: null };
   if (!node.init || node.init.type !== 'CallExpression') return { element: null, error: null };
+  if (!warnings) warnings = [];
 
   let current = node.init;
   let label = null;
@@ -272,7 +352,7 @@ function extractElement(node, filePath) {
       }
       const arg = current.arguments[0];
       if (arg && arg.type === 'CallExpression') {
-        matchers = extractMatcherCall(arg);
+        matchers = extractMatcherCall(arg, warnings, filePath);
       }
       current = current.callee.object;
     } else if (methodName === 'childOf') {
@@ -1762,7 +1842,7 @@ function parseSource(source, filePath) {
     if (node.type !== 'VariableDeclaration') return;
     for (const declarator of node.declarations) {
       // Try tag-based element pattern first
-      const { element, error } = extractElement(declarator, filePath);
+      const { element, error } = extractElement(declarator, filePath, result.warnings);
       if (error) {
         result.warnings.push(error);
       }
@@ -1840,4 +1920,4 @@ function parseSource(source, filePath) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractStep, extractElementRef, extractIfStep, extractCondition, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };
+module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractStep, extractElementRef, extractIfStep, extractCondition, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };

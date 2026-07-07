@@ -32,8 +32,8 @@ Add 9 new `where` matchers (valueIs, dataAttr, ariaLabel, roleIs, titleIs, hrefC
     - **Property 2: Two-arg matcher factory round-trip**
     - **Validates: Requirements 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 8.1, 10.1**
 
-- [ ] 2. Extend compiler `extractMatcherCall` for new matcher shapes
-  - [ ] 2.1 Add special-case branches in `packages/compiler/src/parser.js`
+- [x] 2. Extend compiler `extractMatcherCall` for new matcher shapes
+  - [x] 2.1 Add special-case branches in `packages/compiler/src/parser.js`
     - Update `extractMatcherCall` signature to accept `warnings` and `filePath` parameters
     - Add `isDisabled` 0-arg branch: emit `{ isDisabled: true }`, warn if args > 0
     - Add `nthChild` numeric-arg branch: use `extractNumber`, emit `{ nthChild: n }`, warn if not a positive integer
