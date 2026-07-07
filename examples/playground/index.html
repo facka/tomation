@@ -1,155 +1,240 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tomation Playground</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Sora', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular']
+          },
+          colors: {
+            neon: '#22c55e',
+            surface: '#090c14'
+          },
+          boxShadow: {
+            glow: '0 0 0 1px rgba(34,197,94,.2), 0 0 40px rgba(34,197,94,.12)'
+          }
+        }
+      }
+    };
+  </script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
-      color: #1c2024;
-      background: #fafafa;
+      background:
+        radial-gradient(circle at 15% 10%, rgba(34,197,94,0.16), transparent 28%),
+        radial-gradient(circle at 85% 5%, rgba(16,185,129,0.15), transparent 30%),
+        linear-gradient(160deg, #020617 0%, #050b1b 35%, #020617 100%);
+      min-height: 100vh;
+    }
+
+    .grid-noise {
+      background-image:
+        linear-gradient(rgba(148,163,184,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148,163,184,0.05) 1px, transparent 1px);
+      background-size: 36px 36px;
+    }
+
+    .code-scroll::-webkit-scrollbar {
+      height: 8px;
+      width: 8px;
+    }
+
+    .code-scroll::-webkit-scrollbar-track {
+      background: #0b1327;
+      border-radius: 999px;
+    }
+
+    .code-scroll::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 999px;
+    }
+
+    pre[class*="language-"] {
+      margin: 0;
+      background: transparent;
+      border: 0;
+      padding: 0;
+      text-shadow: none;
+    }
+
+    code[class*="language-"] {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
       line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
+      text-shadow: none;
     }
-    .container { max-width: 720px; margin: 0 auto; padding: 48px 24px; }
-
-    /* Hero */
-    .hero { text-align: center; margin-bottom: 48px; }
-    .hero h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 12px; }
-    .hero p { font-size: 16px; color: #5c6370; max-width: 520px; margin: 0 auto; }
-    .badge { display: inline-block; background: #eef0ff; color: #5e6ad2; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px; margin-bottom: 16px; }
-
-    /* Cards */
-    .examples { display: flex; flex-direction: column; gap: 16px; }
-    .card {
-      background: #fff;
-      border: 1px solid #e4e7eb;
-      border-radius: 12px;
-      padding: 20px 24px;
-      transition: box-shadow 0.15s, border-color 0.15s;
-    }
-    .card:hover { border-color: #d0d5db; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-    .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-    .card h3 { font-size: 16px; font-weight: 600; }
-    .card p { font-size: 14px; color: #5c6370; margin-bottom: 12px; }
-    .card-actions { display: flex; gap: 8px; }
-    .btn {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 7px 14px; font-size: 13px; font-weight: 500;
-      border: 1px solid #e4e7eb; border-radius: 6px;
-      background: #fff; color: #1c2024; cursor: pointer;
-      text-decoration: none; transition: all 0.12s;
-    }
-    .btn:hover { background: #f0f2f5; border-color: #d0d5db; }
-    .btn-primary { background: #5e6ad2; color: #fff; border-color: #5e6ad2; }
-    .btn-primary:hover { background: #4e5ab8; }
-
-    /* Modal */
-    .modal-overlay {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.5); z-index: 100;
-      align-items: center; justify-content: center;
-    }
-    .modal-overlay.active { display: flex; }
-    .modal {
-      background: #fff; border-radius: 12px;
-      width: 90%; max-width: 680px; max-height: 80vh;
-      display: flex; flex-direction: column;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-    }
-    .modal-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 20px; border-bottom: 1px solid #e4e7eb;
-    }
-    .modal-header h3 { font-size: 15px; font-weight: 600; }
-    .modal-close {
-      background: none; border: none; font-size: 20px;
-      cursor: pointer; color: #5c6370; padding: 4px 8px; border-radius: 4px;
-    }
-    .modal-close:hover { background: #f0f2f5; }
-    .modal-tabs {
-      display: flex; border-bottom: 1px solid #e4e7eb;
-      padding: 0 20px;
-    }
-    .modal-tab {
-      padding: 10px 14px; font-size: 13px; font-weight: 500;
-      border: none; background: none; cursor: pointer;
-      color: #5c6370; border-bottom: 2px solid transparent;
-      margin-bottom: -1px;
-    }
-    .modal-tab.active { color: #5e6ad2; border-bottom-color: #5e6ad2; }
-    .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
-    .modal-body pre {
-      background: #f8f9fa; border: 1px solid #e4e7eb; border-radius: 8px;
-      padding: 16px; font-size: 13px; line-height: 1.5;
-      font-family: "SF Mono", "JetBrains Mono", "Fira Code", monospace;
-      overflow-x: auto; white-space: pre; tab-size: 2;
-    }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-
-    /* Footer */
-    .footer { text-align: center; margin-top: 48px; color: #8b929a; font-size: 13px; }
-    .footer a { color: #5e6ad2; text-decoration: none; }
-    .footer a:hover { text-decoration: underline; }
   </style>
 </head>
-<body>
-  <div class="container">
-    <div class="hero">
-      <span class="badge">Playground</span>
-      <h1>Tomation</h1>
-      <p>A TypeScript-first browser automation framework. Write readable UI tests, compile them, and run them directly in the browser.</p>
-    </div>
+<body class="text-slate-100 antialiased">
+  <div class="pointer-events-none absolute inset-0 grid-noise opacity-30"></div>
 
-    <div class="examples">
-      <div class="card">
-        <div class="card-header"><h3>Login</h3></div>
-        <p>Simple login form with validation — tests credential flows and error messages.</p>
-        <div class="card-actions">
-          <a href="login/index.html" class="btn btn-primary">Open App</a>
-          <button class="btn" onclick="showCode('login')">View Tests</button>
+  <main class="relative mx-auto w-full max-w-6xl px-5 pb-16 pt-10 sm:px-8 sm:pt-14">
+    <section class="mb-14 overflow-hidden rounded-3xl border border-emerald-500/25 bg-slate-900/60 p-7 shadow-glow backdrop-blur xl:p-12">
+      <div class="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+        <div class="max-w-2xl space-y-5">
+          <span class="inline-flex items-center rounded-full border border-emerald-400/35 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">Playground</span>
+          <h1 class="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">Build Browser UI Tests with a Clean, Type-Safe DX</h1>
+          <p class="max-w-xl text-sm text-slate-300 sm:text-base">Tomation helps you write readable TypeScript tests, compile them, and run them directly in the browser. Explore real examples you can run right now.</p>
+          <a href="#examples" class="inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-bold text-emerald-950 transition hover:-translate-y-0.5 hover:bg-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">View Examples
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 3a1 1 0 0 1 1 1v9.586l2.293-2.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 1.414-1.414L9 13.586V4a1 1 0 0 1 1-1Z" clip-rule="evenodd"/></svg>
+          </a>
+        </div>
+
+        <div class="w-full max-w-sm rounded-2xl border border-slate-700/70 bg-slate-950/80 p-4">
+          <div class="mb-3 flex items-center gap-2">
+            <span class="h-2.5 w-2.5 rounded-full bg-red-400"></span>
+            <span class="h-2.5 w-2.5 rounded-full bg-amber-300"></span>
+            <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+            <span class="ml-2 text-xs text-slate-400">tomation run examples</span>
+          </div>
+<pre class="font-mono text-xs leading-6 text-slate-300"><span class="text-emerald-300">✓</span> login.test.ts
+<span class="text-emerald-300">✓</span> navigation.test.ts
+<span class="text-emerald-300">✓</span> todo.test.ts</pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="examples" class="space-y-6">
+      <div class="flex items-end justify-between gap-3">
+        <div>
+          <h2 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">Code Showcase</h2>
+          <p class="mt-2 text-sm text-slate-300">Your current 3 examples presented in a modern editor-style layout.</p>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-header"><h3>Navigation Wizard</h3></div>
-        <p>Multi-page wizard with back/next navigation — tests page transitions and assertions across routes.</p>
-        <div class="card-actions">
-          <a href="navigation/index.html" class="btn btn-primary">Open App</a>
-          <button class="btn" onclick="showCode('navigation')">View Tests</button>
-        </div>
+      <div class="grid gap-5 lg:grid-cols-3">
+        <article class="group rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 transition hover:-translate-y-1 hover:border-emerald-400/60 hover:shadow-glow">
+          <div class="mb-4 rounded-xl border border-slate-700 bg-slate-950">
+            <div class="flex items-center gap-2 border-b border-slate-700 px-3 py-2">
+              <span class="h-2.5 w-2.5 rounded-full bg-red-400"></span>
+              <span class="h-2.5 w-2.5 rounded-full bg-amber-300"></span>
+              <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+              <span class="ml-2 text-xs font-medium text-slate-400">login.test.ts</span>
+            </div>
+<pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">Test('Login with valid credentials', () => {
+  Login.fillCredentials({ username: 'admin', password: 'password123' })
+  Login.submit()
+  AssertHasText(Login.message, 'Login successful')
+})</code></pre>
+          </div>
+          <h3 class="text-lg font-semibold text-white">Login</h3>
+          <p class="mb-4 mt-1 text-sm text-slate-300">Authentication flow with validation and error handling.</p>
+          <div class="flex gap-2">
+            <a href="login/index.html" class="inline-flex flex-1 items-center justify-center rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-300">Open App</a>
+            <button class="inline-flex flex-1 items-center justify-center rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-emerald-400/70" onclick="showCode('login')">View Tests</button>
+          </div>
+        </article>
+
+        <article class="group rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 transition hover:-translate-y-1 hover:border-emerald-400/60 hover:shadow-glow">
+          <div class="mb-4 rounded-xl border border-slate-700 bg-slate-950">
+            <div class="flex items-center gap-2 border-b border-slate-700 px-3 py-2">
+              <span class="h-2.5 w-2.5 rounded-full bg-red-400"></span>
+              <span class="h-2.5 w-2.5 rounded-full bg-amber-300"></span>
+              <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+              <span class="ml-2 text-xs font-medium text-slate-400">navigation.test.ts</span>
+            </div>
+<pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">Test('Full wizard navigation flow', () => {
+  Navigate('navigation/index.html')
+  Navigation.verifyStep1()
+  Navigate('page2.html')
+  Navigate('page3.html')
+})</code></pre>
+          </div>
+          <h3 class="text-lg font-semibold text-white">Navigation Wizard</h3>
+          <p class="mb-4 mt-1 text-sm text-slate-300">Multi-step page transitions with cross-page assertions.</p>
+          <div class="flex gap-2">
+            <a href="navigation/index.html" class="inline-flex flex-1 items-center justify-center rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-300">Open App</a>
+            <button class="inline-flex flex-1 items-center justify-center rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-emerald-400/70" onclick="showCode('navigation')">View Tests</button>
+          </div>
+        </article>
+
+        <article class="group rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 transition hover:-translate-y-1 hover:border-emerald-400/60 hover:shadow-glow">
+          <div class="mb-4 rounded-xl border border-slate-700 bg-slate-950">
+            <div class="flex items-center gap-2 border-b border-slate-700 px-3 py-2">
+              <span class="h-2.5 w-2.5 rounded-full bg-red-400"></span>
+              <span class="h-2.5 w-2.5 rounded-full bg-amber-300"></span>
+              <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+              <span class="ml-2 text-xs font-medium text-slate-400">todo.test.ts</span>
+            </div>
+<pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">Test('Add a todo item and verify it exists', () => {
+  Todo.addItem({ text: 'Buy groceries' })
+  AssertExists(Todo.firstItem)
+  AssertHasText(Todo.firstItemText, 'Buy groceries')
+})</code></pre>
+          </div>
+          <h3 class="text-lg font-semibold text-white">Todo List</h3>
+          <p class="mb-4 mt-1 text-sm text-slate-300">Dynamic DOM interactions with highly readable tests.</p>
+          <div class="flex gap-2">
+            <a href="todo/index.html" class="inline-flex flex-1 items-center justify-center rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-300">Open App</a>
+            <button class="inline-flex flex-1 items-center justify-center rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-emerald-400/70" onclick="showCode('todo')">View Tests</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="mt-12 space-y-6">
+      <div>
+        <h2 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">Key Features</h2>
       </div>
 
-      <div class="card">
-        <div class="card-header"><h3>Todo List</h3></div>
-        <p>Add, view, and delete todo items — tests dynamic DOM interactions and element presence assertions.</p>
-        <div class="card-actions">
-          <a href="todo/index.html" class="btn btn-primary">Open App</a>
-          <button class="btn" onclick="showCode('todo')">View Tests</button>
-        </div>
-      </div>
-    </div>
+      <div class="grid gap-5 lg:grid-cols-2">
+        <article class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-5">
+          <span class="inline-flex rounded-full border border-emerald-400/35 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">Where Matchers</span>
+          <h3 class="mt-3 text-xl font-semibold text-white">Declarative Element Targeting</h3>
+          <p class="mt-2 text-sm text-slate-300">Define UI elements with readable selectors such as <span class="font-mono text-emerald-200">is.BUTTON.where(idIs('login-btn')).as('Submit')</span> to keep tests explicit and maintainable.</p>
+          <div class="mt-4 rounded-xl border border-slate-700 bg-slate-950 p-3">
+<pre class="code-scroll overflow-x-auto"><code class="language-typescript">const submitButton = is.BUTTON
+  .where(idIs('login-btn'))
+  .as('Submit')</code></pre>
+          </div>
+        </article>
 
-    <div class="footer">
-      <p>Install the <a href="https://github.com/facka/tomation">Tomation extension</a> to run these tests in the browser side panel.</p>
+        <article class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-5">
+          <span class="inline-flex rounded-full border border-emerald-400/35 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">Save To Context</span>
+          <h3 class="mt-3 text-xl font-semibold text-white">Capture Dynamic Values for Later Steps</h3>
+          <p class="mt-2 text-sm text-slate-300">Store runtime values from the DOM and reuse them in later steps to keep multi-step flows robust and data-aware.</p>
+          <div class="mt-4 rounded-xl border border-slate-700 bg-slate-950 p-3">
+<pre class="code-scroll overflow-x-auto"><code class="language-typescript">SaveText(orderIdLabel).as('orderId')
+Type('{{ctx.orderId}}').in(searchInput)</code></pre>
+          </div>
+        </article>
+
+        <article class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-5 lg:col-span-2">
+          <span class="inline-flex rounded-full border border-emerald-400/35 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">TypeScript-First</span>
+          <h3 class="mt-3 text-xl font-semibold text-white">Author Fast with Reusable Tasks and Strong Typing</h3>
+          <p class="mt-2 text-sm text-slate-300">Create reusable tasks, compose test scenarios, and compile them into portable .tomation.json files that run in the browser extension with visual feedback.</p>
+        </article>
+      </div>
+    </section>
+
+    <footer class="mt-12 text-center text-sm text-slate-400">
+      Install the <a class="font-semibold text-emerald-300 hover:text-emerald-200" href="https://github.com/facka/tomation">Tomation extension</a> to run these tests in the browser side panel.
+    </footer>
+  </main>
+
+  <div class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm" id="modal-overlay" onclick="closeModal(event)">
+    <div class="max-h-[85vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-700 bg-slate-950" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between border-b border-slate-700 px-5 py-3">
+        <h3 id="modal-title" class="text-sm font-semibold text-white">Test Source</h3>
+        <button class="rounded-md p-1 text-xl leading-none text-slate-400 hover:bg-slate-800 hover:text-white" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="flex items-center gap-2 border-b border-slate-700 px-5 py-2" id="modal-tabs"></div>
+      <div class="code-scroll overflow-y-auto p-5" id="modal-body"></div>
     </div>
   </div>
 
-  <!-- Code Modal -->
-  <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
-    <div class="modal" onclick="event.stopPropagation()">
-      <div class="modal-header">
-        <h3 id="modal-title">Test Source</h3>
-        <button class="modal-close" onclick="closeModal()">&times;</button>
-      </div>
-      <div class="modal-tabs" id="modal-tabs"></div>
-      <div class="modal-body" id="modal-body"></div>
-    </div>
-  </div>
-
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
   <script>
     var sources = {
       login: {
@@ -308,41 +393,67 @@ export default { input, addButton, list, firstItem, firstItemText, deleteButton,
       for (var i = 0; i < data.tabs.length; i++) {
         var tab = data.tabs[i];
         var btn = document.createElement('button');
-        btn.className = 'modal-tab' + (i === 0 ? ' active' : '');
+        btn.className = 'rounded-md border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:border-emerald-400/70 hover:text-emerald-200' + (i === 0 ? ' border-emerald-400/70 bg-emerald-500/10 text-emerald-200' : '');
         btn.textContent = tab.name;
         btn.setAttribute('data-index', i);
-        btn.onclick = function() { switchTab(this.getAttribute('data-index'), example); };
+        btn.onclick = function() { switchTab(this.getAttribute('data-index')); };
         tabsEl.appendChild(btn);
 
         var content = document.createElement('div');
-        content.className = 'tab-content' + (i === 0 ? ' active' : '');
+        content.className = i === 0 ? 'block' : 'hidden';
         content.setAttribute('data-tab-index', i);
+
+        var wrapper = document.createElement('div');
+        wrapper.className = 'rounded-xl border border-slate-700 bg-[#0a1022]';
+
         var pre = document.createElement('pre');
-        pre.textContent = tab.code;
-        content.appendChild(pre);
+        pre.className = 'code-scroll overflow-x-auto p-4';
+
+        var code = document.createElement('code');
+        code.className = 'language-typescript';
+        code.textContent = tab.code;
+
+        pre.appendChild(code);
+
+        if (window.Prism && typeof window.Prism.highlightElement === 'function') {
+          window.Prism.highlightElement(code);
+        }
+
+        wrapper.appendChild(pre);
+        content.appendChild(wrapper);
         bodyEl.appendChild(content);
       }
 
-      document.getElementById('modal-overlay').classList.add('active');
+      document.getElementById('modal-overlay').classList.remove('hidden');
+      document.getElementById('modal-overlay').classList.add('flex');
     }
 
-    function switchTab(index, example) {
-      var tabs = document.querySelectorAll('.modal-tab');
-      var contents = document.querySelectorAll('.tab-content');
+    function switchTab(index) {
+      var tabs = document.querySelectorAll('#modal-tabs button');
+      var contents = document.querySelectorAll('#modal-body [data-tab-index]');
       for (var i = 0; i < tabs.length; i++) {
-        tabs[i].classList.toggle('active', i == index);
-        contents[i].classList.toggle('active', i == index);
+        var isActive = i == index;
+        tabs[i].classList.toggle('border-emerald-400/70', isActive);
+        tabs[i].classList.toggle('bg-emerald-500/10', isActive);
+        tabs[i].classList.toggle('text-emerald-200', isActive);
+        contents[i].classList.toggle('hidden', !isActive);
+        contents[i].classList.toggle('block', isActive);
       }
     }
 
     function closeModal(event) {
       if (event && event.target !== document.getElementById('modal-overlay')) return;
-      document.getElementById('modal-overlay').classList.remove('active');
+      document.getElementById('modal-overlay').classList.remove('flex');
+      document.getElementById('modal-overlay').classList.add('hidden');
     }
 
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') closeModal();
     });
+
+    if (window.Prism && typeof window.Prism.highlightAll === 'function') {
+      window.Prism.highlightAll();
+    }
   </script>
 </body>
 </html>

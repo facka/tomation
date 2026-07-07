@@ -1,26 +1,31 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Step 1: Welcome - Navigation Playground</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #f0f4f8; }
-    .wizard-container { background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 400px; text-align: center; }
-    h1 { margin-bottom: 1rem; font-size: 1.5rem; color: #333; }
-    .step-indicator { margin-bottom: 1.5rem; color: #666; font-size: 0.875rem; }
-    p { margin-bottom: 1.5rem; color: #555; line-height: 1.5; }
-    a.btn { display: inline-block; padding: 0.6rem 1.5rem; background: #4a90d9; color: #fff; text-decoration: none; border-radius: 4px; font-size: 1rem; }
-    a.btn:hover { background: #357abd; }
+    body {
+      font-family: Sora, ui-sans-serif, system-ui;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(34,197,94,0.2), transparent 36%),
+        radial-gradient(circle at 84% 0%, rgba(52,211,153,0.16), transparent 35%),
+        linear-gradient(160deg, #020617 0%, #020b1c 45%, #020617 100%);
+    }
   </style>
 </head>
-<body>
-  <div class="wizard-container">
-    <div class="step-indicator" id="step-indicator">Step 1 of 3</div>
-    <h1 id="page-title">Welcome to the Wizard</h1>
-    <p id="page-description">This multi-step wizard demonstrates navigation between pages. Click Next to proceed to the information step.</p>
-    <a href="page2.html" class="btn" id="next-btn">Next</a>
-  </div>
+<body class="min-h-full text-slate-100 antialiased">
+  <main class="mx-auto flex min-h-screen w-full max-w-xl items-center px-5 py-10">
+    <section class="w-full rounded-3xl border border-emerald-500/25 bg-slate-900/70 p-7 text-center shadow-[0_0_0_1px_rgba(34,197,94,0.18),0_20px_80px_rgba(2,6,23,0.7)] backdrop-blur">
+      <div class="mb-5 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300" id="step-indicator">Step 1 of 3</div>
+      <h1 class="mb-4 text-3xl font-bold tracking-tight text-white" id="page-title">Welcome to the Wizard</h1>
+      <p class="mx-auto mb-7 max-w-md text-sm leading-6 text-slate-300" id="page-description">This multi-step wizard demonstrates navigation between pages. Click Next to proceed to the information step.</p>
+      <a href="page2.html" class="inline-flex rounded-xl bg-emerald-400 px-5 py-2.5 text-sm font-bold text-emerald-950 transition hover:bg-emerald-300" id="next-btn">Next</a>
+    </section>
+  </main>
 </body>
 </html>
