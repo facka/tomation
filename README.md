@@ -108,6 +108,134 @@ Open the Tomation browser extension panel, load your `.tomation.json`, and run t
 
 ## DSL Reference
 
+### Defining Page Elements
+
+Page elements are declared using the `is` builder, which provides a fluent API for describing how to locate elements on the page. Elements are defined in POM (Page Object Model) files.
+
+#### Basic element declaration
+
+The pattern is `is.TAG.where(matcher).as('Label')`:
+
+```typescript
+import { is, idIs, innerTextIs, classIncludes, placeholderIs, nameIs, typeIs } from '@tomationjs/dsl'
+
+const submitButton = is.BUTTON.where(idIs('submit-btn')).as('Submit Button')
+const emailInput = is.INPUT.where(nameIs('email')).as('Email Input')
+const heading = is.H1.where(innerTextIs('Welcome')).as('Page Heading')
+```
+
+Any uppercase HTML tag name works: `is.INPUT`, `is.BUTTON`, `is.DIV`, `is.FORM`, `is.SELECT`, `is.SPAN`, `is.H1`, etc.
+
+#### Where matchers
+
+The `.where()` method accepts a matcher factory that describes how to find the element:
+
+| Matcher | Matches on | Example |
+|---------|-----------|---------|
+| `idIs(value)` | Element `id` attribute | `is.INPUT.where(idIs('username'))` |
+| `innerTextIs(value)` | Exact text content | `is.BUTTON.where(innerTextIs('Login'))` |
+| `innerTextContains(value)` | Partial text content | `is.DIV.where(innerTextContains('Welcome'))` |
+| `classIncludes(value)` | CSS class name | `is.LI.where(classIncludes('active'))` |
+| `placeholderIs(value)` | Input placeholder | `is.INPUT.where(placeholderIs('Enter email'))` |
+| `nameIs(value)` | Element `name` attribute | `is.INPUT.where(nameIs('password'))` |
+| `typeIs(value)` | Input `type` attribute | `is.INPUT.where(typeIs('checkbox'))` |
+
+#### Scoping with childOf
+
+When multiple elements on the page match the same criteria, use `.childOf(parent)` to scope the search within a parent element:
+
+```typescript
+const loginForm = is.FORM.where(idIs('login-form')).as('Login Form')
+const submitButton = is.BUTTON.where(innerTextIs('Submit')).childOf(loginForm).as('Login Submit')
+
+const signupForm = is.FORM.where(idIs('signup-form')).as('Signup Form')
+const signupSubmit = is.BUTTON.where(innerTextIs('Submit')).childOf(signupForm).as('Signup Submit')
+```
+
+The `.childOf()` and `.where()` methods can be chained in any order:
+
+```typescript
+const child = is.INPUT.childOf(parentForm).where(typeIs('text')).as('Text Input')
+```
+
+#### XPath elements
+
+For complex selectors that can't be expressed with tag + where matchers, use XPath:
+
+```typescript
+import { Element } from '@tomationjs/dsl'
+
+const alert = Element('//div[@role="alert"]').as('Alert Box')
+const thirdRow = Element('//table/tbody/tr[3]').as('Third Row')
+```
+
+Or equivalently via the `is` proxy:
+
+```typescript
+const alert = is.ELEMENT('//div[@role="alert"]').as('Alert Box')
+```
+
+### Save to Context
+
+Save actions extract dynamic values during test execution and store them in a per-run context store. Later steps can reference saved values using `{{ctx.keyName}}` template syntax.
+
+#### SaveText — save an element's text content
+
+```typescript
+import { SaveText } from '@tomationjs/dsl'
+
+const confirmationCode = is.SPAN.where(idIs('confirmation-code')).as('Confirmation Code')
+
+SaveText(confirmationCode).as('code')
+// Later steps can use {{ctx.code}} to reference the saved text
+```
+
+#### SaveAttribute — save an element's attribute value
+
+```typescript
+import { SaveAttribute } from '@tomationjs/dsl'
+
+const link = is.A.where(classIncludes('generated-link')).as('Generated Link')
+
+SaveAttribute(link, 'href').as('linkUrl')
+// {{ctx.linkUrl}} now contains the href value
+```
+
+#### SaveValue — save an input element's current value
+
+```typescript
+import { SaveValue } from '@tomationjs/dsl'
+
+const orderIdInput = is.INPUT.where(idIs('order-id')).as('Order ID')
+
+SaveValue(orderIdInput).as('orderId')
+// {{ctx.orderId}} now contains the input's value
+```
+
+#### Save — save a computed expression
+
+`Save()` lets you compute a value (using date helpers or template strings) and store it for later reference:
+
+```typescript
+import { Save, today, tomorrow } from '@tomationjs/dsl'
+
+Save(tomorrow()).as('appointmentDate')
+Save(today('MM/DD/YYYY')).as('formattedToday')
+Save('static-value').as('myConstant')
+```
+
+#### Using saved values in later steps
+
+Reference saved context values with `{{ctx.keyName}}` in any step that accepts a string:
+
+```typescript
+Type('{{ctx.code}}').in(verificationInput)
+AssertHasText(dateLabel, '{{ctx.appointmentDate}}')
+Navigate('{{ctx.linkUrl}}')
+```
+
+Context values persist for the entire test run across task boundaries, but reset between runs. Overwriting a key simply stores the new value — no error is produced.
+
 ### Date Helpers
 
 Date helpers resolve to formatted date strings at test execution time, so your tests stay valid regardless of when they run.
