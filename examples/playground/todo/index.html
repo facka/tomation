@@ -1,66 +1,34 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Todo List — Tomation Playground</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
-      font-family: sans-serif;
-      max-width: 480px;
-      margin: 40px auto;
-      padding: 0 16px;
-    }
-    h1 { margin-bottom: 16px; }
-    .add-form {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 24px;
-    }
-    #todo-input {
-      flex: 1;
-      padding: 8px;
-      font-size: 14px;
-    }
-    #add-btn {
-      padding: 8px 16px;
-      font-size: 14px;
-      cursor: pointer;
-    }
-    #todo-list {
-      list-style: none;
-      padding: 0;
-    }
-    .todo-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 12px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      margin-bottom: 8px;
-    }
-    .todo-item span {
-      flex: 1;
-    }
-    .delete-btn {
-      background: #e74c3c;
-      color: #fff;
-      border: none;
-      padding: 4px 10px;
-      border-radius: 3px;
-      cursor: pointer;
-      font-size: 12px;
+      font-family: Sora, ui-sans-serif, system-ui;
+      background:
+        radial-gradient(circle at 20% 14%, rgba(34,197,94,0.2), transparent 35%),
+        radial-gradient(circle at 84% 5%, rgba(16,185,129,0.16), transparent 32%),
+        linear-gradient(160deg, #020617 0%, #020b1c 45%, #020617 100%);
     }
   </style>
 </head>
-<body>
-  <h1>Todo List</h1>
-  <div class="add-form">
-    <input type="text" id="todo-input" placeholder="Enter a task...">
-    <button id="add-btn">Add</button>
-  </div>
-  <ul id="todo-list"></ul>
+<body class="min-h-full text-slate-100 antialiased">
+  <main class="mx-auto min-h-screen w-full max-w-2xl px-5 py-10">
+    <section class="rounded-3xl border border-emerald-500/25 bg-slate-900/70 p-7 shadow-[0_0_0_1px_rgba(34,197,94,0.18),0_20px_80px_rgba(2,6,23,0.7)] backdrop-blur">
+      <h1 class="mb-5 text-3xl font-bold tracking-tight text-white">Todo List</h1>
+      <div class="add-form mb-6 flex gap-2">
+        <input type="text" id="todo-input" placeholder="Enter a task..." class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none">
+        <button id="add-btn" class="rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-bold text-emerald-950 transition hover:bg-emerald-300">Add</button>
+      </div>
+      <ul id="todo-list" class="space-y-2"></ul>
+    </section>
+  </main>
 
   <script>
     (function() {
@@ -73,14 +41,14 @@
         if (!text) return;
 
         var li = document.createElement('li');
-        li.className = 'todo-item';
+        li.className = 'todo-item flex items-center justify-between rounded-xl border border-slate-700 bg-slate-950 px-3 py-2';
 
         var span = document.createElement('span');
-        span.className = 'todo-text';
+        span.className = 'todo-text flex-1 text-sm text-slate-100';
         span.textContent = text;
 
         var del = document.createElement('button');
-        del.className = 'delete-btn';
+        del.className = 'delete-btn ml-3 rounded-lg border border-rose-500/40 bg-rose-500/15 px-3 py-1 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/25';
         del.textContent = 'Delete';
         del.addEventListener('click', function() {
           list.removeChild(li);
