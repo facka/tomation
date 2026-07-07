@@ -13,7 +13,7 @@ var TIMEOUT_5sec = 5000;
  * Check if a single DOM element matches all conditions in the `where` object.
  * All keys are evaluated as AND conditions.
  */
-function matchesWhere(el, where) {
+function matchesWhere(el, where, parentNode) {
   var keys = Object.keys(where);
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
@@ -40,11 +40,110 @@ function matchesWhere(el, where) {
       case 'type':
         if (el.getAttribute('type') !== value) return false;
         break;
+      case 'value':
+        if (el.value === undefined || el.value !== value) return false;
+        break;
+      case 'ariaLabel':
+        if (el.getAttribute('aria-label') !== value) return false;
+        break;
+      case 'role':
+        if (el.getAttribute('role') !== value) return false;
+        break;
+      case 'title':
+        if (el.getAttribute('title') !== value) return false;
+        break;
+      case 'hrefContains':
+        var href = el.getAttribute('href');
+        if (href === null || href.indexOf(value) === -1) return false;
+        break;
+      case 'isDisabled':
+        if (el.disabled !== true) return false;
+        break;
+      case 'dataAttr':
+        if (el.getAttribute('data-' + value.name) !== value.value) return false;
+        break;
+      case 'nthChild':
+        var pos = 1;
+        var sib = el.previousElementSibling;
+        while (sib) { pos++; sib = sib.previousElementSibling; }
+        if (pos !== value) return false;
+        break;
+      case 'closestLabel':
+        if (!matchClosestLabel(el, value, parentNode)) return false;
+        break;
       default:
         break;
     }
   }
   return true;
+}
+
+/**
+ * Search a subtree for an element matching the given tag and text content.
+ *
+ * @param {Element} root - The root element to search within
+ * @param {string} tag - The uppercase tag name to match
+ * @param {string} text - The expected trimmed textContent
+ * @returns {boolean}
+ */
+function searchSubtreeForLabel(root, tag, text) {
+  var candidates = root.getElementsByTagName(tag);
+  for (var i = 0; i < candidates.length; i++) {
+    if (candidates[i].textContent.trim() === text) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Determine if a label element matching the spec exists near the target element.
+ *
+ * @param {Element} el - target element
+ * @param {{ tag: string, text: string }} spec - label specification
+ * @param {Element|null} parentNode - childOf parent if present, null otherwise
+ * @returns {boolean}
+ */
+function matchClosestLabel(el, spec, parentNode) {
+  var tag = spec.tag.toUpperCase();
+  var text = spec.text;
+
+  // Strategy A: childOf-bounded search — search within parent subtree only
+  if (parentNode) {
+    return searchSubtreeForLabel(parentNode, tag, text);
+  }
+
+  // Strategy B: Unbounded search with max 3 ancestor levels
+
+  // B1: Explicit `for` attribute — find a matching-tag element with for=el.id
+  if (el.id) {
+    var forLabels = document.querySelectorAll(spec.tag + '[for="' + el.id + '"]');
+    for (var i = 0; i < forLabels.length; i++) {
+      if (forLabels[i].tagName === tag && forLabels[i].textContent.trim() === text) {
+        return true;
+      }
+    }
+  }
+
+  // B2: Walk up at most 3 ancestor levels, search descendants
+  var ancestor = el.parentElement;
+  for (var depth = 0; depth < 3 && ancestor; depth++) {
+    if (searchSubtreeForLabel(ancestor, tag, text)) {
+      return true;
+    }
+    ancestor = ancestor.parentElement;
+  }
+
+  // B3: aria-labelledby resolution
+  var labelledBy = el.getAttribute('aria-labelledby');
+  if (labelledBy) {
+    var refEl = document.getElementById(labelledBy);
+    if (refEl && refEl.tagName === tag && refEl.textContent.trim() === text) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -101,7 +200,7 @@ function findElement(descriptor, parentNode) {
     function poll() {
       var candidates = root.querySelectorAll(tag);
       for (var i = 0; i < candidates.length; i++) {
-        if (matchesWhere(candidates[i], where)) {
+        if (matchesWhere(candidates[i], where, root === document ? null : root)) {
           resolve(candidates[i]);
           return;
         }

@@ -55,8 +55,8 @@ Add 9 new `where` matchers (valueIs, dataAttr, ariaLabel, roleIs, titleIs, hrefC
 - [ ] 3. Checkpoint
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. Implement runtime DOM matching for new matchers
-  - [ ] 4.1 Add simple matcher cases to `matchesWhere` in `packages/extension/src/runtime.js`
+- [x] 4. Implement runtime DOM matching for new matchers
+  - [x] 4.1 Add simple matcher cases to `matchesWhere` in `packages/extension/src/runtime.js`
     - Add `value` case: check `el.value !== undefined && el.value === value`
     - Add `ariaLabel` case: check `el.getAttribute('aria-label') === value`
     - Add `role` case: check `el.getAttribute('role') === value`
@@ -67,7 +67,7 @@ Add 9 new `where` matchers (valueIs, dataAttr, ariaLabel, roleIs, titleIs, hrefC
     - Add `nthChild` case: count `previousElementSibling` chain for 1-based position
     - _Requirements: 1.3, 1.5, 2.3, 3.3, 3.5, 4.3, 5.3, 6.3, 6.5, 7.3, 8.3_
 
-  - [ ] 4.2 Implement `closestLabel` matching with `matchClosestLabel` algorithm
+  - [x] 4.2 Implement `closestLabel` matching with `matchClosestLabel` algorithm
     - Add `closestLabel` case to the `matchesWhere` switch that delegates to `matchClosestLabel`
     - Thread `parentNode` parameter through `matchesWhere` (pass `root === document ? null : root` from `findElement`)
     - Implement `matchClosestLabel(el, spec, parentNode)`:
@@ -91,8 +91,8 @@ Add 9 new `where` matchers (valueIs, dataAttr, ariaLabel, roleIs, titleIs, hrefC
 - [ ] 5. Checkpoint
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. Integration and wiring verification
-  - [ ] 6.1 Verify end-to-end compilation of all new matchers
+- [x] 6. Integration and wiring verification
+  - [x] 6.1 Verify end-to-end compilation of all new matchers
     - Write a small `.pom.ts` fixture file using all 9 new matchers in `.where()` chains
     - Verify the compiler produces correct `spec.json` output with all new where descriptors
     - Ensure no regressions in existing matcher compilation
