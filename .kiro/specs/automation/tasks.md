@@ -24,8 +24,8 @@ This plan implements the Automation feature across five layers: DSL stub/types, 
     - For any function `fn` and non-empty string `label`, `Automation(fn).as(label)` produces `{ __automation: true, fn, label }`
     - **Validates: Requirements 1.1, 1.2**
 
-- [ ] 2. Compiler — Automation param type extraction
-  - [ ] 2.1 Implement `extractAutomationParamTypes` in `packages/compiler/src/parser.js`
+- [x] 2. Compiler — Automation param type extraction
+  - [x] 2.1 Implement `extractAutomationParamTypes` in `packages/compiler/src/parser.js`
     - Use `ts.createSourceFile()` from the TypeScript compiler API to parse the raw TypeScript source into an AST
     - Walk the AST to find the `Automation(` call expression and locate the params type annotation on the function argument
     - For each property in the params type literal, extract the name, check for `questionToken` (optional `?` marker), and inspect the type node
@@ -34,13 +34,13 @@ This plan implements the Automation feature across five layers: DSL stub/types, 
     - For enum params (string union literals), include `options: string[]` containing the literal values in declaration order
     - _Requirements: 2.2, 2.3, 2.4, 2.5, 2.6, 2.9, 2.10_
 
-  - [ ] 2.2 Implement optional param extraction
+  - [x] 2.2 Implement optional param extraction
     - Detect `questionToken` on property signatures via the TS AST
     - Emit `optional: true` in the param metadata when present
     - Optional params without a default resolve to empty string at runtime
     - _Requirements: 8.1_
 
-  - [ ] 2.3 Implement enum/union literal type detection
+  - [x] 2.3 Implement enum/union literal type detection
     - Detect `ts.isUnionTypeNode` where all members are `ts.isLiteralTypeNode` with `ts.isStringLiteral`
     - Emit `type: "enum"` and `options: [...]` containing the string values in declaration order
     - If the union contains non-string-literal members, fall back to `"string"` with a warning
@@ -61,15 +61,15 @@ This plan implements the Automation feature across five layers: DSL stub/types, 
     - For any type annotation with whitespace, comments, or trailing commas, extraction produces the same result as a single-line equivalent
     - **Validates: Requirements 2.2, 2.9, 2.10**
 
-- [ ] 3. Compiler — Automation declaration extraction
-  - [ ] 3.1 Implement `extractAutomation` in `packages/compiler/src/parser.js`
+- [x] 3. Compiler — Automation declaration extraction
+  - [x] 3.1 Implement `extractAutomation` in `packages/compiler/src/parser.js`
     - Pattern match `const X = Automation(fn).as('Label')` using the same AST walking approach as `extractTask`
     - Extract label from `.as()` call, call `extractAutomationParamTypes` for params, reuse existing step extraction for the function body
     - Handle `params.X` references as `{{X}}` template placeholders (same as Task param resolution)
     - Return `{ automation: { name, label, params, steps, line }, error, warnings }`
     - _Requirements: 2.1, 2.7, 2.8, 1.4_
 
-  - [ ] 3.2 Integrate `extractAutomation` into `parseFile` / `parseSource`
+  - [x] 3.2 Integrate `extractAutomation` into `parseFile` / `parseSource`
     - Add `automations` array to the ParsedFile output shape
     - Walk VariableDeclarator nodes and attempt `extractAutomation` alongside existing `extractTask`/`extractTest`
     - Pass the raw TypeScript source (before stripping) to `extractAutomationParamTypes`

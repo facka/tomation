@@ -1,16 +1,17 @@
 'use strict';
 
 /**
- * parser.js — AST parsing of element declarations and Task/Test calls from DSL source files.
+ * parser.js — AST parsing of element declarations and Task/Test/Automation calls from DSL source files.
  *
  * Uses acorn to parse each file and walks the resulting AST to find:
  *   - const X = is.TAG.where(matcher).as('Label') → element declarations
  *   - const X = Element(xpath).as('Label') → XPath element declarations
  *   - Task('name', fn) / Test('name', fn) → task/test declarations
+ *   - const X = Automation(fn).as('Label') → automation declarations
  *
  * Exported API:
  *   parseFile(filePath) → ParsedFile
- *   parseSource(source, filePath) → ParsedFile
+ *   parseSource(source, filePath, rawSource?) → ParsedFile
  *
  * ParsedFile shape:
  * {
@@ -19,6 +20,7 @@
  *   elements: ElementDef[],  // element declarations
  *   tasks: TaskDef[],        // task declarations
  *   tests: TestDef[],        // test declarations
+ *   automations: AutomationDef[], // automation declarations
  *   error: null | { message: string, line: number }
  *   warnings: Array<{ message: string, filePath: string, line: number }>
  * }
@@ -28,6 +30,7 @@
 
 const fs = require('fs');
 const acorn = require('acorn');
+const ts = require('typescript');
 
 // ---------------------------------------------------------------------------
 // AST walk helper
@@ -568,6 +571,14 @@ function extractStringOrTemplate(node) {
   if (node.type === 'TemplateLiteral') return extractTemplateValue(node);
   // Handle variable references (e.g., destructured params) → template placeholder
   if (node.type === 'Identifier') return '{{' + node.name + '}}';
+  // Handle params.X member access → {{X}} template placeholder
+  if (
+    node.type === 'MemberExpression' &&
+    node.object && node.object.type === 'Identifier' &&
+    node.property && node.property.type === 'Identifier'
+  ) {
+    return '{{' + node.property.name + '}}';
+  }
   return null;
 }
 
@@ -863,6 +874,15 @@ function extractValueExpression(node, filePath, warnings) {
 
   // Identifier reference (e.g., destructured param variable)
   if (node.type === 'Identifier') return '{{' + node.name + '}}';
+
+  // MemberExpression reference (e.g., params.email) → {{email}}
+  if (
+    node.type === 'MemberExpression' &&
+    node.object && node.object.type === 'Identifier' &&
+    node.property && node.property.type === 'Identifier'
+  ) {
+    return '{{' + node.property.name + '}}';
+  }
 
   return null;
 }
@@ -1453,6 +1473,217 @@ function extractBodyDestructuring(stmt) {
   return params;
 }
 
+// ---------------------------------------------------------------------------
+// Automation param type extraction using TypeScript compiler API
+// Requirements: 2.2, 2.3, 2.4, 2.5, 2.6, 2.9, 2.10
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract typed parameter metadata from the raw TypeScript source of an Automation declaration.
+ *
+ * Uses ts.createSourceFile() for fast single-file AST parsing (no type-checking) to locate
+ * the Automation() call expression, find the function argument's params type annotation,
+ * and map each property to a ParamDef.
+ *
+ * Type mapping:
+ *   - StringKeyword → "string"
+ *   - NumberKeyword → "number"
+ *   - TypeReference with identifier "Date" → "date"
+ *   - UnionType where all members are string literals → "enum" with options[]
+ *   - Anything else → "string" with a warning
+ *
+ * @param {string} rawSource - The raw TypeScript source (before type stripping)
+ * @param {string} filePath - File path for error reporting
+ * @returns {{ params: Array<{name: string, type: string, optional?: boolean, options?: string[]}>, warnings: Array<{message: string, filePath: string, line: number}> }}
+ */
+function extractAutomationParamTypes(rawSource, filePath) {
+  const result = { params: [], warnings: [] };
+
+  // Parse the raw TypeScript source into an AST (fast, single-file, no type-checking)
+  var sourceFile;
+  try {
+    sourceFile = ts.createSourceFile(
+      filePath,
+      rawSource,
+      ts.ScriptTarget.Latest,
+      /* setParentNodes */ true,
+      ts.ScriptKind.TS
+    );
+  } catch (e) {
+    result.warnings.push({
+      message: `Failed to parse TypeScript source for param extraction: ${e.message}`,
+      filePath,
+      line: 1,
+    });
+    return result;
+  }
+
+  // Find the Automation() call expression in the source
+  var automationCall = null;
+  function findAutomationCall(node) {
+    if (automationCall) return; // already found
+
+    // Match: Automation(fn) or Automation(fn).as(...)
+    if (ts.isCallExpression(node)) {
+      var callee = node.expression;
+
+      // Pattern 1: Automation(fn).as('Label') — callee is PropertyAccessExpression
+      if (
+        ts.isPropertyAccessExpression(callee) &&
+        callee.name && callee.name.text === 'as' &&
+        ts.isCallExpression(callee.expression)
+      ) {
+        var innerCallee = callee.expression.expression;
+        if (ts.isIdentifier(innerCallee) && innerCallee.text === 'Automation') {
+          automationCall = callee.expression; // the Automation(...) call
+          return;
+        }
+      }
+
+      // Pattern 2: Automation(fn) — callee is Identifier
+      if (ts.isIdentifier(callee) && callee.text === 'Automation') {
+        automationCall = node;
+        return;
+      }
+    }
+
+    ts.forEachChild(node, findAutomationCall);
+  }
+
+  findAutomationCall(sourceFile);
+
+  if (!automationCall) {
+    // No Automation call found — not necessarily an error (file might not contain one)
+    return result;
+  }
+
+  // Get the first argument (the function)
+  var args = automationCall.arguments;
+  if (!args || args.length < 1) return result;
+
+  var fnArg = args[0];
+  if (!ts.isArrowFunction(fnArg) && !ts.isFunctionExpression(fnArg)) return result;
+
+  // Get the first parameter of the function
+  var fnParams = fnArg.parameters;
+  if (!fnParams || fnParams.length < 1) return result;
+
+  var firstParam = fnParams[0];
+
+  // The param should have a type annotation (TypeLiteral or TypeReference)
+  var typeNode = firstParam.type;
+  if (!typeNode) return result;
+
+  // Handle TypeLiteral: { email: string; count: number; ... }
+  if (ts.isTypeLiteralNode(typeNode)) {
+    for (var i = 0; i < typeNode.members.length; i++) {
+      var member = typeNode.members[i];
+      if (!ts.isPropertySignature(member)) continue;
+
+      var paramName = member.name && ts.isIdentifier(member.name) ? member.name.text : null;
+      if (!paramName) continue;
+
+      var isOptional = !!member.questionToken;
+      var paramDef = mapTypeNode(member.type, paramName, filePath, sourceFile, result.warnings);
+
+      if (isOptional) {
+        paramDef.optional = true;
+      }
+
+      result.params.push(paramDef);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Map a TypeScript type node to a ParamDef object.
+ *
+ * @param {ts.TypeNode|undefined} typeNode - The type node to map
+ * @param {string} paramName - The parameter name (for the returned object)
+ * @param {string} filePath - For warning messages
+ * @param {ts.SourceFile} sourceFile - For line number extraction
+ * @param {Array} warnings - Warnings accumulator
+ * @returns {{ name: string, type: string, options?: string[] }}
+ */
+function mapTypeNode(typeNode, paramName, filePath, sourceFile, warnings) {
+  if (!typeNode) {
+    // No type annotation — default to string
+    return { name: paramName, type: 'string' };
+  }
+
+  // string keyword
+  if (typeNode.kind === ts.SyntaxKind.StringKeyword) {
+    return { name: paramName, type: 'string' };
+  }
+
+  // number keyword
+  if (typeNode.kind === ts.SyntaxKind.NumberKeyword) {
+    return { name: paramName, type: 'number' };
+  }
+
+  // TypeReference — check for "Date"
+  if (ts.isTypeReferenceNode(typeNode)) {
+    var typeName = typeNode.typeName;
+    if (ts.isIdentifier(typeName) && typeName.text === 'Date') {
+      return { name: paramName, type: 'date' };
+    }
+    // Unknown type reference — fallback to string with warning
+    var line = ts.getLineAndCharacterOfPosition(sourceFile, typeNode.getStart(sourceFile)).line + 1;
+    var refName = ts.isIdentifier(typeName) ? typeName.text : 'unknown';
+    warnings.push({
+      message: `Unknown type annotation '${refName}' for param '${paramName}' at ${filePath}:${line} — defaulting to "string"`,
+      filePath,
+      line,
+    });
+    return { name: paramName, type: 'string' };
+  }
+
+  // Union type — check if all members are string literals → "enum"
+  if (ts.isUnionTypeNode(typeNode)) {
+    var members = typeNode.types;
+    var allStringLiterals = true;
+    var options = [];
+
+    for (var j = 0; j < members.length; j++) {
+      var memberType = members[j];
+      if (ts.isLiteralTypeNode(memberType) && memberType.literal && ts.isStringLiteral(memberType.literal)) {
+        options.push(memberType.literal.text);
+      } else {
+        allStringLiterals = false;
+        break;
+      }
+    }
+
+    if (allStringLiterals && options.length > 0) {
+      return { name: paramName, type: 'enum', options: options };
+    }
+
+    // Union contains non-string-literal members — fallback to string with warning
+    var unionLine = ts.getLineAndCharacterOfPosition(sourceFile, typeNode.getStart(sourceFile)).line + 1;
+    warnings.push({
+      message: `Union type for param '${paramName}' at ${filePath}:${unionLine} contains non-string-literal members — defaulting to "string"`,
+      filePath,
+      line: unionLine,
+    });
+    return { name: paramName, type: 'string' };
+  }
+
+  // Anything else — fallback to string with warning
+  var fallbackLine = ts.getLineAndCharacterOfPosition(sourceFile, typeNode.getStart(sourceFile)).line + 1;
+  warnings.push({
+    message: `Unknown type annotation for param '${paramName}' at ${filePath}:${fallbackLine} — defaulting to "string"`,
+    filePath,
+    line: fallbackLine,
+  });
+  return { name: paramName, type: 'string' };
+}
+
+// ---------------------------------------------------------------------------
+// Task extraction
+// ---------------------------------------------------------------------------
+
 /**
  * Extract a TaskDef from a VariableDeclarator node matching:
  *   const X = Task((params) => { ... }).as('Label')
@@ -1675,6 +1906,132 @@ function extractTest(node, filePath, source, declaredTaskNames) {
 }
 
 // ---------------------------------------------------------------------------
+// Automation extraction
+// Requirements: 2.1, 2.7, 2.8, 1.4
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract an AutomationDef from a VariableDeclarator node matching:
+ *   const X = Automation(fn).as('Label')
+ *   const X = Automation(fn)  (missing label — warning)
+ *
+ * @param {object} declarator - VariableDeclarator AST node
+ * @param {string} filePath - current file path for error reporting
+ * @param {string} source - stripped JS source (for step extraction)
+ * @param {string|null} rawSource - raw TypeScript source (for param type extraction)
+ * @param {Set<string>} [declaredTaskNames] - task names declared in this file
+ * @returns {{ automation: object|null, error: object|null, warnings: Array }}
+ */
+function extractAutomation(declarator, filePath, source, rawSource, declaredTaskNames) {
+  if (!declarator || declarator.type !== 'VariableDeclarator') return { automation: null, error: null, warnings: [] };
+  if (!declarator.init) return { automation: null, error: null, warnings: [] };
+
+  var variableName = declarator.id && declarator.id.type === 'Identifier' ? declarator.id.name : null;
+  if (!variableName) return { automation: null, error: null, warnings: [] };
+
+  var automationCallNode = null;
+  var label = null;
+
+  // Pattern 1: Automation(fn).as('Label') — .as() chain
+  if (
+    declarator.init.type === 'CallExpression' &&
+    isMethodCall(declarator.init, 'as')
+  ) {
+    var asObj = declarator.init.callee.object;
+    if (
+      asObj && asObj.type === 'CallExpression' &&
+      asObj.callee && asObj.callee.type === 'Identifier' &&
+      asObj.callee.name === 'Automation'
+    ) {
+      automationCallNode = asObj;
+      label = extractString(declarator.init.arguments[0]);
+    }
+  }
+
+  // Pattern 2: Automation(fn) — direct call without .as()
+  if (
+    !automationCallNode &&
+    declarator.init.type === 'CallExpression' &&
+    declarator.init.callee &&
+    declarator.init.callee.type === 'Identifier' &&
+    declarator.init.callee.name === 'Automation'
+  ) {
+    automationCallNode = declarator.init;
+  }
+
+  if (!automationCallNode) return { automation: null, error: null, warnings: [] };
+
+  var warnings = [];
+
+  // Validate function argument
+  var args = automationCallNode.arguments || [];
+  if (args.length < 1) {
+    return {
+      automation: null,
+      error: {
+        message: `Automation() at ${filePath}:${lineOf(automationCallNode)} requires a function argument`,
+        filePath,
+        line: lineOf(automationCallNode),
+      },
+      warnings,
+    };
+  }
+
+  var fn = args[0];
+  if (fn.type !== 'ArrowFunctionExpression' && fn.type !== 'FunctionExpression') {
+    return {
+      automation: null,
+      error: {
+        message: `Automation() at ${filePath}:${lineOf(automationCallNode)} argument must be a function`,
+        filePath,
+        line: lineOf(automationCallNode),
+      },
+      warnings,
+    };
+  }
+
+  // Extract param types from raw TypeScript source (before type stripping)
+  var params = [];
+  if (rawSource) {
+    var paramResult = extractAutomationParamTypes(rawSource, filePath);
+    params = paramResult.params;
+    if (paramResult.warnings.length > 0) {
+      warnings.push.apply(warnings, paramResult.warnings);
+    }
+  }
+
+  // Build tracked params set for step extraction
+  // Include params from type extraction (so params.X and destructured X both resolve)
+  var trackedParams = new Set();
+  for (var i = 0; i < params.length; i++) {
+    trackedParams.add(params[i].name);
+  }
+
+  // Also extract destructured params from function signature (e.g., ({email, password}) => ...)
+  var fnParams = extractFnParams(fn.params);
+  for (var j = 0; j < fnParams.length; j++) {
+    trackedParams.add(fnParams[j]);
+  }
+
+  // Extract steps from the function body
+  var steps = fn.body && fn.body.type === 'BlockStatement'
+    ? extractSteps(fn.body, filePath, trackedParams, warnings, source, declaredTaskNames)
+    : [];
+
+  return {
+    automation: {
+      name: variableName,
+      label: label || null,
+      params: params,
+      steps: steps,
+      line: lineOf(declarator),
+    },
+    error: null,
+    warnings,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // File type detection
 // ---------------------------------------------------------------------------
 
@@ -1710,6 +2067,7 @@ function detectFileType(filePath) {
  *   elements: ElementDef[],
  *   tasks: TaskDef[],
  *   tests: TestDef[],
+ *   automations: AutomationDef[],
  *   error: null | { message: string, line: number }
  *   warnings: Array<{ message: string, filePath: string, line: number }>
  * }
@@ -1726,6 +2084,7 @@ function parseFile(filePath) {
       tests: [],
       elements: [],
       tasks: [],
+      automations: [],
       error: {
         message: 'Parse error in ' + filePath + ':0: ' + e.message,
         line: 0,
@@ -1742,15 +2101,17 @@ function parseFile(filePath) {
  *
  * @param {string} source - JavaScript source code (types already stripped)
  * @param {string} filePath - file path (for error reporting and file type detection)
+ * @param {string} [rawSource] - raw TypeScript source (before type stripping) for Automation param extraction
  * @returns {ParsedFile}
  */
-function parseSource(source, filePath) {
+function parseSource(source, filePath, rawSource) {
   const result = {
     filePath,
     type: detectFileType(filePath),
     tests: [],
     elements: [],
     tasks: [],
+    automations: [],
     imports: [],   // track import declarations for namespace resolution
     error: null,
     warnings: [],
@@ -1913,6 +2274,23 @@ function parseSource(source, filePath) {
     }
   });
 
+  // Walk the AST for Automation declarations: const X = Automation(fn).as('Label')
+  walk(ast, node => {
+    if (node.type !== 'VariableDeclaration') return;
+    for (const declarator of node.declarations) {
+      const { automation, error, warnings } = extractAutomation(declarator, filePath, source, rawSource || null, declaredTaskNames);
+      if (error) {
+        result.warnings.push(error);
+      }
+      if (warnings) {
+        result.warnings.push(...warnings);
+      }
+      if (automation) {
+        result.automations.push(automation);
+      }
+    }
+  });
+
   return result;
 }
 
@@ -1920,4 +2298,4 @@ function parseSource(source, filePath) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractStep, extractElementRef, extractIfStep, extractCondition, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };
+module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractIfStep, extractCondition, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };

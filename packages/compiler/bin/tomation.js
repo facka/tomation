@@ -167,6 +167,9 @@ function runPipeline(cwd, options) {
       return { ok: false, error: 'Failed to read ' + filePath + ': ' + e.message };
     }
 
+    // Keep raw source for Automation param type extraction (needs TypeScript annotations)
+    var rawSource = isTypeScript ? source : null;
+
     // Strip TypeScript types if needed
     if (isTypeScript) {
       log('    Stripping types...');
@@ -184,7 +187,7 @@ function runPipeline(cwd, options) {
 
     // Parse the (now plain JS) source
     log('    Parsing...');
-    var parsed = parseSource(source, filePath);
+    var parsed = parseSource(source, filePath, rawSource);
     if (parsed.error) {
       log('    ✗ Parse failed: ' + parsed.error.message);
       return { ok: false, error: parsed.error.message };
@@ -198,7 +201,8 @@ function runPipeline(cwd, options) {
     var elementCount = (parsed.elements || []).length;
     var taskCount = (parsed.tasks || []).length;
     var testCount = (parsed.tests || []).length;
-    log('    ✓ Parsed: type=' + parsed.type + ', elements=' + elementCount + ', tasks=' + taskCount + ', tests=' + testCount);
+    var automationCount = (parsed.automations || []).length;
+    log('    ✓ Parsed: type=' + parsed.type + ', elements=' + elementCount + ', tasks=' + taskCount + ', tests=' + testCount + ', automations=' + automationCount);
     parsedFiles.push(parsed);
   }
 
