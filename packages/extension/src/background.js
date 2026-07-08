@@ -431,7 +431,7 @@ function evaluateCondition(condition, params) {
  * @param {Set|Array} checkedIndexes - Set or array of top-level step indexes that are checked (included)
  * @returns {Array} - Ordered array of resolved EXECUTE_STEP message objects
  */
-function flattenSteps(testSteps, tasksMap, pageElements, checkedIndexes) {
+function flattenSteps(testSteps, tasksMap, pageElements, checkedIndexes, initialParams) {
   var checked;
   if (checkedIndexes && typeof checkedIndexes.has === 'function') {
     checked = checkedIndexes;
@@ -446,6 +446,7 @@ function flattenSteps(testSteps, tasksMap, pageElements, checkedIndexes) {
     checked = { has: function () { return true; } };
   }
 
+  var params = initialParams || {};
   var result = [];
 
   for (var i = 0; i < testSteps.length; i++) {
@@ -454,7 +455,7 @@ function flattenSteps(testSteps, tasksMap, pageElements, checkedIndexes) {
     }
 
     var step = testSteps[i];
-    var expanded = expandStep(step, tasksMap, pageElements, {});
+    var expanded = expandStep(step, tasksMap, pageElements, params);
     for (var j = 0; j < expanded.length; j++) {
       result.push(expanded[j]);
     }
@@ -1703,6 +1704,9 @@ function handleMessage(message, sender, sendResponse) {
     case 'RUN_TEST':
       handleRunTest(message);
       break;
+    case 'RUN_AUTOMATION':
+      handleRunAutomation(message);
+      break;
     case 'PAUSE':
       pauseRun();
       break;
@@ -1793,6 +1797,109 @@ function handleRunTest(message) {
 }
 
 /**
+ * Handle the RUN_AUTOMATION message from the panel.
+ * Queries the active tab, looks up the project by hostname, finds the automation
+ * by index, and starts the automation run with user-provided params.
+ *
+ * @param {object} message - { type: 'RUN_AUTOMATION', automationIndex: number, params: object, checkedSteps: Array, config: object }
+ */
+function handleRunAutomation(message) {
+  var automationIndex = message.automationIndex;
+  var params = message.params || {};
+  var checkedSteps = message.checkedSteps;
+  var config = message.config || {
+    allowContinueOnFailure: false,
+    allowRetryOnFailure: false,
+    executionSpeed: 'FAST'
+  };
+
+  api.tabs.query({ active: true, currentWindow: true }).then(function (tabs) {
+    if (!tabs || tabs.length === 0) return;
+
+    var tab = tabs[0];
+    var url = new URL(tab.url);
+    var hostname = url.hostname;
+
+    return getProject(hostname).then(function (project) {
+      if (!project || !project.specs || project.specs.length === 0) return;
+
+      // Find the automation across all specs in the project
+      var foundAutomation = null;
+      var foundSpec = null;
+      var globalIndex = 0;
+
+      for (var s = 0; s < project.specs.length; s++) {
+        var spec = project.specs[s].spec;
+        if (!spec || !spec.automations) continue;
+
+        for (var a = 0; a < spec.automations.length; a++) {
+          if (globalIndex === automationIndex) {
+            foundAutomation = spec.automations[a];
+            foundSpec = spec;
+            break;
+          }
+          globalIndex++;
+        }
+        if (foundAutomation) break;
+      }
+
+      if (foundAutomation && foundSpec) {
+        startAutomationRun(tab.id, foundAutomation, foundSpec, checkedSteps, config, params);
+      }
+    });
+  });
+}
+
+/**
+ * Start an Automation run. Identical to startRun but seeds the context store
+ * with user-provided params so that {{paramName}} placeholders resolve correctly
+ * during step flattening.
+ *
+ * @param {number} tabId - The tab to run in
+ * @param {object} automation - The automation object { name, params, steps }
+ * @param {object} spec - The full spec object
+ * @param {Array} checkedSteps - Checked step indices
+ * @param {object} config - Run configuration
+ * @param {object} params - User-provided param values (e.g., { email: "...", count: 5 })
+ * @returns {Promise}
+ */
+function startAutomationRun(tabId, automation, spec, checkedSteps, config, params) {
+  resetRunState();
+
+  if (config) {
+    runState.config = config;
+  }
+
+  // Seed context store with user-provided params so {{paramName}} resolves at runtime
+  runState.contextStore = {};
+  var paramKeys = Object.keys(params);
+  for (var i = 0; i < paramKeys.length; i++) {
+    runState.contextStore[paramKeys[i]] = String(params[paramKeys[i]]);
+  }
+
+  var resolvedSteps = flattenSteps(
+    automation.steps,
+    spec.tasks || {},
+    spec.pageElements || {},
+    checkedSteps,
+    params
+  );
+
+  runState.running = true;
+  runState.currentTestName = automation.name || '';
+  runState.steps = resolvedSteps;
+  runState.spec = spec;
+  runState.stepIndex = 0;
+  runState.passCount = 0;
+  runState.failCount = 0;
+
+  return lockTab(tabId).then(function () {
+    initTabTracker();
+    return runStepLoop();
+  });
+}
+
+/**
  * Send STATE_SYNC to a newly connected panel port.
  *
  * @param {object} port - The connected port
@@ -1847,6 +1954,7 @@ if (typeof module !== 'undefined' && module.exports) {
     emitLog: emitLog,
     emitSummary: emitSummary,
     startRun: startRun,
+    startAutomationRun: startAutomationRun,
     runStepLoop: runStepLoop,
     finishRun: finishRun,
     stopRun: stopRun,
@@ -1858,6 +1966,7 @@ if (typeof module !== 'undefined' && module.exports) {
     handleRetryStep: handleRetryStep,
     handleMessage: handleMessage,
     handleRunTest: handleRunTest,
+    handleRunAutomation: handleRunAutomation,
     handlePanelConnect: handlePanelConnect,
     initMessageRouter: initMessageRouter
   };

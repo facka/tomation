@@ -207,7 +207,7 @@ This plan implements the Automation feature across five layers: DSL stub/types, 
 - [ ] 11. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [-] 12. Background Runtime — RUN_AUTOMATION handler
+- [x] 12. Background Runtime — RUN_AUTOMATION handler
   - [ ] 12.1 Add `RUN_AUTOMATION` message handler in `packages/extension/src/background.js`
     - Handle the `RUN_AUTOMATION` message type in the existing message listener
     - Look up `spec.automations[msg.automationIndex]`
@@ -229,8 +229,8 @@ This plan implements the Automation feature across five layers: DSL stub/types, 
     - Verify existing `resolveValue` handles automation param tokens
     - _Requirements: 6.2_
 
-- [ ] 13. Spec validator extension
-  - [ ] 13.1 Extend `validateSpec` in `packages/extension/src/panel.js`
+- [x] 13. Spec validator extension
+  - [x] 13.1 Extend `validateSpec` in `packages/extension/src/panel.js`
     - Add validation for `automations` array structure (if present): each entry must have `name` (string), `params` (array), `steps` (array)
     - Each param entry must have `name` (string) and `type` (one of `"string"`, `"number"`, `"date"`, `"enum"`)
     - For params with `type: "enum"`, validate that `options` is a non-empty array of strings

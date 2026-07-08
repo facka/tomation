@@ -156,6 +156,60 @@ function validateSpec(obj) {
     }
   }
 
+  // Validate automations entries (if present)
+  if (obj.automations !== undefined) {
+    if (!Array.isArray(obj.automations)) {
+      return { ok: false, error: 'automations field must be an array' };
+    }
+    var validParamTypes = ['string', 'number', 'date', 'enum'];
+    for (var a = 0; a < obj.automations.length; a++) {
+      var autoEntry = obj.automations[a];
+      if (!autoEntry || typeof autoEntry.name !== 'string') {
+        return { ok: false, error: 'automations entry at index ' + a + ' missing name field' };
+      }
+      if (!Array.isArray(autoEntry.params)) {
+        return { ok: false, error: 'automations entry "' + autoEntry.name + '" missing params array' };
+      }
+      if (!Array.isArray(autoEntry.steps)) {
+        return { ok: false, error: 'automations entry "' + autoEntry.name + '" missing steps array' };
+      }
+      // Validate each param entry
+      for (var p = 0; p < autoEntry.params.length; p++) {
+        var param = autoEntry.params[p];
+        if (!param || typeof param.name !== 'string') {
+          return { ok: false, error: 'automations entry "' + autoEntry.name + '" param at index ' + p + ' missing name field' };
+        }
+        if (validParamTypes.indexOf(param.type) === -1) {
+          return { ok: false, error: 'automations entry "' + autoEntry.name + '" param "' + param.name + '" has invalid type "' + param.type + '" (expected one of: string, number, date, enum)' };
+        }
+        // Validate enum params have a non-empty options array of strings
+        if (param.type === 'enum') {
+          if (!Array.isArray(param.options) || param.options.length === 0) {
+            return { ok: false, error: 'automations entry "' + autoEntry.name + '" param "' + param.name + '" with type "enum" must have a non-empty options array' };
+          }
+          for (var o = 0; o < param.options.length; o++) {
+            if (typeof param.options[o] !== 'string') {
+              return { ok: false, error: 'automations entry "' + autoEntry.name + '" param "' + param.name + '" options must all be strings' };
+            }
+          }
+        }
+        // Validate optional fields only when present
+        if (param.optional !== undefined && typeof param.optional !== 'boolean') {
+          return { ok: false, error: 'automations entry "' + autoEntry.name + '" param "' + param.name + '" optional field must be a boolean' };
+        }
+        if (param.defaultValue !== undefined && typeof param.defaultValue !== 'string') {
+          return { ok: false, error: 'automations entry "' + autoEntry.name + '" param "' + param.name + '" defaultValue field must be a string' };
+        }
+        if (param.options !== undefined && param.type !== 'enum') {
+          // options field present but type is not enum — still validate it's an array of strings
+          if (!Array.isArray(param.options)) {
+            return { ok: false, error: 'automations entry "' + autoEntry.name + '" param "' + param.name + '" options field must be an array' };
+          }
+        }
+      }
+    }
+  }
+
   return { ok: true, spec: obj };
 }
 
