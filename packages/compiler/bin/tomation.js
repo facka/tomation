@@ -22,6 +22,7 @@ var resolve = require('../src/resolver').resolve;
 var resolveSpecifier = require('../src/resolver').resolveSpecifier;
 var parseSource = require('../src/parser').parseSource;
 var extractPom = require('../src/pom').extractPom;
+var deriveNamespace = require('../src/pom').deriveNamespace;
 var detectNamespaceCollisions = require('../src/pom').detectNamespaceCollisions;
 var stripTypes = require('../src/ts-stripper').stripTypes;
 var deduplicateKeys = require('../src/deduplicator').deduplicateKeys;
@@ -70,6 +71,12 @@ function rewriteStepTargets(parsedFile, importMap) {
   if (parsedFile.tasks) {
     for (var tki = 0; tki < parsedFile.tasks.length; tki++) {
       parsedFile.tasks[tki].steps = rewriteSteps(parsedFile.tasks[tki].steps, importMap);
+    }
+  }
+  // Rewrite automation steps
+  if (parsedFile.automations) {
+    for (var ai = 0; ai < parsedFile.automations.length; ai++) {
+      parsedFile.automations[ai].steps = rewriteSteps(parsedFile.automations[ai].steps, importMap);
     }
   }
 }
@@ -210,6 +217,7 @@ function runPipeline(cwd, options) {
   log('Step 3/6: Extracting POM data and separating test files');
   var pomResults = [];
   var parsedTestFiles = [];
+  var parsedAutomationFiles = [];
   for (var j = 0; j < parsedFiles.length; j++) {
     var pf = parsedFiles[j];
     if (pf.type === 'pom') {
@@ -223,6 +231,9 @@ function runPipeline(cwd, options) {
       var taskKeys = Object.keys(pomResult.tasks || {});
       log('    ✓ Elements: [' + elemKeys.join(', ') + '], Tasks: [' + taskKeys.join(', ') + ']');
       pomResults.push(pomResult);
+    } else if (pf.type === 'automation') {
+      log('  Automation file: ' + path.basename(pf.filePath) + ' (' + (pf.automations || []).length + ' automation(s))');
+      parsedAutomationFiles.push(pf);
     } else {
       log('  Test file: ' + path.basename(pf.filePath) + ' (' + (pf.tests || []).length + ' test(s))');
       parsedTestFiles.push(pf);
@@ -269,6 +280,24 @@ function runPipeline(cwd, options) {
     // Rewrite step targets: "VariableName__prop" → "Namespace__prop"
     if (Object.keys(importMap).length > 0) {
       rewriteStepTargets(rpf, importMap);
+    }
+  }
+
+  // Step 3d: derive namespace for automation files and prefix automation labels
+  var automationsDir = resolveResult.automationsDir || null;
+  for (var ai = 0; ai < parsedAutomationFiles.length; ai++) {
+    var af = parsedAutomationFiles[ai];
+    if (!af.automations || af.automations.length === 0) continue;
+    try {
+      var autoNamespace = deriveNamespace(af.filePath, automationsDir);
+      for (var aji = 0; aji < af.automations.length; aji++) {
+        if (af.automations[aji].label) {
+          af.automations[aji].name = autoNamespace + '__' + af.automations[aji].label;
+        }
+      }
+      log('  Automation namespace: ' + autoNamespace + ' (' + path.basename(af.filePath) + ')');
+    } catch (err) {
+      return { ok: false, error: err.message };
     }
   }
 

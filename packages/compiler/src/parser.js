@@ -16,7 +16,7 @@
  * ParsedFile shape:
  * {
  *   filePath: string,
- *   type: 'pom' | 'test',
+ *   type: 'pom' | 'test' | 'automation',
  *   elements: ElementDef[],  // element declarations
  *   tasks: TaskDef[],        // task declarations
  *   tests: TestDef[],        // test declarations
@@ -2040,12 +2040,13 @@ function extractAutomation(declarator, filePath, source, rawSource, declaredTask
  * Falls back to content inspection if the name is ambiguous.
  *
  * @param {string} filePath
- * @returns {'pom'|'test'}
+ * @returns {'pom'|'test'|'automation'}
  */
 function detectFileType(filePath) {
   if (filePath.endsWith('.pom.js') || filePath.endsWith('.pom.ts')) return 'pom';
   if (filePath.endsWith('.test.js') || filePath.endsWith('.test.ts')) return 'test';
   if (filePath.endsWith('.page.js') || filePath.endsWith('.page.ts')) return 'pom';
+  if (filePath.endsWith('.automation.ts')) return 'automation';
   // Fallback: treat as unknown but default to 'test'
   return 'test';
 }
@@ -2063,7 +2064,7 @@ function detectFileType(filePath) {
  * ParsedFile:
  * {
  *   filePath: string,
- *   type: 'pom' | 'test',
+ *   type: 'pom' | 'test' | 'automation',
  *   elements: ElementDef[],
  *   tasks: TaskDef[],
  *   tests: TestDef[],

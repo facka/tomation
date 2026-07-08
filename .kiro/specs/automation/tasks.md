@@ -80,23 +80,23 @@ This plan implements the Automation feature across five layers: DSL stub/types, 
     - For any param map and step values with `{{X}}` placeholders, resolution equals `params[X]`
     - **Validates: Requirements 1.4, 2.7, 2.8, 6.2**
 
-- [ ] 4. File type detection and resolver support
-  - [ ] 4.1 Extend `detectFileType` in `packages/compiler/src/parser.js`
+- [x] 4. File type detection and resolver support
+  - [x] 4.1 Extend `detectFileType` in `packages/compiler/src/parser.js`
     - Recognize files ending in `.automation.ts` as file type `"automation"`
     - Ensure `.pom.ts` and `.test.ts` detection remains unchanged
     - _Requirements: 11.1_
 
-  - [ ] 4.2 Extend config parsing to accept `automations` path
+  - [x] 4.2 Extend config parsing to accept `automations` path
     - Update `tomation.config.ts` schema to accept an optional `automations` field (string path, defaults to `'./automations'`)
     - _Requirements: 11.2_
 
-  - [ ] 4.3 Extend resolver to scan `*.automation.ts` files
+  - [x] 4.3 Extend resolver to scan `*.automation.ts` files
     - Scan the configured automations directory for `*.automation.ts` files
     - Include automation files in the parse pipeline alongside pom and test files
     - Automations do NOT need `export default` — extracted by AST pattern (like Tests)
     - _Requirements: 11.3, 11.4_
 
-  - [ ] 4.4 Implement namespace derivation for automation files
+  - [x] 4.4 Implement namespace derivation for automation files
     - Derive namespace prefix from the automation file's relative path (e.g., `automations/user-creation.automation.ts` → `UserCreation`)
     - Prefix automation names in the flattened spec (e.g., `UserCreation__Create Users`)
     - Ensure cross-file Task imports (via `~/` aliases) resolve correctly in automation step extraction

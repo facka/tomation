@@ -96,7 +96,7 @@ function deriveNamespace(filePath, pomDir) {
 
   // Strip known compound suffixes first, then simple extensions.
   const stripped = basename
-    .replace(/\.(pom|page)\.(ts|tsx|js)$/, '')
+    .replace(/\.(pom|page|automation)\.(ts|tsx|js)$/, '')
     .replace(/\.(ts|tsx|js)$/, '');
 
   if (stripped.includes('_')) {
