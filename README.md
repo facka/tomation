@@ -37,6 +37,7 @@ export default {
   },
   pom: './pom',
   tests: './tests',
+  automations: './automations', // optional
   baseUrl: './',
 }
 ```
@@ -102,6 +103,7 @@ Open the Tomation browser extension panel, load your `.tomation.json`, and run t
 - **Declarative element selectors** — `is.BUTTON.where(idIs('login')).as('Login Button')`
 - **XPath support** — `Element('//div[@role="alert"]').as('Alert')`
 - **Reusable tasks** — Compose multi-step workflows with parameters and conditionals
+- **Automations** — Parameterized test procedures with a runtime form for user-provided values
 - **Folder-based namespacing** — Organize POM files in folders without naming conflicts
 - **Browser extension runtime** — Execute tests directly in the browser with visual feedback
 - **Watch mode** — `npx tomation watch` for live recompilation during development
@@ -313,6 +315,87 @@ const bookAppointment = Task((params) => {
   Type(`Dr. ${doctor} - ${tomorrow('MM/DD')} at ${slot}`).in(appointmentField)
 }).as('Book Appointment')
 ```
+
+## Automations
+
+Automations are like Tests, but with typed parameters that the user fills in via a form in the browser extension before execution. Use them for reusable procedures where input values are determined at run-time rather than at authoring time.
+
+### Declaring an Automation
+
+Automations live in `*.automation.ts` files inside a configured `automations` directory:
+
+```typescript
+// automations/todo.automation.ts
+import { Automation, AssertExists, AssertHasText, SaveText } from '@tomationjs/dsl'
+import Todo from '~/pom/todo.pom'
+
+Automation((params: { item: string }) => {
+  Todo.addItem({ text: params.item })
+  AssertExists(Todo.firstItem)
+  SaveText(Todo.firstItemText).as('savedItem')
+  AssertHasText(Todo.firstItemText, params.item)
+}).as('Add Todo Item')
+```
+
+### Supported parameter types
+
+| Type annotation | Form input | Notes |
+|----------------|-----------|-------|
+| `string` | Text input | Free-text field |
+| `number` | Number input | Coerced to `parseFloat` before execution |
+| `Date` | Date picker | Sent as ISO `YYYY-MM-DD` string |
+| `'a' \| 'b' \| 'c'` | Select dropdown | Constrained to declared options |
+
+Optional parameters use `?` and won't block execution if left empty:
+
+```typescript
+Automation((params: { email: string; environment?: string }) => {
+  // environment resolves to empty string if not provided
+}).as('Create Account')
+```
+
+### Enum parameters
+
+String union literals render as a `<select>` dropdown in the extension panel:
+
+```typescript
+Automation((params: { username: string; role: 'admin' | 'user' | 'viewer' }) => {
+  // role is constrained to one of the declared options
+}).as('Assign Role')
+```
+
+### Configuration
+
+Add an `automations` path to your `tomation.config.ts`:
+
+```typescript
+export default {
+  meta: { name: 'My App', urls: ['http://localhost:3000'] },
+  pom: './pom',
+  tests: './tests',
+  automations: './automations',
+  baseUrl: './',
+}
+```
+
+### How it works
+
+1. You write an Automation with typed params in a `*.automation.ts` file
+2. The compiler extracts parameter metadata (names, types, options) from TypeScript annotations
+3. The compiled `.tomation.json` includes an `automations` array with param definitions and steps
+4. The browser extension renders a form for the declared params when you select an Automation
+5. You fill in values, click Run, and the steps execute with your provided values resolved into `{{paramName}}` placeholders
+6. On successful completion, param values are remembered for next time
+
+### Differences from Tests
+
+| | Tests | Automations |
+|-|-------|-------------|
+| Values | Hardcoded at authoring time | Provided at run-time via form |
+| File suffix | `.test.ts` | `.automation.ts` |
+| Declaration | `Test('name', fn)` | `Automation(fn).as('name')` |
+| Parameters | None | Typed params object |
+| Use case | Regression checks | Reusable user-driven procedures |
 
 ## Project Structure
 
