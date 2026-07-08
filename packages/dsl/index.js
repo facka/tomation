@@ -148,6 +148,16 @@ function Test(name, fn) {
   return { __test: true, name: name, fn: fn };
 }
 
+function Automation(fn) {
+  return {
+    __automation: true,
+    fn: fn,
+    as: function (label) {
+      return { __automation: true, fn: fn, label: label };
+    }
+  };
+}
+
 // --- Action stubs ---
 
 function Click(element) {
@@ -412,9 +422,10 @@ module.exports = {
   nthChild: nthChild,
   dataAttr: dataAttr,
   closestLabelIs: closestLabelIs,
-  // Task and Test
+  // Task, Test, and Automation
   Task: Task,
   Test: Test,
+  Automation: Automation,
   // Action stubs
   Click: Click,
   Type: Type,

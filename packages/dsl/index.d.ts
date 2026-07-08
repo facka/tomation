@@ -146,7 +146,7 @@ export declare const is: {
   ELEMENT: (xpath: string) => XPathElementBuilder;
 };
 
-// --- Task and Test ---
+// --- Task, Test, and Automation ---
 
 /**
  * A task builder returned by Task(fn).
@@ -184,6 +184,39 @@ export declare function Test(
   name: string,
   fn: () => void
 ): { __test: true; name: string; fn: () => void };
+
+// --- Automation ---
+
+/**
+ * Constrains Automation param values to supported scalar types.
+ */
+type AutomationParamValue = string | number | Date;
+
+/**
+ * Builder returned by Automation(fn) — chain .as(label) to finalize.
+ */
+export interface AutomationBuilder<P extends Record<string, AutomationParamValue>> {
+  __automation: true;
+  fn: (params: P) => void;
+  as(label: string): AutomationDescriptor<P>;
+}
+
+/**
+ * Finalized Automation descriptor returned by .as(label).
+ */
+export interface AutomationDescriptor<P extends Record<string, AutomationParamValue>> {
+  __automation: true;
+  fn: (params: P) => void;
+  label: string;
+}
+
+/**
+ * Declares a parameterized Automation.
+ * @param fn - The automation function with a typed params object.
+ */
+export declare function Automation<P extends Record<string, AutomationParamValue>>(
+  fn: (params: P) => void
+): AutomationBuilder<P>;
 
 // --- Action Stubs ---
 
