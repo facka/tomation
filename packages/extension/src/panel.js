@@ -11,6 +11,7 @@ var currentTestIndex = -1;
 var currentRunnable = null; // { type: 'test'|'automation', index: number, data: object }
 var isRunning = false;
 var currentRunConfig = null;
+var currentRunAutomationParams = null; // params used in the current automation run (for persistence)
 
 // --- Search Filter ---
 
@@ -547,6 +548,18 @@ function renderTestPlan() {
     }
 
     checklist.parentNode.insertBefore(paramForm, checklist);
+
+    // Pre-fill form with last-used values from storage
+    loadParamValues(currentRunnable.data.name).then(function (storedValues) {
+      if (!storedValues) return;
+      var inputs = paramForm.querySelectorAll('input[data-param-name], select[data-param-name]');
+      for (var i = 0; i < inputs.length; i++) {
+        var name = inputs[i].getAttribute('data-param-name');
+        if (storedValues[name] !== undefined && storedValues[name] !== null) {
+          inputs[i].value = String(storedValues[name]);
+        }
+      }
+    });
   }
 
   var steps = currentTest.steps;
@@ -760,6 +773,9 @@ function onRunClick() {
       checkedSteps: checkedSteps,
       config: config
     });
+
+    // Store params for persistence on successful completion
+    currentRunAutomationParams = { name: currentRunnable.data.name, params: params };
   } else {
     api.runtime.sendMessage({
       type: 'RUN_TEST',
@@ -1051,6 +1067,12 @@ function hideManualBanner() {
  */
 function showRunSummary(data) {
   isRunning = false;
+
+  // Persist automation param values on successful run completion
+  if (currentRunAutomationParams && data.failed === 0) {
+    saveParamValues(currentRunAutomationParams.name, currentRunAutomationParams.params);
+  }
+  currentRunAutomationParams = null;
 
   var summaryEl = document.getElementById('run-summary');
   if (summaryEl) {

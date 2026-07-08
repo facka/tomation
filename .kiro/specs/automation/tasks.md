@@ -238,7 +238,7 @@ This plan implements the Automation feature across five layers: DSL stub/types, 
     - Show error view on malformed automations data
     - _Requirements: 3.1, 3.2, 3.3, 9.2_
 
-- [ ] 14. Side Panel — Param value persistence
+- [x] 14. Side Panel — Param value persistence
   - [ ] 14.1 Implement `saveParamValues` and `loadParamValues` in `packages/extension/src/panel.js`
     - `saveParamValues(automationName, params)`: store param values in `chrome.storage.local` keyed by `automation_params_{automationName}`
     - `loadParamValues(automationName)`: retrieve stored values from `chrome.storage.local`

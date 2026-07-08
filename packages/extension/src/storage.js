@@ -286,6 +286,38 @@ function saveTestPlanConfig(key, config) {
   });
 }
 
+/**
+ * Persist the last-used parameter values for an Automation.
+ * Catches and logs write failures without throwing (silent fail).
+ * @param {string} automationName - The Automation label/name
+ * @param {object} params - Key-value map of param values
+ * @returns {Promise<void>}
+ */
+function saveParamValues(automationName, params) {
+  var key = 'automation_params_' + automationName;
+  var data = {};
+  data[key] = params;
+  return api.storage.local.set(data).catch(function (err) {
+    console.error('saveParamValues: failed to write params for "' + automationName + '":', err);
+  });
+}
+
+/**
+ * Retrieve previously stored parameter values for an Automation.
+ * Returns null if no stored values exist or on read failure (silent fail).
+ * @param {string} automationName - The Automation label/name
+ * @returns {Promise<object|null>}
+ */
+function loadParamValues(automationName) {
+  var key = 'automation_params_' + automationName;
+  return api.storage.local.get(key).then(function (result) {
+    return result[key] || null;
+  }).catch(function (err) {
+    console.error('loadParamValues: failed to read params for "' + automationName + '":', err);
+    return null;
+  });
+}
+
 // Export for use by other extension scripts and for testing
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -301,6 +333,8 @@ if (typeof module !== 'undefined' && module.exports) {
     importAll: importAll,
     getTestPlanConfig: getTestPlanConfig,
     saveTestPlanConfig: saveTestPlanConfig,
+    saveParamValues: saveParamValues,
+    loadParamValues: loadParamValues,
     DEFAULT_TEST_PLAN_CONFIG: DEFAULT_TEST_PLAN_CONFIG
   };
 }
