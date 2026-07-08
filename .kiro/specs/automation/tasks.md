@@ -137,7 +137,7 @@ This plan implements the Automation feature across five layers: DSL stub/types, 
     - Verify steps included with template placeholders
     - _Requirements: 3.1, 3.4, 3.5_
 
-- [ ] 8. Side Panel — Automation listing in home view
+- [x] 8. Side Panel — Automation listing in home view
   - [ ] 8.1 Extend `renderHomeView` in `packages/extension/src/panel.js`
     - Iterate `spec.automations[]` alongside `spec.tests[]` in the home view
     - Render automation entries with a distinguishing badge/icon (e.g., `⚙` prefix or CSS class `automation-item`)

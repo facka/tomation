@@ -529,6 +529,72 @@
     }
 
     .nav-row h2 { flex: 1; }
+
+    /* Automation badge */
+    .automation-badge {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+
+    .automation-item {
+      border-left: 2px solid var(--accent);
+    }
+
+    /* Param form */
+    .param-form {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      box-shadow: var(--shadow-sm);
+      padding: 12px;
+    }
+
+    .param-form h3 { margin-bottom: 10px; }
+
+    .param-row {
+      margin-bottom: 10px;
+    }
+
+    .param-row:last-child { margin-bottom: 0; }
+
+    .param-row label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .param-row input,
+    .param-row select {
+      width: 100%;
+      padding: 6px 10px;
+      font-size: 13px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.12s;
+    }
+
+    .param-row input:focus,
+    .param-row select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-soft);
+    }
+
+    .param-row input.param-error,
+    .param-row select.param-error {
+      border-color: var(--error);
+      box-shadow: 0 0 0 2px var(--error-soft);
+    }
+
+    .optional-badge {
+      font-weight: 400;
+      color: var(--text-muted);
+      font-size: 11px;
+    }
   </style>
 </head>
 <body>
@@ -546,10 +612,10 @@
     </div>
     <div id="warning-banner" class="warning-banner"></div>
     <div class="search-wrapper">
-      <input type="text" id="search-input" maxlength="100" placeholder="Search tests..." />
+      <input type="text" id="search-input" maxlength="100" placeholder="Search tests and automations..." />
     </div>
     <div id="project-content"></div>
-    <div id="search-empty-state" style="display:none;">No tests found</div>
+    <div id="search-empty-state" style="display:none;">No tests or automations found</div>
   </div>
 
   <!-- Test Plan View -->

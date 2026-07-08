@@ -8,21 +8,22 @@ var currentProject = null;
 var currentSpec = null;
 var currentTest = null;
 var currentTestIndex = -1;
+var currentRunnable = null; // { type: 'test'|'automation', index: number, data: object }
 var isRunning = false;
 var currentRunConfig = null;
 
 // --- Search Filter ---
 
 /**
- * Pure function: filter test names by case-insensitive substring match.
- * @param {string[]} testNames
+ * Pure function: filter test/automation names by case-insensitive substring match.
+ * @param {string[]} names - Test or automation names
  * @param {string} query
  * @returns {string[]}
  */
-function filterTests(testNames, query) {
-  if (!query) return testNames;
+function filterTests(names, query) {
+  if (!query) return names;
   var lowerQuery = query.toLowerCase();
-  return testNames.filter(function(name) {
+  return names.filter(function(name) {
     return name.toLowerCase().indexOf(lowerQuery) !== -1;
   });
 }
@@ -227,11 +228,22 @@ function renderHomeView() {
       html += '<div class="spec-section">';
       html += '<div class="spec-header">' + escapeHtml(specEntry.filename) + '</div>';
 
-      if (spec && spec.tests && spec.tests.length > 0) {
+      var hasTests = spec && spec.tests && spec.tests.length > 0;
+      var hasAutomations = spec && spec.automations && spec.automations.length > 0;
+
+      if (hasTests || hasAutomations) {
         html += '<ul class="test-list">';
-        for (var j = 0; j < spec.tests.length; j++) {
-          html += '<li data-spec-index="' + i + '" data-test-index="' + j + '">' +
-            escapeHtml(spec.tests[j].name) + '</li>';
+        if (hasTests) {
+          for (var j = 0; j < spec.tests.length; j++) {
+            html += '<li data-spec-index="' + i + '" data-test-index="' + j + '" data-runnable-type="test">' +
+              escapeHtml(spec.tests[j].name) + '</li>';
+          }
+        }
+        if (hasAutomations) {
+          for (var a = 0; a < spec.automations.length; a++) {
+            html += '<li data-spec-index="' + i + '" data-automation-index="' + a + '" data-runnable-type="automation" class="automation-item">' +
+              '<span class="automation-badge">⚙</span> ' + escapeHtml(spec.automations[a].name) + '</li>';
+          }
         }
         html += '</ul>';
       }
@@ -253,23 +265,35 @@ function renderHomeView() {
 }
 
 /**
- * Handle click on a test item — navigate to Test Plan view.
+ * Handle click on a test or automation item — navigate to Test Plan view.
  */
 function onTestItemClick(e) {
   var li = e.currentTarget;
   var specIndex = parseInt(li.getAttribute('data-spec-index'), 10);
-  var testIndex = parseInt(li.getAttribute('data-test-index'), 10);
+  var runnableType = li.getAttribute('data-runnable-type') || 'test';
 
   if (!currentProject || !currentProject.specs[specIndex]) return;
 
   currentSpec = currentProject.specs[specIndex];
-  currentTest = currentSpec.spec.tests[testIndex];
-  currentTestIndex = testIndex;
+
+  if (runnableType === 'automation') {
+    var automationIndex = parseInt(li.getAttribute('data-automation-index'), 10);
+    var automation = currentSpec.spec.automations[automationIndex];
+    currentRunnable = { type: 'automation', index: automationIndex, data: automation };
+    currentTest = automation;
+    currentTestIndex = automationIndex;
+  } else {
+    var testIndex = parseInt(li.getAttribute('data-test-index'), 10);
+    var test = currentSpec.spec.tests[testIndex];
+    currentRunnable = { type: 'test', index: testIndex, data: test };
+    currentTest = test;
+    currentTestIndex = testIndex;
+  }
 
   showView('test-plan');
   var titleEl = document.getElementById('test-plan-title');
-  if (titleEl && currentTest) {
-    titleEl.textContent = currentTest.name;
+  if (titleEl && currentRunnable) {
+    titleEl.textContent = currentRunnable.data.name;
   }
   renderTestPlan();
 }
@@ -408,6 +432,69 @@ function renderTestPlan() {
 
   checklist.innerHTML = '';
 
+  // Render param form placeholder for automations (actual form rendering in task 9)
+  var existingParamForm = document.querySelector('.param-form');
+  if (existingParamForm) existingParamForm.remove();
+
+  if (currentRunnable && currentRunnable.type === 'automation' && currentRunnable.data.params && currentRunnable.data.params.length > 0) {
+    var paramForm = document.createElement('div');
+    paramForm.className = 'param-form';
+    var paramTitle = document.createElement('h3');
+    paramTitle.textContent = 'Parameters';
+    paramForm.appendChild(paramTitle);
+
+    var params = currentRunnable.data.params;
+    for (var p = 0; p < params.length; p++) {
+      var param = params[p];
+      var row = document.createElement('div');
+      row.className = 'param-row' + (param.optional ? ' param-optional' : '');
+
+      var lbl = document.createElement('label');
+      lbl.setAttribute('for', 'param-' + param.name);
+      lbl.textContent = param.name;
+      if (param.optional) {
+        var badge = document.createElement('span');
+        badge.className = 'optional-badge';
+        badge.textContent = ' (optional)';
+        lbl.appendChild(badge);
+      }
+      row.appendChild(lbl);
+
+      var input;
+      if (param.type === 'enum' && param.options && param.options.length > 0) {
+        input = document.createElement('select');
+        input.id = 'param-' + param.name;
+        input.setAttribute('data-param-name', param.name);
+        input.setAttribute('data-param-type', 'enum');
+        if (!param.optional) input.setAttribute('required', '');
+        for (var o = 0; o < param.options.length; o++) {
+          var opt = document.createElement('option');
+          opt.value = param.options[o];
+          opt.textContent = param.options[o];
+          input.appendChild(opt);
+        }
+      } else {
+        input = document.createElement('input');
+        input.id = 'param-' + param.name;
+        input.setAttribute('data-param-name', param.name);
+        input.setAttribute('data-param-type', param.type);
+        if (param.type === 'number') {
+          input.type = 'number';
+        } else if (param.type === 'date') {
+          input.type = 'date';
+        } else {
+          input.type = 'text';
+        }
+        if (!param.optional) input.setAttribute('required', '');
+        if (param.defaultValue) input.placeholder = param.defaultValue;
+      }
+      row.appendChild(input);
+      paramForm.appendChild(row);
+    }
+
+    checklist.parentNode.insertBefore(paramForm, checklist);
+  }
+
   var steps = currentTest.steps;
   var tasks = currentSpec.spec.tasks || {};
   var pageElements = currentSpec.spec.pageElements || {};
@@ -535,7 +622,7 @@ function onTaskCheckboxChange(e) {
 }
 
 /**
- * Collect checked step indices and send RUN_TEST to the background.
+ * Collect checked step indices and send RUN_TEST or RUN_AUTOMATION to the background.
  * Only top-level step indices are sent (task steps that are checked).
  */
 function onRunClick() {
@@ -566,12 +653,55 @@ function onRunClick() {
 
   currentRunConfig = config;
 
-  api.runtime.sendMessage({
-    type: 'RUN_TEST',
-    testIndex: currentTestIndex,
-    checkedSteps: checkedSteps,
-    config: config
-  });
+  if (currentRunnable && currentRunnable.type === 'automation') {
+    // Collect param form values
+    var paramForm = document.querySelector('.param-form');
+    var params = {};
+    var hasValidationError = false;
+
+    if (paramForm) {
+      var inputs = paramForm.querySelectorAll('input[data-param-name], select[data-param-name]');
+      for (var p = 0; p < inputs.length; p++) {
+        var input = inputs[p];
+        var paramName = input.getAttribute('data-param-name');
+        var paramType = input.getAttribute('data-param-type');
+        var value = input.value;
+
+        // Validate required fields
+        if (input.hasAttribute('required') && !value) {
+          input.classList.add('param-error');
+          hasValidationError = true;
+          continue;
+        } else {
+          input.classList.remove('param-error');
+        }
+
+        // Coerce types
+        if (paramType === 'number' && value) {
+          params[paramName] = parseFloat(value);
+        } else {
+          params[paramName] = value;
+        }
+      }
+    }
+
+    if (hasValidationError) return;
+
+    api.runtime.sendMessage({
+      type: 'RUN_AUTOMATION',
+      automationIndex: currentRunnable.index,
+      params: params,
+      checkedSteps: checkedSteps,
+      config: config
+    });
+  } else {
+    api.runtime.sendMessage({
+      type: 'RUN_TEST',
+      testIndex: currentTestIndex,
+      checkedSteps: checkedSteps,
+      config: config
+    });
+  }
 
   switchToRunView();
 }
