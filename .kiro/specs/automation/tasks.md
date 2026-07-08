@@ -156,8 +156,8 @@ This plan implements the Automation feature across five layers: DSL stub/types, 
     - For any query and automation names, filter returns all names containing the query as case-insensitive substring
     - **Validates: Requirements 4.4**
 
-- [ ] 9. Side Panel — Parameter form rendering
-  - [ ] 9.1 Implement `renderParamForm` in `packages/extension/src/panel.js`
+- [x] 9. Side Panel — Parameter form rendering
+  - [x] 9.1 Implement `renderParamForm` in `packages/extension/src/panel.js`
     - Render a `<div class="param-form">` above the step checklist when an Automation is selected
     - For each param: render label (param name) and input matching type (`text`, `number`, `date`)
     - For enum params: render a `<select>` dropdown with `<option>` for each value in `options[]`
@@ -166,13 +166,13 @@ This plan implements the Automation feature across five layers: DSL stub/types, 
     - Preserve param order from the spec
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
 
-  - [ ] 9.2 Implement select dropdown rendering for enum params
+  - [x] 9.2 Implement select dropdown rendering for enum params
     - Render `<select>` with one `<option value="x">x</option>` for each entry in `options[]`
     - Add `required` attribute (unless the param is also optional)
     - Constrain user to declared options — no free-text fallback
     - _Requirements: 9.3, 9.4_
 
-  - [ ] 9.3 Add param form CSS to `packages/extension/src/panel.html`
+  - [x] 9.3 Add param form CSS to `packages/extension/src/panel.html`
     - Style `.param-form`, `.param-row`, labels, and inputs
     - Add validation error styling (`.param-error`)
     - Add optional badge styling (`.optional-badge`)
@@ -184,7 +184,7 @@ This plan implements the Automation feature across five layers: DSL stub/types, 
     - For any param with `type: "enum"` and `options`, a `<select>` is rendered with matching `<option>` elements
     - **Validates: Requirements 9.3, 9.4**
 
-- [ ] 10. Side Panel — Validation and Run for Automations
+- [x] 10. Side Panel — Validation and Run for Automations
   - [ ] 10.1 Implement validation and RUN_AUTOMATION dispatch
     - On Run click, check `currentRunnable.type === 'automation'` to decide whether to collect param form values
     - Collect param form values (inputs and selects)
@@ -207,7 +207,7 @@ This plan implements the Automation feature across five layers: DSL stub/types, 
 - [ ] 11. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 12. Background Runtime — RUN_AUTOMATION handler
+- [-] 12. Background Runtime — RUN_AUTOMATION handler
   - [ ] 12.1 Add `RUN_AUTOMATION` message handler in `packages/extension/src/background.js`
     - Handle the `RUN_AUTOMATION` message type in the existing message listener
     - Look up `spec.automations[msg.automationIndex]`

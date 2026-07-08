@@ -660,7 +660,12 @@ function onRunClick() {
     var hasValidationError = false;
 
     if (paramForm) {
+      // Remove any previous validation message
+      var existingMsg = paramForm.querySelector('.param-validation-message');
+      if (existingMsg) existingMsg.remove();
+
       var inputs = paramForm.querySelectorAll('input[data-param-name], select[data-param-name]');
+      var emptyFields = [];
       for (var p = 0; p < inputs.length; p++) {
         var input = inputs[p];
         var paramName = input.getAttribute('data-param-name');
@@ -670,6 +675,7 @@ function onRunClick() {
         // Validate required fields
         if (input.hasAttribute('required') && !value) {
           input.classList.add('param-error');
+          emptyFields.push(paramName);
           hasValidationError = true;
           continue;
         } else {
@@ -683,9 +689,15 @@ function onRunClick() {
           params[paramName] = value;
         }
       }
-    }
 
-    if (hasValidationError) return;
+      if (hasValidationError) {
+        var msg = document.createElement('div');
+        msg.className = 'param-validation-message';
+        msg.textContent = 'Required field' + (emptyFields.length > 1 ? 's' : '') + ' missing: ' + emptyFields.join(', ');
+        paramForm.appendChild(msg);
+        return;
+      }
+    }
 
     api.runtime.sendMessage({
       type: 'RUN_AUTOMATION',
