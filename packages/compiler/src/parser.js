@@ -2018,6 +2018,35 @@ function extractAutomation(declarator, filePath, source, rawSource, declaredTask
     ? extractSteps(fn.body, filePath, trackedParams, warnings, source, declaredTaskNames)
     : [];
 
+  // --- Validation warnings ---
+
+  // Missing .as() call (Req 7.1)
+  if (!label) {
+    warnings.push({
+      message: `Automation '${variableName}' at ${filePath}:${lineOf(declarator)} is missing .as() — a label is required`,
+      filePath,
+      line: lineOf(declarator),
+    });
+  }
+
+  // Empty params object — zero params means this should be a Test (Req 7.2)
+  if (params.length === 0) {
+    warnings.push({
+      message: `Automation '${variableName}' at ${filePath}:${lineOf(declarator)} has no parameters — consider using Test instead`,
+      filePath,
+      line: lineOf(declarator),
+    });
+  }
+
+  // No recognizable steps in body (Req 7.4)
+  if (steps.length === 0) {
+    warnings.push({
+      message: `Automation '${variableName}' at ${filePath}:${lineOf(declarator)} has no recognizable steps`,
+      filePath,
+      line: lineOf(declarator),
+    });
+  }
+
   return {
     automation: {
       name: variableName,

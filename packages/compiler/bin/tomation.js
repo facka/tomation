@@ -301,6 +301,28 @@ function runPipeline(cwd, options) {
     }
   }
 
+  // Step 3e: detect duplicate automation labels (Req 7.3)
+  var seenAutomationLabels = {};
+  for (var dli = 0; dli < parsedAutomationFiles.length; dli++) {
+    var dlf = parsedAutomationFiles[dli];
+    if (!dlf.automations) continue;
+    for (var dlj = 0; dlj < dlf.automations.length; dlj++) {
+      var dlAuto = dlf.automations[dlj];
+      var dlLabel = dlAuto.label;
+      if (!dlLabel) continue;
+      var dlName = dlAuto.name || dlLabel;
+      if (seenAutomationLabels[dlName]) {
+        allWarnings.push({
+          message: `Duplicate Automation label '${dlLabel}' found in ${dlf.filePath}:${dlAuto.line} (first seen in ${seenAutomationLabels[dlName].filePath}:${seenAutomationLabels[dlName].line})`,
+          filePath: dlf.filePath,
+          line: dlAuto.line,
+        });
+      } else {
+        seenAutomationLabels[dlName] = { filePath: dlf.filePath, line: dlAuto.line };
+      }
+    }
+  }
+
   // Step 4: deduplication
   log('Step 4/6: Deduplicating keys');
   var dedupResult = deduplicateKeys(pomResults);

@@ -15,14 +15,17 @@
  *   meta: { name, url, description },
  *   pageElements: { [key]: { tag, label?, childOf?, where } },
  *   tasks:        { [key]: { steps, params? } },
- *   tests:        Array<{ name, steps }>
+ *   tests:        Array<{ name, steps }>,
+ *   automations:  Array<{ name, params: [{name, type, optional?, options?}], steps }>
  * }
  *
  * Notes:
  *   - _meta is stripped from every pageElements / tasks entry (internal bookkeeping only)
  *   - line is stripped from every test definition before inclusion
+ *   - line and name (variable name) are stripped from every automation; label becomes the output name
  *   - All keys from all POM results are merged into a single flat map
  *   - All tests from all test files are collected into a single array
+ *   - All automations from all parsed files are collected into a single array
  *
  * Exported API:
  *   flattenSpec(pomResults, parsedTestFiles, meta) → SpecObject
@@ -134,6 +137,48 @@ function flattenSpec(pomResults, parsedTestFiles, meta) {
     }
   }
 
+  // --- Collect all automations from all parsed test files ---
+  var automations = [];
+  if (Array.isArray(parsedTestFiles)) {
+    for (var ai = 0; ai < parsedTestFiles.length; ai++) {
+      var automationFile = parsedTestFiles[ai];
+      if (!automationFile || !Array.isArray(automationFile.automations)) continue;
+
+      for (var ati = 0; ati < automationFile.automations.length; ati++) {
+        var automationDef = automationFile.automations[ati];
+        if (!automationDef || typeof automationDef !== 'object') continue;
+
+        // Build output entry: { name: label, params: [...], steps: [...] }
+        // Strip internal fields: line, name (variable name — label becomes the name)
+        var automationOut = {
+          name: automationDef.label || automationDef.name,
+          params: [],
+          steps: automationDef.steps || [],
+        };
+
+        // Preserve param declaration order, include relevant fields only
+        if (Array.isArray(automationDef.params)) {
+          for (var api = 0; api < automationDef.params.length; api++) {
+            var paramDef = automationDef.params[api];
+            var paramOut = { name: paramDef.name, type: paramDef.type };
+            if (paramDef.optional) {
+              paramOut.optional = true;
+            }
+            if (paramDef.defaultValue !== undefined) {
+              paramOut.defaultValue = paramDef.defaultValue;
+            }
+            if (Array.isArray(paramDef.options)) {
+              paramOut.options = paramDef.options;
+            }
+            automationOut.params.push(paramOut);
+          }
+        }
+
+        automations.push(automationOut);
+      }
+    }
+  }
+
   return {
     format: 'tomation-spec',
     version: 1,
@@ -141,6 +186,7 @@ function flattenSpec(pomResults, parsedTestFiles, meta) {
     pageElements: pageElements,
     tasks: tasks,
     tests: tests,
+    automations: automations,
   };
 }
 

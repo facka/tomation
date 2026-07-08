@@ -102,7 +102,7 @@ This plan implements the Automation feature across five layers: DSL stub/types, 
     - Ensure cross-file Task imports (via `~/` aliases) resolve correctly in automation step extraction
     - _Requirements: 11.5, 11.6_
 
-- [ ] 5. Compiler — Automation validation warnings
+- [x] 5. Compiler — Automation validation warnings
   - [ ] 5.1 Add validation checks in `extractAutomation`
     - Missing `.as()` call → warning (Req 7.1)
     - Empty params object (zero params) → warning suggesting Test instead (Req 7.2)
@@ -123,7 +123,7 @@ This plan implements the Automation feature across five layers: DSL stub/types, 
 - [ ] 6. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 7. Flattener — emit automations array in spec output
+- [x] 7. Flattener — emit automations array in spec output
   - [ ] 7.1 Extend `flattenSpec` in `packages/compiler/src/flattener.js`
     - Add `automations` array to the output spec object
     - Collect automations from `parsedTestFiles[].automations`, stripping `line` and internal fields
