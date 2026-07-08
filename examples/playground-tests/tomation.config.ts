@@ -6,5 +6,6 @@ export default {
   },
   pom: './pom',
   tests: './tests',
+  automations: './automations',
   baseUrl: './',
 }
