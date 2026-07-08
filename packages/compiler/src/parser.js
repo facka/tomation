@@ -7,7 +7,7 @@
  *   - const X = is.TAG.where(matcher).as('Label') → element declarations
  *   - const X = Element(xpath).as('Label') → XPath element declarations
  *   - Task('name', fn) / Test('name', fn) → task/test declarations
- *   - const X = Automation(fn).as('Label') → automation declarations
+ *   - Automation('name', fn) or const X = Automation('name', fn) → automation declarations
  *
  * Exported API:
  *   parseFile(filePath) → ParsedFile
@@ -1523,24 +1523,11 @@ function extractAutomationParamTypes(rawSource, filePath) {
   function findAutomationCall(node) {
     if (automationCall) return; // already found
 
-    // Match: Automation(fn) or Automation(fn).as(...)
+    // Match: Automation('name', fn)
     if (ts.isCallExpression(node)) {
       var callee = node.expression;
 
-      // Pattern 1: Automation(fn).as('Label') — callee is PropertyAccessExpression
-      if (
-        ts.isPropertyAccessExpression(callee) &&
-        callee.name && callee.name.text === 'as' &&
-        ts.isCallExpression(callee.expression)
-      ) {
-        var innerCallee = callee.expression.expression;
-        if (ts.isIdentifier(innerCallee) && innerCallee.text === 'Automation') {
-          automationCall = callee.expression; // the Automation(...) call
-          return;
-        }
-      }
-
-      // Pattern 2: Automation(fn) — callee is Identifier
+      // Pattern: Automation('name', fn) — callee is Identifier
       if (ts.isIdentifier(callee) && callee.text === 'Automation') {
         automationCall = node;
         return;
@@ -1557,11 +1544,11 @@ function extractAutomationParamTypes(rawSource, filePath) {
     return result;
   }
 
-  // Get the first argument (the function)
+  // Get the second argument (the function) — first argument is the name string
   var args = automationCall.arguments;
-  if (!args || args.length < 1) return result;
+  if (!args || args.length < 2) return result;
 
-  var fnArg = args[0];
+  var fnArg = args[1];
   if (!ts.isArrowFunction(fnArg) && !ts.isFunctionExpression(fnArg)) return result;
 
   // Get the first parameter of the function
@@ -1912,8 +1899,7 @@ function extractTest(node, filePath, source, declaredTaskNames) {
 
 /**
  * Extract an AutomationDef from a VariableDeclarator node matching:
- *   const X = Automation(fn).as('Label')
- *   const X = Automation(fn)  (missing label — warning)
+ *   const X = Automation('Label', fn)
  *
  * @param {object} declarator - VariableDeclarator AST node
  * @param {string} filePath - current file path for error reporting
@@ -1932,44 +1918,31 @@ function extractAutomation(declarator, filePath, source, rawSource, declaredTask
   var automationCallNode = null;
   var label = null;
 
-  // Pattern 1: Automation(fn).as('Label') — .as() chain
+  // Pattern: Automation('name', fn) — direct call with name as first arg
   if (
-    declarator.init.type === 'CallExpression' &&
-    isMethodCall(declarator.init, 'as')
-  ) {
-    var asObj = declarator.init.callee.object;
-    if (
-      asObj && asObj.type === 'CallExpression' &&
-      asObj.callee && asObj.callee.type === 'Identifier' &&
-      asObj.callee.name === 'Automation'
-    ) {
-      automationCallNode = asObj;
-      label = extractString(declarator.init.arguments[0]);
-    }
-  }
-
-  // Pattern 2: Automation(fn) — direct call without .as()
-  if (
-    !automationCallNode &&
     declarator.init.type === 'CallExpression' &&
     declarator.init.callee &&
     declarator.init.callee.type === 'Identifier' &&
     declarator.init.callee.name === 'Automation'
   ) {
     automationCallNode = declarator.init;
+    // First argument is the label string
+    if (automationCallNode.arguments && automationCallNode.arguments.length >= 1) {
+      label = extractString(automationCallNode.arguments[0]);
+    }
   }
 
   if (!automationCallNode) return { automation: null, error: null, warnings: [] };
 
   var warnings = [];
 
-  // Validate function argument
+  // Validate function argument (second argument)
   var args = automationCallNode.arguments || [];
-  if (args.length < 1) {
+  if (args.length < 2) {
     return {
       automation: null,
       error: {
-        message: `Automation() at ${filePath}:${lineOf(automationCallNode)} requires a function argument`,
+        message: `Automation() at ${filePath}:${lineOf(automationCallNode)} requires a name and a function argument`,
         filePath,
         line: lineOf(automationCallNode),
       },
@@ -1977,12 +1950,12 @@ function extractAutomation(declarator, filePath, source, rawSource, declaredTask
     };
   }
 
-  var fn = args[0];
+  var fn = args[1];
   if (fn.type !== 'ArrowFunctionExpression' && fn.type !== 'FunctionExpression') {
     return {
       automation: null,
       error: {
-        message: `Automation() at ${filePath}:${lineOf(automationCallNode)} argument must be a function`,
+        message: `Automation() at ${filePath}:${lineOf(automationCallNode)} second argument must be a function`,
         filePath,
         line: lineOf(automationCallNode),
       },
@@ -2020,10 +1993,10 @@ function extractAutomation(declarator, filePath, source, rawSource, declaredTask
 
   // --- Validation warnings ---
 
-  // Missing .as() call (Req 7.1)
+  // Missing name argument (Req 7.1)
   if (!label) {
     warnings.push({
-      message: `Automation '${variableName}' at ${filePath}:${lineOf(declarator)} is missing .as() — a label is required`,
+      message: `Automation '${variableName}' at ${filePath}:${lineOf(declarator)} is missing a name — a label string is required as the first argument`,
       filePath,
       line: lineOf(declarator),
     });
@@ -2304,19 +2277,103 @@ function parseSource(source, filePath, rawSource) {
     }
   });
 
-  // Walk the AST for Automation declarations: const X = Automation(fn).as('Label')
+  // Walk the AST for Automation declarations: Automation('name', fn) or const X = Automation('name', fn)
   walk(ast, node => {
-    if (node.type !== 'VariableDeclaration') return;
-    for (const declarator of node.declarations) {
-      const { automation, error, warnings } = extractAutomation(declarator, filePath, source, rawSource || null, declaredTaskNames);
-      if (error) {
-        result.warnings.push(error);
+    // Pattern 1: Standalone call expression — Automation('name', fn)
+    if (node.type === 'ExpressionStatement' && node.expression && node.expression.type === 'CallExpression') {
+      var callExpr = node.expression;
+      if (callExpr.callee && callExpr.callee.type === 'Identifier' && callExpr.callee.name === 'Automation') {
+        var args = callExpr.arguments || [];
+        var label = args.length >= 1 ? extractString(args[0]) : null;
+        var fn = args.length >= 2 ? args[1] : null;
+        var warnings = [];
+
+        if (!fn || (fn.type !== 'ArrowFunctionExpression' && fn.type !== 'FunctionExpression')) {
+          result.warnings.push({
+            message: `Automation() at ${filePath}:${lineOf(callExpr)} requires a name and a function argument`,
+            filePath,
+            line: lineOf(callExpr),
+          });
+          return false;
+        }
+
+        // Extract param types from raw TypeScript source
+        var params = [];
+        if (rawSource) {
+          var paramResult = extractAutomationParamTypes(rawSource, filePath);
+          params = paramResult.params;
+          if (paramResult.warnings.length > 0) {
+            warnings.push.apply(warnings, paramResult.warnings);
+          }
+        }
+
+        // Build tracked params set
+        var trackedParams = new Set();
+        for (var i = 0; i < params.length; i++) {
+          trackedParams.add(params[i].name);
+        }
+        var fnParams = extractFnParams(fn.params);
+        for (var j = 0; j < fnParams.length; j++) {
+          trackedParams.add(fnParams[j]);
+        }
+
+        // Extract steps
+        var steps = fn.body && fn.body.type === 'BlockStatement'
+          ? extractSteps(fn.body, filePath, trackedParams, warnings, source, declaredTaskNames)
+          : [];
+
+        // Validation warnings
+        if (!label) {
+          warnings.push({
+            message: `Automation at ${filePath}:${lineOf(callExpr)} is missing a name — a label string is required as the first argument`,
+            filePath,
+            line: lineOf(callExpr),
+          });
+        }
+        if (params.length === 0) {
+          warnings.push({
+            message: `Automation '${label || '(unnamed)'}' at ${filePath}:${lineOf(callExpr)} has no parameters — consider using Test instead`,
+            filePath,
+            line: lineOf(callExpr),
+          });
+        }
+        if (steps.length === 0) {
+          warnings.push({
+            message: `Automation '${label || '(unnamed)'}' at ${filePath}:${lineOf(callExpr)} has no recognizable steps`,
+            filePath,
+            line: lineOf(callExpr),
+          });
+        }
+
+        if (warnings.length > 0) {
+          result.warnings.push(...warnings);
+        }
+
+        result.automations.push({
+          name: label || null,
+          label: label || null,
+          params: params,
+          steps: steps,
+          line: lineOf(callExpr),
+        });
+
+        return false;
       }
-      if (warnings) {
-        result.warnings.push(...warnings);
-      }
-      if (automation) {
-        result.automations.push(automation);
+    }
+
+    // Pattern 2: Variable declaration — const X = Automation('name', fn)
+    if (node.type === 'VariableDeclaration') {
+      for (const declarator of node.declarations) {
+        const { automation, error, warnings } = extractAutomation(declarator, filePath, source, rawSource || null, declaredTaskNames);
+        if (error) {
+          result.warnings.push(error);
+        }
+        if (warnings) {
+          result.warnings.push(...warnings);
+        }
+        if (automation) {
+          result.automations.push(automation);
+        }
       }
     }
   });

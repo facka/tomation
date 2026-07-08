@@ -193,30 +193,23 @@ export declare function Test(
 type AutomationParamValue = string | number | Date;
 
 /**
- * Builder returned by Automation(fn) — chain .as(label) to finalize.
- */
-export interface AutomationBuilder<P extends Record<string, AutomationParamValue>> {
-  __automation: true;
-  fn: (params: P) => void;
-  as(label: string): AutomationDescriptor<P>;
-}
-
-/**
- * Finalized Automation descriptor returned by .as(label).
+ * Descriptor returned by Automation('name', fn).
  */
 export interface AutomationDescriptor<P extends Record<string, AutomationParamValue>> {
   __automation: true;
+  name: string;
   fn: (params: P) => void;
-  label: string;
 }
 
 /**
  * Declares a parameterized Automation.
+ * @param name - The automation label/name.
  * @param fn - The automation function with a typed params object.
  */
 export declare function Automation<P extends Record<string, AutomationParamValue>>(
+  name: string,
   fn: (params: P) => void
-): AutomationBuilder<P>;
+): AutomationDescriptor<P>;
 
 // --- Action Stubs ---
 

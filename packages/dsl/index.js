@@ -148,14 +148,8 @@ function Test(name, fn) {
   return { __test: true, name: name, fn: fn };
 }
 
-function Automation(fn) {
-  return {
-    __automation: true,
-    fn: fn,
-    as: function (label) {
-      return { __automation: true, fn: fn, label: label };
-    }
-  };
+function Automation(name, fn) {
+  return { __automation: true, name: name, fn: fn };
 }
 
 // --- Action stubs ---

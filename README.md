@@ -329,12 +329,12 @@ Automations live in `*.automation.ts` files inside a configured `automations` di
 import { Automation, AssertExists, AssertHasText, SaveText } from '@tomationjs/dsl'
 import Todo from '~/pom/todo.pom'
 
-Automation((params: { item: string }) => {
+Automation('Add Todo Item', (params: { item: string }) => {
   Todo.addItem({ text: params.item })
   AssertExists(Todo.firstItem)
   SaveText(Todo.firstItemText).as('savedItem')
   AssertHasText(Todo.firstItemText, params.item)
-}).as('Add Todo Item')
+})
 ```
 
 ### Supported parameter types
@@ -349,9 +349,9 @@ Automation((params: { item: string }) => {
 Optional parameters use `?` and won't block execution if left empty:
 
 ```typescript
-Automation((params: { email: string; environment?: string }) => {
+Automation('Create Account', (params: { email: string; environment?: string }) => {
   // environment resolves to empty string if not provided
-}).as('Create Account')
+})
 ```
 
 ### Enum parameters
@@ -359,9 +359,9 @@ Automation((params: { email: string; environment?: string }) => {
 String union literals render as a `<select>` dropdown in the extension panel:
 
 ```typescript
-Automation((params: { username: string; role: 'admin' | 'user' | 'viewer' }) => {
+Automation('Assign Role', (params: { username: string; role: 'admin' | 'user' | 'viewer' }) => {
   // role is constrained to one of the declared options
-}).as('Assign Role')
+})
 ```
 
 ### Configuration
@@ -393,7 +393,7 @@ export default {
 |-|-------|-------------|
 | Values | Hardcoded at authoring time | Provided at run-time via form |
 | File suffix | `.test.ts` | `.automation.ts` |
-| Declaration | `Test('name', fn)` | `Automation(fn).as('name')` |
+| Declaration | `Test('name', fn)` | `Automation('name', fn)` |
 | Parameters | None | Typed params object |
 | Use case | Regression checks | Reusable user-driven procedures |
 
