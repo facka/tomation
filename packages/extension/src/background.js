@@ -573,7 +573,14 @@ function buildStepMessage(step, pageElements, params) {
 
   // Resolve value field
   if (step.value !== undefined) {
-    msg.value = resolveValue(step.value, params, runState.contextStore);
+    var resolvedVal = resolveValue(step.value, params, runState.contextStore);
+    // If ctx resolution fails (key not saved yet), keep original for lazy resolution at runtime
+    if (resolvedVal && typeof resolvedVal === 'object' && resolvedVal.__ctxError) {
+      msg.value = step.value;
+      msg.__needsCtxResolve = true;
+    } else {
+      msg.value = resolvedVal;
+    }
   }
 
   // Copy over action-specific fields
@@ -581,7 +588,13 @@ function buildStepMessage(step, pageElements, params) {
     msg.target = step.target;
   }
   if (step.url !== undefined) {
-    msg.url = resolveValue(step.url, params, runState.contextStore);
+    var resolvedUrl = resolveValue(step.url, params, runState.contextStore);
+    if (resolvedUrl && typeof resolvedUrl === 'object' && resolvedUrl.__ctxError) {
+      msg.url = step.url;
+      msg.__needsCtxResolve = true;
+    } else {
+      msg.url = resolvedUrl;
+    }
   }
   if (step.ms !== undefined) {
     msg.ms = step.ms;
@@ -1010,10 +1023,36 @@ function sendStepToRuntime(step, stepIndex) {
   var msg = {};
   var keys = Object.keys(step);
   for (var i = 0; i < keys.length; i++) {
+    if (keys[i] === '__needsCtxResolve') continue;
     msg[keys[i]] = step[keys[i]];
   }
   msg.type = 'EXECUTE_STEP';
   msg.stepIndex = stepIndex;
+
+  // Lazily resolve {{ctx.X}} placeholders that couldn't be resolved during flattening
+  if (step.__needsCtxResolve) {
+    if (msg.value && typeof msg.value === 'string' && msg.value.indexOf('{{ctx.') !== -1) {
+      var resolved = resolveValue(msg.value, {}, runState.contextStore);
+      if (resolved && typeof resolved === 'object' && resolved.__ctxError) {
+        // Still unresolved — report as step failure
+        emitLog(stepIndex, step, false, resolved.__ctxError);
+        runState.failCount++;
+        runState.stepIndex++;
+        return Promise.resolve({ ok: false, error: resolved.__ctxError });
+      }
+      msg.value = resolved;
+    }
+    if (msg.url && typeof msg.url === 'string' && msg.url.indexOf('{{ctx.') !== -1) {
+      var resolvedUrl = resolveValue(msg.url, {}, runState.contextStore);
+      if (resolvedUrl && typeof resolvedUrl === 'object' && resolvedUrl.__ctxError) {
+        emitLog(stepIndex, step, false, resolvedUrl.__ctxError);
+        runState.failCount++;
+        runState.stepIndex++;
+        return Promise.resolve({ ok: false, error: resolvedUrl.__ctxError });
+      }
+      msg.url = resolvedUrl;
+    }
+  }
 
   return api.tabs.sendMessage(runState.lockedTabId, msg);
 }
