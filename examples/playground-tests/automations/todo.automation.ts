@@ -6,4 +6,5 @@ Automation('Add Todo Item', (params: { item: string }) => {
   AssertExists(Todo.firstItem)
   SaveText(Todo.firstItemText).as('savedItem')
   AssertHasText(Todo.firstItemText, params.item)
+  AssertHasText(Todo.firstItemText, '{{ctx.savedItem}}')
 })

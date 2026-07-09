@@ -1,6 +1,6 @@
 {
   "name": "tomation-extension",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Tomation browser extension — cross-browser WebExtensions sidebar",
   "private": true,
   "scripts": {

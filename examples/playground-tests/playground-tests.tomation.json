@@ -8,7 +8,7 @@
     "urls": [
       "https://facka.github.io/tomation"
     ],
-    "compilerVersion": "1.0.3"
+    "compilerVersion": "1.0.4"
   },
   "pageElements": {
     "Login__usernameInput": {
@@ -444,6 +444,11 @@
           "action": "assertHasText",
           "target": "Todo__firstItemText",
           "value": "{{item}}"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Todo__firstItemText",
+          "value": "{{ctx.savedItem}}"
         }
       ]
     }
