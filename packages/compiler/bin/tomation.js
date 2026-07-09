@@ -334,7 +334,7 @@ function runPipeline(cwd, options) {
 
   // Step 5: flatten
   log('Step 5/6: Flattening spec');
-  var spec = flattenSpec(pomResults, parsedTestFiles, meta);
+  var spec = flattenSpec(pomResults, parsedTestFiles.concat(parsedAutomationFiles), meta);
   var specElemCount = Object.keys(spec.pageElements || {}).length;
   var specTaskCount = Object.keys(spec.tasks || {}).length;
   var specTestCount = (spec.tests || []).length;

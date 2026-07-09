@@ -2,7 +2,7 @@
 
 module.exports = {
   name: 'Tomation',
-  version: '1.0.1',
+  version: require('./package.json').version,
   description: 'Browser automation and testing via a sidebar panel',
   permissions: ['storage', 'tabs'],
   content_scripts: [

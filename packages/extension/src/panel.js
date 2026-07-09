@@ -281,7 +281,22 @@ function renderHomeView() {
       }
 
       html += '<div class="spec-section">';
-      html += '<div class="spec-header">' + escapeHtml(specEntry.filename) + '</div>';
+
+      // Display meta.name and meta.description as the primary header
+      var specName = (spec && spec.meta && spec.meta.name) ? spec.meta.name : specEntry.filename;
+      var specDesc = (spec && spec.meta && spec.meta.description) ? spec.meta.description : '';
+      var specVersion = (spec && spec.meta && spec.meta.compilerVersion) ? spec.meta.compilerVersion : '';
+
+      html += '<div class="spec-header">' + escapeHtml(specName);
+      if (specDesc) {
+        html += '<div class="spec-description">' + escapeHtml(specDesc) + '</div>';
+      }
+      html += '<div class="spec-file-info">' + escapeHtml(specEntry.filename);
+      if (specVersion) {
+        html += ' <span class="spec-version">(v' + escapeHtml(specVersion) + ')</span>';
+      }
+      html += '</div>';
+      html += '</div>';
 
       var hasTests = spec && spec.tests && spec.tests.length > 0;
       var hasAutomations = spec && spec.automations && spec.automations.length > 0;

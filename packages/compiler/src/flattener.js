@@ -1,5 +1,7 @@
 'use strict';
 
+var path = require('path');
+
 /**
  * flattener.js — merges POM results and parsed test files into a spec-shaped object.
  *
@@ -59,6 +61,14 @@ function flattenSpec(pomResults, parsedTestFiles, meta) {
   // Include testFiles base URL when provided (for file upload support)
   if (meta && typeof meta.testFiles === 'string') {
     resolvedMeta.testFiles = meta.testFiles;
+  }
+
+  // Stamp compiler version from package.json
+  try {
+    var compilerPkg = require(path.join(__dirname, '..', 'package.json'));
+    resolvedMeta.compilerVersion = compilerPkg.version;
+  } catch (e) {
+    // Silently skip if package.json is unavailable
   }
 
   // --- Merge pageElements from all POM results ---
@@ -149,9 +159,10 @@ function flattenSpec(pomResults, parsedTestFiles, meta) {
         if (!automationDef || typeof automationDef !== 'object') continue;
 
         // Build output entry: { name: label, params: [...], steps: [...] }
-        // Strip internal fields: line, name (variable name — label becomes the name)
+        // Strip internal fields: line
+        // Use name (which includes namespace prefix if set), falling back to label
         var automationOut = {
-          name: automationDef.label || automationDef.name,
+          name: automationDef.name || automationDef.label,
           params: [],
           steps: automationDef.steps || [],
         };

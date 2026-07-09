@@ -7,7 +7,8 @@
     "description": "Tests for the Tomation playground apps",
     "urls": [
       "https://facka.github.io/tomation"
-    ]
+    ],
+    "compilerVersion": "1.0.3"
   },
   "pageElements": {
     "Login__usernameInput": {
@@ -108,15 +109,19 @@
         {
           "action": "type",
           "target": "Login__usernameInput",
-          "value": "admin"
+          "value": "{{username}}"
         },
         {
           "action": "typePassword",
           "target": "Login__passwordInput",
-          "value": "password123"
+          "value": "{{password}}"
         }
       ],
-      "params": []
+      "params": [
+        "username",
+        "password"
+      ],
+      "label": "Fill Credentials"
     },
     "Login__fillInvalidCredentials": {
       "steps": [
@@ -131,7 +136,8 @@
           "value": "wrongpass"
         }
       ],
-      "params": []
+      "params": [],
+      "label": "Fill Invalid Credentials"
     },
     "Login__submit": {
       "steps": [
@@ -140,7 +146,8 @@
           "target": "Login__submitButton"
         }
       ],
-      "params": []
+      "params": [],
+      "label": "Submit Form"
     },
     "Navigation__verifyStep1": {
       "steps": [
@@ -155,7 +162,8 @@
           "value": "Step 1 of 3"
         }
       ],
-      "params": []
+      "params": [],
+      "label": "Verify Step 1"
     },
     "Navigation__verifyStep2": {
       "steps": [
@@ -170,7 +178,8 @@
           "value": "Step 2 of 3"
         }
       ],
-      "params": []
+      "params": [],
+      "label": "Verify Step 2"
     },
     "Navigation__verifyStep3": {
       "steps": [
@@ -190,7 +199,8 @@
           "value": "Step 3 of 3"
         }
       ],
-      "params": []
+      "params": [],
+      "label": "Verify Step 3"
     },
     "Todo__addItem": {
       "steps": [
@@ -206,7 +216,8 @@
       ],
       "params": [
         "text"
-      ]
+      ],
+      "label": "Add Item"
     }
   },
   "tests": [
@@ -215,7 +226,11 @@
       "steps": [
         {
           "action": "task",
-          "name": "Login__fillCredentials"
+          "name": "Login__fillCredentials",
+          "params": {
+            "username": "admin",
+            "password": "password123"
+          }
         },
         {
           "action": "task",
@@ -395,6 +410,40 @@
           "action": "assertHasText",
           "target": "Todo__list",
           "value": "Write code"
+        }
+      ]
+    }
+  ],
+  "automations": [
+    {
+      "name": "Todo__Add Todo Item",
+      "params": [
+        {
+          "name": "item",
+          "type": "string"
+        }
+      ],
+      "steps": [
+        {
+          "action": "task",
+          "name": "Todo__addItem",
+          "params": {
+            "text": "{{item}}"
+          }
+        },
+        {
+          "action": "assertExists",
+          "target": "Todo__firstItem"
+        },
+        {
+          "action": "saveText",
+          "target": "Todo__firstItemText",
+          "contextKey": "savedItem"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Todo__firstItemText",
+          "value": "{{item}}"
         }
       ]
     }
