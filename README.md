@@ -8,6 +8,10 @@ Tomation separates **what** you're testing from **how** elements are found on th
 
 ![Tomation Demo](./docs/tomation-demo-todo-list.gif)
 
+## Try it out
+
+Want to see Tomation in action? Head over to the [Tomation Playground](https://facka.github.io/tomation/) — a set of small demo apps (login form, todo list, navigation) built specifically for testing the framework. Load the extension, open the playground in your browser, and run the included test specs to see step-by-step execution with visual feedback.
+
 ## Installation
 
 ### Browser Extension
