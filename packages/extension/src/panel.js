@@ -223,6 +223,8 @@ function validateSpec(obj) {
 function renderHomeView() {
   var contentEl = document.getElementById('project-content');
   var warningEl = document.getElementById('warning-banner');
+  var landingEl = document.getElementById('home-landing');
+  var loadedEl = document.getElementById('home-loaded');
 
   if (!contentEl) return;
 
@@ -236,7 +238,9 @@ function renderHomeView() {
   warningEl.textContent = '';
 
   if (!currentHostname) {
-    contentEl.innerHTML = '<p>No active tab detected.</p>';
+    // Show landing page
+    if (landingEl) landingEl.style.display = '';
+    if (loadedEl) loadedEl.style.display = 'none';
     return;
   }
 
@@ -244,24 +248,45 @@ function renderHomeView() {
     currentProject = project;
 
     if (!project || !project.specs || project.specs.length === 0) {
-      // Show create-project prompt
-      contentEl.innerHTML =
-        '<div class="create-project">' +
-        '<p>No project found for <strong>' + escapeHtml(currentHostname) + '</strong></p>' +
-        '<p>Load a spec file to get started.</p>' +
-        '</div>';
+      // Show landing page
+      if (landingEl) landingEl.style.display = '';
+      if (loadedEl) loadedEl.style.display = 'none';
       return;
+    }
+
+    // Switch to loaded state
+    if (landingEl) landingEl.style.display = 'none';
+    if (loadedEl) loadedEl.style.display = '';
+
+    // Update loaded header with first spec's meta info
+    var firstSpec = project.specs[0];
+    var spec = firstSpec.spec;
+    var nameEl = document.getElementById('loaded-spec-name');
+    var descEl = document.getElementById('loaded-spec-description');
+    var fileInfoEl = document.getElementById('loaded-spec-file-info');
+
+    if (nameEl) {
+      nameEl.textContent = (spec && spec.meta && spec.meta.name) ? spec.meta.name : firstSpec.filename;
+    }
+    if (descEl) {
+      var desc = (spec && spec.meta && spec.meta.description) ? spec.meta.description : '';
+      descEl.textContent = desc;
+      descEl.style.display = desc ? '' : 'none';
+    }
+    if (fileInfoEl) {
+      var version = (spec && spec.meta && spec.meta.compilerVersion) ? spec.meta.compilerVersion : '';
+      fileInfoEl.textContent = firstSpec.filename + (version ? ' (v' + version + ')' : '');
     }
 
     // Render spec + test list
     var html = '';
     for (var i = 0; i < project.specs.length; i++) {
       var specEntry = project.specs[i];
-      var spec = specEntry.spec;
+      var specData = specEntry.spec;
 
       // Check meta.urls (array) or meta.url (legacy single) warning
-      if (spec && spec.meta) {
-        var urls = spec.meta.urls || (spec.meta.url ? [spec.meta.url] : []);
+      if (specData && specData.meta) {
+        var urls = specData.meta.urls || (specData.meta.url ? [specData.meta.url] : []);
         if (urls.length > 0) {
           try {
             var anyMatch = urls.some(function (u) {
@@ -280,45 +305,27 @@ function renderHomeView() {
         }
       }
 
-      html += '<div class="spec-section">';
-
-      // Display meta.name and meta.description as the primary header
-      var specName = (spec && spec.meta && spec.meta.name) ? spec.meta.name : specEntry.filename;
-      var specDesc = (spec && spec.meta && spec.meta.description) ? spec.meta.description : '';
-      var specVersion = (spec && spec.meta && spec.meta.compilerVersion) ? spec.meta.compilerVersion : '';
-
-      html += '<div class="spec-header">' + escapeHtml(specName);
-      if (specDesc) {
-        html += '<div class="spec-description">' + escapeHtml(specDesc) + '</div>';
-      }
-      html += '<div class="spec-file-info">' + escapeHtml(specEntry.filename);
-      if (specVersion) {
-        html += ' <span class="spec-version">(v' + escapeHtml(specVersion) + ')</span>';
-      }
-      html += '</div>';
-      html += '</div>';
-
-      var hasTests = spec && spec.tests && spec.tests.length > 0;
-      var hasAutomations = spec && spec.automations && spec.automations.length > 0;
+      var hasTests = specData && specData.tests && specData.tests.length > 0;
+      var hasAutomations = specData && specData.automations && specData.automations.length > 0;
 
       if (hasTests || hasAutomations) {
+        html += '<div class="spec-section">';
         html += '<ul class="test-list">';
         if (hasTests) {
-          for (var j = 0; j < spec.tests.length; j++) {
+          for (var j = 0; j < specData.tests.length; j++) {
             html += '<li data-spec-index="' + i + '" data-test-index="' + j + '" data-runnable-type="test">' +
-              escapeHtml(spec.tests[j].name) + '</li>';
+              escapeHtml(specData.tests[j].name) + '</li>';
           }
         }
         if (hasAutomations) {
-          for (var a = 0; a < spec.automations.length; a++) {
+          for (var a = 0; a < specData.automations.length; a++) {
             html += '<li data-spec-index="' + i + '" data-automation-index="' + a + '" data-runnable-type="automation" class="automation-item">' +
-              '<span class="automation-badge">⚙</span> ' + escapeHtml(spec.automations[a].name) + '</li>';
+              '<span class="automation-badge">⚙</span> ' + escapeHtml(specData.automations[a].name) + '</li>';
           }
         }
         html += '</ul>';
+        html += '</div>';
       }
-
-      html += '</div>';
     }
 
     contentEl.innerHTML = html;
@@ -1251,7 +1258,16 @@ function onBackgroundMessage(message) {
 function onSpecFileSelected(e) {
   var file = e.target.files[0];
   if (!file) return;
+  handleDroppedFile(file);
+  // Reset file input so the same file can be re-selected
+  e.target.value = '';
+}
 
+/**
+ * Handle a file (from input or drag-and-drop) — parse, validate, and load.
+ * @param {File} file
+ */
+function handleDroppedFile(file) {
   var reader = new FileReader();
   reader.onload = function (evt) {
     var text = evt.target.result;
@@ -1275,9 +1291,6 @@ function onSpecFileSelected(e) {
     });
   };
   reader.readAsText(file);
-
-  // Reset file input so the same file can be re-selected
-  e.target.value = '';
 }
 
 // --- Error View ---
@@ -1387,6 +1400,44 @@ function init() {
       fileInput.click();
     });
     fileInput.addEventListener('change', onSpecFileSelected);
+  }
+
+  // Wire up alternate Load Spec button (in loaded header)
+  var loadBtnAlt = document.getElementById('load-spec-btn-alt');
+  var fileInputAlt = document.getElementById('spec-file-input-alt');
+  if (loadBtnAlt && fileInputAlt) {
+    loadBtnAlt.addEventListener('click', function () {
+      fileInputAlt.click();
+    });
+    fileInputAlt.addEventListener('change', onSpecFileSelected);
+  }
+
+  // Wire up drag-and-drop on the drop zone and body
+  var dropZone = document.getElementById('drop-zone');
+  var homeView = document.getElementById('view-home');
+
+  if (homeView) {
+    homeView.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      if (dropZone) dropZone.classList.add('drag-over');
+    });
+    homeView.addEventListener('dragleave', function (e) {
+      if (!homeView.contains(e.relatedTarget)) {
+        if (dropZone) dropZone.classList.remove('drag-over');
+      }
+    });
+    homeView.addEventListener('drop', function (e) {
+      e.preventDefault();
+      if (dropZone) dropZone.classList.remove('drag-over');
+      var files = e.dataTransfer && e.dataTransfer.files;
+      if (files && files.length > 0) {
+        var file = files[0];
+        if (file.name.endsWith('.json') || file.name.endsWith('.tomation.json')) {
+          // Simulate file input change
+          handleDroppedFile(file);
+        }
+      }
+    });
   }
 
   // Wire up error back button

@@ -176,6 +176,7 @@
     /* Search input */
     .search-wrapper {
       position: relative;
+      margin-bottom: 12px;
     }
 
     .search-wrapper::before {
@@ -185,7 +186,7 @@
       top: 50%;
       transform: translateY(-50%);
       color: var(--text-muted);
-      font-size: 13px;
+      font-size: 30px;
       pointer-events: none;
     }
 
@@ -277,6 +278,115 @@
     }
 
     .create-project p { margin-bottom: 12px; font-size: 13px; }
+
+    /* Landing page (no spec loaded) */
+    .home-landing {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px 32px;
+      text-align: center;
+      min-height: 300px;
+    }
+
+    .landing-icon {
+      font-size: 40px;
+      margin-bottom: 16px;
+      opacity: 0.8;
+    }
+
+    .landing-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .landing-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .landing-subtitle code {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: var(--bg-elevated);
+      padding: 1px 5px;
+      border-radius: 3px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .landing-actions {
+      margin-bottom: 24px;
+    }
+
+    .landing-actions input[type="file"] {
+      display: none;
+    }
+
+    /* Drop zone */
+    .drop-zone {
+      width: 100%;
+      max-width: 260px;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px 16px;
+      color: var(--text-muted);
+      font-size: 12px;
+      transition: all 0.15s ease;
+    }
+
+    .drop-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent-text);
+    }
+
+    .drop-zone-text {
+      pointer-events: none;
+    }
+
+    /* Loaded state header */
+    .loaded-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 12px;
+    }
+
+    .loaded-meta h2 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .loaded-description {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .loaded-file-info {
+      font-size: 10px;
+      color: var(--text-muted);
+      opacity: 0.7;
+    }
+
+    .loaded-actions {
+      flex-shrink: 0;
+    }
+
+    .loaded-actions input[type="file"] {
+      display: none;
+    }
+
+    #load-spec-btn-alt {
+      font-size: 20px;
+    }
 
     /* File input */
     .file-input-wrapper input[type="file"] { display: none; }
@@ -551,8 +661,9 @@
 
     /* Automation badge */
     .automation-badge {
-      font-size: 12px;
+      font-size: 20px;
       opacity: 0.7;
+      line-height: 10px;
     }
 
     .automation-item {
@@ -628,22 +739,37 @@
 <body>
   <!-- Home View -->
   <div id="view-home" class="view active">
-    <div class="header">
-      <div class="header-title">
-        <div class="logo">T</div>
-        <h1>Tomation</h1>
-      </div>
-      <div class="file-input-wrapper">
-        <button id="load-spec-btn" class="btn btn-sm">Load Spec</button>
+    <div id="warning-banner" class="warning-banner"></div>
+    <div id="home-landing" class="home-landing">
+      <div class="landing-icon">📋</div>
+      <p class="landing-title">Load a spec to get started</p>
+      <p class="landing-subtitle">Drag and drop a <code>.tomation.json</code> file here, or use the button below.</p>
+      <div class="landing-actions">
+        <button id="load-spec-btn" class="btn btn-primary">Load Spec File</button>
         <input type="file" id="spec-file-input" accept=".json,.tomation.json" />
       </div>
+      <div id="drop-zone" class="drop-zone">
+        <span class="drop-zone-text">Drop .tomation.json here</span>
+      </div>
     </div>
-    <div id="warning-banner" class="warning-banner"></div>
-    <div class="search-wrapper">
-      <input type="text" id="search-input" maxlength="100" placeholder="Search tests and automations..." />
+    <div id="home-loaded" style="display:none;">
+      <div class="loaded-header">
+        <div class="loaded-meta">
+          <h2 id="loaded-spec-name"></h2>
+          <p id="loaded-spec-description" class="loaded-description"></p>
+          <p id="loaded-spec-file-info" class="loaded-file-info"></p>
+        </div>
+        <div class="loaded-actions">
+          <button id="load-spec-btn-alt" class="btn btn-sm btn-ghost" title="Load another spec">⟳</button>
+          <input type="file" id="spec-file-input-alt" accept=".json,.tomation.json" />
+        </div>
+      </div>
+      <div class="search-wrapper">
+        <input type="text" id="search-input" maxlength="100" placeholder="Search tests and automations..." />
+      </div>
+      <div id="project-content"></div>
+      <div id="search-empty-state" style="display:none;">No tests or automations found</div>
     </div>
-    <div id="project-content"></div>
-    <div id="search-empty-state" style="display:none;">No tests or automations found</div>
   </div>
 
   <!-- Test Plan View -->
