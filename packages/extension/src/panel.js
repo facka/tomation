@@ -319,8 +319,10 @@ function renderHomeView() {
         }
         if (hasAutomations) {
           for (var a = 0; a < specData.automations.length; a++) {
+            var autoName = specData.automations[a].name || '';
+            var autoDisplayName = autoName.indexOf('__') !== -1 ? autoName.split('__').slice(1).join('__') : autoName;
             html += '<li data-spec-index="' + i + '" data-automation-index="' + a + '" data-runnable-type="automation" class="automation-item">' +
-              '<span class="automation-badge">⚙</span> ' + escapeHtml(specData.automations[a].name) + '</li>';
+              '<span class="automation-badge">⚙</span> ' + escapeHtml(autoDisplayName) + '</li>';
           }
         }
         html += '</ul>';
