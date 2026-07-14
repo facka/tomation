@@ -617,6 +617,7 @@ function renderTestPlan() {
         childCb.checked = true;
         childCb.setAttribute('data-step-index', String(i));
         childCb.setAttribute('data-child-index', String(c));
+        childCb.addEventListener('change', onChildCheckboxChange);
         var childLabel = document.createElement('label');
         childLabel.innerHTML = buildStepLabelHtml(childSteps[c], pageElements);
         childLi.appendChild(childCb);
@@ -690,23 +691,50 @@ function onConfigChange() {
 }
 
 /**
- * When a task checkbox is unchecked, uncheck all its child checkboxes.
- * When checked, do not force children to re-check.
+ * When a task checkbox is toggled, sync all child checkboxes to match.
+ * Checking a task checks all its child steps; unchecking unchecks them all.
  */
 function onTaskCheckboxChange(e) {
   var cb = e.target;
   var stepIndex = cb.getAttribute('data-step-index');
   var isChecked = cb.checked;
 
-  if (!isChecked) {
-    // Uncheck all child checkboxes for this task
-    var checklist = document.getElementById('step-checklist');
-    var childCbs = checklist.querySelectorAll(
-      'input[data-step-index="' + stepIndex + '"][data-child-index]'
-    );
-    for (var i = 0; i < childCbs.length; i++) {
-      childCbs[i].checked = false;
+  var checklist = document.getElementById('step-checklist');
+  var childCbs = checklist.querySelectorAll(
+    'input[data-step-index="' + stepIndex + '"][data-child-index]'
+  );
+  for (var i = 0; i < childCbs.length; i++) {
+    childCbs[i].checked = isChecked;
+  }
+}
+
+/**
+ * When a child step checkbox is toggled, sync the parent task checkbox.
+ * If any child is checked, the task is checked. If all are unchecked, the task is unchecked.
+ */
+function onChildCheckboxChange(e) {
+  var cb = e.target;
+  var stepIndex = cb.getAttribute('data-step-index');
+
+  var checklist = document.getElementById('step-checklist');
+  var childCbs = checklist.querySelectorAll(
+    'input[data-step-index="' + stepIndex + '"][data-child-index]'
+  );
+
+  var anyChecked = false;
+  for (var i = 0; i < childCbs.length; i++) {
+    if (childCbs[i].checked) {
+      anyChecked = true;
+      break;
     }
+  }
+
+  // Find the parent task checkbox (same step-index, no child-index, has data-is-task)
+  var taskCb = checklist.querySelector(
+    'input[data-step-index="' + stepIndex + '"][data-is-task]'
+  );
+  if (taskCb) {
+    taskCb.checked = anyChecked;
   }
 }
 
