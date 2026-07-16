@@ -56,6 +56,7 @@ const usernameInput = is.INPUT.where(idIs('username')).as('Username')
 const passwordInput = is.INPUT.where(idIs('password')).as('Password')
 const submitButton = is.BUTTON.where(idIs('login-btn')).as('Submit')
 const errorMessage = is.DIV.where(idIs('error-msg')).as('Error Message')
+const message = is.DIV.where(idIs('message')).as('Message')
 
 const fillCredentials = Task((params) => {
   const { username, password } = params
@@ -67,7 +68,7 @@ const submit = Task(() => {
   Click(submitButton)
 }).as('Submit')
 
-export default { usernameInput, passwordInput, submitButton, errorMessage, fillCredentials, submit }
+export default { usernameInput, passwordInput, submitButton, errorMessage, message, fillCredentials, submit }
 ```
 
 ### 3. Write tests
@@ -80,7 +81,7 @@ import Login from '~/pom/login.pom'
 Test('Login with valid credentials', () => {
   Login.fillCredentials({ username: 'admin', password: 'secret' })
   Login.submit()
-  AssertExists(Login.errorMessage)
+  AssertHasText(Login.message, 'Login successful')
 })
 
 Test('Login shows error on empty submit', () => {
