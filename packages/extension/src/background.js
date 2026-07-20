@@ -1054,7 +1054,12 @@ function sendStepToRuntime(step, stepIndex) {
     }
   }
 
-  return api.tabs.sendMessage(runState.lockedTabId, msg);
+  return api.tabs.sendMessage(runState.lockedTabId, msg).catch(function (error) {
+    if (error && error.message && error.message.indexOf('Could not establish connection') !== -1) {
+      return { ok: false, error: 'Content script not available on this tab. Reload the page and try again.' };
+    }
+    throw error;
+  });
 }
 
 /**
@@ -1537,7 +1542,12 @@ function sendUploadToRuntime(step, currentIndex, fileDataUrl, mimeType) {
     msg.mimeType = mimeType;
   }
 
-  return api.tabs.sendMessage(runState.lockedTabId, msg).then(function (result) {
+  return api.tabs.sendMessage(runState.lockedTabId, msg).catch(function (error) {
+    if (error && error.message && error.message.indexOf('Could not establish connection') !== -1) {
+      return { ok: false, error: 'Content script not available on this tab. Reload the page and try again.' };
+    }
+    throw error;
+  }).then(function (result) {
     if (runState.stopRequested) return finishRun();
 
     var ok = result && result.ok;
