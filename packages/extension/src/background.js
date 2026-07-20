@@ -1638,8 +1638,7 @@ function handleRetryStep(msg) {
 
 /**
  * Handle a SKIP_STEP message from the panel.
- * Advances past the failed step without modifying passCount.
- * If the failed step was the last step, finishes the run; otherwise resumes the step loop.
+ * Advances past the failed step without modifying passCount and resumes the step loop.
  *
  * @param {object} msg - The SKIP_STEP message payload (must include stepIndex)
  */
@@ -1658,11 +1657,7 @@ function handleSkipStep(msg) {
   runState.failedStepIndex = null;
   runState.stepIndex = msg.stepIndex + 1;
 
-  if (runState.stepIndex >= runState.steps.length) {
-    finishRun();
-  } else {
-    runStepLoop();
-  }
+  runStepLoop();
 }
 
 /**
