@@ -626,7 +626,7 @@ function renderAutomationsTab(specs, favourites) {
 
         var rowLabel = document.createElement('span');
         rowLabel.className = 'row-label';
-        rowLabel.innerHTML = '<span class="automation-badge">⚙</span> ' + escapeHtml(autoDisplayName);
+        rowLabel.innerHTML = escapeHtml(autoDisplayName);
         li.appendChild(rowLabel);
 
         var qrBtn = document.createElement('button');
