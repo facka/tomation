@@ -258,6 +258,9 @@
     }
 
     .test-list li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       padding: 8px 12px;
       cursor: pointer;
       border-radius: 4px;
@@ -734,6 +737,107 @@
       color: var(--text-muted);
       font-size: 11px;
     }
+
+    /* Tab bar */
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+
+    .tab-btn {
+      border: none;
+      background: transparent;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.12s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-hover);
+    }
+
+    .tab-btn.active {
+      color: var(--accent-text);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .tab-search-input {
+      display: block;
+      width: 100%;
+      padding: 8px 12px 8px 30px;
+      font-size: 13px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.12s;
+    }
+
+    .tab-search-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .tab-search-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-soft);
+    }
+
+    /* Quick Run button */
+    .quick-run-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px 6px;
+      border-radius: var(--radius-sm);
+      margin-left: auto;
+      transition: all 0.12s;
+      flex-shrink: 0;
+    }
+
+    .quick-run-btn:hover {
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    /* Favourite button */
+    .favourite-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px 6px;
+      border-radius: var(--radius-sm);
+      transition: all 0.12s;
+      flex-shrink: 0;
+    }
+
+    .favourite-btn:hover {
+      color: var(--warning);
+      background: var(--warning-soft);
+    }
+
+    .favourite-btn[data-favourite="true"] {
+      color: var(--warning);
+    }
   </style>
 </head>
 <body>
@@ -764,8 +868,21 @@
           <input type="file" id="spec-file-input-alt" accept=".json,.tomation.json" />
         </div>
       </div>
-      <div class="search-wrapper">
-        <input type="text" id="search-input" maxlength="100" placeholder="Search tests and automations..." />
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="tests">☑ Tests</button>
+        <button class="tab-btn" data-tab="automations">⚡ Automations</button>
+      </div>
+      <div id="tab-content-tests" class="tab-content active">
+        <div class="search-wrapper">
+          <input type="text" class="tab-search-input" maxlength="100" placeholder="Search tests..." />
+        </div>
+        <!-- test list items rendered here -->
+      </div>
+      <div id="tab-content-automations" class="tab-content">
+        <div class="search-wrapper">
+          <input type="text" class="tab-search-input" maxlength="100" placeholder="Search automations..." />
+        </div>
+        <!-- automation list items rendered here -->
       </div>
       <div id="project-content"></div>
       <div id="search-empty-state" style="display:none;">No tests or automations found</div>

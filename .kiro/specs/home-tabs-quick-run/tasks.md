@@ -29,14 +29,14 @@ Refactor the Tomation extension's home view into a tabbed interface with "Tests"
     - In panel.js, call `deleteFavourites(hostname)` wherever `deleteProject(hostname)` is invoked
     - _Requirements: 4.6_
 
-- [ ] 2. Add tab bar HTML structure and CSS to panel.html
-  - [ ] 2.1 Add tab bar markup and tab content containers inside `#home-loaded`
+- [x] 2. Add tab bar HTML structure and CSS to panel.html
+  - [x] 2.1 Add tab bar markup and tab content containers inside `#home-loaded`
     - Add `.tab-bar` div with two `.tab-btn` buttons (`data-tab="tests"` and `data-tab="automations"`)
     - Add `#tab-content-tests` and `#tab-content-automations` containers with `.tab-content` class
     - Add `.tab-search-input` in each tab content container with appropriate placeholder text
     - _Requirements: 1.1, 1.7_
 
-  - [ ] 2.2 Add inline CSS styles for tabs, Quick Run buttons, and favourite toggles
+  - [x] 2.2 Add inline CSS styles for tabs, Quick Run buttons, and favourite toggles
     - `.tab-bar` — flex row, border-bottom, gap
     - `.tab-btn` — ghost button style; `.tab-btn.active` — accent underline
     - `.tab-content` — hidden by default; `.tab-content.active` — displayed
@@ -45,8 +45,8 @@ Refactor the Tomation extension's home view into a tabbed interface with "Tests"
     - `.favourite-btn` — star icon button, left side of automation row
     - _Requirements: 1.1, 2.1, 3.1, 4.1_
 
-- [ ] 3. Implement tab switching logic in panel.js
-  - [ ] 3.1 Add `switchTab` function and tab button event listeners
+- [x] 3. Implement tab switching logic in panel.js
+  - [x] 3.1 Add `switchTab` function and tab button event listeners
     - Implement `switchTab(tabName)` that toggles `.active` class on tab buttons and content containers
     - Call `saveActiveTab(tabName)` to persist selection
     - Attach click listeners to `.tab-btn` elements that call `switchTab`

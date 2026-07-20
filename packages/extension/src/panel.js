@@ -97,6 +97,46 @@ function showView(viewName) {
   }
 }
 
+// --- Tab Switching ---
+
+/**
+ * Switch the active tab in the home view.
+ * Toggles .active class on tab buttons and content containers,
+ * and persists the selection to storage.
+ * @param {string} tabName - 'tests' or 'automations'
+ */
+function switchTab(tabName) {
+  var tabButtons = document.querySelectorAll('.tab-btn');
+  for (var i = 0; i < tabButtons.length; i++) {
+    if (tabButtons[i].getAttribute('data-tab') === tabName) {
+      tabButtons[i].classList.add('active');
+    } else {
+      tabButtons[i].classList.remove('active');
+    }
+  }
+
+  var testsContent = document.getElementById('tab-content-tests');
+  var automationsContent = document.getElementById('tab-content-automations');
+
+  if (testsContent) {
+    if (tabName === 'tests') {
+      testsContent.classList.add('active');
+    } else {
+      testsContent.classList.remove('active');
+    }
+  }
+
+  if (automationsContent) {
+    if (tabName === 'automations') {
+      automationsContent.classList.add('active');
+    } else {
+      automationsContent.classList.remove('active');
+    }
+  }
+
+  saveActiveTab(tabName);
+}
+
 // --- Inline Spec Validator (lightweight UI-level guard) ---
 
 /**
@@ -1420,6 +1460,15 @@ function init() {
   var searchInput = document.getElementById('search-input');
   if (searchInput) {
     searchInput.addEventListener('input', applySearchFilter);
+  }
+
+  // Wire up tab buttons
+  var tabButtons = document.querySelectorAll('.tab-btn');
+  for (var t = 0; t < tabButtons.length; t++) {
+    tabButtons[t].addEventListener('click', function (e) {
+      var tabName = e.currentTarget.getAttribute('data-tab');
+      switchTab(tabName);
+    });
   }
 
   // Wire up Load Spec button and file input
