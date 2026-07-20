@@ -318,6 +318,83 @@ function loadParamValues(automationName) {
   });
 }
 
+/**
+ * Persist favourite automations for a given project hostname.
+ * Catches and logs write failures without throwing (silent fail).
+ * @param {string} hostname - The project hostname
+ * @param {object} favourites - Object map { automationName: true }
+ * @returns {Promise<void>}
+ */
+function saveFavourites(hostname, favourites) {
+  var key = 'automation_favourites_' + hostname;
+  var data = {};
+  data[key] = favourites;
+  return api.storage.local.set(data).catch(function (err) {
+    console.error('saveFavourites: failed to write favourites for "' + hostname + '":', err);
+  });
+}
+
+/**
+ * Load favourite automations for a given project hostname.
+ * Returns empty object on read failure (silent fail).
+ * @param {string} hostname - The project hostname
+ * @returns {Promise<object>}
+ */
+function loadFavourites(hostname) {
+  var key = 'automation_favourites_' + hostname;
+  return api.storage.local.get(key).then(function (result) {
+    return result[key] || {};
+  }).catch(function (err) {
+    console.error('loadFavourites: failed to read favourites for "' + hostname + '":', err);
+    return {};
+  });
+}
+
+/**
+ * Remove favourite automations data for a given project hostname.
+ * Catches and logs removal failures without throwing (silent fail).
+ * @param {string} hostname - The project hostname
+ * @returns {Promise<void>}
+ */
+function deleteFavourites(hostname) {
+  var key = 'automation_favourites_' + hostname;
+  return api.storage.local.remove(key).catch(function (err) {
+    console.error('deleteFavourites: failed to remove favourites for "' + hostname + '":', err);
+  });
+}
+
+/**
+ * Persist the last selected home tab.
+ * Catches and logs write failures without throwing (silent fail).
+ * @param {string} tabName - 'tests' or 'automations'
+ * @returns {Promise<void>}
+ */
+function saveActiveTab(tabName) {
+  var data = {};
+  data['home_active_tab'] = tabName;
+  return api.storage.local.set(data).catch(function (err) {
+    console.error('saveActiveTab: failed to write active tab:', err);
+  });
+}
+
+/**
+ * Load the last selected home tab from storage.
+ * Returns 'tests' as default if not set or on read failure (silent fail).
+ * @returns {Promise<string>}
+ */
+function loadActiveTab() {
+  return api.storage.local.get('home_active_tab').then(function (result) {
+    var tab = result['home_active_tab'];
+    if (tab === 'tests' || tab === 'automations') {
+      return tab;
+    }
+    return 'tests';
+  }).catch(function (err) {
+    console.error('loadActiveTab: failed to read active tab:', err);
+    return 'tests';
+  });
+}
+
 // Export for use by other extension scripts and for testing
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -335,6 +412,11 @@ if (typeof module !== 'undefined' && module.exports) {
     saveTestPlanConfig: saveTestPlanConfig,
     saveParamValues: saveParamValues,
     loadParamValues: loadParamValues,
+    saveFavourites: saveFavourites,
+    loadFavourites: loadFavourites,
+    deleteFavourites: deleteFavourites,
+    saveActiveTab: saveActiveTab,
+    loadActiveTab: loadActiveTab,
     DEFAULT_TEST_PLAN_CONFIG: DEFAULT_TEST_PLAN_CONFIG
   };
 }

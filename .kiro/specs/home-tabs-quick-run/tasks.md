@@ -6,7 +6,7 @@ Refactor the Tomation extension's home view into a tabbed interface with "Tests"
 
 ## Tasks
 
-- [ ] 1. Add storage functions for favourites and tab persistence
+- [x] 1. Add storage functions for favourites and tab persistence
   - [ ] 1.1 Add `saveFavourites`, `loadFavourites`, and `deleteFavourites` functions to storage.js
     - Add `saveFavourites(hostname, favourites)` that persists object under key `automation_favourites_{hostname}`
     - Add `loadFavourites(hostname)` that returns Promise resolving to the favourites object or `{}`
