@@ -274,6 +274,205 @@ function sortAutomationsWithFavourites(automations, favourites) {
   return favs.concat(nonFavs);
 }
 
+// --- Quick Run Helpers ---
+
+/**
+ * Returns an array of all step indices [0, 1, 2, ..., steps.length - 1].
+ * @param {Array} steps - array of step objects
+ * @returns {number[]}
+ */
+function buildAllStepsChecked(steps) {
+  var result = [];
+  for (var i = 0; i < steps.length; i++) {
+    result.push(i);
+  }
+  return result;
+}
+
+/**
+ * Returns an object with default values for each parameter based on its type.
+ * - string → empty string
+ * - number → 0
+ * - date → today's date in YYYY-MM-DD format
+ * - enum → first option value
+ * @param {Array} params - array of parameter definition objects
+ * @returns {object}
+ */
+function buildDefaultParams(params) {
+  var result = {};
+  for (var i = 0; i < params.length; i++) {
+    var param = params[i];
+    var type = param.type;
+    if (type === 'string') {
+      result[param.name] = '';
+    } else if (type === 'number') {
+      result[param.name] = 0;
+    } else if (type === 'date') {
+      var now = new Date();
+      var yyyy = now.getFullYear();
+      var mm = String(now.getMonth() + 1);
+      if (mm.length < 2) mm = '0' + mm;
+      var dd = String(now.getDate());
+      if (dd.length < 2) dd = '0' + dd;
+      result[param.name] = yyyy + '-' + mm + '-' + dd;
+    } else if (type === 'enum') {
+      result[param.name] = (param.options && param.options.length > 0) ? param.options[0] : '';
+    }
+  }
+  return result;
+}
+
+/**
+ * Returns true if any non-optional parameter has no saved value.
+ * @param {Array} params - array of parameter definition objects
+ * @param {object|null} savedValues - object of saved param values, or null
+ * @returns {boolean}
+ */
+function hasRequiredParamsWithoutValues(params, savedValues) {
+  for (var i = 0; i < params.length; i++) {
+    var param = params[i];
+    if (param.optional === true) continue;
+    if (!savedValues || savedValues[param.name] === undefined || savedValues[param.name] === null || savedValues[param.name] === '') {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Quick Run a test: sets state, builds config, sends RUN_TEST message, switches to run view.
+ * @param {number} specIndex - index into currentProject.specs
+ * @param {number} testIndex - index into spec.tests
+ */
+function quickRunTest(specIndex, testIndex) {
+  if (!currentProject || !currentProject.specs[specIndex]) return;
+
+  var specEntry = currentProject.specs[specIndex];
+  var test = specEntry.spec.tests && specEntry.spec.tests[testIndex];
+  if (!test) return;
+
+  // Set global state (same as onTestItemClick for tests)
+  currentSpec = specEntry;
+  currentTest = test;
+  currentTestIndex = testIndex;
+  currentRunnable = { type: 'test', index: testIndex, data: test };
+
+  var checkedSteps = buildAllStepsChecked(test.steps);
+  var configKey = 'config:' + currentSpec.id + ':' + testIndex;
+
+  getTestPlanConfig(configKey).then(function (savedConfig) {
+    var config = {
+      allowContinueOnFailure: true,
+      allowRetryOnFailure: true,
+      executionSpeed: savedConfig.executionSpeed || 'NORMAL'
+    };
+
+    currentRunConfig = config;
+
+    api.runtime.sendMessage({
+      type: 'RUN_TEST',
+      testIndex: testIndex,
+      checkedSteps: checkedSteps,
+      config: config
+    });
+
+    switchToRunView();
+  });
+}
+
+/**
+ * Quick Run an automation: load saved params, merge with defaults, and execute.
+ * If required params have no saved values, navigates to plan view instead.
+ * @param {number} specIndex - index into currentProject.specs
+ * @param {number} automationIndex - index into spec.automations
+ */
+function quickRunAutomation(specIndex, automationIndex) {
+  if (!currentProject) return;
+  if (!currentProject.specs[specIndex]) return;
+  var specEntry = currentProject.specs[specIndex];
+  if (!specEntry.spec || !specEntry.spec.automations || !specEntry.spec.automations[automationIndex]) return;
+
+  var automation = specEntry.spec.automations[automationIndex];
+
+  // Set global state (same as onTestItemClick for automations)
+  currentSpec = specEntry;
+  currentTest = automation;
+  currentTestIndex = automationIndex;
+  currentRunnable = { type: 'automation', index: automationIndex, data: automation };
+
+  var params = automation.params || [];
+
+  loadParamValues(automation.name).then(function (savedValues) {
+    // If required params have no saved values, fall back to plan view
+    if (hasRequiredParamsWithoutValues(params, savedValues)) {
+      showView('test-plan');
+      var titleEl = document.getElementById('test-plan-title');
+      if (titleEl) {
+        titleEl.textContent = automation.name;
+      }
+      renderTestPlan();
+      return;
+    }
+
+    // Merge saved values with defaults
+    var mergedParams = buildDefaultParams(params);
+    if (savedValues) {
+      var keys = Object.keys(savedValues);
+      for (var i = 0; i < keys.length; i++) {
+        var k = keys[i];
+        if (savedValues[k] !== null && savedValues[k] !== undefined) {
+          mergedParams[k] = savedValues[k];
+        }
+      }
+    }
+
+    var checkedSteps = buildAllStepsChecked(automation.steps || []);
+
+    var configKey = 'config:' + currentSpec.id + ':' + automationIndex;
+    getTestPlanConfig(configKey).then(function (savedConfig) {
+      var config = {
+        allowContinueOnFailure: true,
+        allowRetryOnFailure: true,
+        executionSpeed: savedConfig.executionSpeed || 'NORMAL'
+      };
+
+      currentRunConfig = config;
+      currentRunAutomationParams = { name: automation.name, params: mergedParams };
+
+      api.runtime.sendMessage({
+        type: 'RUN_AUTOMATION',
+        automationIndex: automationIndex,
+        params: mergedParams,
+        checkedSteps: checkedSteps,
+        config: config
+      });
+
+      switchToRunView();
+    });
+  });
+}
+
+/**
+ * Click handler for Quick Run buttons. Stops propagation to prevent row click,
+ * reads runnable type from the parent <li>, and delegates to the appropriate runner.
+ * @param {Event} e - click event on a .quick-run-btn element
+ */
+function onQuickRunClick(e) {
+  e.stopPropagation();
+  var li = e.currentTarget.parentElement;
+  if (!li) return;
+  var runnableType = li.getAttribute('data-runnable-type');
+  var specIndex = parseInt(li.getAttribute('data-spec-index'), 10);
+
+  if (runnableType === 'test') {
+    var testIndex = parseInt(li.getAttribute('data-test-index'), 10);
+    quickRunTest(specIndex, testIndex);
+  } else if (runnableType === 'automation') {
+    var automationIndex = parseInt(li.getAttribute('data-automation-index'), 10);
+    quickRunAutomation(specIndex, automationIndex);
+  }
+}
+
 // --- Home View Rendering ---
 
 /**
@@ -320,6 +519,7 @@ function renderTestsTab(specs) {
         qrBtn.title = 'Quick Run';
         qrBtn.textContent = '▶';
         li.appendChild(qrBtn);
+        qrBtn.addEventListener('click', onQuickRunClick);
 
         li.addEventListener('click', onTestItemClick);
         ul.appendChild(li);
@@ -411,6 +611,7 @@ function renderAutomationsTab(specs, favourites) {
         qrBtn.title = 'Quick Run';
         qrBtn.textContent = '▶';
         li.appendChild(qrBtn);
+        qrBtn.addEventListener('click', onQuickRunClick);
 
         li.addEventListener('click', onTestItemClick);
         ul.appendChild(li);

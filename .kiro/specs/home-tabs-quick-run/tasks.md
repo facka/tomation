@@ -74,24 +74,24 @@ Refactor the Tomation extension's home view into a tabbed interface with "Tests"
     - Call this in `renderAutomationsTab` before rendering items
     - _Requirements: 4.3, 4.4_
 
-- [ ] 5. Checkpoint - Ensure tab rendering works
+- [x] 5. Checkpoint - Ensure tab rendering works
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. Implement Quick Run functionality
-  - [ ] 6.1 Add `buildAllStepsChecked` and `buildDefaultParams` helper functions
+- [x] 6. Implement Quick Run functionality
+  - [x] 6.1 Add `buildAllStepsChecked` and `buildDefaultParams` helper functions
     - `buildAllStepsChecked(steps)` returns `[0, 1, 2, ..., steps.length - 1]`
     - `buildDefaultParams(params)` returns object with empty string for string, 0 for number, today's date for date, first option for enum
     - `hasRequiredParamsWithoutValues(params, savedValues)` returns true if any non-optional param has no saved value
     - _Requirements: 2.2, 3.5, 3.6_
 
-  - [ ] 6.2 Implement `quickRunTest` function
+  - [x] 6.2 Implement `quickRunTest` function
     - Build `checkedSteps` via `buildAllStepsChecked`
     - Build debug config: `{ allowContinueOnFailure: true, allowRetryOnFailure: true, executionSpeed: savedSpeed || 'NORMAL' }`
     - Send `RUN_TEST` message via `api.runtime.sendMessage`
     - Call `switchToRunView()` to transition to run view
     - _Requirements: 2.2, 2.3, 2.4, 2.5_
 
-  - [ ] 6.3 Implement `quickRunAutomation` function
+  - [x] 6.3 Implement `quickRunAutomation` function
     - Load saved params via `loadParamValues(automationName)`
     - If `hasRequiredParamsWithoutValues` returns true, navigate to plan view instead
     - Otherwise merge saved values with defaults from `buildDefaultParams`
@@ -99,7 +99,7 @@ Refactor the Tomation extension's home view into a tabbed interface with "Tests"
     - Send `RUN_AUTOMATION` message and call `switchToRunView()`
     - _Requirements: 3.2, 3.3, 3.4, 3.5, 3.6_
 
-  - [ ] 6.4 Implement `onQuickRunClick` event handler and wire it up
+  - [x] 6.4 Implement `onQuickRunClick` event handler and wire it up
     - Call `e.stopPropagation()` to prevent row click from firing
     - Determine runnable type from `data-runnable-type` attribute
     - Delegate to `quickRunTest` or `quickRunAutomation`
