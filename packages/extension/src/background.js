@@ -1573,7 +1573,7 @@ function sendUploadToRuntime(step, currentIndex, fileDataUrl, mimeType) {
 /**
  * Handle a RETRY_STEP message from the panel. Re-sends the failed step
  * to the runtime. On success, resumes the step loop from the next step.
- * On failure, halts the run and unlocks the tab.
+ * On failure, keeps the run alive in awaitingAction state for unlimited retries.
  *
  * @param {object} msg - { type: 'RETRY_STEP', stepIndex: number }
  */
@@ -1603,41 +1603,35 @@ function handleRetryStep(msg) {
       runState.passCount++;
       runState.stepIndex++;
 
-      // Emit LOG with retryAttempt field
+      // Emit UPDATE_LOG_ENTRY for in-place update
       var logMsg = {
-        type: 'LOG',
+        type: 'UPDATE_LOG_ENTRY',
         stepIndex: currentIndex,
-        action: step.action,
-        target: step.target || null,
-        value: step.value || null,
         ok: true,
         retryAttempt: runState.retryAttempt
       };
       safeSendMessage(logMsg);
 
+      runState.retryAttempt = 0;
+
       // Resume step loop
       runStepLoop();
     } else {
-      // Halt run on retry failure
-      runState.awaitingAction = false;
-      runState.failedStepIndex = null;
-      runState.running = false;
-      unlockTab();
-
-      // Emit failure LOG
-      var failLogMsg = {
-        type: 'LOG',
+      // Re-emit STEP_FAILED_AWAITING_ACTION — keep run alive for unlimited retries
+      safeSendMessage({
+        type: 'UPDATE_LOG_ENTRY',
         stepIndex: currentIndex,
-        action: step.action,
-        target: step.target || null,
-        value: step.value || null,
         ok: false,
-        error: error || 'Retry failed',
-        retryAttempt: runState.retryAttempt
-      };
-      safeSendMessage(failLogMsg);
+        retryAttempt: runState.retryAttempt,
+        error: error || 'Retry failed'
+      });
 
-      emitSummary('RUN_COMPLETE', currentIndex + 1, runState.passCount, runState.failCount);
+      safeSendMessage({
+        type: 'STEP_FAILED_AWAITING_ACTION',
+        stepIndex: currentIndex,
+        retryAttempt: runState.retryAttempt,
+        error: error || 'Retry failed'
+      });
     }
   });
 }

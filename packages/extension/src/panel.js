@@ -1457,6 +1457,7 @@ function appendLogEntry(logData) {
   }
 
   var div = document.createElement('div');
+  div.setAttribute('data-step-index', String(logData.stepIndex));
   var classes = 'log-entry';
 
   if (logData.ok === true) {
@@ -1557,6 +1558,48 @@ function showRunSummary(data) {
 }
 
 /**
+ * Handle UPDATE_LOG_ENTRY message from background.
+ * Updates an existing log entry DOM element in-place with new pass/fail state and retry indicator.
+ * @param {object} message - { stepIndex, ok, retryAttempt, error? }
+ */
+function handleUpdateLogEntry(message) {
+  var entry = document.querySelector('[data-step-index="' + message.stepIndex + '"]');
+  if (!entry) return;
+
+  // Update pass/fail class
+  entry.classList.remove('pass', 'fail');
+  if (message.ok) {
+    entry.classList.add('pass');
+  } else {
+    entry.classList.add('fail');
+  }
+
+  // Rebuild indicator text (keep existing action/target HTML, just update the indicator suffix)
+  var indicator = '';
+  if (message.ok) {
+    indicator = ' ✓';
+    if (message.retryAttempt) {
+      indicator += ' Attempt ' + message.retryAttempt;
+    }
+  } else {
+    indicator = ' ✗';
+    if (message.retryAttempt) {
+      indicator += ' Attempt ' + message.retryAttempt;
+    }
+    if (message.error) {
+      indicator += ' ' + escapeHtml(message.error);
+    }
+  }
+
+  // The existing entry already has the correct action/target HTML from the original LOG emission.
+  // Strip any existing indicator (✓/✗ and everything after) and append the new one.
+  var currentHtml = entry.innerHTML;
+  // Remove old indicator: match ' ✓...' or ' ✗...' at end of string
+  currentHtml = currentHtml.replace(/ [✓✗].*$/, '');
+  entry.innerHTML = currentHtml + indicator;
+}
+
+/**
  * Handle STEP_FAILED_AWAITING_ACTION message from the background.
  * Renders "Try Again" and/or "Skip" buttons adjacent to the failed log entry
  * based on the current run configuration.
@@ -1595,6 +1638,10 @@ function handleStepFailedAwaitingAction(message) {
     skipBtn.setAttribute('data-step-index', String(message.stepIndex));
     buttonContainer.appendChild(skipBtn);
   }
+
+  // Remove any existing action buttons to prevent duplicates on repeated retries
+  var oldBtns = logContainer.querySelector('.action-buttons');
+  if (oldBtns) oldBtns.parentNode.removeChild(oldBtns);
 
   logContainer.appendChild(buttonContainer);
 
@@ -1654,6 +1701,10 @@ function onBackgroundMessage(message) {
 
     case 'STEP_FAILED_AWAITING_ACTION':
       handleStepFailedAwaitingAction(message);
+      break;
+
+    case 'UPDATE_LOG_ENTRY':
+      handleUpdateLogEntry(message);
       break;
 
     case 'MANUAL_PAUSE':
