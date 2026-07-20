@@ -106,8 +106,8 @@ Refactor the Tomation extension's home view into a tabbed interface with "Tests"
     - Attach click listener to all `.quick-run-btn` elements during render
     - _Requirements: 5.3_
 
-- [ ] 7. Implement favourite toggle functionality
-  - [ ] 7.1 Implement `onFavouriteClick` handler and wire it up
+- [x] 7. Implement favourite toggle functionality
+  - [x] 7.1 Implement `onFavouriteClick` handler and wire it up
     - Call `e.stopPropagation()` to prevent row click propagation
     - Toggle favourite state in local favourites object
     - Call `saveFavourites(currentHostname, favourites)` to persist scoped to current project

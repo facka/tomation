@@ -12,6 +12,7 @@ var currentRunnable = null; // { type: 'test'|'automation', index: number, data:
 var isRunning = false;
 var currentRunConfig = null;
 var currentRunAutomationParams = null; // params used in the current automation run (for persistence)
+var currentFavourites = {};
 
 // --- Search Filter ---
 
@@ -457,6 +458,24 @@ function quickRunAutomation(specIndex, automationIndex) {
  * reads runnable type from the parent <li>, and delegates to the appropriate runner.
  * @param {Event} e - click event on a .quick-run-btn element
  */
+function onFavouriteClick(e) {
+  e.stopPropagation();
+  var li = e.currentTarget.parentElement;
+  if (!li || !currentProject) return;
+  var specIndex = parseInt(li.getAttribute('data-spec-index'), 10);
+  var automationIndex = parseInt(li.getAttribute('data-automation-index'), 10);
+  var automationName = currentProject.specs[specIndex].spec.automations[automationIndex].name;
+
+  if (currentFavourites[automationName]) {
+    delete currentFavourites[automationName];
+  } else {
+    currentFavourites[automationName] = true;
+  }
+
+  saveFavourites(currentHostname, currentFavourites);
+  renderAutomationsTab(currentProject.specs, currentFavourites);
+}
+
 function onQuickRunClick(e) {
   e.stopPropagation();
   var li = e.currentTarget.parentElement;
@@ -599,6 +618,7 @@ function renderAutomationsTab(specs, favourites) {
         favBtn.setAttribute('data-favourite', isFav ? 'true' : 'false');
         favBtn.title = 'Favourite';
         favBtn.textContent = isFav ? '★' : '☆';
+        favBtn.addEventListener('click', onFavouriteClick);
         li.appendChild(favBtn);
 
         var rowLabel = document.createElement('span');
@@ -714,6 +734,7 @@ function renderHomeView() {
 
     // Load favourites and render both tabs
     loadFavourites(currentHostname).then(function (favourites) {
+      currentFavourites = favourites;
       renderTestsTab(project.specs);
       renderAutomationsTab(project.specs, favourites);
 
