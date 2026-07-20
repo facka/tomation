@@ -254,7 +254,180 @@ function validateSpec(obj) {
   return { ok: true, spec: obj };
 }
 
+/**
+ * Sort automations so that favourited items appear first, preserving relative order
+ * within each group (stable partition).
+ * @param {Array} automations - Array of automation objects (each has .name property)
+ * @param {Object} favourites - Object map { automationName: true }
+ * @returns {Array} New array with favourited items first, then non-favourited items
+ */
+function sortAutomationsWithFavourites(automations, favourites) {
+  var favs = [];
+  var nonFavs = [];
+  for (var i = 0; i < automations.length; i++) {
+    if (favourites[automations[i].name] === true) {
+      favs.push(automations[i]);
+    } else {
+      nonFavs.push(automations[i]);
+    }
+  }
+  return favs.concat(nonFavs);
+}
+
 // --- Home View Rendering ---
+
+/**
+ * Render test items into the #tab-content-tests container (after the search input).
+ * Adds empty state message when no tests exist.
+ * @param {Array} specs - project.specs array
+ */
+function renderTestsTab(specs) {
+  var container = document.getElementById('tab-content-tests');
+  if (!container) return;
+
+  // Remove any previously rendered content (keep the search wrapper)
+  var existing = container.querySelectorAll('.spec-section, .tab-empty-state');
+  for (var r = 0; r < existing.length; r++) {
+    existing[r].parentNode.removeChild(existing[r]);
+  }
+
+  var hasAnyTests = false;
+
+  for (var i = 0; i < specs.length; i++) {
+    var specData = specs[i].spec;
+    var hasTests = specData && specData.tests && specData.tests.length > 0;
+
+    if (hasTests) {
+      hasAnyTests = true;
+      var section = document.createElement('div');
+      section.className = 'spec-section';
+      var ul = document.createElement('ul');
+      ul.className = 'test-list';
+
+      for (var j = 0; j < specData.tests.length; j++) {
+        var li = document.createElement('li');
+        li.setAttribute('data-spec-index', String(i));
+        li.setAttribute('data-test-index', String(j));
+        li.setAttribute('data-runnable-type', 'test');
+
+        var rowLabel = document.createElement('span');
+        rowLabel.className = 'row-label';
+        rowLabel.textContent = specData.tests[j].name;
+        li.appendChild(rowLabel);
+
+        var qrBtn = document.createElement('button');
+        qrBtn.className = 'quick-run-btn';
+        qrBtn.title = 'Quick Run';
+        qrBtn.textContent = '▶';
+        li.appendChild(qrBtn);
+
+        li.addEventListener('click', onTestItemClick);
+        ul.appendChild(li);
+      }
+
+      section.appendChild(ul);
+      container.appendChild(section);
+    }
+  }
+
+  if (!hasAnyTests) {
+    var emptyMsg = document.createElement('p');
+    emptyMsg.className = 'tab-empty-state';
+    emptyMsg.textContent = 'No tests available';
+    container.appendChild(emptyMsg);
+  }
+}
+
+/**
+ * Render automation items into the #tab-content-automations container (after the search input).
+ * Sorts automations by favourites if sortAutomationsWithFavourites is available.
+ * Adds empty state message when no automations exist.
+ * @param {Array} specs - project.specs array
+ * @param {object} favourites - favourites map { automationName: true }
+ */
+function renderAutomationsTab(specs, favourites) {
+  var container = document.getElementById('tab-content-automations');
+  if (!container) return;
+
+  // Remove any previously rendered content (keep the search wrapper)
+  var existing = container.querySelectorAll('.spec-section, .tab-empty-state');
+  for (var r = 0; r < existing.length; r++) {
+    existing[r].parentNode.removeChild(existing[r]);
+  }
+
+  var hasAnyAutomations = false;
+
+  for (var i = 0; i < specs.length; i++) {
+    var specData = specs[i].spec;
+    var hasAutomations = specData && specData.automations && specData.automations.length > 0;
+
+    if (hasAutomations) {
+      hasAnyAutomations = true;
+
+      // Build automations array with original indices for sorting
+      var automations = [];
+      for (var a = 0; a < specData.automations.length; a++) {
+        automations.push({ data: specData.automations[a], index: a, name: specData.automations[a].name || '' });
+      }
+
+      // Sort by favourites if the function exists
+      if (typeof sortAutomationsWithFavourites === 'function') {
+        automations = sortAutomationsWithFavourites(automations, favourites);
+      }
+
+      var section = document.createElement('div');
+      section.className = 'spec-section';
+      var ul = document.createElement('ul');
+      ul.className = 'test-list';
+
+      for (var b = 0; b < automations.length; b++) {
+        var autoObj = automations[b];
+        var autoData = autoObj.data;
+        var autoIndex = autoObj.index;
+        var autoName = autoData.name || '';
+        var autoDisplayName = autoName.indexOf('__') !== -1 ? autoName.split('__').slice(1).join('__') : autoName;
+        var isFav = !!(favourites && favourites[autoName]);
+
+        var li = document.createElement('li');
+        li.setAttribute('data-spec-index', String(i));
+        li.setAttribute('data-automation-index', String(autoIndex));
+        li.setAttribute('data-runnable-type', 'automation');
+        li.className = 'automation-item';
+
+        var favBtn = document.createElement('button');
+        favBtn.className = 'favourite-btn';
+        favBtn.setAttribute('data-favourite', isFav ? 'true' : 'false');
+        favBtn.title = 'Favourite';
+        favBtn.textContent = isFav ? '★' : '☆';
+        li.appendChild(favBtn);
+
+        var rowLabel = document.createElement('span');
+        rowLabel.className = 'row-label';
+        rowLabel.innerHTML = '<span class="automation-badge">⚙</span> ' + escapeHtml(autoDisplayName);
+        li.appendChild(rowLabel);
+
+        var qrBtn = document.createElement('button');
+        qrBtn.className = 'quick-run-btn';
+        qrBtn.title = 'Quick Run';
+        qrBtn.textContent = '▶';
+        li.appendChild(qrBtn);
+
+        li.addEventListener('click', onTestItemClick);
+        ul.appendChild(li);
+      }
+
+      section.appendChild(ul);
+      container.appendChild(section);
+    }
+  }
+
+  if (!hasAnyAutomations) {
+    var emptyMsg = document.createElement('p');
+    emptyMsg.className = 'tab-empty-state';
+    emptyMsg.textContent = 'No automations available';
+    container.appendChild(emptyMsg);
+  }
+}
 
 /**
  * Render the home view for a given hostname.
@@ -266,13 +439,7 @@ function renderHomeView() {
   var landingEl = document.getElementById('home-landing');
   var loadedEl = document.getElementById('home-loaded');
 
-  if (!contentEl) return;
-
-  // Clear search input when returning to Home view (Requirement 1.7)
-  var searchInput = document.getElementById('search-input');
-  if (searchInput) {
-    searchInput.value = '';
-  }
+  if (!contentEl && !loadedEl) return;
 
   warningEl.classList.remove('visible');
   warningEl.textContent = '';
@@ -318,13 +485,11 @@ function renderHomeView() {
       fileInfoEl.textContent = firstSpec.filename + (version ? ' (v' + version + ')' : '');
     }
 
-    // Render spec + test list
-    var html = '';
+    // Check meta.urls warning for each spec
     for (var i = 0; i < project.specs.length; i++) {
       var specEntry = project.specs[i];
       var specData = specEntry.spec;
 
-      // Check meta.urls (array) or meta.url (legacy single) warning
       if (specData && specData.meta) {
         var urls = specData.meta.urls || (specData.meta.url ? [specData.meta.url] : []);
         if (urls.length > 0) {
@@ -344,42 +509,18 @@ function renderHomeView() {
           }
         }
       }
-
-      var hasTests = specData && specData.tests && specData.tests.length > 0;
-      var hasAutomations = specData && specData.automations && specData.automations.length > 0;
-
-      if (hasTests || hasAutomations) {
-        html += '<div class="spec-section">';
-        html += '<ul class="test-list">';
-        if (hasTests) {
-          for (var j = 0; j < specData.tests.length; j++) {
-            html += '<li data-spec-index="' + i + '" data-test-index="' + j + '" data-runnable-type="test">' +
-              escapeHtml(specData.tests[j].name) + '</li>';
-          }
-        }
-        if (hasAutomations) {
-          for (var a = 0; a < specData.automations.length; a++) {
-            var autoName = specData.automations[a].name || '';
-            var autoDisplayName = autoName.indexOf('__') !== -1 ? autoName.split('__').slice(1).join('__') : autoName;
-            html += '<li data-spec-index="' + i + '" data-automation-index="' + a + '" data-runnable-type="automation" class="automation-item">' +
-              '<span class="automation-badge">⚙</span> ' + escapeHtml(autoDisplayName) + '</li>';
-          }
-        }
-        html += '</ul>';
-        html += '</div>';
-      }
     }
 
-    contentEl.innerHTML = html;
+    // Load favourites and render both tabs
+    loadFavourites(currentHostname).then(function (favourites) {
+      renderTestsTab(project.specs);
+      renderAutomationsTab(project.specs, favourites);
 
-    // Attach click handlers to test items
-    var testItems = contentEl.querySelectorAll('.test-list li');
-    for (var t = 0; t < testItems.length; t++) {
-      testItems[t].addEventListener('click', onTestItemClick);
-    }
-
-    // Apply search filter after rendering (in case search input has a value)
-    applySearchFilter();
+      // Restore last active tab
+      loadActiveTab().then(function (tabName) {
+        switchTab(tabName || 'tests');
+      });
+    });
   });
 }
 

@@ -52,8 +52,8 @@ Refactor the Tomation extension's home view into a tabbed interface with "Tests"
     - Attach click listeners to `.tab-btn` elements that call `switchTab`
     - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-- [ ] 4. Refactor renderHomeView into tab-based rendering
-  - [ ] 4.1 Refactor `renderHomeView` to call `renderTestsTab` and `renderAutomationsTab`
+- [x] 4. Refactor renderHomeView into tab-based rendering
+  - [x] 4.1 Refactor `renderHomeView` to call `renderTestsTab` and `renderAutomationsTab`
     - Extract test-rendering logic into `renderTestsTab(specs)` targeting `#tab-content-tests`
     - Extract automation-rendering logic into `renderAutomationsTab(specs, favourites)` targeting `#tab-content-automations`
     - Load favourites via `loadFavourites(currentHostname)` before rendering automations
@@ -61,14 +61,14 @@ Refactor the Tomation extension's home view into a tabbed interface with "Tests"
     - Add empty state messages when no tests or no automations exist
     - _Requirements: 1.2, 1.3, 1.4, 1.5, 1.6, 4.3, 4.4, 4.5_
 
-  - [ ] 4.2 Add Quick Run button HTML to each test and automation row
+  - [x] 4.2 Add Quick Run button HTML to each test and automation row
     - Append `<button class="quick-run-btn" title="Quick Run">▶</button>` to each row
     - Add favourite toggle `<button class="favourite-btn" ...>☆</button>` to automation rows
     - Set `data-favourite` attribute based on loaded favourites
     - Display filled star `★` for favourited, empty `☆` for non-favourited
     - _Requirements: 2.1, 3.1, 4.1_
 
-  - [ ] 4.3 Implement `sortAutomationsWithFavourites` function
+  - [x] 4.3 Implement `sortAutomationsWithFavourites` function
     - Takes `automations` array and `favourites` object
     - Returns new array with favourites first, preserving relative order within each group
     - Call this in `renderAutomationsTab` before rendering items
