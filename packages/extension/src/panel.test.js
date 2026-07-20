@@ -720,7 +720,22 @@ function createSearchEnv() {
     '<div id="view-home" class="view active">' +
     '  <h1>Tomation</h1>' +
     '  <div id="warning-banner" class="warning-banner"></div>' +
-    '  <input type="text" id="search-input" maxlength="100" placeholder="Search tests..." />' +
+    '  <div class="tab-bar">' +
+    '    <button class="tab-btn active" data-tab="tests">☑ Tests</button>' +
+    '    <button class="tab-btn" data-tab="automations">⚡ Automations</button>' +
+    '  </div>' +
+    '  <div id="tab-content-tests" class="tab-content active">' +
+    '    <div class="search-wrapper">' +
+    '      <input type="text" class="tab-search-input" maxlength="100" placeholder="Search tests..." />' +
+    '    </div>' +
+    '    <div class="search-empty-state" style="display:none;">No tests found</div>' +
+    '  </div>' +
+    '  <div id="tab-content-automations" class="tab-content">' +
+    '    <div class="search-wrapper">' +
+    '      <input type="text" class="tab-search-input" maxlength="100" placeholder="Search automations..." />' +
+    '    </div>' +
+    '    <div class="search-empty-state" style="display:none;">No automations found</div>' +
+    '  </div>' +
     '  <div id="project-content"></div>' +
     '  <div id="search-empty-state" style="display:none;">No tests found</div>' +
     '  <button id="load-spec-btn"></button>' +
@@ -790,7 +805,7 @@ function createSearchEnv() {
 }
 
 function renderProjectWithSpecs(env, specs) {
-  var contentEl = env.document.getElementById('project-content');
+  var contentEl = env.document.querySelector('.tab-content.active');
   var html = '';
   for (var i = 0; i < specs.length; i++) {
     var spec = specs[i];
@@ -803,7 +818,7 @@ function renderProjectWithSpecs(env, specs) {
     html += '</ul>';
     html += '</div>';
   }
-  contentEl.innerHTML = html;
+  contentEl.insertAdjacentHTML('beforeend', html);
 }
 
 test('filterTests returns all names when query is empty (Req 1.5)', function () {
@@ -854,11 +869,11 @@ test('applySearchFilter hides non-matching test items (Req 1.2)', function () {
     { name: 'Spec A', tests: ['Login test', 'Logout test', 'Signup test'] }
   ]);
 
-  var searchInput = env.document.getElementById('search-input');
+  var searchInput = env.document.querySelector('.tab-content.active .tab-search-input');
   searchInput.value = 'login';
   env.window.applySearchFilter();
 
-  var items = env.document.querySelectorAll('.test-list li');
+  var items = env.document.querySelectorAll('.tab-content.active .test-list li');
   assert.equal(items[0].style.display, '', 'Login test should be visible');
   assert.equal(items[1].style.display, 'none', 'Logout test should be hidden');
   assert.equal(items[2].style.display, 'none', 'Signup test should be hidden');
@@ -871,11 +886,11 @@ test('applySearchFilter hides spec section when no tests match (Req 1.3)', funct
     { name: 'Spec B', tests: ['Signup test'] }
   ]);
 
-  var searchInput = env.document.getElementById('search-input');
+  var searchInput = env.document.querySelector('.tab-content.active .tab-search-input');
   searchInput.value = 'signup';
   env.window.applySearchFilter();
 
-  var sections = env.document.querySelectorAll('.spec-section');
+  var sections = env.document.querySelectorAll('.tab-content.active .spec-section');
   assert.equal(sections[0].style.display, 'none', 'Spec A section should be hidden');
   assert.equal(sections[1].style.display, '', 'Spec B section should be visible');
 });
@@ -887,11 +902,11 @@ test('applySearchFilter shows empty state when no tests match anywhere (Req 1.4)
     { name: 'Spec B', tests: ['Signup test'] }
   ]);
 
-  var searchInput = env.document.getElementById('search-input');
+  var searchInput = env.document.querySelector('.tab-content.active .tab-search-input');
   searchInput.value = 'zzzznonexistent';
   env.window.applySearchFilter();
 
-  var emptyState = env.document.getElementById('search-empty-state');
+  var emptyState = env.document.querySelector('.tab-content.active .search-empty-state');
   assert.equal(emptyState.style.display, 'block', 'Empty state should be shown');
 });
 
@@ -902,7 +917,7 @@ test('applySearchFilter restores full list when search is cleared (Req 1.5)', fu
     { name: 'Spec B', tests: ['Signup test'] }
   ]);
 
-  var searchInput = env.document.getElementById('search-input');
+  var searchInput = env.document.querySelector('.tab-content.active .tab-search-input');
 
   // First, filter
   searchInput.value = 'login';
@@ -912,16 +927,16 @@ test('applySearchFilter restores full list when search is cleared (Req 1.5)', fu
   searchInput.value = '';
   env.window.applySearchFilter();
 
-  var sections = env.document.querySelectorAll('.spec-section');
+  var sections = env.document.querySelectorAll('.tab-content.active .spec-section');
   assert.equal(sections[0].style.display, '', 'Spec A should be visible');
   assert.equal(sections[1].style.display, '', 'Spec B should be visible');
 
-  var items = env.document.querySelectorAll('.test-list li');
+  var items = env.document.querySelectorAll('.tab-content.active .test-list li');
   for (var i = 0; i < items.length; i++) {
     assert.equal(items[i].style.display, '', 'All items should be visible after clearing');
   }
 
-  var emptyState = env.document.getElementById('search-empty-state');
+  var emptyState = env.document.querySelector('.tab-content.active .search-empty-state');
   assert.equal(emptyState.style.display, 'none', 'Empty state should be hidden');
 });
 
@@ -931,7 +946,7 @@ test('search input fires applySearchFilter on input event (Req 1.1, 1.2)', funct
     { name: 'Spec A', tests: ['Login test', 'Logout test'] }
   ]);
 
-  var searchInput = env.document.getElementById('search-input');
+  var searchInput = env.document.querySelector('.tab-content.active .tab-search-input');
   searchInput.value = 'logout';
 
   // Fire input event
@@ -939,14 +954,14 @@ test('search input fires applySearchFilter on input event (Req 1.1, 1.2)', funct
   event.initEvent('input', true, true);
   searchInput.dispatchEvent(event);
 
-  var items = env.document.querySelectorAll('.test-list li');
+  var items = env.document.querySelectorAll('.tab-content.active .test-list li');
   assert.equal(items[0].style.display, 'none', 'Login test should be hidden');
   assert.equal(items[1].style.display, '', 'Logout test should be visible');
 });
 
 test('search input has maxlength of 100 (Req 1.1)', function () {
   var env = createSearchEnv();
-  var searchInput = env.document.getElementById('search-input');
+  var searchInput = env.document.querySelector('.tab-content.active .tab-search-input');
   assert.equal(searchInput.getAttribute('maxlength'), '100');
 });
 
@@ -957,11 +972,11 @@ test('applySearchFilter matches tests across multiple specs (Req 1.6 cross-spec)
     { name: 'User Spec', tests: ['Login flow e2e', 'Profile update'] }
   ]);
 
-  var searchInput = env.document.getElementById('search-input');
+  var searchInput = env.document.querySelector('.tab-content.active .tab-search-input');
   searchInput.value = 'login';
   env.window.applySearchFilter();
 
-  var sections = env.document.querySelectorAll('.spec-section');
+  var sections = env.document.querySelectorAll('.tab-content.active .spec-section');
   // Both specs have a 'login' match
   assert.equal(sections[0].style.display, '', 'Auth Spec should be visible');
   assert.equal(sections[1].style.display, '', 'User Spec should be visible');

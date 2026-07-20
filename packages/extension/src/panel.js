@@ -31,19 +31,18 @@ function filterTests(names, query) {
 }
 
 /**
- * Apply search filter to the rendered test list in the Home view.
- * Hides/shows test items, spec section headers, and empty state message.
+ * Apply search filter to the rendered items in the currently active tab.
+ * Hides/shows items, spec section headers, and empty state within the active tab only.
  */
 function applySearchFilter() {
-  var searchInput = document.getElementById('search-input');
-  var contentEl = document.getElementById('project-content');
-  var emptyState = document.getElementById('search-empty-state');
-  if (!searchInput || !contentEl) return;
+  var activeTab = document.querySelector('.tab-content.active');
+  if (!activeTab) return;
 
-  var query = searchInput.value;
+  var searchInput = activeTab.querySelector('.tab-search-input');
+  var query = searchInput ? searchInput.value : '';
   var lowerQuery = query ? query.toLowerCase() : '';
 
-  var sections = contentEl.querySelectorAll('.spec-section');
+  var sections = activeTab.querySelectorAll('.spec-section');
   var totalVisible = 0;
 
   for (var i = 0; i < sections.length; i++) {
@@ -71,7 +70,8 @@ function applySearchFilter() {
     totalVisible += sectionVisible;
   }
 
-  // Show/hide empty state
+  // Show/hide empty state within the active tab
+  var emptyState = activeTab.querySelector('.search-empty-state');
   if (emptyState) {
     if (lowerQuery && totalVisible === 0) {
       emptyState.style.display = 'block';
@@ -136,6 +136,9 @@ function switchTab(tabName) {
   }
 
   saveActiveTab(tabName);
+
+  // Re-apply search filter from the newly active tab's search input
+  applySearchFilter();
 }
 
 // --- Inline Spec Validator (lightweight UI-level guard) ---
@@ -1819,10 +1822,10 @@ function getHostFromUrl(urlStr) {
 // --- Initialization ---
 
 function init() {
-  // Wire up search input filter
-  var searchInput = document.getElementById('search-input');
-  if (searchInput) {
-    searchInput.addEventListener('input', applySearchFilter);
+  // Wire up tab search input filters
+  var tabSearchInputs = document.querySelectorAll('.tab-search-input');
+  for (var s = 0; s < tabSearchInputs.length; s++) {
+    tabSearchInputs[s].addEventListener('input', applySearchFilter);
   }
 
   // Wire up tab buttons

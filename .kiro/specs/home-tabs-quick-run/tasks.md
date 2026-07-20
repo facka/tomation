@@ -116,8 +116,8 @@ Refactor the Tomation extension's home view into a tabbed interface with "Tests"
     - Attach click listener to all `.favourite-btn` elements during render
     - _Requirements: 4.1, 4.2, 4.3, 5.4_
 
-- [ ] 8. Update search filter to scope per-tab
-  - [ ] 8.1 Refactor `applySearchFilter` to work within active tab content only
+- [x] 8. Update search filter to scope per-tab
+  - [x] 8.1 Refactor `applySearchFilter` to work within active tab content only
     - Attach `input` event listener to each `.tab-search-input`
     - Filter only items within the active tab's content container
     - When switching tabs, re-apply filter from that tab's search input value
