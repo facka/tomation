@@ -897,6 +897,16 @@
       font-style: italic;
     }
 
+    .context-popup-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.15);
+      z-index: 99;
+    }
+
     .context-popup {
       position: absolute;
       top: 40px;
@@ -1041,6 +1051,7 @@
       <button id="stop-btn" class="btn btn-danger btn-sm">⏹ Stop</button>
       <button id="context-btn" class="btn btn-sm" aria-label="Context">🔑 Context</button>
     </div>
+    <div id="context-popup-backdrop" class="context-popup-backdrop" style="display:none;"></div>
     <div id="context-popup" class="context-popup" style="display:none;">
       <div class="context-popup-header">
         <span>Context Store</span>

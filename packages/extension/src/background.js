@@ -1703,7 +1703,6 @@ function finishRun() {
   teardownTabTracker();
   unlockTab();
   runState.running = false;
-  runState.contextStore = {};
 
   var total = runState.stepIndex;
   var passed = runState.passCount;

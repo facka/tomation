@@ -1604,6 +1604,13 @@ function handleUpdateLogEntry(message) {
     entry.classList.add('fail');
   }
 
+  // Remove any remaining action-buttons container (e.g. Try Again / Skip)
+  var logContainer = document.getElementById('log-container');
+  if (logContainer) {
+    var oldBtns = logContainer.querySelector('.action-buttons');
+    if (oldBtns) oldBtns.parentNode.removeChild(oldBtns);
+  }
+
   // Rebuild indicator: use badge for attempt number
   var indicator = '';
   if (message.ok) {
@@ -1951,13 +1958,16 @@ function renderContextPopup(store) {
  */
 function toggleContextPopup() {
   var popup = document.getElementById('context-popup');
+  var backdrop = document.getElementById('context-popup-backdrop');
   if (!popup) return;
   if (popup.style.display === 'block') {
     popup.style.display = 'none';
+    if (backdrop) backdrop.style.display = 'none';
     return;
   }
   api.runtime.sendMessage({ type: 'GET_CONTEXT' });
   renderContextPopup(contextStoreCache);
+  if (backdrop) backdrop.style.display = 'block';
   popup.style.display = 'block';
 }
 
@@ -2170,7 +2180,9 @@ function init() {
   if (contextPopupClose) {
     contextPopupClose.addEventListener('click', function () {
       var popup = document.getElementById('context-popup');
+      var backdrop = document.getElementById('context-popup-backdrop');
       if (popup) { popup.style.display = 'none'; }
+      if (backdrop) { backdrop.style.display = 'none'; }
     });
   }
 
@@ -2178,8 +2190,10 @@ function init() {
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
       var popup = document.getElementById('context-popup');
+      var backdrop = document.getElementById('context-popup-backdrop');
       if (popup && popup.style.display === 'block') {
         popup.style.display = 'none';
+        if (backdrop) { backdrop.style.display = 'none'; }
       }
     }
   });
@@ -2192,6 +2206,8 @@ function init() {
     if (popup.contains(e.target)) return;
     if (contextBtn2 && (contextBtn2 === e.target || contextBtn2.contains(e.target))) return;
     popup.style.display = 'none';
+    var backdrop = document.getElementById('context-popup-backdrop');
+    if (backdrop) { backdrop.style.display = 'none'; }
   });
 
   // Wire up Close button (go back to home from run view)
