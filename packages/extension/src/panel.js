@@ -1441,7 +1441,15 @@ function buildLogEntryHtml(logData, pageElements) {
         parts.push('<span class="element-badge" title="' + escapeHtml(tooltip) + '">' + escapeHtml(displayTarget) + '</span>');
       }
       if (logData.value) {
-        parts.push('<span class="step-value">"' + escapeHtml(logData.value) + '"</span>');
+        var displayValue = logData.value;
+        if (logData.resolvedContext && logData.resolvedContext.length > 0) {
+          logData.resolvedContext.forEach(function(ref) {
+            if (ref.value !== null && ref.value !== undefined) {
+              displayValue = displayValue.replace('{{ctx.' + ref.key + '}}', ref.value);
+            }
+          });
+        }
+        parts.push('<span class="step-value">"' + escapeHtml(displayValue) + '"</span>');
       }
       if (action === 'waitFor' && logData.gone) {
         parts.push('<span class="step-value">(gone)</span>');
