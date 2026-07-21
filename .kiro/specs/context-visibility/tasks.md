@@ -91,18 +91,18 @@ Make the extension's runtime context store visible in the panel UI. Enrich LOG m
     - Attach click-outside listener to close popup when clicking outside it
     - _Requirements: 4.5, 4.6, 4.7, 5.7_
 
-- [ ] 6. Add HTML markup and CSS in panel.html
-  - [ ] 6.1 Add Context button to controller bar in panel.html
+- [x] 6. Add HTML markup and CSS in panel.html
+  - [x] 6.1 Add Context button to controller bar in panel.html
     - Add `<button id="context-btn" class="btn btn-sm" aria-label="Context">🔑 Context</button>` after the Stop button in `.controller-bar`
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.7_
 
-  - [ ] 6.2 Add context popup overlay markup in panel.html
+  - [x] 6.2 Add context popup overlay markup in panel.html
     - Add `<div id="context-popup" class="context-popup" style="display:none;">` after the controller bar
     - Include header with "Context Store" title and close button `#context-popup-close`
     - Include `<div id="context-popup-body"></div>` for dynamic content
     - _Requirements: 5.1, 5.2_
 
-  - [ ] 6.3 Add CSS styles for context badges, values, popup, and table
+  - [x] 6.3 Add CSS styles for context badges, values, popup, and table
     - `.ctx-badge` — green background, bold, small rounded pill
     - `.ctx-value` — muted color, italic
     - `.ctx-masked` — muted color, letter-spacing

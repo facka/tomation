@@ -869,6 +869,81 @@
       text-align: center;
       font-size: 13px;
     }
+
+    /* Context visibility */
+    .ctx-badge {
+      display: inline-block;
+      background: #e8f5e9;
+      color: #2e7d32;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    .ctx-value {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .ctx-masked {
+      color: var(--text-muted);
+      letter-spacing: 1px;
+    }
+
+    .ctx-source {
+      color: var(--text-muted);
+      font-size: 11px;
+      font-style: italic;
+    }
+
+    .context-popup {
+      position: absolute;
+      top: 40px;
+      right: 8px;
+      left: 8px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      z-index: 100;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .context-popup-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .ctx-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      font-family: var(--font-mono);
+    }
+
+    .ctx-table td {
+      padding: 4px 12px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .ctx-popup-key {
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .ctx-empty {
+      padding: 16px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
   </style>
 </head>
 <body>
@@ -964,6 +1039,14 @@
       <button id="pause-btn" class="btn btn-sm">⏸ Pause</button>
       <button id="continue-btn" class="btn btn-sm" disabled>▶ Resume</button>
       <button id="stop-btn" class="btn btn-danger btn-sm">⏹ Stop</button>
+      <button id="context-btn" class="btn btn-sm" aria-label="Context">🔑 Context</button>
+    </div>
+    <div id="context-popup" class="context-popup" style="display:none;">
+      <div class="context-popup-header">
+        <span>Context Store</span>
+        <button id="context-popup-close" class="btn btn-ghost btn-sm">✕</button>
+      </div>
+      <div id="context-popup-body"></div>
     </div>
     <div id="manual-banner" class="manual-banner">
       <p id="manual-description"></p>
