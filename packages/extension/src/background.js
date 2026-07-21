@@ -1063,6 +1063,28 @@ function sendStepToRuntime(step, stepIndex) {
 }
 
 /**
+ * Extract context key references and their resolved values from a template string.
+ * @param {string} template - Value containing {{ctx.X}} tokens
+ * @param {object} contextStore - Current context store
+ * @returns {Array<{key: string, value: string}>}
+ */
+function extractResolvedContext(template, contextStore) {
+  var refs = [];
+  var seen = {};
+  template.replace(/\{\{ctx\.([^}]+)\}\}/g, function(match, keyName) {
+    if (!seen[keyName]) {
+      seen[keyName] = true;
+      refs.push({
+        key: keyName,
+        value: contextStore.hasOwnProperty(keyName) ? contextStore[keyName] : null
+      });
+    }
+    return match;
+  });
+  return refs;
+}
+
+/**
  * Emit a LOG message to the panel after a step completes.
  *
  * @param {number} stepIndex - The index of the completed step
@@ -1088,6 +1110,19 @@ function emitLog(stepIndex, step, ok, error) {
   if (step.gone != null) logMsg.gone = step.gone;
   if (error) {
     logMsg.error = error;
+  }
+  // Include context data for successful save steps
+  if (ok && (step.action === 'saveText' || step.action === 'saveValue' ||
+             step.action === 'saveAttribute' || step.action === 'saveExpression')) {
+    var ctxKey = step.contextKey || step.key;
+    if (ctxKey) {
+      logMsg.contextKey = ctxKey;
+      logMsg.savedValue = runState.contextStore[ctxKey];
+    }
+  }
+  // Include resolved context references for assert steps
+  if (step.value && typeof step.value === 'string' && step.value.indexOf('{{ctx.') !== -1) {
+    logMsg.resolvedContext = extractResolvedContext(step.value, runState.contextStore);
   }
   safeSendMessage(logMsg);
 }
@@ -1759,6 +1794,9 @@ function handleMessage(message, sender, sendResponse) {
       break;
     case 'SKIP_STEP':
       handleSkipStep(message);
+      break;
+    case 'GET_CONTEXT':
+      safeSendMessage({ type: 'CONTEXT_STATE', store: runState.contextStore || {} });
       break;
     case 'RUNTIME_READY':
       // If a tab switch is pending and the sender matches the expected tab, complete the switch

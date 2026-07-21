@@ -6,8 +6,8 @@ Make the extension's runtime context store visible in the panel UI. Enrich LOG m
 
 ## Tasks
 
-- [ ] 1. Add context extraction utility in background.js
-  - [ ] 1.1 Implement `extractResolvedContext` function in background.js
+- [x] 1. Add context extraction utility in background.js
+  - [x] 1.1 Implement `extractResolvedContext` function in background.js
     - Add function that takes a template string and contextStore object
     - Use regex `/\{\{ctx\.([^}]+)\}\}/g` to find all `{{ctx.X}}` tokens
     - Deduplicate keys (use a `seen` object) and return array of `{key, value}` objects
@@ -15,22 +15,22 @@ Make the extension's runtime context store visible in the panel UI. Enrich LOG m
     - Place before `emitLog` function
     - _Requirements: 3.1, 3.2_
 
-  - [ ] 1.2 Enhance `emitLog` function to include context data on save steps
+  - [x] 1.2 Enhance `emitLog` function to include context data on save steps
     - After existing field assignments, add conditional block for save actions
     - When `ok === true` and action is `saveText`, `saveValue`, `saveAttribute`, or `saveExpression`: set `logMsg.contextKey` from `step.contextKey || step.key` and `logMsg.savedValue` from `runState.contextStore[ctxKey]`
     - When `ok === false`: do not add these fields
     - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-  - [ ] 1.3 Enhance `emitLog` function to include resolved context for assert steps
+  - [x] 1.3 Enhance `emitLog` function to include resolved context for assert steps
     - After the save-step block, check if `step.value` contains `{{ctx.`
     - If yes, call `extractResolvedContext(step.value, runState.contextStore)` and assign result to `logMsg.resolvedContext`
     - _Requirements: 3.1, 3.2_
 
-  - [ ] 1.4 Add `GET_CONTEXT` message handler in background.js
+  - [x] 1.4 Add `GET_CONTEXT` message handler in background.js
     - In the existing `handleMessage` switch, add a `case 'GET_CONTEXT':` that calls `safeSendMessage({ type: 'CONTEXT_STATE', store: runState.contextStore || {} })`
     - _Requirements: 7.1, 7.2, 7.4_
 
-- [ ] 2. Checkpoint - Verify background changes
+- [x] 2. Checkpoint - Verify background changes
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 3. Add panel utility functions in panel.js
