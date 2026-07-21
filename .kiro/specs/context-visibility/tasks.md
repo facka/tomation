@@ -60,31 +60,31 @@ Make the extension's runtime context store visible in the panel UI. Enrich LOG m
     - If non-empty array: build label string `"(from ctx.X, ctx.Y, ...)"` and render in `<span class="ctx-source">`
     - _Requirements: 3.3, 3.4, 3.5_
 
-- [ ] 5. Add context popup state and logic in panel.js
-  - [ ] 5.1 Add `contextStoreCache` variable and cache update logic
+- [x] 5. Add context popup state and logic in panel.js
+  - [x] 5.1 Add `contextStoreCache` variable and cache update logic
     - Declare `var contextStoreCache = {};` at module level
     - In the LOG message handler: if `message.contextKey !== undefined`, update `contextStoreCache[message.contextKey] = message.savedValue`
     - Add `CONTEXT_STATE` case to message handler: set `contextStoreCache = message.store || {}` and call `renderContextPopup(contextStoreCache)`
     - _Requirements: 7.3_
 
-  - [ ] 5.2 Implement `renderContextPopup` function
+  - [x] 5.2 Implement `renderContextPopup` function
     - Takes a store object
     - Gets `#context-popup-body` element
     - If no keys: render `<p class="ctx-empty">No context values stored yet.</p>`
     - Otherwise: render `<table class="ctx-table">` with one row per key, using `formatContextValue` for values
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-  - [ ] 5.3 Implement `toggleContextPopup` function
+  - [x] 5.3 Implement `toggleContextPopup` function
     - Get `#context-popup` element
     - If currently visible (`display === 'block'`): hide it
     - Otherwise: send `{ type: 'GET_CONTEXT' }` via `api.runtime.sendMessage`, call `renderContextPopup(contextStoreCache)`, set `display = 'block'`
     - _Requirements: 4.5, 4.6, 7.1_
 
-  - [ ] 5.4 Implement `updateContextPopupIfOpen` helper function
+  - [x] 5.4 Implement `updateContextPopupIfOpen` helper function
     - Check if popup is visible; if so, call `renderContextPopup(contextStoreCache)`
     - _Requirements: 5.6_
 
-  - [ ] 5.5 Wire up Context button and popup close events
+  - [x] 5.5 Wire up Context button and popup close events
     - Attach click listener to `#context-btn` calling `toggleContextPopup`
     - Attach click listener to `#context-popup-close` to hide popup
     - Attach Escape key listener (on document) to close popup if open

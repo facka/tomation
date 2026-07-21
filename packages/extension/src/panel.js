@@ -13,6 +13,7 @@ var isRunning = false;
 var currentRunConfig = null;
 var currentRunAutomationParams = null; // params used in the current automation run (for persistence)
 var currentFavourites = {};
+var contextStoreCache = {};
 
 // --- Search Filter ---
 
@@ -1738,6 +1739,10 @@ function onBackgroundMessage(message) {
 
     case 'LOG':
       finalizeInProgressEntry(message);
+      if (message.contextKey !== undefined) {
+        contextStoreCache[message.contextKey] = message.savedValue;
+        updateContextPopupIfOpen();
+      }
       appendLogEntry(message);
       break;
 
@@ -1761,6 +1766,11 @@ function onBackgroundMessage(message) {
     case 'RUN_STOPPED':
       hideManualBanner();
       showRunSummary(message);
+      break;
+
+    case 'CONTEXT_STATE':
+      contextStoreCache = message.store || {};
+      renderContextPopup(contextStoreCache);
       break;
 
     case 'STATE_SYNC':
@@ -1904,6 +1914,53 @@ function formatContextValue(key, value) {
            escapeHtml(strVal.slice(0, 30)) + '..."</span>';
   }
   return '<span class="ctx-value">"' + escapeHtml(strVal) + '"</span>';
+}
+
+/**
+ * Render the context popup body with all store entries as a table.
+ * @param {object} store - context store key-value map
+ */
+function renderContextPopup(store) {
+  var body = document.getElementById('context-popup-body');
+  if (!body) return;
+  var keys = Object.keys(store);
+  if (keys.length === 0) {
+    body.innerHTML = '<p class="ctx-empty">No context values stored yet.</p>';
+    return;
+  }
+  var html = '<table class="ctx-table"><tbody>';
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i];
+    html += '<tr><td class="ctx-popup-key">' + escapeHtml(k) + '</td>' +
+            '<td class="ctx-popup-val">' + formatContextValue(k, store[k]) + '</td></tr>';
+  }
+  html += '</tbody></table>';
+  body.innerHTML = html;
+}
+
+/**
+ * Toggle the context popup visibility. When opening, requests latest state from background.
+ */
+function toggleContextPopup() {
+  var popup = document.getElementById('context-popup');
+  if (!popup) return;
+  if (popup.style.display === 'block') {
+    popup.style.display = 'none';
+    return;
+  }
+  api.runtime.sendMessage({ type: 'GET_CONTEXT' });
+  renderContextPopup(contextStoreCache);
+  popup.style.display = 'block';
+}
+
+/**
+ * If the context popup is currently open, re-render it with the latest cache.
+ */
+function updateContextPopupIfOpen() {
+  var popup = document.getElementById('context-popup');
+  if (popup && popup.style.display === 'block') {
+    renderContextPopup(contextStoreCache);
+  }
 }
 
 /**
@@ -2091,6 +2148,43 @@ function init() {
       if (closeBtn) { closeBtn.style.display = ''; }
     });
   }
+
+  // Wire up Context button
+  var contextBtn = document.getElementById('context-btn');
+  if (contextBtn) {
+    contextBtn.addEventListener('click', function () {
+      toggleContextPopup();
+    });
+  }
+
+  // Wire up Context popup close button
+  var contextPopupClose = document.getElementById('context-popup-close');
+  if (contextPopupClose) {
+    contextPopupClose.addEventListener('click', function () {
+      var popup = document.getElementById('context-popup');
+      if (popup) { popup.style.display = 'none'; }
+    });
+  }
+
+  // Wire up Escape key to close context popup
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      var popup = document.getElementById('context-popup');
+      if (popup && popup.style.display === 'block') {
+        popup.style.display = 'none';
+      }
+    }
+  });
+
+  // Wire up click-outside to close context popup
+  document.addEventListener('click', function (e) {
+    var popup = document.getElementById('context-popup');
+    if (!popup || popup.style.display !== 'block') return;
+    var contextBtn2 = document.getElementById('context-btn');
+    if (popup.contains(e.target)) return;
+    if (contextBtn2 && (contextBtn2 === e.target || contextBtn2.contains(e.target))) return;
+    popup.style.display = 'none';
+  });
 
   // Wire up Close button (go back to home from run view)
   var closeRunBtn = document.getElementById('close-run-btn');
