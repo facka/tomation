@@ -1856,6 +1856,36 @@ function syncToActiveTab() {
 // --- Utility ---
 
 /**
+ * Determine if a context key is sensitive (should be masked).
+ * @param {string} key
+ * @returns {boolean}
+ */
+function isSensitiveKey(key) {
+  return /password|secret|token|key|auth/i.test(key);
+}
+
+/**
+ * Format a context value for display with truncation and masking.
+ * @param {string} key - The context key (for sensitivity check)
+ * @param {*} value - The raw value
+ * @returns {string} HTML string with appropriate truncation/masking/tooltip
+ */
+function formatContextValue(key, value) {
+  if (value === null || value === undefined || value === '') {
+    return '<span class="ctx-value"></span>';
+  }
+  var strVal = String(value);
+  if (isSensitiveKey(key)) {
+    return '<span class="ctx-value ctx-masked">****</span>';
+  }
+  if (strVal.length > 30) {
+    return '<span class="ctx-value" title="' + escapeHtml(strVal) + '">"' +
+           escapeHtml(strVal.slice(0, 30)) + '..."</span>';
+  }
+  return '<span class="ctx-value">"' + escapeHtml(strVal) + '"</span>';
+}
+
+/**
  * Escape HTML special characters.
  * @param {string} str
  * @returns {string}

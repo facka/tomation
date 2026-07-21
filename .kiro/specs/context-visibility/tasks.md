@@ -33,13 +33,13 @@ Make the extension's runtime context store visible in the panel UI. Enrich LOG m
 - [x] 2. Checkpoint - Verify background changes
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 3. Add panel utility functions in panel.js
-  - [ ] 3.1 Implement `isSensitiveKey` function in panel.js
+- [x] 3. Add panel utility functions in panel.js
+  - [x] 3.1 Implement `isSensitiveKey` function in panel.js
     - Returns `true` if the key matches `/password|secret|token|key|auth/i`
     - Place near the top of panel.js utility section
     - _Requirements: 6.1_
 
-  - [ ] 3.2 Implement `formatContextValue` function in panel.js
+  - [x] 3.2 Implement `formatContextValue` function in panel.js
     - Takes `(key, value)` parameters
     - If value is null/undefined/empty string: return `<span class="ctx-value"></span>`
     - If `isSensitiveKey(key)`: return `<span class="ctx-value ctx-masked">****</span>` (no title attribute)
