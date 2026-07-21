@@ -1566,25 +1566,25 @@ function handleUpdateLogEntry(message) {
   var entry = document.querySelector('[data-step-index="' + message.stepIndex + '"]');
   if (!entry) return;
 
-  // Update pass/fail class
-  entry.classList.remove('pass', 'fail');
+  // Update pass/fail class (also remove in-progress from retry loading state)
+  entry.classList.remove('pass', 'fail', 'in-progress');
   if (message.ok) {
     entry.classList.add('pass');
   } else {
     entry.classList.add('fail');
   }
 
-  // Rebuild indicator text (keep existing action/target HTML, just update the indicator suffix)
+  // Rebuild indicator: use badge for attempt number
   var indicator = '';
   if (message.ok) {
     indicator = ' ✓';
     if (message.retryAttempt) {
-      indicator += ' Attempt ' + message.retryAttempt;
+      indicator += ' <span class="attempt-badge pass">Attempt ' + message.retryAttempt + '</span>';
     }
   } else {
     indicator = ' ✗';
     if (message.retryAttempt) {
-      indicator += ' Attempt ' + message.retryAttempt;
+      indicator += ' <span class="attempt-badge fail">Attempt ' + message.retryAttempt + '</span>';
     }
     if (message.error) {
       indicator += ' ' + escapeHtml(message.error);
@@ -1592,10 +1592,12 @@ function handleUpdateLogEntry(message) {
   }
 
   // The existing entry already has the correct action/target HTML from the original LOG emission.
-  // Strip any existing indicator (✓/✗ and everything after) and append the new one.
+  // Strip any existing indicator (✓/✗/spinner and everything after) and append the new one.
   var currentHtml = entry.innerHTML;
-  // Remove old indicator: match ' ✓...' or ' ✗...' at end of string
-  currentHtml = currentHtml.replace(/ [✓✗].*$/, '');
+  currentHtml = currentHtml.replace(/ [✓✗⊘].*$/, '');
+  // Also strip spinner if present (from retry loading state)
+  currentHtml = currentHtml.replace(/ <span class="attempt-badge">.*$/, '');
+  currentHtml = currentHtml.replace(/ <span class="spinner">.*$/, '');
   entry.innerHTML = currentHtml + indicator;
 }
 
@@ -1652,8 +1654,25 @@ function handleStepFailedAwaitingAction(message) {
         type: 'RETRY_STEP',
         stepIndex: message.stepIndex
       });
-      if (retryBtn) retryBtn.disabled = true;
-      if (skipBtn) skipBtn.disabled = true;
+
+      // Remove the action buttons container
+      if (buttonContainer.parentNode) {
+        buttonContainer.parentNode.removeChild(buttonContainer);
+      }
+
+      // Put the log entry into loading/running state with attempt badge
+      var entry = document.querySelector('[data-step-index="' + message.stepIndex + '"]');
+      if (entry) {
+        entry.classList.remove('fail');
+        entry.classList.add('in-progress');
+        // Strip the old indicator (error text, ✗, etc) and show attempt badge with spinner
+        var currentHtml = entry.innerHTML;
+        currentHtml = currentHtml.replace(/ [✓✗⊘].*$/, '');
+        currentHtml = currentHtml.replace(/ <span class="attempt-badge">.*$/, '');
+        currentHtml = currentHtml.replace(/ <span class="spinner">.*$/, '');
+        var attemptNum = (message.retryAttempt || 0) + 1;
+        entry.innerHTML = currentHtml + ' <span class="attempt-badge">Attempt ' + attemptNum + '</span> <span class="spinner">⟳</span>';
+      }
     });
   }
 
@@ -1663,17 +1682,19 @@ function handleStepFailedAwaitingAction(message) {
         type: 'SKIP_STEP',
         stepIndex: message.stepIndex
       });
-      if (retryBtn) retryBtn.disabled = true;
-      if (skipBtn) skipBtn.disabled = true;
 
-      // Update the last failed log entry to show "skipped" badge with muted styling
-      var logEntries = logContainer.querySelectorAll('.log-entry.fail');
-      if (logEntries.length > 0) {
-        var lastFailed = logEntries[logEntries.length - 1];
-        lastFailed.classList.remove('fail');
-        lastFailed.classList.add('skipped');
+      // Remove the action buttons container
+      if (buttonContainer.parentNode) {
+        buttonContainer.parentNode.removeChild(buttonContainer);
+      }
+
+      // Update the failed log entry to show "skipped" badge with muted styling
+      var entry = document.querySelector('[data-step-index="' + message.stepIndex + '"]');
+      if (entry) {
+        entry.classList.remove('fail');
+        entry.classList.add('skipped');
         // Replace the ✗ indicator with ⊘ skipped badge
-        lastFailed.innerHTML = lastFailed.innerHTML.replace(/ ✗.*$/, ' ⊘ skipped');
+        entry.innerHTML = entry.innerHTML.replace(/ [✓✗].*$/, ' <span class="skipped-badge">⊘ skipped</span>');
       }
     });
   }

@@ -591,6 +591,34 @@
       border-left: 3px solid var(--error);
     }
 
+    .attempt-badge {
+      display: inline-block;
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 5px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+    }
+
+    .attempt-badge.pass {
+      background: var(--success);
+      color: #fff;
+      border-color: var(--success);
+    }
+
+    .attempt-badge.fail {
+      background: var(--error);
+      color: #fff;
+      border-color: var(--error);
+    }
+
+    .skipped-badge {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
     .log-summary {
       padding: 10px 12px;
       background: var(--bg-elevated);
