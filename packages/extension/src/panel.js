@@ -1417,6 +1417,21 @@ function buildLogEntryHtml(logData, pageElements) {
       parts.push('<span class="step-value">****</span>');
       break;
 
+    case 'saveText':
+    case 'saveValue':
+    case 'saveAttribute':
+    case 'saveExpression':
+      if (logData.target) {
+        var saveTarget = resolveTargetLabel(logData.target, pageElements);
+        var saveTip = buildElementTooltip(logData.target, pageElements);
+        parts.push('<span class="element-badge" title="' + escapeHtml(saveTip) + '">' + escapeHtml(saveTarget) + '</span>');
+      }
+      if (logData.contextKey) {
+        parts.push('<span class="ctx-badge">ctx.' + escapeHtml(logData.contextKey) + '</span>');
+        parts.push(formatContextValue(logData.contextKey, logData.savedValue));
+      }
+      break;
+
     default:
       // Actions with target: click, type, select, assertExists, assertNotExists, assertHasText, waitFor
       if (logData.target) {
@@ -1429,6 +1444,12 @@ function buildLogEntryHtml(logData, pageElements) {
       }
       if (action === 'waitFor' && logData.gone) {
         parts.push('<span class="step-value">(gone)</span>');
+      }
+      if (logData.resolvedContext && logData.resolvedContext.length > 0) {
+        var ctxLabels = logData.resolvedContext.map(function(ref) {
+          return 'ctx.' + ref.key;
+        });
+        parts.push('<span class="ctx-source">(from ' + escapeHtml(ctxLabels.join(', ')) + ')</span>');
       }
       break;
   }

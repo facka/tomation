@@ -48,14 +48,14 @@ Make the extension's runtime context store visible in the panel UI. Enrich LOG m
     - Use existing `escapeHtml` function for all output
     - _Requirements: 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 5.3, 5.4, 5.5, 6.1, 6.2_
 
-- [ ] 4. Add context rendering in log entries in panel.js
-  - [ ] 4.1 Add save step cases to `buildLogEntryHtml` switch
+- [x] 4. Add context rendering in log entries in panel.js
+  - [x] 4.1 Add save step cases to `buildLogEntryHtml` switch
     - Add cases for `saveText`, `saveValue`, `saveAttribute`, `saveExpression`
     - Render target element badge (reuse existing `resolveTargetLabel`/`buildElementTooltip` pattern)
     - If `logData.contextKey` exists: render `<span class="ctx-badge">ctx.{key}</span>` followed by `formatContextValue(logData.contextKey, logData.savedValue)`
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7_
 
-  - [ ] 4.2 Add resolved context label to default case in `buildLogEntryHtml`
+  - [x] 4.2 Add resolved context label to default case in `buildLogEntryHtml`
     - After existing value rendering in the default case, check `logData.resolvedContext`
     - If non-empty array: build label string `"(from ctx.X, ctx.Y, ...)"` and render in `<span class="ctx-source">`
     - _Requirements: 3.3, 3.4, 3.5_
