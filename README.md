@@ -17,7 +17,7 @@ Want to see Tomation in action? Head over to the [Tomation Playground](https://f
 ### Browser Extension
 
 <!-- TODO: Update with store links once published -->
-- **Chrome**: Coming soon
+- [Chrome Tomation Extension](https://chromewebstore.google.com/detail/plinecpdmbklpddinihlmcempieeehch?utm_source=item-share-cb) 
 - **Firefox**: Coming soon
 
 For development, load the extension from `packages/extension/dist` as an unpacked extension.
