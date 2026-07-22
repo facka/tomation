@@ -1,6 +1,6 @@
 {
   "name": "@tomationjs/dsl",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "TypeScript type definitions and runtime stubs for the Tomation DSL",
   "main": "index.js",
   "types": "index.d.ts",
