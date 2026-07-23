@@ -55,8 +55,8 @@ Replace the existing `#home-landing` section in `panel.html` with a comprehensiv
     - Test file: `packages/extension/src/isPlaygroundUrl.test.js`
     - **Validates: Requirements 7.2**
 
-- [ ] 4. Implement Get Started button and playground link handlers in panel.js
-  - [ ] 4.1 Wire Get Started button and playground link click handlers
+- [x] 4. Implement Get Started button and playground link handlers in panel.js
+  - [x] 4.1 Wire Get Started button and playground link click handlers
     - Get Started button click: call `api.tabs.create({ url: 'https://facka.github.io/tomation/' })`
     - Playground link click (if needed for extension context): call `api.tabs.create` similarly
     - _Requirements: 3.2, 4.1, 4.2_

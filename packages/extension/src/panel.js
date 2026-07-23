@@ -2124,6 +2124,23 @@ function init() {
     });
   }
 
+  // Wire up Get Started button — opens playground in a new tab
+  var getStartedBtn = document.getElementById('get-started-btn');
+  if (getStartedBtn) {
+    getStartedBtn.addEventListener('click', function () {
+      api.tabs.create({ url: 'https://facka.github.io/tomation/' });
+    });
+  }
+
+  // Wire up playground link — intercept click to open via extension API
+  var playgroundLink = document.getElementById('playground-link');
+  if (playgroundLink) {
+    playgroundLink.addEventListener('click', function (e) {
+      e.preventDefault();
+      api.tabs.create({ url: 'https://facka.github.io/tomation/' });
+    });
+  }
+
   // Wire up error back button
   var errorBackBtn = document.getElementById('error-back-btn');
   if (errorBackBtn) {
