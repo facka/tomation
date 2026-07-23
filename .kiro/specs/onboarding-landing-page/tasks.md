@@ -6,8 +6,8 @@ Replace the existing `#home-landing` section in `panel.html` with a comprehensiv
 
 ## Tasks
 
-- [ ] 1. Add CSS styles for onboarding components in panel.html
-  - [ ] 1.1 Add all new CSS rules for landing page components to the `<style>` block in panel.html
+- [x] 1. Add CSS styles for onboarding components in panel.html
+  - [x] 1.1 Add all new CSS rules for landing page components to the `<style>` block in panel.html
     - Add `.landing-welcome` (h1: 18px, font-weight 700, centered, margin-bottom 4px)
     - Add `.landing-tagline` (13px, `--text-secondary`, max 120 chars width, centered)
     - Add `.landing-get-started` (primary CTA, padding 8px 20px)
@@ -24,8 +24,8 @@ Replace the existing `#home-landing` section in `panel.html` with a comprehensiv
     - Add `.automations-content` (padding 12px, prose styling), `.automations-content pre` (bg-elevated, mono font)
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 6.1, 6.2, 6.3_
 
-- [ ] 2. Replace `#home-landing` HTML markup in panel.html
-  - [ ] 2.1 Replace the existing `#home-landing` section content with the new onboarding markup
+- [x] 2. Replace `#home-landing` HTML markup in panel.html
+  - [x] 2.1 Replace the existing `#home-landing` section content with the new onboarding markup
     - Add `<h1 class="landing-welcome">Welcome to Tomation</h1>`
     - Add tagline `<p>` below heading (≤120 chars communicating extension purpose)
     - Add Get Started button `<button id="get-started-btn" class="btn btn-primary landing-get-started">Get Started</button>`

@@ -954,6 +954,152 @@
       color: var(--text-muted);
       font-size: 13px;
     }
+
+    /* Onboarding Landing Page */
+    .landing-welcome {
+      font-size: 18px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    .landing-tagline {
+      font-size: 13px;
+      color: var(--text-secondary);
+      max-width: 40ch;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .landing-get-started {
+      padding: 8px 20px;
+    }
+
+    .drop-zone-unified {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      width: 100%;
+      max-width: 320px;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px 16px;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 0.15s ease, background 0.15s ease;
+      margin-top: 16px;
+    }
+
+    .drop-zone-unified:hover {
+      border-color: var(--accent-text);
+    }
+
+    .drop-zone-unified.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .drop-zone-unified:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .drop-zone-label {
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .drop-zone-helper {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .drop-zone-error {
+      color: var(--error);
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    .drop-zone-error:empty {
+      display: none;
+    }
+
+    .playground-prompt {
+      background: var(--accent-soft);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      margin-top: 12px;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .playground-prompt-text {
+      font-size: 13px;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .playground-prompt-actions {
+      display: flex;
+      flex-direction: row;
+      gap: 8px;
+    }
+
+    .landing-playground-link {
+      color: var(--accent-text);
+      font-size: 13px;
+      text-decoration: none;
+      margin-top: 16px;
+    }
+
+    .landing-playground-link:hover {
+      text-decoration: underline;
+    }
+
+    .landing-automations {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      margin-top: 16px;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .landing-automations summary {
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--text-primary);
+    }
+
+    .automations-content {
+      padding: 12px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
+    .automations-content p {
+      margin-bottom: 8px;
+    }
+
+    .automations-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .automations-content pre {
+      background: var(--bg-elevated);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      overflow-x: auto;
+      margin: 8px 0;
+    }
   </style>
 </head>
 <body>
@@ -961,16 +1107,43 @@
   <div id="view-home" class="view active">
     <div id="warning-banner" class="warning-banner"></div>
     <div id="home-landing" class="home-landing">
-      <div class="landing-icon">📋</div>
-      <p class="landing-title">Load a spec to get started</p>
-      <p class="landing-subtitle">Drag and drop a <code>.tomation.json</code> file here, or use the button below.</p>
-      <div class="landing-actions">
-        <button id="load-spec-btn" class="btn btn-primary">Load Spec File</button>
-        <input type="file" id="spec-file-input" accept=".json,.tomation.json" />
+      <!-- Welcome -->
+      <h1 class="landing-welcome">Welcome to Tomation</h1>
+      <p class="landing-tagline">Run browser UI tests directly from your sidebar — load a spec and watch it execute step by step.</p>
+
+      <!-- Get Started -->
+      <button id="get-started-btn" class="btn btn-primary landing-get-started">Get Started</button>
+
+      <!-- Unified Drop Zone -->
+      <div id="drop-zone" class="drop-zone-unified" tabindex="0" role="button" aria-label="Load spec file">
+        <span class="drop-zone-label">Load Spec File</span>
+        <span class="drop-zone-helper">or drag and drop a .tomation.json file here</span>
+        <input type="file" id="spec-file-input" accept=".json,.tomation.json" aria-hidden="true" />
       </div>
-      <div id="drop-zone" class="drop-zone">
-        <span class="drop-zone-text">Drop .tomation.json here</span>
+      <p id="drop-zone-error" class="drop-zone-error" role="alert" aria-live="polite"></p>
+
+      <!-- Playground Prompt (hidden by default, shown on playground detection) -->
+      <div id="playground-prompt" class="playground-prompt" style="display:none;">
+        <p class="playground-prompt-text">You're on the Tomation Playground! Load example tests?</p>
+        <div class="playground-prompt-actions">
+          <button id="load-playground-btn" class="btn btn-primary btn-sm">Load Playground Tests</button>
+          <button id="dismiss-playground-btn" class="btn btn-ghost btn-sm">Dismiss</button>
+        </div>
       </div>
+
+      <!-- Playground Link -->
+      <a id="playground-link" class="landing-playground-link" href="https://facka.github.io/tomation/" target="_blank" rel="noopener">Try examples in the Playground</a>
+
+      <!-- Automations Section -->
+      <details id="automations-section" class="landing-automations">
+        <summary>How to write automations</summary>
+        <div class="automations-content">
+          <p>Automations are written in TypeScript using the <code>@tomationjs/dsl</code> package. Define page elements, compose reusable tasks, and write tests that read like plain English.</p>
+          <p>Compile your TypeScript files to a <code>.tomation.json</code> spec by running:</p>
+          <pre><code>npx @tomationjs/compiler</code></pre>
+          <p><a href="https://facka.github.io/tomation/" target="_blank" rel="noopener">Read the full documentation →</a></p>
+        </div>
+      </details>
     </div>
     <div id="home-loaded" style="display:none;">
       <div class="loaded-header">
