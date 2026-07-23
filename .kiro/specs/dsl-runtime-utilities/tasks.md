@@ -58,7 +58,7 @@ This plan implements date helper functions and runtime template strings for the 
     - Ensure step descriptor `value`/`url`/`description` fields can now be either string or object
     - _Requirements: 4.1, 8.1, 8.6_
 
-- [~] 3. Checkpoint - Verify compiler changes
+- [ ] 3. Checkpoint - Verify compiler changes
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 4. Implement runtime resolution in background.js
@@ -120,7 +120,7 @@ This plan implements date helper functions and runtime template strings for the 
     - Generate random mixed values (plain strings and object descriptors), verify correct dispatch path
     - **Validates: Requirements 8.6**
 
-- [~] 5. Checkpoint - Verify runtime changes
+- [ ] 5. Checkpoint - Verify runtime changes
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 6. Integration wiring and compiler warning coverage
@@ -150,7 +150,7 @@ This plan implements date helper functions and runtime template strings for the 
     - Test multiple date helpers with different format strings in a single test plan
     - _Requirements: 2.1, 2.2, 2.3, 5.7, 6.1, 6.2_
 
-- [~] 7. Final checkpoint - Ensure all tests pass
+- [ ] 7. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
