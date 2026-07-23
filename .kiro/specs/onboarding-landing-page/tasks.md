@@ -37,8 +37,8 @@ Replace the existing `#home-landing` section in `panel.html` with a comprehensiv
     - Ensure top-to-bottom order: welcome, tagline, Get Started, drop zone, error, playground prompt, playground link, automations section
     - _Requirements: 1.1, 1.2, 2.1, 2.5, 3.1, 4.1, 4.2, 4.3, 5.1, 7.3, 8.1, 8.2, 8.3, 8.4, 8.5_
 
-- [ ] 3. Implement unified drop zone logic in panel.js
-  - [ ] 3.1 Add `isPlaygroundUrl`, `showDropZoneError`, `clearDropZoneError`, and drop zone event handlers
+- [x] 3. Implement unified drop zone logic in panel.js
+  - [x] 3.1 Add `isPlaygroundUrl`, `showDropZoneError`, `clearDropZoneError`, and drop zone event handlers
     - Add `isPlaygroundUrl(url)` — returns true if url starts with `https://facka.github.io/tomation/` or equals `https://facka.github.io/tomation` exactly
     - Add `showDropZoneError(msg)` — sets text content on `#drop-zone-error`
     - Add `clearDropZoneError()` — clears `#drop-zone-error` text content

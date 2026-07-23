@@ -2017,6 +2017,32 @@ function getHostFromUrl(urlStr) {
   }
 }
 
+// --- Playground URL Detection ---
+
+function isPlaygroundUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  if (url === 'https://facka.github.io/tomation') return true;
+  return url.indexOf('https://facka.github.io/tomation/') === 0;
+}
+
+// --- Drop Zone Error Helpers ---
+
+function showDropZoneError(msg) {
+  var el = document.getElementById('drop-zone-error');
+  if (el) el.textContent = msg;
+}
+
+function clearDropZoneError() {
+  var el = document.getElementById('drop-zone-error');
+  if (el) el.textContent = '';
+}
+
+function handleUnifiedDropZoneClick() {
+  clearDropZoneError();
+  var fileInput = document.getElementById('spec-file-input');
+  if (fileInput) fileInput.click();
+}
+
 // --- Initialization ---
 
 function init() {
@@ -2035,13 +2061,9 @@ function init() {
     });
   }
 
-  // Wire up Load Spec button and file input
-  var loadBtn = document.getElementById('load-spec-btn');
+  // Wire up file input change (triggered by unified drop zone click)
   var fileInput = document.getElementById('spec-file-input');
-  if (loadBtn && fileInput) {
-    loadBtn.addEventListener('click', function () {
-      fileInput.click();
-    });
+  if (fileInput) {
     fileInput.addEventListener('change', onSpecFileSelected);
   }
 
@@ -2055,31 +2077,50 @@ function init() {
     fileInputAlt.addEventListener('change', onSpecFileSelected);
   }
 
-  // Wire up drag-and-drop on the drop zone and body
+  // Wire up unified drop zone (click + drag + drop)
   var dropZone = document.getElementById('drop-zone');
-  var homeView = document.getElementById('view-home');
 
-  if (homeView) {
-    homeView.addEventListener('dragover', function (e) {
-      e.preventDefault();
-      if (dropZone) dropZone.classList.add('drag-over');
-    });
-    homeView.addEventListener('dragleave', function (e) {
-      if (!homeView.contains(e.relatedTarget)) {
-        if (dropZone) dropZone.classList.remove('drag-over');
+  if (dropZone) {
+    dropZone.addEventListener('click', handleUnifiedDropZoneClick);
+
+    dropZone.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleUnifiedDropZoneClick();
       }
     });
-    homeView.addEventListener('drop', function (e) {
+
+    dropZone.addEventListener('dragenter', function (e) {
       e.preventDefault();
-      if (dropZone) dropZone.classList.remove('drag-over');
+      dropZone.classList.add('drag-over');
+      clearDropZoneError();
+    });
+
+    dropZone.addEventListener('dragleave', function (e) {
+      if (!dropZone.contains(e.relatedTarget)) {
+        dropZone.classList.remove('drag-over');
+      }
+    });
+
+    dropZone.addEventListener('dragover', function (e) {
+      e.preventDefault();
+    });
+
+    dropZone.addEventListener('drop', function (e) {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
       var files = e.dataTransfer && e.dataTransfer.files;
-      if (files && files.length > 0) {
-        var file = files[0];
-        if (file.name.endsWith('.json') || file.name.endsWith('.tomation.json')) {
-          // Simulate file input change
-          handleDroppedFile(file);
-        }
+      if (!files || files.length === 0) return;
+      if (files.length > 1) {
+        showDropZoneError('Only a single file can be loaded at a time');
+        return;
       }
+      var file = files[0];
+      if (!file.name.endsWith('.json') && !file.name.endsWith('.tomation.json')) {
+        showDropZoneError('Invalid file type. Please drop a .tomation.json file');
+        return;
+      }
+      handleDroppedFile(file);
     });
   }
 
