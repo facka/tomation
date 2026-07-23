@@ -1758,6 +1758,65 @@ function stopRun() {
 }
 
 // ---------------------------------------------------------------------------
+// Bundled Spec Loader
+// ---------------------------------------------------------------------------
+
+/**
+ * Load the bundled playground spec from the extension package.
+ * Fetches the JSON file, parses it, and sends it to the panel.
+ * On error, sends a BUNDLED_SPEC_ERROR message instead.
+ */
+function loadBundledSpec() {
+  var specUrl = api.runtime.getURL('bundled/playground-tests.tomation.json');
+  fetch(specUrl)
+    .then(function(response) { return response.json(); })
+    .then(function(spec) {
+      safeSendMessage({
+        type: 'BUNDLED_SPEC_LOADED',
+        spec: spec,
+        filename: 'playground-tests.tomation.json'
+      });
+    })
+    .catch(function(err) {
+      safeSendMessage({
+        type: 'BUNDLED_SPEC_ERROR',
+        error: err.message || 'Failed to load bundled spec'
+      });
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Tab URL Notifier
+// ---------------------------------------------------------------------------
+
+/**
+ * Register persistent tab listeners that notify the panel of active tab URL changes.
+ * Called once during initMessageRouter() to enable playground auto-detection.
+ */
+function initTabUrlNotifier() {
+  if (api.tabs && api.tabs.onActivated) {
+    api.tabs.onActivated.addListener(function(activeInfo) {
+      api.tabs.get(activeInfo.tabId, function(tab) {
+        if (tab && tab.url) {
+          safeSendMessage({ type: 'TAB_URL_UPDATE', url: tab.url });
+        }
+      });
+    });
+  }
+  if (api.tabs && api.tabs.onUpdated) {
+    api.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+      if (changeInfo.status === 'complete') {
+        api.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+          if (tabs[0] && tabs[0].url) {
+            safeSendMessage({ type: 'TAB_URL_UPDATE', url: tabs[0].url });
+          }
+        });
+      }
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Message Router (Task 15.5)
 // ---------------------------------------------------------------------------
 
@@ -1811,6 +1870,9 @@ function handleMessage(message, sender, sendResponse) {
           switchToTab(sender.tab.id);
         }
       }
+      break;
+    case 'LOAD_BUNDLED_SPEC':
+      loadBundledSpec();
       break;
     // STEP_RESULT is handled inline by sendStepToRuntime via its own listener.
     // RUNTIME_READY for navigation is handled inline by handleNavigateStep.
@@ -1997,6 +2059,7 @@ function handlePanelConnect(port) {
 function initMessageRouter() {
   api.runtime.onMessage.addListener(handleMessage);
   api.runtime.onConnect.addListener(handlePanelConnect);
+  initTabUrlNotifier();
 }
 
 // Initialize the router (only in extension context, not in Node test context)
@@ -2043,6 +2106,8 @@ if (typeof module !== 'undefined' && module.exports) {
     handleRunTest: handleRunTest,
     handleRunAutomation: handleRunAutomation,
     handlePanelConnect: handlePanelConnect,
-    initMessageRouter: initMessageRouter
+    initMessageRouter: initMessageRouter,
+    loadBundledSpec: loadBundledSpec,
+    initTabUrlNotifier: initTabUrlNotifier
   };
 }

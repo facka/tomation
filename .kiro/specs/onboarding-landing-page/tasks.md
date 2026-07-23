@@ -61,13 +61,13 @@ Replace the existing `#home-landing` section in `panel.html` with a comprehensiv
     - Playground link click (if needed for extension context): call `api.tabs.create` similarly
     - _Requirements: 3.2, 4.1, 4.2_
 
-- [ ] 5. Implement playground auto-detection in background.js
-  - [ ] 5.1 Add `TAB_URL_UPDATE` message sending in background.js
+- [x] 5. Implement playground auto-detection in background.js
+  - [x] 5.1 Add `TAB_URL_UPDATE` message sending in background.js
     - In `tabs.onActivated` handler: get tab info and send `{ type: 'TAB_URL_UPDATE', url: tab.url }` via `safeSendMessage`
     - In `tabs.onUpdated` handler (on status complete): query active tab and send `TAB_URL_UPDATE` via `safeSendMessage`
     - _Requirements: 7.2_
 
-  - [ ] 5.2 Add `LOAD_BUNDLED_SPEC` message handler in background.js
+  - [x] 5.2 Add `LOAD_BUNDLED_SPEC` message handler in background.js
     - On receiving `LOAD_BUNDLED_SPEC`: fetch `chrome.runtime.getURL('bundled/playground-tests.tomation.json')`, parse JSON, send `BUNDLED_SPEC_LOADED` with spec and filename back to panel
     - On error: send `BUNDLED_SPEC_ERROR` with error message
     - _Requirements: 7.1, 7.4, 7.5_
