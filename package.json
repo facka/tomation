@@ -13,6 +13,9 @@
     "build:firefox": "npm run build:firefox --workspace=packages/extension",
     "test": "npm test --workspaces",
     "test:compiler": "npm test --workspace=packages/compiler",
-    "test:extension": "npm test --workspace=packages/extension"
+    "test:extension": "npm test --workspace=packages/extension",
+    "release:minor": "./scripts/bump-and-release.sh minor",
+    "release:major": "./scripts/bump-and-release.sh major",
+    "release:patch": "./scripts/bump-and-release.sh patch"
   }
 }
