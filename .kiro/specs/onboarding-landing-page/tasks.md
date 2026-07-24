@@ -92,8 +92,8 @@ Replace the existing `#home-landing` section in `panel.html` with a comprehensiv
     - Create `bundled/` directory if it does not exist
     - _Requirements: 7.1_
 
-- [ ] 9. Update `renderHomeView` to handle landing page visibility
-  - [ ] 9.1 Update `renderHomeView` in panel.js to manage onboarding element visibility
+- [x] 9. Update `renderHomeView` to handle landing page visibility
+  - [x] 9.1 Update `renderHomeView` in panel.js to manage onboarding element visibility
     - When spec is loaded: hide Get Started button, hide playground prompt, hide automations section, hide playground link
     - When no spec loaded: show all onboarding elements
     - After determining landing vs loaded state, check playground prompt visibility based on current tab URL and dismiss state

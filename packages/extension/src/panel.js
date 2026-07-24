@@ -15,6 +15,7 @@ var currentRunAutomationParams = null; // params used in the current automation 
 var currentFavourites = {};
 var contextStoreCache = {};
 var playgroundPromptDismissed = false;
+var lastKnownTabUrl = null;
 
 // --- Search Filter ---
 
@@ -674,6 +675,7 @@ function renderHomeView() {
     // Show landing page
     if (landingEl) landingEl.style.display = '';
     if (loadedEl) loadedEl.style.display = 'none';
+    updateOnboardingVisibility(false);
     return;
   }
 
@@ -684,12 +686,14 @@ function renderHomeView() {
       // Show landing page
       if (landingEl) landingEl.style.display = '';
       if (loadedEl) loadedEl.style.display = 'none';
+      updateOnboardingVisibility(false);
       return;
     }
 
     // Switch to loaded state
     if (landingEl) landingEl.style.display = 'none';
     if (loadedEl) loadedEl.style.display = '';
+    updateOnboardingVisibility(true);
 
     // Update loaded header with first spec's meta info
     var firstSpec = project.specs[0];
@@ -1804,6 +1808,7 @@ function onBackgroundMessage(message) {
       break;
 
     case 'TAB_URL_UPDATE':
+      lastKnownTabUrl = message.url;
       if (isPlaygroundUrl(message.url) && (!currentProject || !currentProject.specs || currentProject.specs.length === 0) && !playgroundPromptDismissed && !isRunning) {
         showPlaygroundPrompt();
       } else {
@@ -2080,6 +2085,35 @@ function showPlaygroundPrompt() {
 function hidePlaygroundPrompt() {
   var el = document.getElementById('playground-prompt');
   if (el) el.style.display = 'none';
+}
+
+// --- Onboarding Visibility ---
+
+function updateOnboardingVisibility(hasSpec) {
+  var getStartedBtn = document.getElementById('get-started-btn');
+  var playgroundPromptEl = document.getElementById('playground-prompt');
+  var automationsSection = document.getElementById('automations-section');
+  var playgroundLink = document.getElementById('playground-link');
+
+  if (hasSpec) {
+    // Hide all onboarding elements when spec is loaded
+    if (getStartedBtn) getStartedBtn.style.display = 'none';
+    if (playgroundPromptEl) playgroundPromptEl.style.display = 'none';
+    if (automationsSection) automationsSection.style.display = 'none';
+    if (playgroundLink) playgroundLink.style.display = 'none';
+  } else {
+    // Show onboarding elements when no spec is loaded
+    if (getStartedBtn) getStartedBtn.style.display = '';
+    if (automationsSection) automationsSection.style.display = '';
+    if (playgroundLink) playgroundLink.style.display = '';
+
+    // Check playground prompt visibility based on current tab URL and dismiss state
+    if (isPlaygroundUrl(lastKnownTabUrl) && !playgroundPromptDismissed && !isRunning) {
+      showPlaygroundPrompt();
+    } else {
+      hidePlaygroundPrompt();
+    }
+  }
 }
 
 // --- Initialization ---
