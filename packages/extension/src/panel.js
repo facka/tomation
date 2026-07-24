@@ -14,6 +14,7 @@ var currentRunConfig = null;
 var currentRunAutomationParams = null; // params used in the current automation run (for persistence)
 var currentFavourites = {};
 var contextStoreCache = {};
+var playgroundPromptDismissed = false;
 
 // --- Search Filter ---
 
@@ -1801,6 +1802,32 @@ function onBackgroundMessage(message) {
         }
       }
       break;
+
+    case 'TAB_URL_UPDATE':
+      if (isPlaygroundUrl(message.url) && (!currentProject || !currentProject.specs || currentProject.specs.length === 0) && !playgroundPromptDismissed && !isRunning) {
+        showPlaygroundPrompt();
+      } else {
+        hidePlaygroundPrompt();
+      }
+      break;
+
+    case 'BUNDLED_SPEC_LOADED':
+      hidePlaygroundPrompt();
+      addSpec('facka.github.io', message.filename, message.spec).then(function () {
+        currentHostname = 'facka.github.io';
+        renderHomeView();
+      });
+      break;
+
+    case 'BUNDLED_SPEC_ERROR':
+      var promptEl = document.getElementById('playground-prompt');
+      if (promptEl) {
+        var errorEl = promptEl.querySelector('.playground-prompt-text');
+        if (errorEl) {
+          errorEl.textContent = message.error || 'Could not load playground tests';
+        }
+      }
+      break;
   }
 }
 
@@ -2043,6 +2070,18 @@ function handleUnifiedDropZoneClick() {
   if (fileInput) fileInput.click();
 }
 
+// --- Playground Prompt Helpers ---
+
+function showPlaygroundPrompt() {
+  var el = document.getElementById('playground-prompt');
+  if (el) el.style.display = '';
+}
+
+function hidePlaygroundPrompt() {
+  var el = document.getElementById('playground-prompt');
+  if (el) el.style.display = 'none';
+}
+
 // --- Initialization ---
 
 function init() {
@@ -2138,6 +2177,23 @@ function init() {
     playgroundLink.addEventListener('click', function (e) {
       e.preventDefault();
       api.tabs.create({ url: 'https://facka.github.io/tomation/' });
+    });
+  }
+
+  // Wire up Load Playground Tests button
+  var loadPlaygroundBtn = document.getElementById('load-playground-btn');
+  if (loadPlaygroundBtn) {
+    loadPlaygroundBtn.addEventListener('click', function () {
+      api.runtime.sendMessage({ type: 'LOAD_BUNDLED_SPEC' });
+    });
+  }
+
+  // Wire up Dismiss playground prompt button
+  var dismissPlaygroundBtn = document.getElementById('dismiss-playground-btn');
+  if (dismissPlaygroundBtn) {
+    dismissPlaygroundBtn.addEventListener('click', function () {
+      playgroundPromptDismissed = true;
+      hidePlaygroundPrompt();
     });
   }
 

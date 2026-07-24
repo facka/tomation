@@ -72,8 +72,8 @@ Replace the existing `#home-landing` section in `panel.html` with a comprehensiv
     - On error: send `BUNDLED_SPEC_ERROR` with error message
     - _Requirements: 7.1, 7.4, 7.5_
 
-- [ ] 6. Implement playground prompt UI logic in panel.js
-  - [ ] 6.1 Add playground prompt show/hide/dismiss logic and message handling
+- [x] 6. Implement playground prompt UI logic in panel.js
+  - [x] 6.1 Add playground prompt show/hide/dismiss logic and message handling
     - Add `var playgroundPromptDismissed = false;` session state
     - Add `showPlaygroundPrompt()` and `hidePlaygroundPrompt()` functions
     - Handle `TAB_URL_UPDATE` message: if `isPlaygroundUrl(url)` AND no spec loaded AND not dismissed AND not running → show prompt; otherwise hide
