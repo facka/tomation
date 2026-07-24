@@ -1007,9 +1007,32 @@
     }
 
     .drop-zone-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 14px;
       font-weight: 600;
       font-size: 13px;
-      color: var(--text-primary);
+      color: #fff;
+      background: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      cursor: pointer;
+    }
+
+    .drop-zone-unified:hover .drop-zone-label {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    #spec-file-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
 
     .drop-zone-helper {
