@@ -86,8 +86,8 @@ Replace the existing `#home-landing` section in `panel.html` with a comprehensiv
 - [ ] 7. Checkpoint - Verify panel UI renders correctly
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Update build script to bundle playground spec
-  - [ ] 8.1 Add bundled spec copy step to `packages/extension/build.js`
+- [x] 8. Update build script to bundle playground spec
+  - [x] 8.1 Add bundled spec copy step to `packages/extension/build.js`
     - Copy `examples/playground-tests/playground-tests.tomation.json` to `dist/<target>/bundled/playground-tests.tomation.json` for each build target
     - Create `bundled/` directory if it does not exist
     - _Requirements: 7.1_

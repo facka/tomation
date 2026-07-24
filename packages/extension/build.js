@@ -154,6 +154,11 @@ function buildTarget(target) {
     mkdirp(path.join(targetDir, 'icons'));
   }
 
+  // Copy bundled spec
+  var bundledSpecSrc = path.join(ROOT, '../../examples/playground-tests/playground-tests.tomation.json');
+  var bundledSpecDest = path.join(targetDir, 'bundled', 'playground-tests.tomation.json');
+  copyFile(bundledSpecSrc, bundledSpecDest);
+
   console.log('Built: dist/' + target + '/');
 }
 
