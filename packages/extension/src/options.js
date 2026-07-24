@@ -148,9 +148,7 @@ function handleDeleteProjectClick(e) {
   var hostname = btn.getAttribute('data-hostname');
 
   if (confirm('Are you sure you want to delete the project "' + hostname + '"? This cannot be undone.')) {
-    deleteFavourites(hostname).then(function () {
-      return deleteProject(hostname);
-    }).then(function () {
+    deleteProject(hostname).then(function () {
       renderProjects();
     });
   }

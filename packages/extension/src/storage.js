@@ -114,7 +114,7 @@ function deleteSpec(hostname, specId) {
  * @returns {Promise<void>}
  */
 function deleteProject(hostname) {
-  return api.storage.local.remove(hostname);
+  return api.storage.local.remove([hostname, 'automation_favourites_' + hostname]);
 }
 
 /**
@@ -288,30 +288,47 @@ function saveTestPlanConfig(key, config) {
 
 /**
  * Persist the last-used parameter values for an Automation.
+ * Stores params inside the project object at project.savedParams[automationName].
  * Catches and logs write failures without throwing (silent fail).
+ * @param {string} hostname - The project hostname
  * @param {string} automationName - The Automation label/name
  * @param {object} params - Key-value map of param values
  * @returns {Promise<void>}
  */
-function saveParamValues(automationName, params) {
-  var key = 'automation_params_' + automationName;
-  var data = {};
-  data[key] = params;
-  return api.storage.local.set(data).catch(function (err) {
+function saveParamValues(hostname, automationName, params) {
+  return getProject(hostname).then(function (project) {
+    if (!project) {
+      project = {
+        host: hostname,
+        name: hostname,
+        specs: [],
+        lastUsed: new Date().toISOString()
+      };
+    }
+    if (!project.savedParams) {
+      project.savedParams = {};
+    }
+    project.savedParams[automationName] = params;
+    return saveProject(hostname, project);
+  }).catch(function (err) {
     console.error('saveParamValues: failed to write params for "' + automationName + '":', err);
   });
 }
 
 /**
  * Retrieve previously stored parameter values for an Automation.
+ * Reads from the project object at project.savedParams[automationName].
  * Returns null if no stored values exist or on read failure (silent fail).
+ * @param {string} hostname - The project hostname
  * @param {string} automationName - The Automation label/name
  * @returns {Promise<object|null>}
  */
-function loadParamValues(automationName) {
-  var key = 'automation_params_' + automationName;
-  return api.storage.local.get(key).then(function (result) {
-    return result[key] || null;
+function loadParamValues(hostname, automationName) {
+  return getProject(hostname).then(function (project) {
+    if (project && project.savedParams && project.savedParams[automationName]) {
+      return project.savedParams[automationName];
+    }
+    return null;
   }).catch(function (err) {
     console.error('loadParamValues: failed to read params for "' + automationName + '":', err);
     return null;
@@ -320,30 +337,45 @@ function loadParamValues(automationName) {
 
 /**
  * Persist favourite automations for a given project hostname.
+ * Stores favourites inside the project object at project.favourites.
  * Catches and logs write failures without throwing (silent fail).
  * @param {string} hostname - The project hostname
  * @param {object} favourites - Object map { automationName: true }
  * @returns {Promise<void>}
  */
 function saveFavourites(hostname, favourites) {
-  var key = 'automation_favourites_' + hostname;
-  var data = {};
-  data[key] = favourites;
-  return api.storage.local.set(data).catch(function (err) {
+  return getProject(hostname).then(function (project) {
+    if (!project) {
+      project = {
+        host: hostname,
+        name: hostname,
+        specs: []
+      };
+    }
+    project.favourites = favourites;
+    return saveProject(hostname, project);
+  }).catch(function (err) {
     console.error('saveFavourites: failed to write favourites for "' + hostname + '":', err);
   });
 }
 
 /**
  * Load favourite automations for a given project hostname.
+ * Reads from project.favourites first; falls back to legacy key for backward compatibility.
  * Returns empty object on read failure (silent fail).
  * @param {string} hostname - The project hostname
  * @returns {Promise<object>}
  */
 function loadFavourites(hostname) {
-  var key = 'automation_favourites_' + hostname;
-  return api.storage.local.get(key).then(function (result) {
-    return result[key] || {};
+  return getProject(hostname).then(function (project) {
+    if (project && project.favourites) {
+      return project.favourites;
+    }
+    // Fall back to legacy key for backward compatibility
+    var key = 'automation_favourites_' + hostname;
+    return api.storage.local.get(key).then(function (result) {
+      return result[key] || {};
+    });
   }).catch(function (err) {
     console.error('loadFavourites: failed to read favourites for "' + hostname + '":', err);
     return {};
@@ -352,13 +384,22 @@ function loadFavourites(hostname) {
 
 /**
  * Remove favourite automations data for a given project hostname.
+ * Deletes project.favourites from the project object and also removes
+ * the legacy automation_favourites_{hostname} key for cleanup.
  * Catches and logs removal failures without throwing (silent fail).
  * @param {string} hostname - The project hostname
  * @returns {Promise<void>}
  */
 function deleteFavourites(hostname) {
   var key = 'automation_favourites_' + hostname;
-  return api.storage.local.remove(key).catch(function (err) {
+  return getProject(hostname).then(function (project) {
+    if (project && project.favourites) {
+      delete project.favourites;
+      return saveProject(hostname, project);
+    }
+  }).then(function () {
+    return api.storage.local.remove(key);
+  }).catch(function (err) {
     console.error('deleteFavourites: failed to remove favourites for "' + hostname + '":', err);
   });
 }

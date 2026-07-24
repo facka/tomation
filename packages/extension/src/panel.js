@@ -409,7 +409,7 @@ function quickRunAutomation(specIndex, automationIndex) {
 
   var params = automation.params || [];
 
-  loadParamValues(automation.name).then(function (savedValues) {
+  loadParamValues(currentHostname, automation.name).then(function (savedValues) {
     // If required params have no saved values, fall back to plan view
     if (hasRequiredParamsWithoutValues(params, savedValues)) {
       showView('test-plan');
@@ -986,7 +986,7 @@ function renderTestPlan() {
     checklist.parentNode.insertBefore(paramForm, checklist);
 
     // Pre-fill form with last-used values from storage
-    loadParamValues(currentRunnable.data.name).then(function (storedValues) {
+    loadParamValues(currentHostname, currentRunnable.data.name).then(function (storedValues) {
       if (!storedValues) return;
       var inputs = paramForm.querySelectorAll('input[data-param-name], select[data-param-name]');
       for (var i = 0; i < inputs.length; i++) {
@@ -1564,7 +1564,7 @@ function showRunSummary(data) {
 
   // Persist automation param values on successful run completion
   if (currentRunAutomationParams && data.failed === 0) {
-    saveParamValues(currentRunAutomationParams.name, currentRunAutomationParams.params);
+    saveParamValues(currentHostname, currentRunAutomationParams.name, currentRunAutomationParams.params);
   }
   currentRunAutomationParams = null;
 
