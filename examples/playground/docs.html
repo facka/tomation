@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tomation Documentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Sora', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular']
+          },
+          colors: {
+            neon: '#22c55e',
+            surface: '#090c14'
+          },
+          boxShadow: {
+            glow: '0 0 0 1px rgba(34,197,94,.2), 0 0 40px rgba(34,197,94,.12)'
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      background:
+        radial-gradient(circle at 15% 10%, rgba(34,197,94,0.16), transparent 28%),
+        radial-gradient(circle at 85% 5%, rgba(16,185,129,0.15), transparent 30%),
+        linear-gradient(160deg, #020617 0%, #050b1b 35%, #020617 100%);
+      min-height: 100vh;
+    }
+
+    .grid-noise {
+      background-image:
+        linear-gradient(rgba(148,163,184,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148,163,184,0.05) 1px, transparent 1px);
+      background-size: 36px 36px;
+    }
+
+    .code-scroll::-webkit-scrollbar {
+      height: 8px;
+      width: 8px;
+    }
+
+    .code-scroll::-webkit-scrollbar-track {
+      background: #0b1327;
+      border-radius: 999px;
+    }
+
+    .code-scroll::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 999px;
+    }
+
+    pre[class*="language-"] {
+      margin: 0;
+      background: transparent;
+      border: 0;
+      padding: 0;
+      text-shadow: none;
+    }
+
+    .code-scroll pre[class*="language-"],
+    pre.code-scroll {
+      padding: 12px;
+      overflow-x: auto;
+    }
+
+    code[class*="language-"] {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      text-shadow: none;
+    }
+
+    /* Offset scroll targets to account for sticky navbar height */
+    [id="get-started"], [id="cli"], [id="configuration"],
+    [id="element-locators"], [id="where-matchers"], [id="user-functions"],
+    [id="assertions"], [id="tests"], [id="automations"], [id="pom-files"] {
+      scroll-margin-top: 70px;
+    }
+  </style>
+</head>
+<body class="text-slate-100 antialiased">
+  <div class="pointer-events-none absolute inset-0 grid-noise opacity-30"></div>
+
+  <!-- Main Navbar (Tier 1) -->
+  <nav aria-label="Main navigation" class="sticky top-0 z-40 flex items-center justify-between border-b border-slate-700/70 bg-slate-900/80 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
+    <div class="flex items-center gap-2">
+      <!-- Hamburger button (mobile only) -->
+      <button id="sidebar-toggle-btn" aria-label="Toggle documentation navigation" aria-expanded="false" class="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-emerald-300">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+      <a href="index.html" class="flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 rounded-md">
+        <svg role="img" aria-label="Tomation logo" width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
+          <rect width="28" height="28" rx="6" fill="#6B46C1"/>
+          <text x="14" y="20" text-anchor="middle" fill="white" font-family="Sora, sans-serif" font-size="16" font-weight="700">T</text>
+        </svg>
+        <span class="font-bold text-white">Tomation</span>
+      </a>
+    </div>
+    <div class="flex items-center gap-4">
+      <a href="docs.html" class="min-h-[44px] min-w-[44px] flex items-center justify-center text-sm font-medium text-emerald-300 transition hover:text-emerald-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Docs</a>
+      <a href="playground.html" class="min-h-[44px] min-w-[44px] flex items-center justify-center text-sm font-medium text-slate-300 transition hover:text-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Examples</a>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="https://chromewebstore.google.com/detail/plinecpdmbklpddinihlmcempieeehch?utm_source=item-share-cb" aria-label="Chrome Extension" class="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 transition hover:text-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c1.85 0 3.55.63 4.9 1.69L12 12l-1.47-5.08A8.014 8.014 0 0 1 12 4zm-6.9 5.69A7.946 7.946 0 0 1 8.07 5.5L9.55 12l-4.45 2.57zM12 20c-2.73 0-5.14-1.37-6.58-3.46L12 12l6.58 4.54C17.14 18.63 14.73 20 12 20zm6.9-5.69L14.45 12l1.48-6.5a7.946 7.946 0 0 1 2.97 4.19 7.946 7.946 0 0 1 0 4.62z"/></svg>
+      </a>
+      <a href="https://github.com/facka/tomation" aria-label="GitHub" class="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 transition hover:text-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.009-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Sidebar Backdrop (mobile overlay) -->
+  <div id="sidebar-backdrop" class="fixed inset-0 z-40 bg-slate-950/50 hidden md:hidden"></div>
+
+  <!-- Sidebar Navigation -->
+  <nav id="docs-sidebar" aria-label="Documentation navigation" class="fixed top-[60px] left-0 h-[calc(100vh-60px)] w-64 overflow-y-auto bg-slate-900/95 backdrop-blur border-r border-slate-700/70 hidden md:block z-50 code-scroll">
+    <div class="flex flex-col gap-1 py-4 px-3">
+
+      <!-- Get Started & Installation -->
+      <a href="#get-started" class="sidebar-link block rounded-md px-3 py-2 text-sm font-medium text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
+        Get Started &amp; Installation
+      </a>
+
+      <!-- Tomation CLI -->
+      <a href="#cli" class="sidebar-link block rounded-md px-3 py-2 text-sm font-medium text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
+        Tomation CLI
+      </a>
+
+      <!-- Configuration File -->
+      <a href="#configuration" class="sidebar-link block rounded-md px-3 py-2 text-sm font-medium text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
+        Configuration File
+      </a>
+
+      <!-- API (collapsible) -->
+      <div class="sidebar-section">
+        <button aria-expanded="false" class="sidebar-section-toggle flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
+          <span>API</span>
+          <svg class="chevron-icon h-4 w-4 transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
+        </button>
+        <ul class="sidebar-children hidden mt-1 flex flex-col gap-0.5">
+          <li>
+            <a href="#element-locators" class="sidebar-link block rounded-md py-1.5 pl-7 pr-3 text-sm text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
+              Element/Locators Builder API
+            </a>
+          </li>
+          <li>
+            <a href="#where-matchers" class="sidebar-link block rounded-md py-1.5 pl-7 pr-3 text-sm text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
+              Where Matchers
+            </a>
+          </li>
+          <li>
+            <a href="#user-functions" class="sidebar-link block rounded-md py-1.5 pl-7 pr-3 text-sm text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
+              User Functions: Click, Type, Select
+            </a>
+          </li>
+          <li>
+            <a href="#assertions" class="sidebar-link block rounded-md py-1.5 pl-7 pr-3 text-sm text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
+              Assertions
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Tests -->
+      <a href="#tests" class="sidebar-link block rounded-md px-3 py-2 text-sm font-medium text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
+        Tests
+      </a>
+
+      <!-- Automations -->
+      <a href="#automations" class="sidebar-link block rounded-md px-3 py-2 text-sm font-medium text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
+        Automations
+      </a>
+
+      <!-- POM Files -->
+      <a href="#pom-files" class="sidebar-link block rounded-md px-3 py-2 text-sm font-medium text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
+        POM Files
+      </a>
+
+    </div>
+  </nav>
+
+  <!-- Content Area -->
+  <main class="ml-0 md:ml-64 max-w-4xl px-6 py-10 sm:px-10">
+    <h1 class="text-3xl font-extrabold tracking-tight text-white sm:text-4xl mb-8">Tomation Documentation</h1>
+
+    <h2 id="get-started" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Get Started &amp; Installation</h2>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      A TypeScript-first browser automation framework that lets you write readable, maintainable UI tests using a declarative DSL — then run them directly in the browser via a lightweight extension.
+    </p>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Browser Extension</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Install the Tomation extension from the <a href="https://chromewebstore.google.com/detail/plinecpdmbklpddinihlmcempieeehch?utm_source=item-share-cb" class="text-emerald-300 hover:text-emerald-200 underline">Chrome Web Store</a>. The extension provides the runtime environment for executing your tests and automations directly in the browser.
+    </p>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Compiler</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Install the Tomation compiler via npm to compile your TypeScript DSL files into executable test plans:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-bash">npm install @tomationjs/compiler @tomationjs/dsl</code></pre></div>
+
+    <h2 id="cli" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Tomation CLI</h2>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      The Tomation CLI compiles your TypeScript POM, test, and automation files into a single <code class="text-emerald-300">.tomation.json</code> file that the browser extension can load and execute. The output file name is derived from the <code class="text-emerald-300">meta.name</code> field in your configuration.
+    </p>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Compile</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Run the compile command to produce the <code class="text-emerald-300">.tomation.json</code> output file:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-bash">npx tomation compile</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Watch Mode</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Use watch mode for live recompilation during development. The CLI will automatically recompile whenever your source files change:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-bash">npx tomation watch</code></pre></div>
+
+    <h2 id="configuration" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Configuration File</h2>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Every Tomation project requires a <code class="text-emerald-300">tomation.config.ts</code> file at the root of the project. This file tells the compiler where to find your source files and how to name the output.
+    </p>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">Available configuration fields:</p>
+
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4 overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead>
+          <tr class="border-b border-slate-700">
+            <th class="px-4 py-2 text-slate-300 font-medium">Field</th>
+            <th class="px-4 py-2 text-slate-300 font-medium">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b border-slate-700/50">
+            <td class="px-4 py-2 font-mono text-emerald-300 text-xs whitespace-nowrap">meta.name</td>
+            <td class="px-4 py-2 text-slate-400">Project name — used for the output filename</td>
+          </tr>
+          <tr class="border-b border-slate-700/50">
+            <td class="px-4 py-2 font-mono text-emerald-300 text-xs whitespace-nowrap">meta.urls</td>
+            <td class="px-4 py-2 text-slate-400">Array of URLs where tests can run</td>
+          </tr>
+          <tr class="border-b border-slate-700/50">
+            <td class="px-4 py-2 font-mono text-emerald-300 text-xs whitespace-nowrap">pom</td>
+            <td class="px-4 py-2 text-slate-400">Path to the POM files directory</td>
+          </tr>
+          <tr class="border-b border-slate-700/50">
+            <td class="px-4 py-2 font-mono text-emerald-300 text-xs whitespace-nowrap">tests</td>
+            <td class="px-4 py-2 text-slate-400">Path to the test files directory</td>
+          </tr>
+          <tr class="border-b border-slate-700/50">
+            <td class="px-4 py-2 font-mono text-emerald-300 text-xs whitespace-nowrap">automations</td>
+            <td class="px-4 py-2 text-slate-400">Path to automation files directory (optional)</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 font-mono text-emerald-300 text-xs whitespace-nowrap">baseUrl</td>
+            <td class="px-4 py-2 text-slate-400">Base path for relative URL resolution</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">Full configuration example:</p>
+
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">// tomation.config.ts
+export default {
+  meta: {
+    name: 'My App Tests',
+    urls: ['http://localhost:3000'],
+  },
+  pom: './pom',
+  tests: './tests',
+  automations: './automations',
+  baseUrl: './',
+}</code></pre></div>
+
+    <h3 id="element-locators" class="text-xl font-semibold text-white mt-12 mb-3">Element/Locators Builder API</h3>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Tomation uses a fluent builder API to declare element locators. The core pattern is <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.TAG.where(matcher).as('Label')</code> — you pick an HTML tag, apply one or more matchers to narrow the selection, and give it a human-readable label.
+    </p>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Basic Element Declaration</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Any uppercase HTML tag name works with the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is</code> builder: <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.INPUT</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.BUTTON</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.DIV</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.FORM</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.SELECT</code>, etc.
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">import { is, idIs, innerTextIs, classIncludes, placeholderIs, nameIs, typeIs } from '@tomationjs/dsl'
+
+const submitButton = is.BUTTON.where(idIs('submit-btn')).as('Submit Button')
+const emailInput = is.INPUT.where(nameIs('email')).as('Email Input')
+const heading = is.H1.where(innerTextIs('Welcome')).as('Page Heading')</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Scoping with childOf</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Use <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.childOf(parent)</code> to scope the element search within a parent element. This is useful when you have multiple elements with the same matcher on the page but need to distinguish them by their container. The <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.childOf()</code> and <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.where()</code> methods can be chained in any order.
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">const loginForm = is.FORM.where(idIs('login-form')).as('Login Form')
+const submitButton = is.BUTTON.where(innerTextIs('Submit')).childOf(loginForm).as('Login Submit')
+
+const signupForm = is.FORM.where(idIs('signup-form')).as('Signup Form')
+const signupSubmit = is.BUTTON.where(innerTextIs('Submit')).childOf(signupForm).as('Signup Submit')</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">XPath Elements</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      For complex selectors that go beyond tag + matcher combinations, use the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Element()</code> function with an XPath expression:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">import { Element } from '@tomationjs/dsl'
+
+const alert = Element('//div[@role="alert"]').as('Alert Box')
+const thirdRow = Element('//table/tbody/tr[3]').as('Third Row')</code></pre></div>
+
+    <h3 id="where-matchers" class="text-xl font-semibold text-white mt-12 mb-3">Where Matchers</h3>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      The <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.where()</code> method accepts matcher functions that narrow down element selection by matching on attributes, text content, position, or state. You can combine multiple matchers to create precise locators.
+    </p>
+
+    <div class="overflow-x-auto mb-4"><table class="w-full text-sm text-left border border-slate-700 rounded-lg overflow-hidden">
+      <thead class="bg-slate-800/80"><tr><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Matcher</th><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Matches on</th><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Example</th></tr></thead>
+      <tbody>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">idIs(value)</code></td><td class="px-4 py-2.5 text-slate-300">Element <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">id</code> attribute</td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.INPUT.where(idIs('username'))</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">innerTextIs(value)</code></td><td class="px-4 py-2.5 text-slate-300">Exact text content</td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.BUTTON.where(innerTextIs('Login'))</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">innerTextContains(value)</code></td><td class="px-4 py-2.5 text-slate-300">Partial text content</td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.DIV.where(innerTextContains('Welcome'))</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">classIncludes(value)</code></td><td class="px-4 py-2.5 text-slate-300">CSS class name</td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.LI.where(classIncludes('active'))</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">placeholderIs(value)</code></td><td class="px-4 py-2.5 text-slate-300">Input placeholder</td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.INPUT.where(placeholderIs('Enter email'))</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">nameIs(value)</code></td><td class="px-4 py-2.5 text-slate-300">Element <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">name</code> attribute</td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.INPUT.where(nameIs('password'))</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">typeIs(value)</code></td><td class="px-4 py-2.5 text-slate-300">Input <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">type</code> attribute</td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.INPUT.where(typeIs('checkbox'))</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">valueIs(value)</code></td><td class="px-4 py-2.5 text-slate-300">Element <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">value</code> property</td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.INPUT.where(valueIs('hello'))</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">ariaLabel(value)</code></td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">aria-label</code> attribute</td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.BUTTON.where(ariaLabel('Close'))</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">roleIs(value)</code></td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">role</code> attribute</td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.DIV.where(roleIs('dialog'))</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">titleIs(value)</code></td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">title</code> attribute</td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.A.where(titleIs('Submit form'))</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">hrefContains(value)</code></td><td class="px-4 py-2.5 text-slate-300">Substring of <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">href</code></td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.A.where(hrefContains('/login'))</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">isDisabled()</code></td><td class="px-4 py-2.5 text-slate-300">Element is disabled</td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.BUTTON.where(isDisabled())</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">nthChild(n)</code></td><td class="px-4 py-2.5 text-slate-300">Nth child position (1-based)</td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.LI.where(nthChild(3))</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">dataAttr(name, value)</code></td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">data-*</code> attribute</td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.DIV.where(dataAttr('testid', 'submit'))</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">closestLabelIs(tag, text)</code></td><td class="px-4 py-2.5 text-slate-300">Nearby label element</td><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.INPUT.where(closestLabelIs('LABEL', 'Email'))</code></td></tr>
+      </tbody>
+    </table></div>
+
+    <h3 id="user-functions" class="text-xl font-semibold text-white mt-12 mb-3">User Functions: Click, Type, Select</h3>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      User functions simulate real user interactions with the page. They operate on element locators declared via the builder API and form the core of every test step.
+    </p>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Interaction Functions</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Click(element)</code> — Click on an element. Works with buttons, links, checkboxes, or any clickable target.
+    </p>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Type(value).in(element)</code> — Type text into an input or textarea field.
+    </p>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">TypePassword(value).in(element)</code> — Type a password into an input. The value is masked in logs for security.
+    </p>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Select(value).in(element)</code> — Select an option from a dropdown (<code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">&lt;select&gt;</code>) element by its visible text.
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">import { Click, Type, TypePassword, Select } from '@tomationjs/dsl'
+
+// Click a button
+Click(submitButton)
+
+// Type into an input field
+Type('user@example.com').in(emailInput)
+
+// Type a password (value masked in logs)
+TypePassword('s3cretP@ss').in(passwordInput)
+
+// Select a dropdown option
+Select('Admin').in(roleDropdown)</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Save to Context</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Save functions capture runtime values from the page and store them in a shared context object. Saved values can be referenced later in the same test using the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">{{ctx.keyName}}</code> interpolation syntax.
+    </p>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">SaveText(element).as('key')</code> — Save the element's text content to context.
+    </p>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">SaveAttribute(element, 'attr').as('key')</code> — Save a specific attribute value from the element.
+    </p>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">SaveValue(element).as('key')</code> — Save an input element's current value.
+    </p>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Save(expression).as('key')</code> — Save a computed expression or literal value to context.
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">import { SaveText, SaveAttribute, SaveValue, Save } from '@tomationjs/dsl'
+
+// Save the text content of an element
+SaveText(welcomeMessage).as('greeting')
+
+// Save a specific attribute
+SaveAttribute(profileLink, 'href').as('profileUrl')
+
+// Save an input's current value
+SaveValue(searchInput).as('lastSearch')
+
+// Save a computed expression
+Save('2024-01-15').as('targetDate')
+
+// Reference saved values later in the test
+Type('{{ctx.greeting}}').in(noteInput)</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Date Helpers</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Date helpers generate formatted date strings relative to the current date. They are useful for filling date inputs with dynamic values that stay correct over time. All helpers accept an optional format string (default: <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">YYYY-MM-DD</code>).
+    </p>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Available helpers: <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">today()</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">tomorrow()</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">yesterday()</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">nextWeek()</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">lastWeek()</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">nextMonth()</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">lastMonth()</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">firstDateOfMonth(offset)</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">lastDateOfMonth(offset)</code>.
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">import { today, tomorrow, yesterday, nextWeek, lastWeek, nextMonth, lastMonth, firstDateOfMonth, lastDateOfMonth } from '@tomationjs/dsl'
+
+// Default format: YYYY-MM-DD
+Type(today()).in(dateInput)
+Type(tomorrow()).in(dueDateInput)
+Type(yesterday()).in(startDateInput)
+
+// Week and month offsets
+Type(nextWeek()).in(scheduledInput)
+Type(lastMonth()).in(reportDateInput)
+
+// Custom format
+Type(today('DD/MM/YYYY')).in(localeDateInput)
+Type(nextWeek('MM-DD-YYYY')).in(usDateInput)
+
+// First and last date of month (offset: 0 = current, 1 = next, -1 = previous)
+Type(firstDateOfMonth(0)).in(periodStartInput)
+Type(lastDateOfMonth(0)).in(periodEndInput)
+Type(firstDateOfMonth(1)).in(nextPeriodStartInput)</code></pre></div>
+
+    <h3 id="assertions" class="text-xl font-semibold text-white mt-12 mb-3">Assertions</h3>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Assertion functions verify that the page is in the expected state after user interactions. They fail the test immediately if the condition is not met.
+    </p>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">AssertExists(element)</code> — Asserts that an element exists in the DOM and is visible.
+    </p>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">AssertNotExists(element)</code> — Asserts that an element does NOT exist or is not visible.
+    </p>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">AssertHasText(element, expectedText)</code> — Asserts that an element's text content matches the expected string.
+    </p>
+
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">import { AssertExists, AssertNotExists, AssertHasText } from '@tomationjs/dsl'
+
+// Verify element exists
+AssertExists(Login.submitButton)
+
+// Verify element does not exist (e.g., error message hidden)
+AssertNotExists(Login.errorMessage)
+
+// Verify text content
+AssertHasText(Login.message, 'Login successful')</code></pre></div>
+
+    <h2 id="tests" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Tests</h2>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Tests are declared using the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Test(name, callback)</code> function in <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">*.test.ts</code> files. Each test has a descriptive name and a callback containing the sequence of interactions and assertions that make up the test scenario.
+    </p>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Test File Structure</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Test files live in the directory specified by the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">tests</code> field in your <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">tomation.config.ts</code>. Each file imports the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Test</code> function from the DSL along with any interaction or assertion functions needed, and imports POM elements to interact with.
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">// tests/login.test.ts
+import { Test, Click, AssertExists, AssertHasText } from '@tomationjs/dsl'
+import Login from '~/pom/login.pom'
+
+Test('Login with valid credentials', () => {
+  Login.fillCredentials({ username: 'admin', password: 'secret' })
+  Login.submit()
+  AssertHasText(Login.message, 'Login successful')
+})
+
+Test('Login shows error on empty submit', () => {
+  Click(Login.submitButton)
+  AssertHasText(Login.errorMessage, 'required')
+})</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Compilation &amp; Execution</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      When you run <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">npx tomation compile</code>, the compiler processes all <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">*.test.ts</code> files in the configured tests directory, resolves POM imports, and includes the compiled tests in the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.tomation.json</code> output file.
+    </p>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Tests are run interactively via the Tomation browser extension. Load the compiled <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.tomation.json</code> file in the extension panel, select one or more tests, and execute them against the live page. The extension renders real-time results including pass/fail status and step-by-step logs.
+    </p>
+
+    <h2 id="automations" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Automations</h2>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Automations are like Tests but with typed parameters that are filled in at runtime via a form in the browser extension. Instead of hardcoding values, you declare a params object with typed fields — the extension generates a form for each parameter, letting you reuse the same procedure with different inputs each time.
+    </p>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Declaration</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Declare automations using the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Automation(name, callback)</code> function in <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">*.automation.ts</code> files. The callback receives a typed <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">params</code> object whose shape determines the form controls shown in the extension.
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">// automations/todo.automation.ts
+import { Automation, AssertExists, AssertHasText, SaveText } from '@tomationjs/dsl'
+import Todo from '~/pom/todo.pom'
+
+Automation('Add Todo Item', (params: { item: string }) => {
+  Todo.addItem({ text: params.item })
+  AssertExists(Todo.firstItem)
+  SaveText(Todo.firstItemText).as('savedItem')
+  AssertHasText(Todo.firstItemText, params.item)
+})</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Parameter Types</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      The TypeScript type of each parameter field controls which form input is rendered in the extension panel:
+    </p>
+    <div class="overflow-x-auto mb-4"><table class="w-full text-sm text-left border border-slate-700 rounded-lg overflow-hidden">
+      <thead class="bg-slate-800/80"><tr><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Type</th><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Form Input</th><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Notes</th></tr></thead>
+      <tbody>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">string</code></td><td class="px-4 py-2.5 text-slate-300">Text input</td><td class="px-4 py-2.5 text-slate-400">Free-text field</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">number</code></td><td class="px-4 py-2.5 text-slate-300">Number input</td><td class="px-4 py-2.5 text-slate-400">Coerced to parseFloat</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Date</code></td><td class="px-4 py-2.5 text-slate-300">Date picker</td><td class="px-4 py-2.5 text-slate-400">Sent as ISO YYYY-MM-DD</td></tr>
+        <tr><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">'a' | 'b' | 'c'</code></td><td class="px-4 py-2.5 text-slate-300">Select dropdown</td><td class="px-4 py-2.5 text-slate-400">Constrained options</td></tr>
+      </tbody>
+    </table></div>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Optional parameters use <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">?</code> in the type definition and won't block execution if left empty in the form.
+    </p>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Configuration</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Automation files live in the directory specified by the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">automations</code> field in your <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">tomation.config.ts</code>. Ensure the field is set so the compiler includes your automation files in the output:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">// tomation.config.ts
+export default {
+  meta: { name: 'My App', urls: ['http://localhost:3000'] },
+  pom: './pom',
+  tests: './tests',
+  automations: './automations',
+  baseUrl: './',
+}</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Differences from Tests</h4>
+    <div class="overflow-x-auto mb-4"><table class="w-full text-sm text-left border border-slate-700 rounded-lg overflow-hidden">
+      <thead class="bg-slate-800/80"><tr><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700"></th><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Tests</th><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Automations</th></tr></thead>
+      <tbody>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300 font-medium">Values</td><td class="px-4 py-2.5 text-slate-400">Hardcoded</td><td class="px-4 py-2.5 text-slate-400">Provided at run-time via form</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300 font-medium">File suffix</td><td class="px-4 py-2.5 text-slate-400"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.test.ts</code></td><td class="px-4 py-2.5 text-slate-400"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.automation.ts</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300 font-medium">Declaration</td><td class="px-4 py-2.5 text-slate-400"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Test('name', fn)</code></td><td class="px-4 py-2.5 text-slate-400"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Automation('name', fn)</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300 font-medium">Parameters</td><td class="px-4 py-2.5 text-slate-400">None</td><td class="px-4 py-2.5 text-slate-400">Typed params object</td></tr>
+        <tr><td class="px-4 py-2.5 text-slate-300 font-medium">Use case</td><td class="px-4 py-2.5 text-slate-400">Regression checks</td><td class="px-4 py-2.5 text-slate-400">Reusable user-driven procedures</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="pom-files" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">POM Files</h2>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Tomation uses the <strong class="text-white">Page Object Model (POM)</strong> pattern to organize element locators and reusable tasks into dedicated files. Each page or section of your application gets its own <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">*.pom.ts</code> file that declares elements, reusable tasks, and exports them as a single default object.
+    </p>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Folder-Based Namespacing</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Organize POM files in folders to avoid naming conflicts. Subfolders create namespaces when imported — for example, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">import Login from '~/pom/login.pom'</code> imports the default export from that POM file. As your project grows, use folders to group related pages (e.g., <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">pom/auth/login.pom.ts</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">pom/auth/signup.pom.ts</code>).
+    </p>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">The Export Default Pattern</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Each POM file exports a default object containing all its declared elements and tasks. This makes imports clean and gives consuming test files a single namespace to work with.
+    </p>
+
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">// pom/login.pom.ts
+import { is, idIs, Task, Type, TypePassword, Click } from '@tomationjs/dsl'
+
+const usernameInput = is.INPUT.where(idIs('username')).as('Username')
+const passwordInput = is.INPUT.where(idIs('password')).as('Password')
+const submitButton = is.BUTTON.where(idIs('login-btn')).as('Submit')
+const message = is.DIV.where(idIs('message')).as('Message')
+
+const fillCredentials = Task((params) => {
+  const { username, password } = params
+  Type(username).in(usernameInput)
+  TypePassword(password).in(passwordInput)
+}).as('Fill Credentials')
+
+const submit = Task(() => {
+  Click(submitButton)
+}).as('Submit')
+
+export default { usernameInput, passwordInput, submitButton, message, fillCredentials, submit }</code></pre></div>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Tests and automations can then import the POM and use its elements and tasks directly:
+    </p>
+
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">import Login from '~/pom/login.pom'
+
+// Use elements
+Click(Login.submitButton)
+
+// Use tasks
+Login.fillCredentials({ username: 'admin', password: 'secret' })
+Login.submit()</code></pre></div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+
+  <!-- Section Collapse Controller -->
+  <script>
+    (function initCollapsibleSections() {
+      var toggles = document.querySelectorAll('.sidebar-section-toggle');
+
+      toggles.forEach(function(button) {
+        button.addEventListener('click', function() {
+          var section = button.closest('.sidebar-section');
+          var children = section.querySelector('.sidebar-children');
+
+          if (!children) return;
+
+          var isExpanded = button.getAttribute('aria-expanded') === 'true';
+
+          // Toggle hidden class
+          children.classList.toggle('hidden');
+
+          // Update aria-expanded
+          button.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
+
+          // Rotate chevron icon
+          var chevron = button.querySelector('.chevron-icon');
+          if (chevron) {
+            chevron.classList.toggle('rotate-90');
+          }
+        });
+      });
+    })();
+  </script>
+
+  <!-- Scroll Spy Controller -->
+  <script>
+    var scrollSpySetActive; // Expose setActive for use by smooth scroll handler
+    var scrollSpyLocked = false; // When true, observer callbacks are suppressed
+    (function initScrollSpy() {
+      if (!('IntersectionObserver' in window)) return;
+
+      var sectionIds = [
+        'get-started', 'cli', 'configuration',
+        'element-locators', 'where-matchers', 'user-functions', 'assertions',
+        'tests', 'automations', 'pom-files'
+      ];
+
+      var sections = [];
+      sectionIds.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) sections.push(el);
+      });
+
+      if (sections.length === 0) return;
+
+      var links = document.querySelectorAll('.sidebar-link');
+      var activeClasses = ['text-emerald-300', 'border-l-2', 'border-emerald-400', 'bg-emerald-500/5'];
+      var defaultClass = 'text-slate-400';
+
+      function setActive(id) {
+        var matchingLink = null;
+
+        links.forEach(function(link) {
+          // Remove active classes from all links
+          activeClasses.forEach(function(cls) {
+            link.classList.remove(cls);
+          });
+          // Restore default class
+          if (!link.classList.contains(defaultClass)) {
+            link.classList.add(defaultClass);
+          }
+
+          // Find the matching link
+          if (link.getAttribute('href') === '#' + id) {
+            matchingLink = link;
+          }
+        });
+
+        if (!matchingLink) return;
+
+        // Apply active classes to matching link
+        activeClasses.forEach(function(cls) {
+          matchingLink.classList.add(cls);
+        });
+        matchingLink.classList.remove(defaultClass);
+
+        // Auto-expand parent sidebar section if the link is inside a .sidebar-children list
+        var parentChildren = matchingLink.closest('.sidebar-children');
+        if (parentChildren) {
+          parentChildren.classList.remove('hidden');
+          var section = parentChildren.closest('.sidebar-section');
+          if (section) {
+            var toggle = section.querySelector('.sidebar-section-toggle');
+            if (toggle) {
+              toggle.setAttribute('aria-expanded', 'true');
+              var chevron = toggle.querySelector('.chevron-icon');
+              if (chevron && !chevron.classList.contains('rotate-90')) {
+                chevron.classList.add('rotate-90');
+              }
+            }
+          }
+        }
+      }
+
+      scrollSpySetActive = setActive;
+
+      var observer = new IntersectionObserver(function(entries) {
+        if (scrollSpyLocked) return; // Ignore during programmatic scroll
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+          }
+        });
+      }, {
+        rootMargin: '-70px 0px -60% 0px'
+      });
+
+      sections.forEach(function(section) {
+        observer.observe(section);
+      });
+    })();
+  </script>
+
+  <!-- Sidebar Toggle Controller -->
+  <script>
+    (function initSidebarToggle() {
+      var btn = document.getElementById('sidebar-toggle-btn');
+      var sidebar = document.getElementById('docs-sidebar');
+      var backdrop = document.getElementById('sidebar-backdrop');
+      if (!btn || !sidebar || !backdrop) return;
+
+      function open() {
+        sidebar.classList.remove('hidden');
+        backdrop.classList.remove('hidden');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+
+      function close() {
+        sidebar.classList.add('hidden');
+        backdrop.classList.add('hidden');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+
+      btn.addEventListener('click', function() {
+        var isExpanded = btn.getAttribute('aria-expanded') === 'true';
+        isExpanded ? close() : open();
+      });
+
+      backdrop.addEventListener('click', close);
+
+      // Close sidebar when a link is clicked on mobile
+      var links = sidebar.querySelectorAll('.sidebar-link');
+      links.forEach(function(link) {
+        link.addEventListener('click', function() {
+          if (window.innerWidth < 768) {
+            close();
+          }
+        });
+      });
+    })();
+  </script>
+
+  <!-- Smooth Scroll Controller -->
+  <script>
+    (function initSmoothScroll() {
+      var lockTimer = null;
+      var links = document.querySelectorAll('.sidebar-link');
+      links.forEach(function(link) {
+        link.addEventListener('click', function(e) {
+          var href = link.getAttribute('href');
+          if (!href || !href.startsWith('#')) return;
+
+          var targetId = href.substring(1);
+          var target = document.getElementById(targetId);
+          if (!target) return;
+
+          e.preventDefault();
+
+          // Lock scroll spy to prevent flickering during animation
+          scrollSpyLocked = true;
+          if (lockTimer) clearTimeout(lockTimer);
+
+          // Immediately highlight the clicked sidebar link
+          if (typeof scrollSpySetActive === 'function') {
+            scrollSpySetActive(targetId);
+          }
+
+          target.scrollIntoView({ behavior: 'smooth' });
+
+          // Unlock after scroll animation completes (~600ms is safe for most smooth scrolls)
+          lockTimer = setTimeout(function() {
+            scrollSpyLocked = false;
+          }, 800);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
