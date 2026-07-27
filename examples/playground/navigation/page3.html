@@ -19,6 +19,37 @@
   </style>
 </head>
 <body class="min-h-full text-slate-100 antialiased">
+  <!-- Main Navbar -->
+  <nav aria-label="Main navigation" class="sticky top-0 z-40 flex items-center justify-between border-b border-slate-700/70 bg-slate-900/80 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
+    <a href="../index.html" class="flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 rounded-md">
+      <svg role="img" aria-label="Tomation logo" width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
+        <rect width="28" height="28" rx="6" fill="#6B46C1"/>
+        <text x="14" y="20" text-anchor="middle" fill="white" font-family="Sora, sans-serif" font-size="16" font-weight="700">T</text>
+      </svg>
+      <span class="font-bold text-white">Tomation</span>
+    </a>
+    <div class="flex items-center gap-4">
+      <a href="https://github.com/facka/tomation" class="min-h-[44px] min-w-[44px] flex items-center justify-center text-sm font-medium text-slate-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900 rounded">Docs</a>
+      <a href="../playground.html" class="min-h-[44px] min-w-[44px] flex items-center justify-center text-sm font-medium text-slate-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900 rounded">Examples</a>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="https://chromewebstore.google.com/detail/plinecpdmbklpddinihlmcempieeehch?utm_source=item-share-cb" aria-label="Chrome Extension" class="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900 rounded">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>
+      </a>
+      <a href="https://github.com/facka/tomation" aria-label="GitHub" class="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900 rounded">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Secondary Examples Navbar -->
+  <nav aria-label="Examples navigation" class="sticky top-[60px] z-30 flex items-center gap-6 border-b border-slate-700/70 bg-slate-900/80 px-4 py-2 backdrop-blur sm:px-6 lg:px-8">
+    <a href="../playground.html" class="min-h-[44px] flex items-center text-sm font-medium text-slate-400 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900 rounded">Playground</a>
+    <a href="../login/index.html" class="min-h-[44px] flex items-center text-sm font-medium text-slate-400 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900 rounded">Login</a>
+    <a href="../todo/index.html" class="min-h-[44px] flex items-center text-sm font-medium text-slate-400 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900 rounded">Todo</a>
+    <a href="index.html" class="min-h-[44px] flex items-center border-b-2 border-emerald-400 text-sm font-medium text-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900 rounded">Navigation</a>
+  </nav>
+
   <main class="mx-auto flex min-h-screen w-full max-w-xl items-center px-5 py-10">
     <section class="w-full rounded-3xl border border-emerald-500/25 bg-slate-900/70 p-7 text-center shadow-[0_0_0_1px_rgba(34,197,94,0.18),0_20px_80px_rgba(2,6,23,0.7)] backdrop-blur">
       <div class="mb-5 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300" id="step-indicator">Step 3 of 3</div>

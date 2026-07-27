@@ -82,6 +82,32 @@
   </style>
 </head>
 <body class="text-slate-100 antialiased">
+  <!-- Main Navbar (Tier 1) -->
+  <nav aria-label="Main navigation" class="sticky top-0 z-40 flex items-center justify-between border-b border-slate-700/70 bg-slate-900/80 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
+    <!-- Left: Brand -->
+    <a href="index.html" class="flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 rounded-md">
+      <svg role="img" aria-label="Tomation logo" width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
+        <rect width="28" height="28" rx="6" fill="#6B46C1"/>
+        <text x="14" y="20" text-anchor="middle" fill="white" font-family="Sora, sans-serif" font-size="16" font-weight="700">T</text>
+      </svg>
+      <span class="font-bold text-white">Tomation</span>
+    </a>
+    <!-- Center-left: Links -->
+    <div class="hidden items-center gap-4 sm:flex">
+      <a href="https://github.com/facka/tomation" class="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium text-slate-300 transition hover:text-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900">Docs</a>
+      <a href="playground.html" class="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium text-slate-300 transition hover:text-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900">Examples</a>
+    </div>
+    <!-- Right: External icons -->
+    <div class="flex items-center gap-3">
+      <a href="https://chromewebstore.google.com/detail/plinecpdmbklpddinihlmcempieeehch?utm_source=item-share-cb" aria-label="Chrome Extension" class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md text-slate-300 transition hover:text-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c1.85 0 3.55.63 4.9 1.69L12 12V4zm-6.9 3.31L12 12l-4.9 6.69A7.96 7.96 0 0 1 4 12c0-1.85.63-3.55 1.1-2.69zM12 20c-1.85 0-3.55-.63-4.9-1.69L12 12l4.9 6.31A7.96 7.96 0 0 1 12 20zm6.9-3.31L12 12l4.9-6.69A7.96 7.96 0 0 1 20 12c0 1.85-.63 3.55-1.1 2.69z"/></svg>
+      </a>
+      <a href="https://github.com/facka/tomation" aria-label="GitHub" class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md text-slate-300 transition hover:text-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.009-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+      </a>
+    </div>
+  </nav>
+
   <div class="pointer-events-none absolute inset-0 grid-noise opacity-30"></div>
 
   <main class="relative mx-auto w-full max-w-6xl px-5 pb-16 pt-10 sm:px-8 sm:pt-14">
@@ -110,73 +136,15 @@
         </div>
       </div>
 
-      <div class="grid gap-5 lg:grid-cols-3">
-        <article class="group rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 transition hover:-translate-y-1 hover:border-emerald-400/60 hover:shadow-glow">
-          <div class="mb-4 rounded-xl border border-slate-700 bg-slate-950">
-            <div class="flex items-center gap-2 border-b border-slate-700 px-3 py-2">
-              <span class="h-2.5 w-2.5 rounded-full bg-red-400"></span>
-              <span class="h-2.5 w-2.5 rounded-full bg-amber-300"></span>
-              <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
-              <span class="ml-2 text-xs font-medium text-slate-400">login.test.ts</span>
-            </div>
-<pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">Test('Login with valid credentials', () => {
-  Login.fillCredentials({ username: 'admin', password: 'password123' })
-  Login.submit()
-  AssertHasText(Login.message, 'Login successful')
-})</code></pre>
-          </div>
-          <h3 class="text-lg font-semibold text-white">Login</h3>
-          <p class="mb-4 mt-1 text-sm text-slate-300">Authentication flow with validation and error handling.</p>
-          <div class="flex gap-2">
-            <a href="login/index.html" class="inline-flex flex-1 items-center justify-center rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-300">Open App</a>
-            <button class="inline-flex flex-1 items-center justify-center rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-emerald-400/70" onclick="showCode('login')">View Tests</button>
-          </div>
-        </article>
-
-        <article class="group rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 transition hover:-translate-y-1 hover:border-emerald-400/60 hover:shadow-glow">
-          <div class="mb-4 rounded-xl border border-slate-700 bg-slate-950">
-            <div class="flex items-center gap-2 border-b border-slate-700 px-3 py-2">
-              <span class="h-2.5 w-2.5 rounded-full bg-red-400"></span>
-              <span class="h-2.5 w-2.5 rounded-full bg-amber-300"></span>
-              <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
-              <span class="ml-2 text-xs font-medium text-slate-400">navigation.test.ts</span>
-            </div>
-<pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">Test('Full wizard navigation flow', () => {
-  Navigate('navigation/index.html')
-  Navigation.verifyStep1()
-  Navigate('page2.html')
-  Navigate('page3.html')
-})</code></pre>
-          </div>
-          <h3 class="text-lg font-semibold text-white">Navigation Wizard</h3>
-          <p class="mb-4 mt-1 text-sm text-slate-300">Multi-step page transitions with cross-page assertions.</p>
-          <div class="flex gap-2">
-            <a href="navigation/index.html" class="inline-flex flex-1 items-center justify-center rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-300">Open App</a>
-            <button class="inline-flex flex-1 items-center justify-center rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-emerald-400/70" onclick="showCode('navigation')">View Tests</button>
-          </div>
-        </article>
-
-        <article class="group rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 transition hover:-translate-y-1 hover:border-emerald-400/60 hover:shadow-glow">
-          <div class="mb-4 rounded-xl border border-slate-700 bg-slate-950">
-            <div class="flex items-center gap-2 border-b border-slate-700 px-3 py-2">
-              <span class="h-2.5 w-2.5 rounded-full bg-red-400"></span>
-              <span class="h-2.5 w-2.5 rounded-full bg-amber-300"></span>
-              <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
-              <span class="ml-2 text-xs font-medium text-slate-400">todo.test.ts</span>
-            </div>
-<pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">Test('Add a todo item and verify it exists', () => {
-  Todo.addItem({ text: 'Buy groceries' })
-  AssertExists(Todo.firstItem)
-  AssertHasText(Todo.firstItemText, 'Buy groceries')
-})</code></pre>
-          </div>
-          <h3 class="text-lg font-semibold text-white">Todo List</h3>
-          <p class="mb-4 mt-1 text-sm text-slate-300">Dynamic DOM interactions with highly readable tests.</p>
-          <div class="flex gap-2">
-            <a href="todo/index.html" class="inline-flex flex-1 items-center justify-center rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-300">Open App</a>
-            <button class="inline-flex flex-1 items-center justify-center rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-emerald-400/70" onclick="showCode('todo')">View Tests</button>
-          </div>
-        </article>
+      <div id="carousel" aria-roledescription="carousel" aria-label="Code examples">
+        <div class="flex items-center justify-between mb-4">
+          <button id="carousel-prev" aria-label="Previous example" class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-slate-600 bg-slate-900 text-lg text-slate-200 transition hover:border-emerald-400/70 hover:text-emerald-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">&#8592;</button>
+          <span id="carousel-position" class="text-sm text-slate-400">1 of 3</span>
+          <button id="carousel-next" aria-label="Next example" class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-slate-600 bg-slate-900 text-lg text-slate-200 transition hover:border-emerald-400/70 hover:text-emerald-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">&#8594;</button>
+        </div>
+        <div id="carousel-card" aria-live="polite" aria-label="Example 1 of 3">
+          <!-- Active card content rendered by JS -->
+        </div>
       </div>
     </section>
 
@@ -241,6 +209,102 @@ Type('{{ctx.orderId}}').in(searchInput)</code></pre>
   <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
   <script>
+    // Carousel state and data
+    var carouselCards = [
+      {
+        title: 'Login',
+        description: 'Authentication flow with validation and error handling.',
+        filename: 'login.test.ts',
+        code: "Test('Login with valid credentials', () => {\n  Login.fillCredentials({ username: 'admin', password: 'password123' })\n  Login.submit()\n  AssertHasText(Login.message, 'Login successful')\n})",
+        appUrl: 'login/index.html',
+        sourceKey: 'login'
+      },
+      {
+        title: 'Navigation Wizard',
+        description: 'Multi-step page transitions with cross-page assertions.',
+        filename: 'navigation.test.ts',
+        code: "Test('Full wizard navigation flow', () => {\n  Navigate('navigation/index.html')\n  Navigation.verifyStep1()\n  Navigate('page2.html')\n  Navigate('page3.html')\n})",
+        appUrl: 'navigation/index.html',
+        sourceKey: 'navigation'
+      },
+      {
+        title: 'Todo List',
+        description: 'Dynamic DOM interactions with highly readable tests.',
+        filename: 'todo.test.ts',
+        code: "Test('Add a todo item and verify it exists', () => {\n  Todo.addItem({ text: 'Buy groceries' })\n  AssertExists(Todo.firstItem)\n  AssertHasText(Todo.firstItemText, 'Buy groceries')\n})",
+        appUrl: 'todo/index.html',
+        sourceKey: 'todo'
+      }
+    ];
+
+    var currentIndex = 0;
+
+    function renderCarouselCard() {
+      var card = carouselCards[currentIndex];
+      var container = document.getElementById('carousel-card');
+      var position = document.getElementById('carousel-position');
+
+      position.textContent = (currentIndex + 1) + ' of ' + carouselCards.length;
+      container.setAttribute('aria-label', 'Example ' + (currentIndex + 1) + ' of ' + carouselCards.length);
+
+      container.innerHTML =
+        '<article class="group rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 transition hover:border-emerald-400/60 hover:shadow-glow">' +
+          '<div class="mb-4 rounded-xl border border-slate-700 bg-slate-950">' +
+            '<div class="flex items-center gap-2 border-b border-slate-700 px-3 py-2">' +
+              '<span class="h-2.5 w-2.5 rounded-full bg-red-400"></span>' +
+              '<span class="h-2.5 w-2.5 rounded-full bg-amber-300"></span>' +
+              '<span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>' +
+              '<span class="ml-2 text-xs font-medium text-slate-400">' + card.filename + '</span>' +
+            '</div>' +
+            '<pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">' + escapeHtml(card.code) + '</code></pre>' +
+          '</div>' +
+          '<h3 class="text-lg font-semibold text-white">' + card.title + '</h3>' +
+          '<p class="mb-4 mt-1 text-sm text-slate-300">' + card.description + '</p>' +
+          '<div class="flex gap-2">' +
+            '<a href="' + card.appUrl + '" class="inline-flex flex-1 items-center justify-center rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-300">Open App</a>' +
+            '<button class="inline-flex flex-1 items-center justify-center rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-emerald-400/70" onclick="showCode(\'' + card.sourceKey + '\')">View Tests</button>' +
+          '</div>' +
+        '</article>';
+
+      // Re-highlight code with Prism.js
+      var codeEl = container.querySelector('code');
+      if (codeEl && window.Prism && typeof window.Prism.highlightElement === 'function') {
+        window.Prism.highlightElement(codeEl);
+      }
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    function carouselNext() {
+      currentIndex = (currentIndex + 1) % carouselCards.length;
+      renderCarouselCard();
+    }
+
+    function carouselPrev() {
+      currentIndex = (currentIndex - 1 + carouselCards.length) % carouselCards.length;
+      renderCarouselCard();
+    }
+
+    // Initialize carousel
+    document.getElementById('carousel-next').addEventListener('click', carouselNext);
+    document.getElementById('carousel-prev').addEventListener('click', carouselPrev);
+
+    // Keyboard navigation
+    document.getElementById('carousel').addEventListener('keydown', function(e) {
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        carouselNext();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        carouselPrev();
+      }
+    });
+
+    // Render first card on load
+    renderCarouselCard();
+
     var sources = {
       login: {
         title: 'Login Tests',
