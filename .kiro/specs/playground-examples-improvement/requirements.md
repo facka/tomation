@@ -45,7 +45,7 @@ This feature restructures the Tomation playground site to improve discoverabilit
 3. THE Main_Navbar SHALL display the text "Tomation" adjacent to the Tomation_Icon on the left side, styled as a brand title
 4. THE Main_Navbar SHALL display a "Docs" link in the center-left area that navigates to `https://github.com/facka/tomation`
 5. THE Main_Navbar SHALL display an "Examples" link in the center-left area that navigates to `playground.html`
-6. THE Main_Navbar SHALL display a Chrome Extension icon link on the right side that navigates to `https://chromewebstore.google.com/detail/plinecpdmbklpddinihlmcempieeehch?utm_source=item-share-cb`
+6. THE Main_Navbar SHALL display a Chrome Extension icon link on the right side that navigates to `https://chromewebstore.google.com/detail/plinecpdmbklpddinihlmcempieeehch?utm_source=gh-page`
 7. THE Main_Navbar SHALL display a GitHub icon link on the right side that navigates to `https://github.com/facka/tomation`
 8. THE Main_Navbar SHALL use a semantic HTML nav element with an aria-label attribute of "Main navigation"
 9. THE Main_Navbar SHALL use the dark theme with emerald accent colors consistent with the playground styling
