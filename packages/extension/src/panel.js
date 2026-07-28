@@ -1300,41 +1300,107 @@ function switchToRunView() {
 }
 
 /**
+ * Render all steps from the STEP_PLAN message as queued entries in the log container.
+ * Task boundaries produce task-header rows; child steps are indented.
+ *
+ * @param {Array} steps - The step plan array from background
+ */
+function renderStepPlan(steps) {
+  var logContainer = document.getElementById('log-container');
+  if (!logContainer) return;
+
+  // Clear the log container (same as switchToRunView does)
+  logContainer.innerHTML = '';
+
+  var pageElements = (currentSpec && currentSpec.spec && currentSpec.spec.pageElements) || {};
+  var currentTaskName = null;
+
+  for (var i = 0; i < steps.length; i++) {
+    var step = steps[i];
+
+    // Detect task boundary: when taskName changes and is non-null, insert a task header
+    if (step.taskName !== currentTaskName && step.taskName != null) {
+      currentTaskName = step.taskName;
+      var headerDiv = document.createElement('div');
+      headerDiv.className = 'log-entry task-header queued';
+      headerDiv.setAttribute('data-task-name', step.taskName);
+      var headerLabel = step.taskName.replace(/__/g, '.').replace(/\//g, ' > ');
+      headerDiv.innerHTML = '<span class="step-action">Task</span> ' + escapeHtml(headerLabel);
+      logContainer.appendChild(headerDiv);
+    }
+
+    // When taskName becomes null, reset tracking
+    if (step.taskName == null) {
+      currentTaskName = null;
+    }
+
+    var div = document.createElement('div');
+    var classes = 'log-entry queued';
+    if (step.taskName != null) {
+      classes += ' indented';
+      div.setAttribute('data-task-name', step.taskName);
+    }
+    div.className = classes;
+    div.setAttribute('data-step-index', String(i));
+
+    var html = buildLogEntryHtml(step, pageElements);
+    div.innerHTML = html;
+
+    logContainer.appendChild(div);
+  }
+}
+
+/**
  * Append an "in progress" entry to the log showing the step is currently executing.
- * This entry will be replaced/updated when the step completes.
+ * Looks for a pre-rendered queued entry by data-step-index and transitions it.
+ * Falls back to creating a new entry if no queued entry exists (Req 3.5).
  * @param {object} data - { stepIndex, action, target, value, url, ms, description, name, params }
  */
 function appendInProgressEntry(data) {
   var logContainer = document.getElementById('log-container');
   if (!logContainer) return;
 
-  // Remove any existing in-progress entry
-  var existing = logContainer.querySelector('.log-entry.in-progress');
-  if (existing) existing.remove();
+  // Remove in-progress state from any previous in-progress entry (keep the element)
+  var prevInProgress = logContainer.querySelector('.log-entry.in-progress');
+  if (prevInProgress) {
+    prevInProgress.classList.remove('in-progress');
+    var prevSpinner = prevInProgress.querySelector('.spinner');
+    if (prevSpinner) prevSpinner.parentNode.removeChild(prevSpinner);
+  }
 
   var pageElements = (currentSpec && currentSpec.spec && currentSpec.spec.pageElements) || {};
-
-  var div = document.createElement('div');
-  div.className = 'log-entry in-progress';
-  div.setAttribute('data-step-index', String(data.stepIndex));
-
   var html = buildLogEntryHtml(data, pageElements);
-  div.innerHTML = html + ' <span class="spinner">⟳</span>';
 
-  logContainer.appendChild(div);
-  logContainer.scrollTop = logContainer.scrollHeight;
+  // Try to find an existing queued entry for this stepIndex
+  var queued = logContainer.querySelector('.log-entry.queued[data-step-index="' + data.stepIndex + '"]');
+
+  if (queued) {
+    // Transition queued entry to in-progress
+    queued.classList.remove('queued');
+    queued.classList.add('in-progress');
+    queued.innerHTML = html + ' <span class="spinner">\u27F3</span>';
+    queued.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  } else {
+    // Fallback: create a new in-progress entry (Req 3.5)
+    var div = document.createElement('div');
+    div.className = 'log-entry in-progress';
+    div.setAttribute('data-step-index', String(data.stepIndex));
+    div.innerHTML = html + ' <span class="spinner">\u27F3</span>';
+    logContainer.appendChild(div);
+    logContainer.scrollTop = logContainer.scrollHeight;
+  }
 }
 
 /**
  * Remove the "in progress" entry when the step completes (LOG arrives).
+ * With the step-plan pre-rendering, we no longer remove the entry from the DOM.
+ * Instead, appendLogEntry will find it by data-step-index and replace it in-place.
+ * This function now only removes the spinner and in-progress class to avoid a flash.
  * @param {object} logData - the LOG message
  */
 function finalizeInProgressEntry(logData) {
-  var logContainer = document.getElementById('log-container');
-  if (!logContainer) return;
-
-  var existing = logContainer.querySelector('.log-entry.in-progress[data-step-index="' + logData.stepIndex + '"]');
-  if (existing) existing.remove();
+  // No-op: appendLogEntry handles replacement in-place.
+  // Keeping the function signature for backward compatibility.
 }
 
 /**
@@ -1491,6 +1557,11 @@ function appendLogEntry(logData) {
     return;
   }
 
+  // Find the existing entry to preserve attributes (indented, data-task-name)
+  var existingEntry = logContainer.querySelector('.log-entry[data-step-index="' + logData.stepIndex + '"]');
+  var wasIndented = existingEntry && existingEntry.classList.contains('indented');
+  var taskName = existingEntry ? existingEntry.getAttribute('data-task-name') : null;
+
   var div = document.createElement('div');
   div.setAttribute('data-step-index', String(logData.stepIndex));
   var classes = 'log-entry';
@@ -1501,11 +1572,15 @@ function appendLogEntry(logData) {
     classes += ' fail';
   }
 
-  if (logData.indented) {
+  if (wasIndented || logData.indented) {
     classes += ' indented';
   }
 
   div.className = classes;
+
+  if (taskName) {
+    div.setAttribute('data-task-name', taskName);
+  }
 
   var html = buildLogEntryHtml(logData, pageElements);
 
@@ -1528,8 +1603,61 @@ function appendLogEntry(logData) {
 
   div.innerHTML = html + indicator;
 
-  logContainer.appendChild(div);
-  logContainer.scrollTop = logContainer.scrollHeight;
+  // Replace existing entry in-place or append at end
+  if (existingEntry && existingEntry.parentNode) {
+    existingEntry.parentNode.replaceChild(div, existingEntry);
+  } else {
+    // Fallback (Req 4.5): append to end if no entry exists at that index
+    logContainer.appendChild(div);
+  }
+
+  // Scroll to the updated entry so the current step is always visible
+  div.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
+  // Check if all steps in this task are now complete, and update the task header
+  if (taskName) {
+    updateTaskHeaderStatus(logContainer, taskName);
+  }
+}
+
+/**
+ * Check if all steps in a task group are completed (pass, fail, or skipped).
+ * If so, update the task-header to show done status:
+ * - Green (pass) if all steps passed
+ * - Yellow (warning) if any step failed or was skipped
+ * @param {Element} logContainer
+ * @param {string} taskName
+ */
+function updateTaskHeaderStatus(logContainer, taskName) {
+  var steps = logContainer.querySelectorAll('.log-entry[data-task-name="' + taskName + '"]:not(.task-header)');
+  if (steps.length === 0) return;
+
+  var allDone = true;
+  var hasFailOrSkip = false;
+
+  for (var i = 0; i < steps.length; i++) {
+    var entry = steps[i];
+    var isCompleted = entry.classList.contains('pass') || entry.classList.contains('fail') || entry.classList.contains('skipped');
+    if (!isCompleted) {
+      allDone = false;
+      break;
+    }
+    if (entry.classList.contains('fail') || entry.classList.contains('skipped')) {
+      hasFailOrSkip = true;
+    }
+  }
+
+  if (!allDone) return;
+
+  var header = logContainer.querySelector('.log-entry.task-header[data-task-name="' + taskName + '"]');
+  if (!header) return;
+
+  header.classList.remove('queued');
+  if (hasFailOrSkip) {
+    header.classList.add('task-warning');
+  } else {
+    header.classList.add('task-pass');
+  }
 }
 
 /**
@@ -1557,6 +1685,9 @@ function hideManualBanner() {
 
 /**
  * Render the run summary after completion or stop.
+ * INVARIANT: This function must NOT remove or hide any log entries (including
+ * elements with the 'queued' class) from #log-container. Remaining queued entries
+ * are intentionally preserved to show which steps were never executed (Req 6.1, 6.2).
  * @param {object} data - { total, passed, failed }
  */
 function showRunSummary(data) {
@@ -1641,6 +1772,15 @@ function handleUpdateLogEntry(message) {
   currentHtml = currentHtml.replace(/ <span class="attempt-badge">.*$/, '');
   currentHtml = currentHtml.replace(/ <span class="spinner">.*$/, '');
   entry.innerHTML = currentHtml + indicator;
+
+  // Scroll to the updated entry
+  entry.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
+  // Check if this completes a task group
+  var taskName = entry.getAttribute('data-task-name');
+  if (taskName && logContainer) {
+    updateTaskHeaderStatus(logContainer, taskName);
+  }
 }
 
 /**
@@ -1687,7 +1827,13 @@ function handleStepFailedAwaitingAction(message) {
   var oldBtns = logContainer.querySelector('.action-buttons');
   if (oldBtns) oldBtns.parentNode.removeChild(oldBtns);
 
-  logContainer.appendChild(buttonContainer);
+  // Insert action buttons immediately after the failed step entry
+  var failedEntry = logContainer.querySelector('[data-step-index="' + message.stepIndex + '"]');
+  if (failedEntry && failedEntry.nextSibling) {
+    logContainer.insertBefore(buttonContainer, failedEntry.nextSibling);
+  } else {
+    logContainer.appendChild(buttonContainer);
+  }
 
   // Wire click handlers
   if (retryBtn) {
@@ -1718,6 +1864,10 @@ function handleStepFailedAwaitingAction(message) {
     });
   }
 
+  // Skip only applies to failed in-progress steps (already transitioned from
+  // queued -> in-progress -> fail), never to queued entries. The .fail -> .skipped
+  // transition here operates on a pre-rendered entry that has already left the
+  // queued state, so no queued entry handling is needed. (Requirement 6.3)
   if (skipBtn) {
     skipBtn.addEventListener('click', function () {
       api.runtime.sendMessage({
@@ -1753,6 +1903,10 @@ function onBackgroundMessage(message) {
   if (!message || !message.type) return;
 
   switch (message.type) {
+    case 'STEP_PLAN':
+      renderStepPlan(message.steps);
+      break;
+
     case 'STEP_STARTING':
       appendInProgressEntry(message);
       break;

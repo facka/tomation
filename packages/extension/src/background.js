@@ -1128,6 +1128,99 @@ function emitLog(stepIndex, step, ok, error) {
 }
 
 /**
+ * Build and send the STEP_PLAN message to the panel.
+ * Annotates each resolved step with its parent taskName for hierarchical rendering.
+ *
+ * @param {Array} resolvedSteps - The flattened step array from flattenSteps()
+ * @param {Array} originalSteps - The test's top-level steps array
+ * @param {object} tasksMap - The spec's tasks map (key → { params?, steps[] })
+ * @param {Array|Set} checkedSteps - Checked top-level step indices
+ */
+function emitStepPlan(resolvedSteps, originalSteps, tasksMap, checkedSteps) {
+  // Build a checked lookup matching flattenSteps logic
+  var checked;
+  if (checkedSteps && typeof checkedSteps.has === 'function') {
+    checked = checkedSteps;
+  } else if (Array.isArray(checkedSteps)) {
+    checked = {};
+    for (var ci = 0; ci < checkedSteps.length; ci++) {
+      checked[checkedSteps[ci]] = true;
+    }
+    checked.has = function (idx) { return this[idx] === true; };
+  } else {
+    checked = { has: function () { return true; } };
+  }
+
+  // Build taskName mapping: for each resolved step index, determine its taskName.
+  // Walk originalSteps in the same order as flattenSteps to count how many resolved
+  // steps each original step contributes, and assign taskName to task-expanded steps.
+  var taskNames = [];
+  var resolvedIdx = 0;
+
+  for (var i = 0; i < originalSteps.length; i++) {
+    if (!checked.has(i)) {
+      continue;
+    }
+
+    var step = originalSteps[i];
+
+    if (step.action === 'task') {
+      // Count how many resolved steps this task step expanded into
+      var taskDef = tasksMap[step.name];
+      var expandedCount = 0;
+      if (taskDef) {
+        // Count by walking from resolvedIdx until we've consumed all steps from this task
+        // The number of resolved steps from this task equals the total resolved steps it produced
+        // We can compute this by temporarily expanding (same as flattenSteps does)
+        var tempExpanded = expandStep(step, tasksMap, runState.spec ? runState.spec.pageElements || {} : {}, {});
+        expandedCount = tempExpanded.length;
+      }
+      // Mark all resolved steps from this task with the task's name
+      for (var t = 0; t < expandedCount; t++) {
+        taskNames[resolvedIdx + t] = step.name;
+      }
+      resolvedIdx += expandedCount;
+    } else if (step.action === 'if') {
+      // if-steps expand based on condition evaluation (already resolved in flattenSteps)
+      var tempIfExpanded = expandStep(step, tasksMap, runState.spec ? runState.spec.pageElements || {} : {}, {});
+      var ifCount = tempIfExpanded.length;
+      for (var ifIdx = 0; ifIdx < ifCount; ifIdx++) {
+        taskNames[resolvedIdx + ifIdx] = null;
+      }
+      resolvedIdx += ifCount;
+    } else {
+      // Non-task step produces exactly 1 resolved step
+      taskNames[resolvedIdx] = null;
+      resolvedIdx += 1;
+    }
+  }
+
+  // Build plan entries from resolvedSteps
+  var planSteps = [];
+  for (var s = 0; s < resolvedSteps.length; s++) {
+    var rs = resolvedSteps[s];
+    var entry = {
+      action: rs.action,
+      target: rs.target || null,
+      value: rs.value || null,
+      url: rs.url || null,
+      description: rs.description || null,
+      ms: (rs.ms != null) ? rs.ms : null,
+      taskName: taskNames[s] || null
+    };
+    if (rs.gone != null) {
+      entry.gone = rs.gone;
+    }
+    if (rs.contextKey != null) {
+      entry.contextKey = rs.contextKey;
+    }
+    planSteps.push(entry);
+  }
+
+  safeSendMessage({ type: 'STEP_PLAN', steps: planSteps });
+}
+
+/**
  * Emit a final summary message to the panel.
  *
  * @param {string} type - 'RUN_COMPLETE' or 'RUN_STOPPED'
@@ -1166,6 +1259,8 @@ function startRun(tabId, test, spec, checkedSteps, config) {
     spec.pageElements || {},
     checkedSteps
   );
+
+  emitStepPlan(resolvedSteps, test.steps, spec.tasks || {}, checkedSteps);
 
   runState.running = true;
   runState.contextStore = {};
@@ -2021,6 +2116,8 @@ function startAutomationRun(tabId, automation, spec, checkedSteps, config, param
     checkedSteps,
     params
   );
+
+  emitStepPlan(resolvedSteps, automation.steps, spec.tasks || {}, checkedSteps);
 
   runState.running = true;
   runState.currentTestName = automation.name || '';

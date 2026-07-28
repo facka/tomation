@@ -564,6 +564,16 @@
       letter-spacing: 0.01em;
     }
 
+    .log-entry.task-header.task-pass {
+      border-left: 3px solid var(--success);
+      color: var(--text-primary);
+    }
+
+    .log-entry.task-header.task-warning {
+      border-left: 3px solid var(--warning);
+      color: var(--text-primary);
+    }
+
     .log-entry.indented { padding-left: 24px; }
 
     .log-entry.in-progress {
@@ -577,6 +587,12 @@
       animation: spin 1s linear infinite;
       font-size: 13px;
       margin-left: 4px;
+    }
+
+    .log-entry.queued {
+      color: var(--text-muted);
+      border-left: 3px solid transparent;
+      opacity: 0.45;
     }
 
     @keyframes spin {
