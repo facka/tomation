@@ -56,6 +56,7 @@ export interface ElementDescriptor {
   childOf?: string;
   where: WhereDescriptor;
   xpath?: string;
+  navigate?: string;
   __el?: true;
 }
 
@@ -68,6 +69,7 @@ export interface ElementDescriptor {
 export interface ElementBuilder {
   where(matcher: WhereMatcher): ElementBuilder;
   childOf(parent: ElementDescriptor): ElementBuilder;
+  navigate(path: string): ElementBuilder;
   as(label: string): ElementDescriptor;
 }
 

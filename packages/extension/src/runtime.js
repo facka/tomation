@@ -237,6 +237,43 @@ function unhighlightElement(el) {
 }
 
 /**
+ * Apply a sequence of navigation steps starting from an anchor element.
+ * Traverses the DOM synchronously following each step in order.
+ *
+ * @param {Element} anchor - The resolved anchor DOM element
+ * @param {Array<{step: string, index?: number}>} steps - Parsed navigate steps
+ * @returns {{ok: boolean, element?: Element, error?: string}}
+ */
+function applyNavigateSteps(anchor, steps) {
+  var current = anchor;
+  for (var i = 0; i < steps.length; i++) {
+    var s = steps[i];
+    var next = null;
+    switch (s.step) {
+      case 'parent':      next = current.parentElement; break;
+      case 'child':       next = current.children[s.index - 1]; break;
+      case 'firstChild':  next = current.firstElementChild; break;
+      case 'lastChild':   next = current.lastElementChild; break;
+      case 'nextSibling': next = current.nextElementSibling; break;
+      case 'prevSibling': next = current.previousElementSibling; break;
+      case 'sibling':
+        var parent = current.parentElement;
+        if (!parent) {
+          return { ok: false, error: 'Navigation failed at step ' + (i + 1) + ' (sibling[' + s.index + ']): no parent element' };
+        }
+        next = parent.children[s.index - 1];
+        break;
+    }
+    if (!next) {
+      var token = s.step + (s.index !== undefined ? '[' + s.index + ']' : '');
+      return { ok: false, error: 'Navigation failed at step ' + (i + 1) + ' (' + token + '): element is null' };
+    }
+    current = next;
+  }
+  return { ok: true, element: current };
+}
+
+/**
  * Find an element, optionally scoped to a parent element.
  * If stepMessage.parentDescriptor is present, first locates the parent,
  * then searches for the child within the parent's subtree.
@@ -247,11 +284,20 @@ function unhighlightElement(el) {
 function findElementWithParent(stepMessage) {
   var elementDescriptor = stepMessage.elementDescriptor;
   var parentDescriptor = stepMessage.parentDescriptor;
+  var navigateSteps = elementDescriptor && elementDescriptor.navigate;
+
+  // Helper to apply navigate steps after anchor is found
+  function applyNavigation(element) {
+    if (navigateSteps && navigateSteps.length > 0) {
+      return applyNavigateSteps(element, navigateSteps);
+    }
+    return { ok: true, element: element };
+  }
 
   if (!parentDescriptor) {
     return findElement(elementDescriptor, document)
       .then(function (element) {
-        return { ok: true, element: element };
+        return applyNavigation(element);
       })
       .catch(function () {
         return { ok: false, error: 'Element not found: ' + stepMessage.target };
@@ -262,7 +308,7 @@ function findElementWithParent(stepMessage) {
     .then(function (parentElement) {
       return findElement(elementDescriptor, parentElement)
         .then(function (element) {
-          return { ok: true, element: element };
+          return applyNavigation(element);
         })
         .catch(function () {
           return { ok: false, error: 'Element not found: ' + stepMessage.target };

@@ -10,6 +10,7 @@ function ElementBuilder(tag) {
   this._tag = tag;
   this._where = {};
   this._childOf = undefined;
+  this._navigate = undefined;
 }
 
 ElementBuilder.prototype.where = function (matcher) {
@@ -22,10 +23,18 @@ ElementBuilder.prototype.childOf = function (parent) {
   return this;
 };
 
+ElementBuilder.prototype.navigate = function (path) {
+  this._navigate = path;
+  return this;
+};
+
 ElementBuilder.prototype.as = function (label) {
   var descriptor = { tag: this._tag, label: label, where: this._where, __el: true };
   if (this._childOf !== undefined) {
     descriptor.childOf = this._childOf;
+  }
+  if (this._navigate !== undefined) {
+    descriptor.navigate = this._navigate;
   }
   return descriptor;
 };

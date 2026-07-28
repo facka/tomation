@@ -344,6 +344,37 @@ const signupSubmit = is.BUTTON.where(innerTextIs('Submit')).childOf(signupForm).
 const alert = Element('//div[@role="alert"]').as('Alert Box')
 const thirdRow = Element('//table/tbody/tr[3]').as('Third Row')</code></pre></div>
 
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Navigate (Relative DOM Traversal)</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Use <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.navigate(path)</code> to enable relative DOM traversal from an anchor element. First, the anchor element is located using the standard tag + matcher logic, then the runtime traverses the DOM following the comma-separated path of navigation steps to reach the final target element. This is useful for locating elements that lack unique identifiers but are positioned predictably relative to an identifiable anchor.
+    </p>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">Supported navigation steps:</p>
+
+    <div class="overflow-x-auto mb-4"><table class="w-full text-sm text-left border border-slate-700 rounded-lg overflow-hidden">
+      <thead class="bg-slate-800/80"><tr><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Step</th><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Description</th></tr></thead>
+      <tbody>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">parent</code></td><td class="px-4 py-2.5 text-slate-300">Traverses to the parent element</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">child[n]</code></td><td class="px-4 py-2.5 text-slate-300">Traverses to the nth child element (1-based)</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">firstChild</code></td><td class="px-4 py-2.5 text-slate-300">Traverses to the first child element</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">lastChild</code></td><td class="px-4 py-2.5 text-slate-300">Traverses to the last child element</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">nextSibling</code></td><td class="px-4 py-2.5 text-slate-300">Traverses to the next sibling element</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">prevSibling</code></td><td class="px-4 py-2.5 text-slate-300">Traverses to the previous sibling element</td></tr>
+        <tr><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">sibling[n]</code></td><td class="px-4 py-2.5 text-slate-300">Traverses to the nth sibling (1-based, via parent's children)</td></tr>
+      </tbody>
+    </table></div>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">Usage examples:</p>
+
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">import { is, idIs, innerTextIs } from '@tomationjs/dsl'
+
+// Navigate from an anchor element to a nearby target
+const target = is.DIV.where(idIs('anchor')).navigate('parent,child[2]').as('Target')
+
+// Combine with childOf for scoped anchor + navigation
+const container = is.DIV.where(idIs('section')).as('Section')
+const content = is.SPAN.childOf(container).where(innerTextIs('Header')).navigate('nextSibling').as('Content')</code></pre></div>
+
     <h3 id="where-matchers" class="text-xl font-semibold text-white mt-12 mb-3">Where Matchers</h3>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       The <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.where()</code> method accepts matcher functions that narrow down element selection by matching on attributes, text content, position, or state. You can combine multiple matchers to create precise locators.

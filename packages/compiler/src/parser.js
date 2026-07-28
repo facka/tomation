@@ -283,9 +283,10 @@ function extractMatcherCall(callNode, warnings, filePath) {
  * Extract an ElementDef from a VariableDeclarator node matching the pattern:
  *   const X = is.TAG.where(matcher).as('Label')
  *   const X = is.TAG.childOf(parent).where(matcher).as('Label')
+ *   const X = is.TAG.navigate(path).as('Label')
  *   const X = is.TAG.as('Label')
  *
- * Walks the method chain from top to bottom: .as() → .where() → .childOf() → is.TAG
+ * Walks the method chain from top to bottom: .as() → .where() → .childOf() → .navigate() → is.TAG
  *
  * @param {object} node - VariableDeclarator AST node
  * @param {string} filePath - current file path for error reporting
@@ -301,6 +302,7 @@ function extractElement(node, filePath, warnings) {
   let label = null;
   let matchers = {};
   let childOf = null;
+  let navigate = null;
   let tag = null;
   let whereCount = 0;
 
@@ -364,6 +366,13 @@ function extractElement(node, filePath, warnings) {
         childOf = parentArg.name;
       }
       current = current.callee.object;
+    } else if (methodName === 'navigate') {
+      const navArg = current.arguments[0];
+      const navStr = extractString(navArg);
+      if (navStr !== null) {
+        navigate = navStr;
+      }
+      current = current.callee.object;
     } else {
       // Unknown method in the chain — not a recognized element builder pattern
       break;
@@ -404,6 +413,10 @@ function extractElement(node, filePath, warnings) {
 
   if (childOf) {
     element.childOf = childOf;
+  }
+
+  if (navigate) {
+    element.navigate = navigate;
   }
 
   return { element, error: null };

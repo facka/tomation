@@ -174,6 +174,39 @@ The `.childOf()` and `.where()` methods can be chained in any order:
 const child = is.INPUT.childOf(parentForm).where(typeIs('text')).as('Text Input')
 ```
 
+#### Relative DOM navigation with `.navigate(path)`
+
+When a target element lacks unique identifiers, use `.navigate(path)` to reach it by traversing the DOM from a nearby identifiable anchor element. The method accepts a comma-separated string of navigation steps and is chainable with `.where()`, `.childOf()`, and `.as()` in any order.
+
+**Method signature:** `.navigate(path: string)` — returns the builder for continued chaining.
+
+**Supported navigation steps:**
+
+| Step | Description |
+|------|-------------|
+| `parent` | Traverses to the parent element |
+| `child[n]` | Traverses to the nth child element (1-based) |
+| `firstChild` | Traverses to the first child element |
+| `lastChild` | Traverses to the last child element |
+| `nextSibling` | Traverses to the next sibling element |
+| `prevSibling` | Traverses to the previous sibling element |
+| `sibling[n]` | Traverses to the nth sibling (1-based, via parent's children) |
+
+**Examples:**
+
+```typescript
+import { is, idIs, textIs } from '@tomationjs/dsl'
+
+// Simple path: find an anchor by ID, then navigate to a relative target
+const target = is.DIV.where(idIs('anchor')).navigate('parent,child[2]').as('Target')
+
+// Combined with childOf: scope the anchor within a parent, then navigate from it
+const container = is.DIV.where(idIs('main-container')).as('Container')
+const content = is.SPAN.childOf(container).where(textIs('Header')).navigate('nextSibling').as('Content')
+```
+
+At runtime, the extension first resolves the anchor element using the standard tag + where logic, then applies each navigation step sequentially. If any step results in a null element, the extension reports an error indicating which step failed and its position in the path.
+
 #### XPath elements
 
 For complex selectors that can't be expressed with tag + where matchers, use XPath:

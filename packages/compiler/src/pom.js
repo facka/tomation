@@ -1,6 +1,7 @@
 'use strict';
 
 const path = require('path');
+const { parseNavigatePath } = require('./navigate-parser');
 
 /**
  * pom.js — POM extraction and namespace-based key namespacing.
@@ -270,6 +271,19 @@ function extractPom(parsedFile, options) {
 
       if (elDef.xpath) {
         entry.xpath = elDef.xpath;
+      }
+
+      if (elDef.navigate) {
+        const navResult = parseNavigatePath(elDef.navigate);
+        if (navResult.ok) {
+          entry.navigate = navResult.steps;
+        } else {
+          result.errors.push({
+            message: `Invalid navigate path for element '${elDef.variableName}': ${navResult.error}`,
+            filePath: parsedFile.filePath,
+            line: elDef.line,
+          });
+        }
       }
 
       result.pageElements[namespacedKey] = entry;
