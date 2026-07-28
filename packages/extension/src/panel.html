@@ -595,6 +595,23 @@
       opacity: 0.45;
     }
 
+    .log-entry.param-banner {
+      background: var(--accent-soft);
+      border-left: 3px solid var(--accent);
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .log-entry.param-banner .param-name {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .log-entry.param-banner .param-val {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
     @keyframes spin {
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }

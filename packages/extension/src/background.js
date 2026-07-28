@@ -1101,8 +1101,26 @@ function emitLog(stepIndex, step, ok, error) {
     value: step.value || null,
     ok: ok
   };
+
+  // Resolve any remaining {{ctx.X}} or {{paramName}} templates in value at emission time
+  if (logMsg.value && typeof logMsg.value === 'string' && logMsg.value.indexOf('{{') !== -1) {
+    var resolved = resolveValue(logMsg.value, {}, runState.contextStore);
+    if (resolved && typeof resolved !== 'object') {
+      logMsg.value = resolved;
+    }
+  }
+
   // Include action-specific fields
-  if (step.url) logMsg.url = step.url;
+  if (step.url) {
+    logMsg.url = step.url;
+    // Resolve URL templates too
+    if (typeof logMsg.url === 'string' && logMsg.url.indexOf('{{') !== -1) {
+      var resolvedUrl = resolveValue(logMsg.url, {}, runState.contextStore);
+      if (resolvedUrl && typeof resolvedUrl !== 'object') {
+        logMsg.url = resolvedUrl;
+      }
+    }
+  }
   if (step.ms != null) logMsg.ms = step.ms;
   if (step.description) logMsg.description = step.description;
   if (step.name) logMsg.name = step.name;
@@ -1155,6 +1173,8 @@ function emitStepPlan(resolvedSteps, originalSteps, tasksMap, checkedSteps) {
   // Walk originalSteps in the same order as flattenSteps to count how many resolved
   // steps each original step contributes, and assign taskName to task-expanded steps.
   var taskNames = [];
+  var taskLabels = [];
+  var taskParams = [];
   var resolvedIdx = 0;
 
   for (var i = 0; i < originalSteps.length; i++) {
@@ -1175,9 +1195,13 @@ function emitStepPlan(resolvedSteps, originalSteps, tasksMap, checkedSteps) {
         var tempExpanded = expandStep(step, tasksMap, runState.spec ? runState.spec.pageElements || {} : {}, {});
         expandedCount = tempExpanded.length;
       }
-      // Mark all resolved steps from this task with the task's name
+      // Mark all resolved steps from this task with the task's name and label
+      var label = (taskDef && taskDef.label) ? taskDef.label : null;
+      var params = step.params || null;
       for (var t = 0; t < expandedCount; t++) {
         taskNames[resolvedIdx + t] = step.name;
+        taskLabels[resolvedIdx + t] = label;
+        taskParams[resolvedIdx + t] = params;
       }
       resolvedIdx += expandedCount;
     } else if (step.action === 'if') {
@@ -1186,11 +1210,15 @@ function emitStepPlan(resolvedSteps, originalSteps, tasksMap, checkedSteps) {
       var ifCount = tempIfExpanded.length;
       for (var ifIdx = 0; ifIdx < ifCount; ifIdx++) {
         taskNames[resolvedIdx + ifIdx] = null;
+        taskLabels[resolvedIdx + ifIdx] = null;
+        taskParams[resolvedIdx + ifIdx] = null;
       }
       resolvedIdx += ifCount;
     } else {
       // Non-task step produces exactly 1 resolved step
       taskNames[resolvedIdx] = null;
+      taskLabels[resolvedIdx] = null;
+      taskParams[resolvedIdx] = null;
       resolvedIdx += 1;
     }
   }
@@ -1206,7 +1234,9 @@ function emitStepPlan(resolvedSteps, originalSteps, tasksMap, checkedSteps) {
       url: rs.url || null,
       description: rs.description || null,
       ms: (rs.ms != null) ? rs.ms : null,
-      taskName: taskNames[s] || null
+      taskName: taskNames[s] || null,
+      taskLabel: taskLabels[s] || null,
+      taskParams: taskParams[s] || null
     };
     if (rs.gone != null) {
       entry.gone = rs.gone;

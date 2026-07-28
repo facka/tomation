@@ -1015,7 +1015,12 @@ function renderTestPlan() {
       taskCb.setAttribute('data-is-task', 'true');
       taskCb.addEventListener('change', onTaskCheckboxChange);
       var taskLabel = document.createElement('label');
-      taskLabel.innerHTML = '<span class="step-action">Task</span> ' + escapeHtml(step.name.replace('__', '.'));
+      var taskDisplayName = (tasks[step.name].label) ? tasks[step.name].label : step.name.replace(/__/g, '.').replace(/\//g, ' > ');
+      var taskLabelHtml = '<span class="step-action">Task</span> ' + escapeHtml(taskDisplayName);
+      if (step.params) {
+        taskLabelHtml += formatParams(step.params);
+      }
+      taskLabel.innerHTML = taskLabelHtml;
       taskLabel.setAttribute('for', '');
       taskLi.appendChild(taskCb);
       taskLi.appendChild(taskLabel);
@@ -1312,6 +1317,25 @@ function renderStepPlan(steps) {
   // Clear the log container (same as switchToRunView does)
   logContainer.innerHTML = '';
 
+  // If running an automation with params, show them as a reference banner at the top
+  if (currentRunAutomationParams && currentRunAutomationParams.params) {
+    var paramKeys = Object.keys(currentRunAutomationParams.params);
+    if (paramKeys.length > 0) {
+      var paramBanner = document.createElement('div');
+      paramBanner.className = 'log-entry param-banner';
+      var bannerParts = [];
+      var sensitiveKeys = /password|secret|token|key|auth/i;
+      for (var pk = 0; pk < paramKeys.length; pk++) {
+        var pName = paramKeys[pk];
+        var pVal = currentRunAutomationParams.params[pName];
+        var displayVal = sensitiveKeys.test(pName) ? '****' : String(pVal);
+        bannerParts.push('<span class="param-name">' + escapeHtml(pName) + '</span>: <span class="param-val">"' + escapeHtml(displayVal) + '"</span>');
+      }
+      paramBanner.innerHTML = '<span class="step-action">Params</span> ' + bannerParts.join(', ');
+      logContainer.appendChild(paramBanner);
+    }
+  }
+
   var pageElements = (currentSpec && currentSpec.spec && currentSpec.spec.pageElements) || {};
   var currentTaskName = null;
 
@@ -1324,8 +1348,12 @@ function renderStepPlan(steps) {
       var headerDiv = document.createElement('div');
       headerDiv.className = 'log-entry task-header queued';
       headerDiv.setAttribute('data-task-name', step.taskName);
-      var headerLabel = step.taskName.replace(/__/g, '.').replace(/\//g, ' > ');
-      headerDiv.innerHTML = '<span class="step-action">Task</span> ' + escapeHtml(headerLabel);
+      var headerLabel = step.taskLabel || step.taskName.replace(/__/g, '.').replace(/\//g, ' > ');
+      var headerHtml = '<span class="step-action">Task</span> ' + escapeHtml(headerLabel);
+      if (step.taskParams) {
+        headerHtml += formatParams(step.taskParams);
+      }
+      headerDiv.innerHTML = headerHtml;
       logContainer.appendChild(headerDiv);
     }
 
@@ -1551,7 +1579,7 @@ function appendLogEntry(logData) {
   if (logData.taskName) {
     var headerDiv = document.createElement('div');
     headerDiv.className = 'log-entry task-header';
-    var headerLabel = logData.taskName.replace(/__/g, '.').replace(/\//g, ' > ');
+    var headerLabel = logData.taskLabel || logData.taskName.replace(/__/g, '.').replace(/\//g, ' > ');
     headerDiv.innerHTML = '<span class="step-action">Task</span> ' + escapeHtml(headerLabel);
     logContainer.appendChild(headerDiv);
     return;
