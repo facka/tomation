@@ -447,3 +447,38 @@ examples/
   playground-tests/   # Tomation test scripts for the playground apps
   my-app-tests/       # Example project with login flow tests
 ```
+
+## Naming Convention
+
+Tests and automations are displayed in the extension using the format:
+
+```
+sourceFile: label
+```
+
+Where:
+- **sourceFile** is the relative path from the project root, with the top-level `tests/` or `automations/` directory stripped and file extensions removed (`.test.ts`, `.automation.ts`, etc.)
+- **label** is the name passed to `Test()` or `Automation()`
+
+For example, a test defined in `tests/login.test.ts` with name `'Login with valid credentials'` will display as:
+
+```
+login: Login with valid credentials
+```
+
+A test in a subfolder `tests/auth/login.test.ts` will display as:
+
+```
+auth/login: Login with valid credentials
+```
+
+And an automation in `automations/todo.automation.ts` with name `'Add Todo Item'` will display as:
+
+```
+todo: Add Todo Item
+```
+
+This convention applies consistently across:
+- The test list in the extension panel
+- The test plan / step checklist view
+- The execution log header during a run

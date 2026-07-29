@@ -415,7 +415,7 @@ function quickRunAutomation(specIndex, automationIndex) {
       showView('test-plan');
       var titleEl = document.getElementById('test-plan-title');
       if (titleEl) {
-        titleEl.textContent = automation.name;
+        titleEl.textContent = formatRunnableLabel(automation.name, automation.sourceFile);
       }
       renderTestPlan();
       return;
@@ -536,7 +536,7 @@ function renderTestsTab(specs) {
 
         var rowLabel = document.createElement('span');
         rowLabel.className = 'row-label';
-        rowLabel.textContent = specData.tests[j].name;
+        rowLabel.textContent = formatRunnableLabel(specData.tests[j].name, specData.tests[j].sourceFile);
         li.appendChild(rowLabel);
 
         var qrBtn = document.createElement('button');
@@ -610,7 +610,7 @@ function renderAutomationsTab(specs, favourites) {
         var autoData = autoObj.data;
         var autoIndex = autoObj.index;
         var autoName = autoData.name || '';
-        var autoDisplayName = autoName.indexOf('__') !== -1 ? autoName.split('__').slice(1).join('__') : autoName;
+        var autoDisplayName = formatRunnableLabel(autoName, autoData.sourceFile);
         var isFav = !!(favourites && favourites[autoName]);
 
         var li = document.createElement('li');
@@ -784,7 +784,7 @@ function onTestItemClick(e) {
   showView('test-plan');
   var titleEl = document.getElementById('test-plan-title');
   if (titleEl && currentRunnable) {
-    titleEl.textContent = currentRunnable.data.name;
+    titleEl.textContent = formatRunnableLabel(currentRunnable.data.name, currentRunnable.data.sourceFile);
   }
   renderTestPlan();
 }
@@ -1268,7 +1268,7 @@ function switchToRunView() {
   // Set run title from current test
   var titleEl = document.getElementById('run-title');
   if (titleEl && currentTest) {
-    titleEl.textContent = currentTest.name;
+    titleEl.textContent = formatRunnableLabel(currentTest.name, currentTest.sourceFile);
   }
 
   // Clear log container
@@ -2193,6 +2193,23 @@ function updateContextPopupIfOpen() {
   if (popup && popup.style.display === 'block') {
     renderContextPopup(contextStoreCache);
   }
+}
+
+/**
+ * Format a display label for a test or automation using source file info.
+ * Format: "sourceFile: label"
+ * The sourceFile is already a clean relative path (e.g., "login", "auth/login")
+ * with extensions stripped and 'tests'/'automations' prefix removed by the compiler.
+ * If no sourceFile is available, returns just the name/label (with namespace prefix stripped).
+ * @param {string} name - The test/automation name
+ * @param {string|undefined} sourceFile - The relative source file path
+ * @returns {string}
+ */
+function formatRunnableLabel(name, sourceFile) {
+  // Strip namespace prefix (e.g., "Todo__Add Todo Item" → "Add Todo Item")
+  var displayName = (name && name.indexOf('__') !== -1) ? name.split('__').slice(1).join('__') : name;
+  if (!sourceFile) return displayName;
+  return sourceFile + ': ' + displayName;
 }
 
 /**

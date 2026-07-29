@@ -116,3 +116,14 @@ export default {
 
 Compile with: `npx tomation compile`
 Watch mode: `npx tomation watch`
+
+Naming convention:
+
+Tests and automations are displayed in the extension using the format `sourceFile: label` where:
+- `sourceFile` is the relative path from the project root with the `tests/` or `automations/` prefix removed and file extensions stripped (`.test.ts`, `.automation.ts`, etc.)
+- `label` is the name passed to `Test()` or `Automation()`
+
+Example: `tests/login.test.ts` with `Test('Login with valid credentials', ...)` displays as `login: Login with valid credentials`
+Example: `tests/auth/login.test.ts` displays as `auth/login: Login with valid credentials`
+
+This convention is used consistently in the test list, test plan view, and execution log header.

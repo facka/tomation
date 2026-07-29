@@ -8,7 +8,7 @@
     "urls": [
       "https://facka.github.io/tomation"
     ],
-    "compilerVersion": "1.0.4"
+    "compilerVersion": "1.1.0"
   },
   "pageElements": {
     "Login__usernameInput": {
@@ -241,7 +241,8 @@
           "target": "Login__message",
           "value": "Login successful"
         }
-      ]
+      ],
+      "sourceFile": "login"
     },
     {
       "name": "Login with invalid credentials shows error",
@@ -259,7 +260,8 @@
           "target": "Login__message",
           "value": "Invalid username or password"
         }
-      ]
+      ],
+      "sourceFile": "login"
     },
     {
       "name": "Login shows error on empty submit",
@@ -273,7 +275,8 @@
           "target": "Login__message",
           "value": "required"
         }
-      ]
+      ],
+      "sourceFile": "login"
     },
     {
       "name": "Full wizard navigation flow",
@@ -314,7 +317,8 @@
           "action": "task",
           "name": "Navigation__verifyStep3"
         }
-      ]
+      ],
+      "sourceFile": "navigation"
     },
     {
       "name": "Navigate directly to confirmation page",
@@ -331,7 +335,8 @@
           "action": "task",
           "name": "Navigation__verifyStep3"
         }
-      ]
+      ],
+      "sourceFile": "navigation"
     },
     {
       "name": "Add a todo item and verify it exists",
@@ -352,7 +357,8 @@
           "target": "Todo__firstItemText",
           "value": "Buy groceries"
         }
-      ]
+      ],
+      "sourceFile": "todo"
     },
     {
       "name": "Delete a todo item and verify it is removed",
@@ -378,7 +384,8 @@
           "action": "assertNotExists",
           "target": "Todo__firstItem"
         }
-      ]
+      ],
+      "sourceFile": "todo"
     },
     {
       "name": "Add multiple items and verify text content",
@@ -411,7 +418,8 @@
           "target": "Todo__list",
           "value": "Write code"
         }
-      ]
+      ],
+      "sourceFile": "todo"
     }
   ],
   "automations": [
@@ -450,7 +458,8 @@
           "target": "Todo__firstItemText",
           "value": "{{ctx.savedItem}}"
         }
-      ]
+      ],
+      "sourceFile": "todo"
     }
   ]
 }

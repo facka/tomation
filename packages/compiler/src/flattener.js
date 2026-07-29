@@ -35,7 +35,30 @@ var path = require('path');
  * Requirements: 13.6
  */
 
+var path = require('path');
+
 var DEFAULT_META = { name: 'Untitled', url: '', description: '' };
+
+/**
+ * Compute a display-friendly relative source path from an absolute file path.
+ * Makes path relative to cwd, strips leading 'tests/' or 'automations/' segments,
+ * and removes file extensions (.test.ts, .automation.ts, etc.)
+ *
+ * @param {string} filePath - Absolute source file path
+ * @param {string} [cwd] - Project root directory
+ * @returns {string} Relative display path (e.g., "login" or "auth/login")
+ */
+function computeSourcePath(filePath, cwd) {
+  if (!filePath) return '';
+  var rel = cwd ? path.relative(cwd, filePath) : filePath;
+  // Normalize to forward slashes
+  rel = rel.replace(/\\/g, '/');
+  // Strip leading 'tests/', 'automations/', or 'pom/' prefix
+  rel = rel.replace(/^(tests|automations|pom)\//, '');
+  // Remove file extensions (.test.ts, .automation.ts, .pom.ts, .ts, .js, .tsx)
+  rel = rel.replace(/\.(test|automation|pom)\.(ts|js|tsx)$/, '').replace(/\.(ts|js|tsx)$/, '');
+  return rel;
+}
 
 /**
  * Merge all POM results and test files into a flat spec-shaped object.
@@ -43,9 +66,11 @@ var DEFAULT_META = { name: 'Untitled', url: '', description: '' };
  * @param {Array<object>} pomResults       - Array of PomResult from extractPom()
  * @param {Array<object>} parsedTestFiles  - Array of ParsedFile (type 'test') from parseFile()
  * @param {object}        [meta]           - Optional metadata; defaults to { name: "Untitled", url: "", description: "" }. Supports meta.urls as an array of URL strings.
+ * @param {object}        [options]        - Optional options { cwd: string }
  * @returns {object} Spec-shaped object
  */
-function flattenSpec(pomResults, parsedTestFiles, meta) {
+function flattenSpec(pomResults, parsedTestFiles, meta, options) {
+  var cwd = (options && options.cwd) || '';
   // Resolve meta: use provided value, falling back to defaults field-by-field
   var resolvedMeta = {
     name:        (meta && typeof meta.name        === 'string') ? meta.name        : DEFAULT_META.name,
@@ -142,6 +167,10 @@ function flattenSpec(pomResults, parsedTestFiles, meta) {
             testOut[testFields[tei]] = testDef[testFields[tei]];
           }
         }
+        // Include source file path for display labeling (path/filename: testName)
+        if (testFile.filePath) {
+          testOut.sourceFile = computeSourcePath(testFile.filePath, cwd);
+        }
         tests.push(testOut);
       }
     }
@@ -166,6 +195,10 @@ function flattenSpec(pomResults, parsedTestFiles, meta) {
           params: [],
           steps: automationDef.steps || [],
         };
+        // Include source file path for display labeling (path/filename: automationName)
+        if (automationFile.filePath) {
+          automationOut.sourceFile = computeSourcePath(automationFile.filePath, cwd);
+        }
 
         // Preserve param declaration order, include relevant fields only
         if (Array.isArray(automationDef.params)) {

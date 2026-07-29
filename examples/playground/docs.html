@@ -552,6 +552,11 @@ Test('Login shows error on empty submit', () => {
       Tests are run interactively via the Tomation browser extension. Load the compiled <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.tomation.json</code> file in the extension panel, select one or more tests, and execute them against the live page. The extension renders real-time results including pass/fail status and step-by-step logs.
     </p>
 
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Display Labels</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Tests and automations are displayed in the extension using the format <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">sourceFile: label</code>. The sourceFile is the relative path from the project root with the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">tests/</code> or <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">automations/</code> prefix removed and file extensions stripped. For example, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">login: Login with valid credentials</code> or <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">auth/login: Login with valid credentials</code> for tests in subfolders.
+    </p>
+
     <h2 id="automations" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Automations</h2>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       Automations are like Tests but with typed parameters that are filled in at runtime via a form in the browser extension. Instead of hardcoding values, you declare a params object with typed fields — the extension generates a form for each parameter, letting you reuse the same procedure with different inputs each time.
