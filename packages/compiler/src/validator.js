@@ -99,14 +99,19 @@ function validateSpec(obj) {
   }
 
   // Requirement 1.6a — validate childOf references
-  // Build a map of id matcher values → element keys for childOf resolution
-  var idToElementKey = {};
+  // Build a map of valid childOf targets:
+  // 1. id matcher values → element keys (legacy: childOf references where.id)
+  // 2. element keys themselves (for xpath/navigate elements without where.id)
+  var validChildOfTargets = {};
   for (var ci = 0; ci < elementKeys.length; ci++) {
     var elKey = elementKeys[ci];
     var elEntry = pageElements[elKey];
+    // Map where.id values
     if (elEntry.where && typeof elEntry.where.id === 'string') {
-      idToElementKey[elEntry.where.id] = elKey;
+      validChildOfTargets[elEntry.where.id] = elKey;
     }
+    // Also map element keys directly (for xpath/navigate parents)
+    validChildOfTargets[elKey] = elKey;
   }
 
   for (var coi = 0; coi < elementKeys.length; coi++) {
@@ -120,8 +125,8 @@ function validateSpec(obj) {
           error: 'pageElements entry "' + coKey + '" childOf must be a non-empty string'
         };
       }
-      // The referenced value must match an existing entry's where.id
-      if (!(childOfValue in idToElementKey)) {
+      // The referenced value must match an existing entry's where.id OR an element key
+      if (!(childOfValue in validChildOfTargets)) {
         return {
           ok: false,
           error:
@@ -129,7 +134,7 @@ function validateSpec(obj) {
             coKey +
             '" childOf "' +
             childOfValue +
-            '" does not reference any pageElements entry with where.id defined'
+            '" does not reference any pageElements entry'
         };
       }
     }

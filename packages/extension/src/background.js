@@ -639,17 +639,23 @@ function buildStepMessage(step, pageElements, params) {
 
 /**
  * Find the parent element descriptor by childOf value.
- * childOf references the `id` matcher value of another pageElement entry.
+ * childOf can reference either the `id` matcher value of another pageElement entry,
+ * or the element key directly (for xpath/navigate elements without where.id).
  *
- * @param {string} childOfId - The id value referenced by childOf
+ * @param {string} childOfRef - The id value or element key referenced by childOf
  * @param {object} pageElements - The spec's pageElements map
  * @returns {object|null} - The parent element descriptor or null if not found
  */
-function findParentDescriptor(childOfId, pageElements) {
+function findParentDescriptor(childOfRef, pageElements) {
+  // First try direct element key lookup
+  if (pageElements[childOfRef]) {
+    return pageElements[childOfRef];
+  }
+  // Fall back to searching by where.id value
   var keys = Object.keys(pageElements);
   for (var i = 0; i < keys.length; i++) {
     var entry = pageElements[keys[i]];
-    if (entry.where && entry.where.id === childOfId) {
+    if (entry.where && entry.where.id === childOfRef) {
       return entry;
     }
   }
