@@ -310,15 +310,21 @@ function extractElement(node, filePath, warnings) {
   if (!isMethodCall(current, 'as')) return { element: null, error: null };
 
   // Before validating the .as() argument, peek to see if this is an XPath pattern.
-  // If the base is Element(...) or is.ELEMENT(...), defer to extractXPathElement.
-  const peekBase = current.callee.object;
-  if (peekBase && peekBase.type === 'CallExpression') {
-    const peekCallee = peekBase.callee;
-    const isXPathPattern = (peekCallee && peekCallee.type === 'Identifier' && peekCallee.name === 'Element') ||
+  // If the base is Element(...) or is.ELEMENT(...) anywhere in the chain, defer to extractXPathElement.
+  var peekNode = current.callee.object;
+  while (peekNode && peekNode.type === 'CallExpression') {
+    var peekCallee = peekNode.callee;
+    var isXPathPattern = (peekCallee && peekCallee.type === 'Identifier' && peekCallee.name === 'Element') ||
       (peekCallee && peekCallee.type === 'MemberExpression' &&
         peekCallee.object && peekCallee.object.type === 'Identifier' && peekCallee.object.name === 'is' &&
         peekCallee.property && peekCallee.property.type === 'Identifier' && peekCallee.property.name === 'ELEMENT');
     if (isXPathPattern) return { element: null, error: null };
+    // Walk further down the chain
+    if (peekCallee && peekCallee.type === 'MemberExpression' && peekCallee.object) {
+      peekNode = peekCallee.object;
+    } else {
+      break;
+    }
   }
 
   const asArg = current.arguments[0];
@@ -440,48 +446,86 @@ function extractXPathElement(node, filePath) {
   let current = node.init;
   let label = null;
   let xpath = null;
+  let childOf = null;
+  let navigate = null;
 
   // Step 1: Check for .as('Label') at the top
   if (!isMethodCall(current, 'as')) return { element: null, error: null };
 
-  // Peek at the base to see if this is an XPath pattern before committing
-  const baseCandidate = current.callee.object;
-  if (!baseCandidate || baseCandidate.type !== 'CallExpression') return { element: null, error: null };
-
-  const baseCallee = baseCandidate.callee;
-  const isElementCall = baseCallee && baseCallee.type === 'Identifier' && baseCallee.name === 'Element';
-  const isIsElementCall = baseCallee && baseCallee.type === 'MemberExpression' &&
-    baseCallee.object && baseCallee.object.type === 'Identifier' && baseCallee.object.name === 'is' &&
-    baseCallee.property && baseCallee.property.type === 'Identifier' && baseCallee.property.name === 'ELEMENT';
-
-  if (!isElementCall && !isIsElementCall) return { element: null, error: null };
-
-  // This IS an XPath pattern — now validate fully
-
   // Extract .as() label
   const asArg = current.arguments[0];
   label = extractString(asArg);
+
+  // Walk down the chain to find the base Element()/is.ELEMENT() call
+  // handling .childOf() and .navigate() along the way
+  current = current.callee.object;
+
+  while (current && current.type === 'CallExpression') {
+    const callee = current.callee;
+
+    // Check if this is a method call (.childOf, .navigate, .where)
+    if (callee && callee.type === 'MemberExpression' && callee.property) {
+      const methodName = callee.property.name || (callee.property.value);
+
+      if (methodName === 'childOf') {
+        const childOfArg = current.arguments[0];
+        if (childOfArg) {
+          childOf = extractString(childOfArg) || (childOfArg.type === 'Identifier' ? childOfArg.name : null);
+        }
+        current = callee.object;
+        continue;
+      }
+
+      if (methodName === 'navigate') {
+        const navArg = current.arguments[0];
+        if (navArg) {
+          navigate = extractString(navArg);
+        }
+        current = callee.object;
+        continue;
+      }
+
+      if (methodName === 'where') {
+        // Skip .where() — XPath elements may have it for additional filtering
+        current = callee.object;
+        continue;
+      }
+    }
+
+    // Check if current is Element(xpath) or is.ELEMENT(xpath)
+    const baseCallee = current.callee;
+    const isElementCall = baseCallee && baseCallee.type === 'Identifier' && baseCallee.name === 'Element';
+    const isIsElementCall = baseCallee && baseCallee.type === 'MemberExpression' &&
+      baseCallee.object && baseCallee.object.type === 'Identifier' && baseCallee.object.name === 'is' &&
+      baseCallee.property && baseCallee.property.type === 'Identifier' && baseCallee.property.name === 'ELEMENT';
+
+    if (isElementCall || isIsElementCall) {
+      // Found the base — extract xpath argument
+      const xpathArg = current.arguments[0];
+      xpath = extractString(xpathArg);
+      break;
+    }
+
+    // Not a recognized pattern
+    return { element: null, error: null };
+  }
+
+  if (!xpath) {
+    // Didn't find a valid Element()/is.ELEMENT() base
+    if (label !== null) {
+      // It had .as() but no valid xpath base — might be a different pattern
+      return { element: null, error: null };
+    }
+    return { element: null, error: null };
+  }
+
   if (label === null) {
     return {
       element: null,
       error: {
-        message: `XPath element at ${filePath}:${lineOf(current)} missing label — call .as('Label') to name it`,
+        message: `XPath element at ${filePath}:${lineOf(node)} missing label — call .as('Label') to name it`,
         filePath,
-        line: lineOf(current),
-      },
-    };
-  }
-
-  // Extract xpath argument from base call
-  const xpathArg = baseCandidate.arguments[0];
-  xpath = extractString(xpathArg);
-  if (xpath === null) {
-    return {
-      element: null,
-      error: {
-        message: `XPath element at ${filePath}:${lineOf(baseCandidate)} requires a string argument`,
-        filePath,
-        line: lineOf(baseCandidate),
+        line: lineOf(node),
       },
     };
   }
@@ -489,17 +533,24 @@ function extractXPathElement(node, filePath) {
   const variableName = node.id && node.id.type === 'Identifier' ? node.id.name : null;
   if (!variableName) return { element: null, error: null };
 
-  return {
-    element: {
-      variableName,
-      tag: '*',
-      label,
-      where: {},
-      xpath,
-      line: lineOf(node),
-    },
-    error: null,
+  var element = {
+    variableName,
+    tag: '*',
+    label,
+    where: {},
+    xpath,
+    line: lineOf(node),
   };
+
+  if (childOf) {
+    element.childOf = childOf;
+  }
+
+  if (navigate) {
+    element.navigate = navigate;
+  }
+
+  return { element, error: null };
 }
 
 /**

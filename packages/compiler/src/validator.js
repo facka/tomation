@@ -234,8 +234,12 @@ function validateSteps(steps, pageElementKeySet, taskKeySet) {
     if ('target' in step) {
       var target = step.target;
       if (!(target in pageElementKeySet)) {
-        return 'Step references unknown element: ' + target;
+        var stepContext = step.action ? ' (action: ' + step.action + ')' : '';
+        if (step.name) {
+          stepContext = ' (action: ' + (step.action || 'unknown') + ', name: ' + step.name + ')';
       }
+        return 'Step references unknown element: ' + target + stepContext;
+    }
     }
 
     // Requirement 1.4 — task action name must reference a key in tasks
