@@ -280,6 +280,23 @@ function runPipeline(cwd, options) {
     // Rewrite step targets: "VariableName__prop" → "Namespace__prop"
     if (Object.keys(importMap).length > 0) {
       rewriteStepTargets(rpf, importMap);
+
+      // Also rewrite targets in already-extracted pomResult tasks (since extractPom
+      // copied the steps before rewriting happened)
+      if (rpf.type === 'pom') {
+        for (var pri = 0; pri < pomResults.length; pri++) {
+          if (pomResults[pri].filePath === rpf.filePath) {
+            var taskKeysToRewrite = Object.keys(pomResults[pri].tasks || {});
+            for (var tki = 0; tki < taskKeysToRewrite.length; tki++) {
+              var taskEntry = pomResults[pri].tasks[taskKeysToRewrite[tki]];
+              if (taskEntry.steps) {
+                taskEntry.steps = rewriteSteps(taskEntry.steps, importMap);
+              }
+            }
+            break;
+          }
+        }
+      }
     }
   }
 

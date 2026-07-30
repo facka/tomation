@@ -179,7 +179,7 @@ function validateSpec(obj) {
     if (!entry || !entry.tag) {
       return { ok: false, error: 'pageElements entry "' + peKeys[i] + '" missing tag field' };
     }
-    if (!entry.where || typeof entry.where !== 'object' || Object.keys(entry.where).length === 0) {
+    if ((!entry.where || typeof entry.where !== 'object' || Object.keys(entry.where).length === 0) && !entry.xpath && !entry.navigate) {
       return { ok: false, error: 'pageElements entry "' + peKeys[i] + '" missing or empty where object' };
     }
   }
