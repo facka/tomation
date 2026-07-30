@@ -1919,8 +1919,8 @@ function handleStepFailedAwaitingAction(message) {
     });
   }
 
-  // Auto-scroll to bottom
-  logContainer.scrollTop = logContainer.scrollHeight;
+  // Scroll the action buttons into view so user can see them
+  buttonContainer.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 /**
