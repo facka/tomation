@@ -93,7 +93,7 @@ function validateSpec(obj) {
       return { ok: false, error: 'pageElements entry "' + key + '" missing required field: where' };
     }
 
-    if (Object.keys(entry.where).length === 0) {
+    if (Object.keys(entry.where).length === 0 && !entry.xpath && !entry.navigate) {
       return { ok: false, error: 'pageElements entry "' + key + '" where object must have at least one key' };
     }
   }
