@@ -1426,7 +1426,7 @@ function extractSteps(body, filePath, trackedParams, warnings, source, declaredT
       // Non-destructuring variable declarations are unrecognized
       const snippet = source ? source.slice(stmt.start, stmt.end).split('\n')[0] : '';
       warnings.push({
-        message: `Unrecognized statement at ${filePath}:${lineOf(stmt)} — skipped`,
+        message: `Unrecognized statement at ${filePath}:${lineOf(stmt)} — variable declaration is not a recognized element, task, or param destructuring pattern — skipped`,
         filePath,
         line: lineOf(stmt),
         source: snippet,
@@ -1449,10 +1449,10 @@ function extractSteps(body, filePath, trackedParams, warnings, source, declaredT
       if (step) {
         steps.push(step);
       } else {
-        // Recognized JS but not a known tomation action — emit warning
-        const snippet = source ? source.slice(stmt.start, stmt.end).split('\n')[0] : '';
+       // Recognized JS but not a known automation action — emit warning
+        const snippet = source ? source.slice(stmt.expression.start, stmt.expression.end).split('\n')[0] : '';
         warnings.push({
-          message: `Unrecognized statement at ${filePath}:${lineOf(stmt)} — skipped`,
+          message: `Unrecognized statement at ${filePath}:${lineOf(stmt)} — expression '${snippet}' is not a recognized DSL action or task invocation — skipped`,
           filePath,
           line: lineOf(stmt),
           source: snippet,
@@ -1464,7 +1464,7 @@ function extractSteps(body, filePath, trackedParams, warnings, source, declaredT
     // Any other statement type (for, while, return, throw, etc.) — emit warning
     const snippet = source ? source.slice(stmt.start, stmt.end).split('\n')[0] : '';
     warnings.push({
-      message: `Unrecognized statement at ${filePath}:${lineOf(stmt)} — skipped`,
+      message: `Unrecognized statement at ${filePath}:${lineOf(stmt)} — '${stmt.type}' is not a supported DSL construct (only variable declarations, expression statements, and if-statements are allowed) — skipped`,
       filePath,
       line: lineOf(stmt),
       source: snippet,
