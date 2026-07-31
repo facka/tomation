@@ -126,10 +126,20 @@ function matchClosestLabel(el, spec, parentNode) {
   }
 
   // B2: Walk up at most 3 ancestor levels, search descendants
+  // Stop at the first level where a matching-tag element is found — if its text
+  // doesn't match, the closest label is wrong (don't keep searching higher)
   var ancestor = el.parentElement;
   for (var depth = 0; depth < 3 && ancestor; depth++) {
-    if (searchSubtreeForLabel(ancestor, tag, text)) {
-      return true;
+    var candidates = ancestor.getElementsByTagName(tag);
+    if (candidates.length > 0) {
+      // Found element(s) with matching tag at this level — check text
+      for (var ci = 0; ci < candidates.length; ci++) {
+        if (candidates[ci].textContent.trim() === text) {
+          return true;
+        }
+      }
+      // Tag found but text didn't match — stop searching further
+      return false;
     }
     ancestor = ancestor.parentElement;
   }
