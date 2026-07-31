@@ -280,6 +280,34 @@
     .test-list li:hover { background: var(--bg-hover); }
     .test-list li:active { background: var(--bg-active); }
 
+    /* Two-row runnable label (path + name) */
+    .row-label {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .runnable-path {
+      display: block;
+      font-size: 10px;
+      color: var(--text-muted);
+      line-height: 1.3;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .runnable-name {
+      display: block;
+      font-size: 13px;
+      color: var(--text-primary);
+      line-height: 1.4;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     /* Create project */
     .create-project {
       text-align: center;
@@ -728,7 +756,21 @@
       gap: 8px;
     }
 
-    .nav-row h2 { flex: 1; }
+    .nav-row h2 {
+      flex: 1;
+      font-size: 14px;
+      line-height: 1.3;
+    }
+
+    .nav-row h2 .runnable-path {
+      font-size: 10px;
+      font-weight: 400;
+    }
+
+    .nav-row h2 .runnable-name {
+      font-size: 14px;
+      font-weight: 600;
+    }
 
     /* Param form */
     .param-form {

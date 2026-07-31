@@ -415,7 +415,7 @@ function quickRunAutomation(specIndex, automationIndex) {
       showView('test-plan');
       var titleEl = document.getElementById('test-plan-title');
       if (titleEl) {
-        titleEl.textContent = formatRunnableLabel(automation.name, automation.sourceFile);
+        titleEl.innerHTML = formatRunnableLabelHtml(automation.name, automation.sourceFile);
       }
       renderTestPlan();
       return;
@@ -536,7 +536,7 @@ function renderTestsTab(specs) {
 
         var rowLabel = document.createElement('span');
         rowLabel.className = 'row-label';
-        rowLabel.textContent = formatRunnableLabel(specData.tests[j].name, specData.tests[j].sourceFile);
+        rowLabel.innerHTML = formatRunnableLabelHtml(specData.tests[j].name, specData.tests[j].sourceFile);
         li.appendChild(rowLabel);
 
         var qrBtn = document.createElement('button');
@@ -610,7 +610,6 @@ function renderAutomationsTab(specs, favourites) {
         var autoData = autoObj.data;
         var autoIndex = autoObj.index;
         var autoName = autoData.name || '';
-        var autoDisplayName = formatRunnableLabel(autoName, autoData.sourceFile);
         var isFav = !!(favourites && favourites[autoName]);
 
         var li = document.createElement('li');
@@ -629,7 +628,7 @@ function renderAutomationsTab(specs, favourites) {
 
         var rowLabel = document.createElement('span');
         rowLabel.className = 'row-label';
-        rowLabel.innerHTML = escapeHtml(autoDisplayName);
+        rowLabel.innerHTML = formatRunnableLabelHtml(autoName, autoData.sourceFile);
         li.appendChild(rowLabel);
 
         var qrBtn = document.createElement('button');
@@ -784,7 +783,7 @@ function onTestItemClick(e) {
   showView('test-plan');
   var titleEl = document.getElementById('test-plan-title');
   if (titleEl && currentRunnable) {
-    titleEl.textContent = formatRunnableLabel(currentRunnable.data.name, currentRunnable.data.sourceFile);
+    titleEl.innerHTML = formatRunnableLabelHtml(currentRunnable.data.name, currentRunnable.data.sourceFile);
   }
   renderTestPlan();
 }
@@ -1270,7 +1269,7 @@ function switchToRunView() {
   // Set run title from current test
   var titleEl = document.getElementById('run-title');
   if (titleEl && currentTest) {
-    titleEl.textContent = formatRunnableLabel(currentTest.name, currentTest.sourceFile);
+    titleEl.innerHTML = formatRunnableLabelHtml(currentTest.name, currentTest.sourceFile);
   }
 
   // Clear log container
@@ -2199,10 +2198,22 @@ function updateContextPopupIfOpen() {
 
 /**
  * Format a display label for a test or automation using source file info.
- * Format: "sourceFile: label"
- * The sourceFile is already a clean relative path (e.g., "login", "auth/login")
- * with extensions stripped and 'tests'/'automations' prefix removed by the compiler.
- * If no sourceFile is available, returns just the name/label (with namespace prefix stripped).
+ * Returns HTML with path on top (small, muted) and label below.
+ * If no sourceFile is available, returns just the name/label as plain text.
+ * @param {string} name - The test/automation name
+ * @param {string|undefined} sourceFile - The relative source file path
+ * @returns {string} HTML string
+ */
+function formatRunnableLabelHtml(name, sourceFile) {
+  // Strip namespace prefix (e.g., "Todo__Add Todo Item" → "Add Todo Item")
+  var displayName = (name && name.indexOf('__') !== -1) ? name.split('__').slice(1).join('__') : name;
+  if (!sourceFile) return escapeHtml(displayName);
+  return '<span class="runnable-path">' + escapeHtml(sourceFile) + '</span>' +
+         '<span class="runnable-name">' + escapeHtml(displayName) + '</span>';
+}
+
+/**
+ * Format a display label as plain text (for title attributes, etc.)
  * @param {string} name - The test/automation name
  * @param {string|undefined} sourceFile - The relative source file path
  * @returns {string}
