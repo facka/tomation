@@ -304,14 +304,38 @@ function findElementWithParent(stepMessage) {
       });
   }
 
+  function getElementXPath(element) {
+    if (!element) return '';
+    if (element.id) {
+        return `//*[@id="${element.id}"]`;
+    }
+    if (element === document.body) {
+        return '/html/body';
+    }
+
+    let index = 1;
+    let sibling = element.previousElementSibling;
+    
+    while (sibling) {
+        if (sibling.nodeName === element.nodeName) {
+            index++;
+        }
+        sibling = sibling.previousElementSibling;
+    }
+
+    const tagName = element.nodeName.toLowerCase();
+    const parentPath = getElementXPath(element.parentElement);
+    return `${parentPath}/${tagName}[${index}]`;
+  }
+
   return findElement(parentDescriptor, document)
     .then(function (parentElement) {
       return findElement(elementDescriptor, parentElement)
         .then(function (element) {
           return applyNavigation(element);
         })
-        .catch(function () {
-          return { ok: false, error: 'Element not found: ' + stepMessage.target };
+        .catch(function (error) {
+          return { ok: false, error: 'Element with parent ' + getElementXPath(parentElement) + ' not found: ' + stepMessage.target + error.message };
         });
     })
     .catch(function () {
