@@ -923,9 +923,11 @@ function renderTestPlan() {
 
   checklist.innerHTML = '';
 
-  // Render param form placeholder for automations (actual form rendering in task 9)
-  var existingParamForm = document.querySelector('.param-form');
-  if (existingParamForm) existingParamForm.remove();
+  // Remove any existing param form (from previous automation) to prevent stale forms
+  var existingParamForms = document.querySelectorAll('.param-form');
+  for (var ef = 0; ef < existingParamForms.length; ef++) {
+    existingParamForms[ef].remove();
+  }
 
   if (currentRunnable && currentRunnable.type === 'automation' && currentRunnable.data.params && currentRunnable.data.params.length > 0) {
     var paramForm = document.createElement('div');
