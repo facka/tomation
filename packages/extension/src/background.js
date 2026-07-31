@@ -388,7 +388,12 @@ function resolveValue(value, params, contextStore) {
   // Resolve {{paramName}} tokens
   resolved = resolved.replace(/\{\{([^}]+)\}\}/g, function (match, paramName) {
     if (params && params.hasOwnProperty(paramName)) {
-      return params[paramName];
+      var paramVal = params[paramName];
+      // Guard against object values (e.g., unresolved error descriptors) — keep token for lazy resolution
+      if (paramVal !== null && typeof paramVal === 'object') {
+        return match;
+      }
+      return (paramVal !== undefined && paramVal !== null) ? String(paramVal) : '';
     }
     console.warn('[tomation] Missing param "' + paramName + '" — substituting empty string');
     return '';
@@ -538,7 +543,14 @@ function expandTaskStep(step, tasksMap, pageElements, parentParams) {
     for (var si = 0; si < stepParamKeys.length; si++) {
       pk = stepParamKeys[si];
       // Resolve param values themselves (they may contain {{tokens}} from outer context)
-      mergedParams[pk] = resolveValue(step.params[pk], parentParams, runState.contextStore);
+      var resolvedParam = resolveValue(step.params[pk], parentParams, runState.contextStore);
+      // If context resolution failed (key not saved yet), keep the original template
+      // string so it can be resolved lazily at runtime via __needsCtxResolve
+      if (resolvedParam && typeof resolvedParam === 'object' && resolvedParam.__ctxError) {
+        mergedParams[pk] = step.params[pk];
+      } else {
+        mergedParams[pk] = resolvedParam;
+      }
     }
   }
 
@@ -580,6 +592,10 @@ function buildStepMessage(step, pageElements, params) {
       msg.__needsCtxResolve = true;
     } else {
       msg.value = resolvedVal;
+      // Check if the resolved value still contains {{ctx.X}} tokens (e.g., passed through params)
+      if (typeof msg.value === 'string' && msg.value.indexOf('{{ctx.') !== -1) {
+        msg.__needsCtxResolve = true;
+      }
     }
   }
 
@@ -594,6 +610,10 @@ function buildStepMessage(step, pageElements, params) {
       msg.__needsCtxResolve = true;
     } else {
       msg.url = resolvedUrl;
+      // Check if the resolved URL still contains {{ctx.X}} tokens
+      if (typeof msg.url === 'string' && msg.url.indexOf('{{ctx.') !== -1) {
+        msg.__needsCtxResolve = true;
+      }
     }
   }
   if (step.ms !== undefined) {
