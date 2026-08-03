@@ -563,6 +563,7 @@
     .log-container {
       max-height: 420px;
       overflow-y: auto;
+      overflow-x: auto;
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
       background: var(--bg-surface);
@@ -575,6 +576,7 @@
       font-size: 12px;
       font-family: var(--font-mono);
       line-height: 1.5;
+      white-space: nowrap;
     }
 
     .log-entry:last-child { border-bottom: none; }
@@ -602,7 +604,10 @@
       color: var(--text-primary);
     }
 
-    .log-entry.indented { padding-left: 24px; }
+    .log-entry.task-header.task-in-progress {
+      border-left: 3px solid var(--accent);
+      color: var(--text-primary);
+    }
 
     .log-entry.in-progress {
       border-left: 3px solid var(--accent);

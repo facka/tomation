@@ -1173,11 +1173,11 @@ function emitLog(stepIndex, step, ok, error) {
 
 /**
  * Build and send the STEP_PLAN message to the panel.
- * Annotates each resolved step with its parent taskName for hierarchical rendering.
+ * Recursively annotates each resolved step with its full task path for hierarchical rendering.
  *
  * @param {Array} resolvedSteps - The flattened step array from flattenSteps()
  * @param {Array} originalSteps - The test's top-level steps array
- * @param {object} tasksMap - The spec's tasks map (key → { params?, steps[] })
+ * @param {object} tasksMap - The spec's tasks map (key → { params?, steps[], label? })
  * @param {Array|Set} checkedSteps - Checked top-level step indices
  */
 function emitStepPlan(resolvedSteps, originalSteps, tasksMap, checkedSteps) {
@@ -1195,64 +1195,53 @@ function emitStepPlan(resolvedSteps, originalSteps, tasksMap, checkedSteps) {
     checked = { has: function () { return true; } };
   }
 
-  // Build taskName mapping: for each resolved step index, determine its taskName.
-  // Walk originalSteps in the same order as flattenSteps to count how many resolved
-  // steps each original step contributes, and assign taskName to task-expanded steps.
-  var taskNames = [];
-  var taskLabels = [];
-  var taskParams = [];
+  // Build taskPath for each resolved step by recursively walking the step tree.
+  // taskPath is an array of { name, label, params } objects representing the nesting hierarchy.
+  var stepAnnotations = []; // array of { taskPath: [...], taskDepth: N } per resolved step
   var resolvedIdx = 0;
+  var pageElements = runState.spec ? runState.spec.pageElements || {} : {};
 
-  for (var i = 0; i < originalSteps.length; i++) {
-    if (!checked.has(i)) {
-      continue;
-    }
+  function annotateSteps(steps, parentPath, checkedSet) {
+    for (var i = 0; i < steps.length; i++) {
+      if (checkedSet && !checkedSet.has(i)) continue;
 
-    var step = originalSteps[i];
+      var step = steps[i];
 
-    if (step.action === 'task') {
-      // Count how many resolved steps this task step expanded into
-      var taskDef = tasksMap[step.name];
-      var expandedCount = 0;
-      if (taskDef) {
-        // Count by walking from resolvedIdx until we've consumed all steps from this task
-        // The number of resolved steps from this task equals the total resolved steps it produced
-        // We can compute this by temporarily expanding (same as flattenSteps does)
-        var tempExpanded = expandStep(step, tasksMap, runState.spec ? runState.spec.pageElements || {} : {}, {});
-        expandedCount = tempExpanded.length;
+      if (step.action === 'task') {
+        var taskDef = tasksMap[step.name];
+        if (!taskDef) continue;
+
+        var taskEntry = {
+          name: step.name,
+          label: taskDef.label || null,
+          params: step.params || null
+        };
+        var childPath = parentPath.concat([taskEntry]);
+
+        // Recursively annotate the task's child steps
+        annotateSteps(taskDef.steps || [], childPath, null);
+      } else if (step.action === 'if') {
+        // if-steps expand — count how many resolved steps they produce
+        var tempIfExpanded = expandStep(step, tasksMap, pageElements, {});
+        for (var ifIdx = 0; ifIdx < tempIfExpanded.length; ifIdx++) {
+          stepAnnotations[resolvedIdx] = { taskPath: parentPath, taskDepth: parentPath.length };
+          resolvedIdx++;
+        }
+      } else {
+        // Non-task step: assign the current path
+        stepAnnotations[resolvedIdx] = { taskPath: parentPath, taskDepth: parentPath.length };
+        resolvedIdx++;
       }
-      // Mark all resolved steps from this task with the task's name and label
-      var label = (taskDef && taskDef.label) ? taskDef.label : null;
-      var params = step.params || null;
-      for (var t = 0; t < expandedCount; t++) {
-        taskNames[resolvedIdx + t] = step.name;
-        taskLabels[resolvedIdx + t] = label;
-        taskParams[resolvedIdx + t] = params;
-      }
-      resolvedIdx += expandedCount;
-    } else if (step.action === 'if') {
-      // if-steps expand based on condition evaluation (already resolved in flattenSteps)
-      var tempIfExpanded = expandStep(step, tasksMap, runState.spec ? runState.spec.pageElements || {} : {}, {});
-      var ifCount = tempIfExpanded.length;
-      for (var ifIdx = 0; ifIdx < ifCount; ifIdx++) {
-        taskNames[resolvedIdx + ifIdx] = null;
-        taskLabels[resolvedIdx + ifIdx] = null;
-        taskParams[resolvedIdx + ifIdx] = null;
-      }
-      resolvedIdx += ifCount;
-    } else {
-      // Non-task step produces exactly 1 resolved step
-      taskNames[resolvedIdx] = null;
-      taskLabels[resolvedIdx] = null;
-      taskParams[resolvedIdx] = null;
-      resolvedIdx += 1;
     }
   }
 
-  // Build plan entries from resolvedSteps
+  annotateSteps(originalSteps, [], checked);
+
+  // Build plan entries from resolvedSteps with annotations
   var planSteps = [];
   for (var s = 0; s < resolvedSteps.length; s++) {
     var rs = resolvedSteps[s];
+    var ann = stepAnnotations[s] || { taskPath: [], taskDepth: 0 };
     var entry = {
       action: rs.action,
       target: rs.target || null,
@@ -1260,9 +1249,11 @@ function emitStepPlan(resolvedSteps, originalSteps, tasksMap, checkedSteps) {
       url: rs.url || null,
       description: rs.description || null,
       ms: (rs.ms != null) ? rs.ms : null,
-      taskName: taskNames[s] || null,
-      taskLabel: taskLabels[s] || null,
-      taskParams: taskParams[s] || null
+      taskName: ann.taskPath.length > 0 ? ann.taskPath[ann.taskPath.length - 1].name : null,
+      taskLabel: ann.taskPath.length > 0 ? ann.taskPath[ann.taskPath.length - 1].label : null,
+      taskParams: ann.taskPath.length > 0 ? ann.taskPath[ann.taskPath.length - 1].params : null,
+      taskPath: ann.taskPath,
+      taskDepth: ann.taskDepth
     };
     if (rs.gone != null) {
       entry.gone = rs.gone;

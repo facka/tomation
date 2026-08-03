@@ -1003,61 +1003,62 @@ function renderTestPlan() {
   var tasks = currentSpec.spec.tasks || {};
   var pageElements = currentSpec.spec.pageElements || {};
 
-  for (var i = 0; i < steps.length; i++) {
-    var step = steps[i];
+  // Recursive function to render steps at any nesting level
+  function renderStepsRecursive(stepsArr, parentIndex, depth) {
+    for (var si = 0; si < stepsArr.length; si++) {
+      var step = stepsArr[si];
 
-    if (step.action === 'task' && step.name && tasks[step.name]) {
-      // Render task header as a checkbox item (top-level)
-      var taskLi = document.createElement('li');
-      var taskCb = document.createElement('input');
-      taskCb.type = 'checkbox';
-      taskCb.checked = true;
-      taskCb.setAttribute('data-step-index', String(i));
-      taskCb.setAttribute('data-is-task', 'true');
-      taskCb.addEventListener('change', onTaskCheckboxChange);
-      var taskLabel = document.createElement('label');
-      var taskDisplayName = (tasks[step.name].label) ? tasks[step.name].label : step.name.replace(/__/g, '.').replace(/\//g, ' > ');
-      var taskLabelHtml = '<span class="step-action">Task</span> ' + escapeHtml(taskDisplayName);
-      if (step.params) {
-        taskLabelHtml += formatParams(step.params);
-      }
-      taskLabel.innerHTML = taskLabelHtml;
-      taskLabel.setAttribute('for', '');
-      taskLi.appendChild(taskCb);
-      taskLi.appendChild(taskLabel);
-      checklist.appendChild(taskLi);
+      if (step.action === 'task' && step.name && tasks[step.name]) {
+        // Render task header
+        var taskLi = document.createElement('li');
+        if (depth > 0) {
+          taskLi.style.paddingLeft = (depth * 16) + 'px';
+        }
+        var taskCb = document.createElement('input');
+        taskCb.type = 'checkbox';
+        taskCb.checked = true;
+        taskCb.setAttribute('data-step-index', String(parentIndex !== null ? parentIndex : si));
+        taskCb.setAttribute('data-is-task', 'true');
+        taskCb.addEventListener('change', onTaskCheckboxChange);
+        var taskLabel = document.createElement('label');
+        var taskDisplayName = (tasks[step.name].label) ? tasks[step.name].label : step.name.replace(/__/g, '.').replace(/\//g, ' > ');
+        var taskLabelHtml = '<span class="step-action">Task</span> ' + escapeHtml(taskDisplayName);
+        if (step.params) {
+          taskLabelHtml += formatParams(step.params);
+        }
+        taskLabel.innerHTML = taskLabelHtml;
+        taskLabel.setAttribute('for', '');
+        taskLi.appendChild(taskCb);
+        taskLi.appendChild(taskLabel);
+        checklist.appendChild(taskLi);
 
-      // Render child steps indented
-      var childSteps = tasks[step.name].steps;
-      for (var c = 0; c < childSteps.length; c++) {
-        var childLi = document.createElement('li');
-        childLi.className = 'indented';
-        var childCb = document.createElement('input');
-        childCb.type = 'checkbox';
-        childCb.checked = true;
-        childCb.setAttribute('data-step-index', String(i));
-        childCb.setAttribute('data-child-index', String(c));
-        childCb.addEventListener('change', onChildCheckboxChange);
-        var childLabel = document.createElement('label');
-        childLabel.innerHTML = buildStepLabelHtml(childSteps[c], pageElements);
-        childLi.appendChild(childCb);
-        childLi.appendChild(childLabel);
-        checklist.appendChild(childLi);
+        // Recursively render child steps of this task
+        var childSteps = tasks[step.name].steps || [];
+        renderStepsRecursive(childSteps, parentIndex !== null ? parentIndex : si, depth + 1);
+      } else {
+        // Render regular step
+        var li = document.createElement('li');
+        if (depth > 0) {
+          li.style.paddingLeft = (depth * 16) + 'px';
+        }
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = true;
+        cb.setAttribute('data-step-index', String(parentIndex !== null ? parentIndex : si));
+        if (depth > 0) {
+          cb.setAttribute('data-child-index', String(si));
+          cb.addEventListener('change', onChildCheckboxChange);
+        }
+        var label = document.createElement('label');
+        label.innerHTML = buildStepLabelHtml(step, pageElements);
+        li.appendChild(cb);
+        li.appendChild(label);
+        checklist.appendChild(li);
       }
-    } else {
-      // Render regular step as a checkbox item
-      var li = document.createElement('li');
-      var cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = true;
-      cb.setAttribute('data-step-index', String(i));
-      var label = document.createElement('label');
-      label.innerHTML = buildStepLabelHtml(step, pageElements);
-      li.appendChild(cb);
-      li.appendChild(label);
-      checklist.appendChild(li);
     }
   }
+
+  renderStepsRecursive(steps, null, 0);
 
   // Load configuration for this test plan
   loadTestPlanConfiguration();
@@ -1112,49 +1113,71 @@ function onConfigChange() {
 
 /**
  * When a task checkbox is toggled, sync all child checkboxes to match.
- * Checking a task checks all its child steps; unchecking unchecks them all.
+ * Cascades through all nested children (steps and sub-tasks) at deeper indentation levels.
  */
 function onTaskCheckboxChange(e) {
   var cb = e.target;
-  var stepIndex = cb.getAttribute('data-step-index');
   var isChecked = cb.checked;
+  var li = cb.parentElement;
+  if (!li) return;
 
-  var checklist = document.getElementById('step-checklist');
-  var childCbs = checklist.querySelectorAll(
-    'input[data-step-index="' + stepIndex + '"][data-child-index]'
-  );
-  for (var i = 0; i < childCbs.length; i++) {
-    childCbs[i].checked = isChecked;
+  // Get the depth of this task (from paddingLeft)
+  var taskDepth = parseInt(li.style.paddingLeft, 10) || 0;
+
+  // Walk through all subsequent siblings and toggle those at deeper levels
+  var next = li.nextElementSibling;
+  while (next) {
+    var nextDepth = parseInt(next.style.paddingLeft, 10) || 0;
+    // Stop when we encounter an element at the same or lesser depth (sibling/parent level)
+    if (nextDepth <= taskDepth) break;
+
+    // Toggle the checkbox inside this child element
+    var childCb = next.querySelector('input[type="checkbox"]');
+    if (childCb) {
+      childCb.checked = isChecked;
+    }
+    next = next.nextElementSibling;
   }
 }
 
 /**
- * When a child step checkbox is toggled, sync the parent task checkbox.
- * If any child is checked, the task is checked. If all are unchecked, the task is unchecked.
+ * When a child step checkbox is toggled, sync ancestor task checkboxes.
+ * If any sibling is checked, the parent task stays checked. If all are unchecked, the parent unchecks.
  */
 function onChildCheckboxChange(e) {
   var cb = e.target;
-  var stepIndex = cb.getAttribute('data-step-index');
+  var li = cb.parentElement;
+  if (!li) return;
 
-  var checklist = document.getElementById('step-checklist');
-  var childCbs = checklist.querySelectorAll(
-    'input[data-step-index="' + stepIndex + '"][data-child-index]'
-  );
+  var childDepth = parseInt(li.style.paddingLeft, 10) || 0;
+  if (childDepth === 0) return; // top-level, no parent task
 
-  var anyChecked = false;
-  for (var i = 0; i < childCbs.length; i++) {
-    if (childCbs[i].checked) {
-      anyChecked = true;
+  // Walk backwards to find the parent task (first element at a lesser depth)
+  var prev = li.previousElementSibling;
+  while (prev) {
+    var prevDepth = parseInt(prev.style.paddingLeft, 10) || 0;
+    if (prevDepth < childDepth) {
+      // Found the parent task — check if any of its children are checked
+      var parentCb = prev.querySelector('input[type="checkbox"]');
+      if (parentCb) {
+        var parentTaskDepth = prevDepth;
+        var sibling = prev.nextElementSibling;
+        var anyChecked = false;
+        while (sibling) {
+          var sibDepth = parseInt(sibling.style.paddingLeft, 10) || 0;
+          if (sibDepth <= parentTaskDepth) break;
+          var sibCb = sibling.querySelector('input[type="checkbox"]');
+          if (sibCb && sibCb.checked) {
+            anyChecked = true;
+            break;
+          }
+          sibling = sibling.nextElementSibling;
+        }
+        parentCb.checked = anyChecked;
+      }
       break;
     }
-  }
-
-  // Find the parent task checkbox (same step-index, no child-index, has data-is-task)
-  var taskCb = checklist.querySelector(
-    'input[data-step-index="' + stepIndex + '"][data-is-task]'
-  );
-  if (taskCb) {
-    taskCb.checked = anyChecked;
+    prev = prev.previousElementSibling;
   }
 }
 
@@ -1307,7 +1330,7 @@ function switchToRunView() {
 
 /**
  * Render all steps from the STEP_PLAN message as queued entries in the log container.
- * Task boundaries produce task-header rows; child steps are indented.
+ * Supports unlimited nested task depth with task-header rows at each boundary.
  *
  * @param {Array} steps - The step plan array from background
  */
@@ -1338,39 +1361,54 @@ function renderStepPlan(steps) {
   }
 
   var pageElements = (currentSpec && currentSpec.spec && currentSpec.spec.pageElements) || {};
-  var currentTaskName = null;
+
+  // Track which task-headers have been rendered (by full path key)
+  var renderedTaskHeaders = {};
 
   for (var i = 0; i < steps.length; i++) {
     var step = steps[i];
+    var taskPath = step.taskPath || [];
+    var taskDepth = step.taskDepth || 0;
 
-    // Detect task boundary: when taskName changes and is non-null, insert a task header
-    if (step.taskName !== currentTaskName && step.taskName != null) {
-      currentTaskName = step.taskName;
-      var headerDiv = document.createElement('div');
-      headerDiv.className = 'log-entry task-header queued';
-      headerDiv.setAttribute('data-task-name', step.taskName);
-      var headerLabel = step.taskLabel || step.taskName.replace(/__/g, '.').replace(/\//g, ' > ');
-      var headerHtml = '<span class="step-action">Task</span> ' + escapeHtml(headerLabel);
-      if (step.taskParams) {
-        headerHtml += formatParams(step.taskParams);
+    // Insert task headers for any new levels in the path that haven't been rendered yet
+    for (var d = 0; d < taskPath.length; d++) {
+      // Build a unique key for this path level (joined names up to this depth)
+      var pathKey = '';
+      for (var pk2 = 0; pk2 <= d; pk2++) {
+        pathKey += (pk2 > 0 ? '>' : '') + taskPath[pk2].name;
       }
-      headerDiv.innerHTML = headerHtml;
-      logContainer.appendChild(headerDiv);
+
+      if (!renderedTaskHeaders[pathKey]) {
+        renderedTaskHeaders[pathKey] = true;
+        var headerDiv = document.createElement('div');
+        headerDiv.className = 'log-entry task-header queued';
+        headerDiv.setAttribute('data-task-path', pathKey);
+        headerDiv.style.paddingLeft = (12 + d * 12) + 'px';
+        var headerLabel = taskPath[d].label || taskPath[d].name.replace(/__/g, '.').replace(/\//g, ' > ');
+        var headerHtml = '<span class="step-action">Task</span> ' + escapeHtml(headerLabel);
+        if (taskPath[d].params) {
+          headerHtml += formatParams(taskPath[d].params);
+        }
+        headerDiv.innerHTML = headerHtml;
+        logContainer.appendChild(headerDiv);
+      }
     }
 
-    // When taskName becomes null, reset tracking
-    if (step.taskName == null) {
-      currentTaskName = null;
-    }
-
+    // Render the step entry with indentation based on depth
     var div = document.createElement('div');
     var classes = 'log-entry queued';
-    if (step.taskName != null) {
-      classes += ' indented';
-      div.setAttribute('data-task-name', step.taskName);
-    }
     div.className = classes;
     div.setAttribute('data-step-index', String(i));
+    div.style.paddingLeft = (12 + taskDepth * 12) + 'px';
+
+    // Set data-task-path for task completion tracking
+    if (taskPath.length > 0) {
+      var fullPathKey = '';
+      for (var fpk = 0; fpk < taskPath.length; fpk++) {
+        fullPathKey += (fpk > 0 ? '>' : '') + taskPath[fpk].name;
+      }
+      div.setAttribute('data-task-path', fullPathKey);
+    }
 
     var html = buildLogEntryHtml(step, pageElements);
     div.innerHTML = html;
@@ -1586,10 +1624,10 @@ function appendLogEntry(logData) {
     return;
   }
 
-  // Find the existing entry to preserve attributes (indented, data-task-name)
+  // Find the existing entry to preserve attributes (indented, data-task-path, inline padding)
   var existingEntry = logContainer.querySelector('.log-entry[data-step-index="' + logData.stepIndex + '"]');
-  var wasIndented = existingEntry && existingEntry.classList.contains('indented');
-  var taskName = existingEntry ? existingEntry.getAttribute('data-task-name') : null;
+  var taskPathAttr = existingEntry ? existingEntry.getAttribute('data-task-path') : null;
+  var existingPadding = existingEntry ? existingEntry.style.paddingLeft : null;
 
   var div = document.createElement('div');
   div.setAttribute('data-step-index', String(logData.stepIndex));
@@ -1601,14 +1639,13 @@ function appendLogEntry(logData) {
     classes += ' fail';
   }
 
-  if (wasIndented || logData.indented) {
-    classes += ' indented';
-  }
-
   div.className = classes;
 
-  if (taskName) {
-    div.setAttribute('data-task-name', taskName);
+  if (taskPathAttr) {
+    div.setAttribute('data-task-path', taskPathAttr);
+  }
+  if (existingPadding) {
+    div.style.paddingLeft = existingPadding;
   }
 
   var html = buildLogEntryHtml(logData, pageElements);
@@ -1644,21 +1681,26 @@ function appendLogEntry(logData) {
   div.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 
   // Check if all steps in this task are now complete, and update the task header
-  if (taskName) {
-    updateTaskHeaderStatus(logContainer, taskName);
+  if (taskPathAttr) {
+    updateTaskHeaderStatus(logContainer, taskPathAttr);
   }
 }
 
 /**
- * Check if all steps in a task group are completed (pass, fail, or skipped).
- * If so, update the task-header to show done status:
- * - Green (pass) if all steps passed
- * - Yellow (warning) if any step failed or was skipped
+ * Check if all steps belonging to a task (by data-task-path) are completed.
+ * Updates the task-header and all ancestor task-headers.
+ * - In-progress: when first child starts executing
+ * - Pass (green): all children passed
+ * - Warning (yellow): at least one child failed or was skipped
  * @param {Element} logContainer
- * @param {string} taskName
+ * @param {string} taskPath - The full task path key (e.g., "TaskA>TaskB")
  */
-function updateTaskHeaderStatus(logContainer, taskName) {
-  var steps = logContainer.querySelectorAll('.log-entry[data-task-name="' + taskName + '"]:not(.task-header)');
+function updateTaskHeaderStatus(logContainer, taskPath) {
+  if (!taskPath) return;
+
+  // Check completion of the specific task at this path level
+  // Steps belonging to this task have data-task-path that starts with this path
+  var steps = logContainer.querySelectorAll('.log-entry[data-task-path="' + taskPath + '"]:not(.task-header)');
   if (steps.length === 0) return;
 
   var allDone = true;
@@ -1676,16 +1718,37 @@ function updateTaskHeaderStatus(logContainer, taskName) {
     }
   }
 
-  if (!allDone) return;
-
-  var header = logContainer.querySelector('.log-entry.task-header[data-task-name="' + taskName + '"]');
+  var header = logContainer.querySelector('.log-entry.task-header[data-task-path="' + taskPath + '"]');
   if (!header) return;
 
-  header.classList.remove('queued');
-  if (hasFailOrSkip) {
-    header.classList.add('task-warning');
+  if (allDone) {
+    header.classList.remove('queued', 'task-in-progress', 'task-warning', 'task-pass');
+    if (hasFailOrSkip) {
+      header.classList.add('task-warning');
+    } else {
+      header.classList.add('task-pass');
+    }
   } else {
-    header.classList.add('task-pass');
+    // If not all done but at least one is completed, mark as in-progress
+    var anyStarted = false;
+    for (var j = 0; j < steps.length; j++) {
+      if (steps[j].classList.contains('pass') || steps[j].classList.contains('fail') ||
+          steps[j].classList.contains('skipped') || steps[j].classList.contains('in-progress')) {
+        anyStarted = true;
+        break;
+      }
+    }
+    if (anyStarted && header.classList.contains('queued')) {
+      header.classList.remove('queued');
+      header.classList.add('task-in-progress');
+    }
+  }
+
+  // Also update ancestor task headers (propagate status up)
+  var pathParts = taskPath.split('>');
+  if (pathParts.length > 1) {
+    var parentPath = pathParts.slice(0, -1).join('>');
+    updateTaskHeaderStatus(logContainer, parentPath);
   }
 }
 
@@ -1806,9 +1869,9 @@ function handleUpdateLogEntry(message) {
   entry.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 
   // Check if this completes a task group
-  var taskName = entry.getAttribute('data-task-name');
-  if (taskName && logContainer) {
-    updateTaskHeaderStatus(logContainer, taskName);
+  var taskPathVal = entry.getAttribute('data-task-path');
+  if (taskPathVal && logContainer) {
+    updateTaskHeaderStatus(logContainer, taskPathVal);
   }
 }
 
