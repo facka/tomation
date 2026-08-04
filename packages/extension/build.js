@@ -141,14 +141,25 @@ function buildTarget(target) {
   var filesToCopy;
 
   if (useVuePanel) {
-    // Copy Vue panel build output as panel.html
-    var vuePanelSrc = path.join(ROOT, 'panel-vue', 'dist', 'index.html');
-    if (!fs.existsSync(vuePanelSrc)) {
-      console.error('Vue panel build output not found: ' + vuePanelSrc);
+    // Copy Vue panel build output (panel.html + panel.js + panel.css)
+    var vuePanelDir = path.join(ROOT, 'panel-vue', 'dist');
+    if (!fs.existsSync(path.join(vuePanelDir, 'index.html'))) {
+      console.error('Vue panel build output not found: ' + vuePanelDir);
       console.error('Run "npm run build" in packages/extension/panel-vue/ first.');
       process.exit(1);
     }
-    copyFile(vuePanelSrc, path.join(targetDir, 'src', 'panel.html'));
+    // Copy index.html as panel.html
+    copyFile(path.join(vuePanelDir, 'index.html'), path.join(targetDir, 'src', 'panel.html'));
+    // Copy panel.js
+    var vuePanelJs = path.join(vuePanelDir, 'panel.js');
+    if (fs.existsSync(vuePanelJs)) {
+      copyFile(vuePanelJs, path.join(targetDir, 'src', 'panel.js'));
+    }
+    // Copy panel.css if it exists
+    var vuePanelCss = path.join(vuePanelDir, 'style.css');
+    if (fs.existsSync(vuePanelCss)) {
+      copyFile(vuePanelCss, path.join(targetDir, 'src', 'style.css'));
+    }
 
     // Exclude original panel.html and panel.js from the copy list
     filesToCopy = SHARED_FILES.filter(function(f) {
