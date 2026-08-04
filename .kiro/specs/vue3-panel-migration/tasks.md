@@ -88,7 +88,7 @@ Migrate the Tomation extension sidebar panel from vanilla ES5 (panel.html + pane
 - [ ] 4. Checkpoint - Verify logic modules
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. Implement reactive store
+- [x] 5. Implement reactive store
   - [ ] 5.1 Create the reactive store with state, getters, and actions
     - Create `src/store/index.ts` using Vue `reactive()` for StoreState and `computed()` for getters (filteredTests, filteredAutomations, sortedAutomations, isPlaygroundDetected, showPlaygroundPrompt)
     - Implement all StoreActions: setView, loadSpec, setProject, setHostname, selectRunnable, clearRunnable, toggleFavourite, startRun, setStepPlan, setStepStatus, setRunComplete, setPaused, stopRun, updateContext, setContextStore, setActiveTab, setSearchQuery
