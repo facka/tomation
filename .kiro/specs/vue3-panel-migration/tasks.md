@@ -174,8 +174,8 @@ Migrate the Tomation extension sidebar panel from vanilla ES5 (panel.html + pane
     - On Run click: validate params, build checked steps list, call store.startRun() and messaging.send() with RUN_TEST or RUN_AUTOMATION, navigate to Run view
     - _Requirements: 5.1, 5.7_
 
-- [ ] 10. Implement Run View components
-  - [ ] 10.1 Implement LogEntry, TaskHeader, and LogContainer components
+- [x] 10. Implement Run View components
+  - [x] 10.1 Implement LogEntry, TaskHeader, and LogContainer components
     - Create `src/components/LogEntry.vue` with status-based CSS classes (queued, in-progress with spinner, pass, fail, skipped), action label, target, value, error text, retry/skip buttons (debug mode), and attempt badges
     - Create `src/components/TaskHeader.vue` with nested depth indentation and aggregate status indicator
     - Create `src/components/LogContainer.vue` as scrollable container with auto-scroll behaviour, rendering param banner, task headers, and log entries
@@ -189,7 +189,7 @@ Migrate the Tomation extension sidebar panel from vanilla ES5 (panel.html + pane
     - **Property 14: Task header aggregate status**
     - **Validates: Requirements 6.4**
 
-  - [ ] 10.4 Implement ControllerBar, ContextPopup, and RunSummary components
+  - [x] 10.4 Implement ControllerBar, ContextPopup, and RunSummary components
     - Create `src/components/ControllerBar.vue` with Pause, Resume, Stop, Context buttons bound to useRunExecution actions
     - Create `src/components/ContextPopup.vue` as overlay table rendering all context store key-value pairs
     - Create `src/components/RunSummary.vue` with pass/fail/skip counts and Back to Home button
@@ -199,7 +199,7 @@ Migrate the Tomation extension sidebar panel from vanilla ES5 (panel.html + pane
     - **Property 15: Context popup completeness**
     - **Validates: Requirements 6.7**
 
-  - [ ] 10.6 Implement RunView as container component
+  - [x] 10.6 Implement RunView as container component
     - Create `src/components/RunView.vue` with nav row (runnable name + close button), ControllerBar, LogContainer, ContextPopup (overlay), and RunSummary (post-completion)
     - _Requirements: 6.1, 6.2, 6.8_
 

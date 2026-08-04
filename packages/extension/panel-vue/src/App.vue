@@ -2,6 +2,7 @@
 import { useStore } from '@/store';
 import HomeView from '@/components/HomeView.vue';
 import TestPlanView from '@/components/TestPlanView.vue';
+import RunView from '@/components/RunView.vue';
 
 const store = useStore();
 </script>
@@ -14,10 +15,8 @@ const store = useStore();
     <!-- TestPlanView -->
     <TestPlanView v-if="store.state.currentView === 'test-plan'" />
 
-    <!-- RunView placeholder -->
-    <div v-if="store.state.currentView === 'run'" class="view active">
-      <p>RunView placeholder</p>
-    </div>
+    <!-- RunView -->
+    <RunView v-if="store.state.currentView === 'run'" />
   </div>
 </template>
 
