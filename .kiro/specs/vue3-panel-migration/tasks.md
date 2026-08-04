@@ -7,7 +7,7 @@ Migrate the Tomation extension sidebar panel from vanilla ES5 (panel.html + pane
 ## Tasks
 
 - [ ] 1. Set up Vue 3 project structure and build pipeline
-  - [ ] 1.1 Initialize panel-vue package with Vite, Vue 3, and TypeScript
+  - [x] 1.1 Initialize panel-vue package with Vite, Vue 3, and TypeScript
     - Create `packages/extension/panel-vue/package.json` with vue, vite, @vitejs/plugin-vue, vite-plugin-singlefile, typescript, vue-tsc dependencies
     - Create `tsconfig.json` with strict mode, path aliases (`@/` → `./src/`), and Vue SFC support
     - Create `vite.config.ts` with vue plugin, viteSingleFile plugin, deterministic filenames (no content hashes), and `@` alias
