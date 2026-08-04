@@ -39,7 +39,7 @@ Migrate the Tomation extension sidebar panel from vanilla ES5 (panel.html + pane
     - Match exact message shapes used by existing background.js
     - _Requirements: 8.4_
 
-- [ ] 3. Implement shared logic modules
+- [x] 3. Implement shared logic modules
   - [ ] 3.1 Port validateSpec to TypeScript
     - Create `src/logic/validateSpec.ts` that validates a JSON object against the spec format (format field, version, pageElements, tests, automations)
     - Return `{ ok: true, spec }` or `{ ok: false, error }` matching original ES5 behaviour
