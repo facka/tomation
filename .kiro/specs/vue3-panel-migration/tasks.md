@@ -100,7 +100,7 @@ Migrate the Tomation extension sidebar panel from vanilla ES5 (panel.html + pane
     - **Property 7: Store persistence round-trip**
     - **Validates: Requirements 3.4, 4.7**
 
-- [ ] 6. Implement composables
+- [x] 6. Implement composables
   - [ ] 6.1 Implement useMessaging composable
     - Create `src/composables/useMessaging.ts` wrapping Browser_API for `send(message)`, `onMessage(handler)`, and `getActiveTabUrl()`
     - Use typed PanelMessage and BackgroundMessage interfaces
