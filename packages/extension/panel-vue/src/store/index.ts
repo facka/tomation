@@ -313,6 +313,41 @@ async function loadPersistedState(hostname: string): Promise<void> {
   }
 }
 
+/**
+ * Load the full project from extension storage for a given hostname.
+ * Restores currentProject, currentSpec, favourites, and active tab.
+ */
+async function loadProjectFromStorage(hostname: string): Promise<void> {
+  try {
+    const project = await getProject(hostname);
+    if (project) {
+      state.currentProject = project;
+      state.favourites = project.favourites ?? {};
+
+      // Set current spec to the most recently loaded one
+      if (project.specs.length > 0) {
+        const sorted = [...project.specs].sort(
+          (a, b) => new Date(b.loadedAt).getTime() - new Date(a.loadedAt).getTime(),
+        );
+        state.currentSpec = sorted[0];
+      }
+    }
+  } catch {
+    // silent fail - panel starts in landing page state
+  }
+
+  // Restore active tab preference
+  try {
+    const result = await storageGet('home_active_tab');
+    const tab = result['home_active_tab'];
+    if (tab === 'tests' || tab === 'automations') {
+      state.activeTab = tab as 'tests' | 'automations';
+    }
+  } catch {
+    // silent fail
+  }
+}
+
 // --- Export ---
 
 export function useStore() {
@@ -347,5 +382,6 @@ export function useStore() {
 
     // Init
     loadPersistedState,
+    loadProjectFromStorage,
   };
 }

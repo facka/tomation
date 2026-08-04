@@ -97,8 +97,27 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   unsubscribe = onMessage(handleBackgroundMessage);
+
+  // Get active tab hostname and load persisted state (project, favourites, active tab)
+  const { getActiveTabUrl } = useMessaging();
+  const url = await getActiveTabUrl();
+  let hostname: string | null = null;
+
+  if (url) {
+    try {
+      hostname = new URL(url).hostname;
+    } catch {
+      hostname = null;
+    }
+  }
+
+  if (hostname) {
+    store.setHostname(hostname);
+    store.state.lastKnownTabUrl = url;
+    await store.loadProjectFromStorage(hostname);
+  }
 });
 
 onUnmounted(() => {
