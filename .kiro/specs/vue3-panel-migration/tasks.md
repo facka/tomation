@@ -25,7 +25,7 @@ Migrate the Tomation extension sidebar panel from vanilla ES5 (panel.html + pane
     - Extract styles directly from the `<style>` block in `packages/extension/src/panel.html`
     - _Requirements: 7.1, 7.2, 7.4_
 
-- [ ] 2. Define TypeScript types and interfaces
+- [x] 2. Define TypeScript types and interfaces
   - [ ] 2.1 Create type definitions for spec data models
     - Create `src/types/spec.ts` with interfaces: PageElement, Step, Param, TestEntry, AutomationEntry, SpecMeta, Spec, SpecEntry, Project
     - _Requirements: 2.1, 3.1_
