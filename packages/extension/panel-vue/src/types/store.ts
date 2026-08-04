@@ -1,4 +1,5 @@
-import type { Spec, SpecEntry, Project, TestEntry, AutomationEntry, Step } from './spec';
+import type { Spec, SpecEntry, Project, TestEntry, AutomationEntry } from './spec';
+import type { StepPlanEntry } from './messages';
 
 export type ViewName = 'home' | 'test-plan' | 'run' | 'error';
 export type RunnableType = 'test' | 'automation';
@@ -75,7 +76,7 @@ export interface StoreActions {
 
   // Run lifecycle
   startRun(config: RunConfig, params?: Record<string, unknown>): void;
-  setStepPlan(steps: Step[]): void;
+  setStepPlan(steps: StepPlanEntry[]): void;
   setStepStatus(stepIndex: number, status: StepStatus, meta?: Partial<LogEntry>): void;
   setRunComplete(summary: { total: number; passed: number; failed: number }): void;
   setPaused(paused: boolean): void;

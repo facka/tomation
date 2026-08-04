@@ -206,7 +206,7 @@ Migrate the Tomation extension sidebar panel from vanilla ES5 (panel.html + pane
 - [ ] 11. Checkpoint - Verify all view components render
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 12. Wire message dispatch and cross-browser support
+- [x] 12. Wire message dispatch and cross-browser support
   - [ ] 12.1 Implement message dispatch in App.vue
     - Wire `useMessaging().onMessage()` in App.vue `onMounted` to dispatch all BackgroundMessage types to appropriate store actions (STEP_PLAN, STEP_STARTING, LOG, UPDATE_LOG_ENTRY, STEP_FAILED_AWAITING_ACTION, RUN_COMPLETE, RUN_STOPPED, STATE_SYNC, TAB_URL_UPDATE, BUNDLED_SPEC_LOADED, CONTEXT_STATE)
     - Handle MANUAL_PAUSE message with description display

@@ -7,7 +7,8 @@ import type {
   LogEntry,
   StoreState,
 } from '../types/store';
-import type { Spec, SpecEntry, Project, Step } from '../types/spec';
+import type { Spec, SpecEntry, Project } from '../types/spec';
+import type { StepPlanEntry } from '../types/messages';
 import { filterTests } from '../logic/filterTests';
 import { sortAutomationsWithFavourites } from '../logic/sortFavourites';
 import { isPlaygroundUrl } from '../logic/browserApi';
@@ -201,13 +202,15 @@ function startRun(config: RunConfig, params?: Record<string, unknown>): void {
   state.currentView = 'run';
 }
 
-function setStepPlan(steps: Step[]): void {
+function setStepPlan(steps: StepPlanEntry[]): void {
   state.logEntries = steps.map((step, index) => ({
     stepIndex: index,
     status: 'queued' as StepStatus,
     action: step.action,
     target: step.target,
     value: step.value,
+    taskPath: step.taskPath,
+    taskDepth: step.taskDepth,
   }));
 }
 

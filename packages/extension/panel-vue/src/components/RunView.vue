@@ -6,6 +6,10 @@ import LogContainer from './LogContainer.vue';
 import ContextPopup from './ContextPopup.vue';
 import RunSummary from './RunSummary.vue';
 
+const props = defineProps<{
+  manualPauseDescription?: string | null;
+}>();
+
 const store = useStore();
 
 // --- State ---
@@ -59,6 +63,12 @@ function closeRun() {
       @toggle-context="toggleContext"
     />
 
+    <!-- Manual pause banner -->
+    <div v-if="props.manualPauseDescription" class="manual-pause-banner">
+      <span class="pause-icon">⏸</span>
+      <span class="pause-text">{{ props.manualPauseDescription }}</span>
+    </div>
+
     <!-- Log container -->
     <LogContainer />
 
@@ -72,3 +82,25 @@ function closeRun() {
     <RunSummary />
   </div>
 </template>
+
+<style scoped>
+.manual-pause-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--warning-bg, #fff3cd);
+  border: 1px solid var(--warning-border, #ffc107);
+  border-radius: var(--radius-sm, 4px);
+  margin: 8px 12px;
+  font-size: 13px;
+}
+
+.pause-icon {
+  flex-shrink: 0;
+}
+
+.pause-text {
+  word-break: break-word;
+}
+</style>
