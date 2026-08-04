@@ -220,7 +220,7 @@ Migrate the Tomation extension sidebar panel from vanilla ES5 (panel.html + pane
     - **Property 16: Browser API detection**
     - **Validates: Requirements 8.1**
 
-- [ ] 13. Integrate with build system
+- [x] 13. Integrate with build system
   - [ ] 13.1 Modify build.js to support USE_VUE_PANEL flag
     - Update `packages/extension/build.js` to check `process.env.USE_VUE_PANEL` and conditionally copy `panel-vue/dist/index.html` as `src/panel.html` to dist directories, excluding original panel.html and panel.js from the copy list when the flag is truthy
     - Ensure original files remain untouched in the repo

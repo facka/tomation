@@ -120,6 +120,11 @@ function cleanDir(dir) {
 // Build functions
 // ---------------------------------------------------------------------------
 
+function isVuePanelEnabled() {
+  var flag = process.env.USE_VUE_PANEL;
+  return flag && flag !== '0' && flag !== 'false' && flag !== '';
+}
+
 function buildTarget(target) {
   var targetDir = path.join(DIST, target);
   cleanDir(targetDir);
@@ -131,9 +136,32 @@ function buildTarget(target) {
     JSON.stringify(manifest, null, 2) + '\n'
   );
 
+  // Determine which files to copy based on USE_VUE_PANEL flag
+  var useVuePanel = isVuePanelEnabled();
+  var filesToCopy;
+
+  if (useVuePanel) {
+    // Copy Vue panel build output as panel.html
+    var vuePanelSrc = path.join(ROOT, 'panel-vue', 'dist', 'index.html');
+    if (!fs.existsSync(vuePanelSrc)) {
+      console.error('Vue panel build output not found: ' + vuePanelSrc);
+      console.error('Run "npm run build" in packages/extension/panel-vue/ first.');
+      process.exit(1);
+    }
+    copyFile(vuePanelSrc, path.join(targetDir, 'src', 'panel.html'));
+
+    // Exclude original panel.html and panel.js from the copy list
+    filesToCopy = SHARED_FILES.filter(function(f) {
+      return f !== 'src/panel.html' && f !== 'src/panel.js';
+    });
+    console.log('  Using Vue panel (USE_VUE_PANEL=' + process.env.USE_VUE_PANEL + ')');
+  } else {
+    filesToCopy = SHARED_FILES;
+  }
+
   // Copy shared files
-  for (var i = 0; i < SHARED_FILES.length; i++) {
-    var file = SHARED_FILES[i];
+  for (var i = 0; i < filesToCopy.length; i++) {
+    var file = filesToCopy[i];
     copyFile(path.join(ROOT, file), path.join(targetDir, file));
   }
 
