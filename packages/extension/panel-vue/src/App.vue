@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useStore } from '@/store';
 import HomeView from '@/components/HomeView.vue';
+import TestPlanView from '@/components/TestPlanView.vue';
 
 const store = useStore();
 </script>
@@ -10,10 +11,8 @@ const store = useStore();
     <!-- HomeView -->
     <HomeView v-if="store.state.currentView === 'home'" />
 
-    <!-- TestPlanView placeholder -->
-    <div v-if="store.state.currentView === 'test-plan'" class="view active">
-      <p>TestPlanView placeholder</p>
-    </div>
+    <!-- TestPlanView -->
+    <TestPlanView v-if="store.state.currentView === 'test-plan'" />
 
     <!-- RunView placeholder -->
     <div v-if="store.state.currentView === 'run'" class="view active">

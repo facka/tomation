@@ -150,13 +150,13 @@ Migrate the Tomation extension sidebar panel from vanilla ES5 (panel.html + pane
     - Wire navigation: clicking a runnable item calls store.selectRunnable() and store.setView('test-plan')
     - _Requirements: 4.1, 4.9_
 
-- [ ] 9. Implement Test Plan View components
-  - [ ] 9.1 Implement StepChecklist component
+- [x] 9. Implement Test Plan View components
+  - [x] 9.1 Implement StepChecklist component
     - Create `src/components/StepChecklist.vue` as a recursive checkbox tree rendering steps with indentation, action keywords, element badges with tooltips, and value/parameter annotations
     - Support nested sub-steps for task references
     - _Requirements: 5.2, 5.3_
 
-  - [ ] 9.2 Implement ParamForm and ConfigSection components
+  - [x] 9.2 Implement ParamForm and ConfigSection components
     - Create `src/components/ParamForm.vue` rendering typed inputs (text, number, date, select) per param definition with required field validation
     - Create `src/components/ConfigSection.vue` with debug mode checkbox and execution speed dropdown (Fast, Normal, Slow)
     - _Requirements: 5.4, 5.5, 5.6_
@@ -169,7 +169,7 @@ Migrate the Tomation extension sidebar panel from vanilla ES5 (panel.html + pane
     - **Property 12: Required parameter validation**
     - **Validates: Requirements 5.5**
 
-  - [ ] 9.5 Implement TestPlanView as container component
+  - [x] 9.5 Implement TestPlanView as container component
     - Create `src/components/TestPlanView.vue` with back button, runnable name/type indicator, StepChecklist, ParamForm (conditional), ConfigSection, and Run button
     - On Run click: validate params, build checked steps list, call store.startRun() and messaging.send() with RUN_TEST or RUN_AUTOMATION, navigate to Run view
     - _Requirements: 5.1, 5.7_
