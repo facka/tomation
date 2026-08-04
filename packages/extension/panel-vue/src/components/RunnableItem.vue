@@ -1,0 +1,50 @@
+<script setup lang="ts">
+import type { TestEntry, AutomationEntry } from '@/types/spec';
+
+const props = defineProps<{
+  item: TestEntry | AutomationEntry;
+  type: 'test' | 'automation';
+  isFavourite?: boolean;
+}>();
+
+const emit = defineEmits<{
+  (e: 'select'): void;
+  (e: 'quickRun'): void;
+  (e: 'toggleFavourite'): void;
+}>();
+
+function onQuickRun(event: Event) {
+  event.stopPropagation();
+  emit('quickRun');
+}
+
+function onToggleFavourite(event: Event) {
+  event.stopPropagation();
+  emit('toggleFavourite');
+}
+</script>
+
+<template>
+  <li @click="emit('select')">
+    <span class="row-label">
+      <span v-if="item.sourceFile" class="runnable-path">{{ item.sourceFile }}</span>
+      <span class="runnable-name">{{ item.name }}</span>
+    </span>
+    <button
+      v-if="type === 'automation'"
+      class="favourite-btn"
+      :data-favourite="isFavourite ? 'true' : 'false'"
+      :title="isFavourite ? 'Remove from favourites' : 'Add to favourites'"
+      @click="onToggleFavourite"
+    >
+      {{ isFavourite ? '★' : '☆' }}
+    </button>
+    <button
+      class="quick-run-btn"
+      title="Quick run with all steps and default params"
+      @click="onQuickRun"
+    >
+      ▶
+    </button>
+  </li>
+</template>

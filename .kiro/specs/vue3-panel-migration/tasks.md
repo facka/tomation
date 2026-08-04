@@ -131,7 +131,7 @@ Migrate the Tomation extension sidebar panel from vanilla ES5 (panel.html + pane
 - [ ] 7. Checkpoint - Verify store and composables
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Implement Home View components
+- [x] 8. Implement Home View components
   - [ ] 8.1 Implement LandingPage and DropZone components
     - Create `src/components/LandingPage.vue` with welcome message, get-started button, drag-drop zone, playground prompt, and documentation link
     - Create `src/components/DropZone.vue` with drag-drop event handling (useFileLoader), file validation feedback, and error display area

@@ -1,29 +1,22 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { useStore } from '@/store';
+import HomeView from '@/components/HomeView.vue';
 
-export type ViewName = 'home' | 'test-plan' | 'run';
-
-const currentView = ref<ViewName>('home');
-
-function setView(view: ViewName) {
-  currentView.value = view;
-}
+const store = useStore();
 </script>
 
 <template>
   <div class="app">
-    <!-- HomeView placeholder -->
-    <div v-if="currentView === 'home'" class="view">
-      <p>HomeView placeholder</p>
-    </div>
+    <!-- HomeView -->
+    <HomeView v-if="store.state.currentView === 'home'" />
 
     <!-- TestPlanView placeholder -->
-    <div v-if="currentView === 'test-plan'" class="view">
+    <div v-if="store.state.currentView === 'test-plan'" class="view active">
       <p>TestPlanView placeholder</p>
     </div>
 
     <!-- RunView placeholder -->
-    <div v-if="currentView === 'run'" class="view">
+    <div v-if="store.state.currentView === 'run'" class="view active">
       <p>RunView placeholder</p>
     </div>
   </div>
