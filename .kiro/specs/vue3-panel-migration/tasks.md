@@ -15,12 +15,12 @@ Migrate the Tomation extension sidebar panel from vanilla ES5 (panel.html + pane
     - Create `index.html` as minimal Vite entry with `<div id="app">` and `<script type="module" src="/src/main.ts">`
     - _Requirements: 1.1, 1.4, 1.5, 1.6_
 
-  - [ ] 1.2 Create application entry point and root component shell
+  - [x] 1.2 Create application entry point and root component shell
     - Create `src/main.ts` that imports `global.css`, creates the Vue app from `App.vue`, and mounts to `#app`
     - Create `src/App.vue` as root component with a reactive `currentView` switch using `v-if` for HomeView, TestPlanView, RunView placeholders
     - _Requirements: 1.1, 7.2_
 
-  - [ ] 1.3 Extract global stylesheet from panel.html
+  - [x] 1.3 Extract global stylesheet from panel.html
     - Create `src/styles/global.css` with CSS custom properties (design tokens), reset rules, base typography, shared utility classes (`.btn`, `.btn-primary`, `.btn-ghost`, `.btn-sm`, `.view`, `.nav-row`, `.action-bar`)
     - Extract styles directly from the `<style>` block in `packages/extension/src/panel.html`
     - _Requirements: 7.1, 7.2, 7.4_
