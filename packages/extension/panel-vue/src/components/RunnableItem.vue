@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TestEntry, AutomationEntry } from '@/types/spec';
 
-const props = defineProps<{
+defineProps<{
   item: TestEntry | AutomationEntry;
   type: 'test' | 'automation';
   isFavourite?: boolean;

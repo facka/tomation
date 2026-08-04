@@ -3,6 +3,7 @@ import { ref, computed, watch, nextTick } from 'vue';
 import { useStore } from '@/store';
 import { useRunExecution } from '@/composables/useRunExecution';
 import type { TaskHeaderStatus } from '@/types/store';
+import type { LogEntry } from '@/types/store';
 import LogEntryComponent from './LogEntry.vue';
 import TaskHeader from './TaskHeader.vue';
 
