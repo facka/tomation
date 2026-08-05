@@ -20,6 +20,8 @@ const showContext = ref(false);
 
 const runnable = computed(() => store.state.currentRunnable);
 const isRunning = computed(() => store.state.isRunning);
+const isPaused = computed(() => store.state.isPaused);
+const logEntries = computed(() => store.state.logEntries);
 const runComplete = computed(() => store.state.runSummary !== null);
 
 const displayName = computed(() => {
@@ -51,7 +53,7 @@ function closeRun() {
         <span class="runnable-name">{{ displayName }}</span>
       </h2>
       <button
-        v-if="runComplete"
+        v-if="runComplete || isPaused || (!isRunning && logEntries.length > 0)"
         class="btn btn-ghost btn-sm"
         @click="closeRun"
       >✕</button>

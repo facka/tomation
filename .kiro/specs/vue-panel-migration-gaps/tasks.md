@@ -131,7 +131,7 @@ Fix 14 functional parity gaps in the Vue 3 panel migration by implementing missi
     - In `App.vue` `handleBackgroundMessage` for `BUNDLED_SPEC_ERROR`: after setting `errorMessage`, also call `store.setView('error')`
     - _Requirements: 2.2_
 
-- [ ] 5. Implement HomeView.vue changes (quick run improvements)
+- [x] 5. Implement HomeView.vue changes (quick run improvements)
 
   - [ ] 5.1 Add required params check to `quickRunAutomation`
     - Load saved params via `loadParamValues(hostname, automationName)`
@@ -151,7 +151,7 @@ Fix 14 functional parity gaps in the Vue 3 panel migration by implementing missi
     - _Preservation: Falls back to NORMAL when no persisted config exists_
     - _Requirements: 2.6, 3.6_
 
-- [ ] 6. Implement TestPlanView.vue changes (config persistence)
+- [x] 6. Implement TestPlanView.vue changes (config persistence)
 
   - [ ] 6.1 Load persisted config on mount
     - In `TestPlanView` `onMounted`, call `getTestPlanConfig(specId, runnableIndex)`
@@ -165,7 +165,7 @@ Fix 14 functional parity gaps in the Vue 3 panel migration by implementing missi
     - _Expected_Behavior: Config saved to storage keyed by specId and runnableIndex_
     - _Requirements: 2.3_
 
-- [ ] 7. Implement RunView.vue changes (close button on pause/stop)
+- [x] 7. Implement RunView.vue changes (close button on pause/stop)
 
   - [ ] 7.1 Show close button when paused or stopped
     - Change close button `v-if` from `runComplete` to `runComplete || isPaused || (!isRunning && logEntries.length > 0)`

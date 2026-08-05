@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useStore } from '@/store';
 import { useMessaging } from '@/composables/useMessaging';
-import { buildAllStepsChecked, buildDefaultParams } from '@/logic/quickRunHelpers';
+import { buildAllStepsChecked, buildDefaultParams, hasRequiredParamsWithoutValues } from '@/logic/quickRunHelpers';
 import LandingPage from './LandingPage.vue';
 import LoadedHeader from './LoadedHeader.vue';
 import TabBar from './TabBar.vue';
@@ -27,33 +27,58 @@ function selectAutomation(automation: AutomationEntry, index: number) {
   store.setView('test-plan');
 }
 
-function quickRunTest(test: TestEntry, index: number) {
+async function quickRunTest(test: TestEntry, index: number) {
   if (!store.state.currentSpec) return;
   const runnable: Runnable = { type: 'test', index, data: test };
   store.selectRunnable(store.state.currentSpec, runnable);
 
   const checkedSteps = buildAllStepsChecked(test.steps);
+
+  // Load persisted execution speed (falls back to NORMAL if none saved)
+  const specId = store.state.currentSpec.id;
+  const savedConfig = await store.getTestPlanConfig(specId, index);
+  const executionSpeed = savedConfig?.executionSpeed ?? 'NORMAL';
+
   const config: RunConfig = {
     allowContinueOnFailure: false,
     allowRetryOnFailure: false,
-    executionSpeed: 'NORMAL',
+    executionSpeed,
   };
 
   store.startRun(config);
   send({ type: 'RUN_TEST', testIndex: index, checkedSteps, config });
 }
 
-function quickRunAutomation(automation: AutomationEntry, index: number) {
+async function quickRunAutomation(automation: AutomationEntry, index: number) {
   if (!store.state.currentSpec) return;
+  const specEntry = store.state.currentSpec;
   const runnable: Runnable = { type: 'automation', index, data: automation };
-  store.selectRunnable(store.state.currentSpec, runnable);
+  store.selectRunnable(specEntry, runnable);
+
+  // Load saved params and check if required params have values
+  const hostname = store.state.currentHostname;
+  const savedValues = hostname
+    ? await store.loadParamValues(hostname, automation.name)
+    : null;
+
+  if (hasRequiredParamsWithoutValues(automation.params, savedValues)) {
+    // Fall back to test-plan view when required params are missing
+    store.setView('test-plan');
+    return;
+  }
 
   const checkedSteps = buildAllStepsChecked(automation.steps);
-  const params = buildDefaultParams(automation.params);
+  const params = savedValues ?? buildDefaultParams(automation.params);
+
+  // Load persisted execution speed (falls back to NORMAL if none saved)
+  const specId = specEntry.id;
+  const savedConfig = await store.getTestPlanConfig(specId, index);
+  const executionSpeed = savedConfig?.executionSpeed ?? 'NORMAL';
+
   const config: RunConfig = {
     allowContinueOnFailure: false,
     allowRetryOnFailure: false,
-    executionSpeed: 'NORMAL',
+    executionSpeed,
   };
 
   store.startRun(config, params);

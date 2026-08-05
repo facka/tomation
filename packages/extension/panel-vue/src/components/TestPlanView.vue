@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useStore } from '@/store';
 import { useMessaging } from '@/composables/useMessaging';
 import StepChecklist from './StepChecklist.vue';
@@ -17,6 +17,7 @@ const paramFormRef = ref<InstanceType<typeof ParamForm> | null>(null);
 const configSectionRef = ref<InstanceType<typeof ConfigSection> | null>(null);
 const checkedSteps = ref<number[]>([]);
 const paramValues = ref<Record<string, unknown>>({});
+const persistedConfig = ref<Partial<RunConfig> | undefined>(undefined);
 
 // --- Computed ---
 
@@ -54,6 +55,19 @@ const savedParamValues = computed(() => {
   return store.state.currentProject.savedParams[runnable.value.data.name] || null;
 });
 
+// --- Lifecycle ---
+
+onMounted(async () => {
+  if (store.state.currentSpec && runnable.value) {
+    const specId = store.state.currentSpec.id;
+    const runnableIndex = runnable.value.index;
+    const config = await store.getTestPlanConfig(specId, runnableIndex);
+    if (config) {
+      persistedConfig.value = config;
+    }
+  }
+});
+
 // --- Actions ---
 
 function goBack() {
@@ -80,6 +94,13 @@ function onRun() {
   const config: RunConfig = configSectionRef.value
     ? configSectionRef.value.getConfig()
     : { allowContinueOnFailure: false, allowRetryOnFailure: false, executionSpeed: 'NORMAL' };
+
+  // Persist config to storage
+  if (store.state.currentSpec && runnable.value) {
+    const specId = store.state.currentSpec.id;
+    const runnableIndex = runnable.value.index;
+    store.saveTestPlanConfig(specId, runnableIndex, config);
+  }
 
   if (isAutomation.value && runnable.value) {
     store.startRun(config, paramValues.value);
@@ -114,7 +135,7 @@ function onRun() {
     </div>
 
     <!-- Config section -->
-    <ConfigSection ref="configSectionRef" @update:config="() => {}" />
+    <ConfigSection ref="configSectionRef" :initial-config="persistedConfig" @update:config="() => {}" />
 
     <!-- Action bar -->
     <div class="action-bar">
