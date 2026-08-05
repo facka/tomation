@@ -8,31 +8,31 @@
     "urls": [
       "https://facka.github.io/tomation"
     ],
-    "compilerVersion": "1.1.0"
+    "compilerVersion": "1.2.2"
   },
   "pageElements": {
-    "Login__usernameInput": {
+    "Login/Login__usernameInput": {
       "tag": "input",
       "label": "Username",
       "where": {
         "id": "username"
       }
     },
-    "Login__passwordInput": {
+    "Login/Login__passwordInput": {
       "tag": "input",
       "label": "Password",
       "where": {
         "id": "password"
       }
     },
-    "Login__submitButton": {
+    "Login/Login__submitButton": {
       "tag": "button",
       "label": "Submit",
       "where": {
         "id": "login-btn"
       }
     },
-    "Login__message": {
+    "Login/Login__message": {
       "tag": "div",
       "label": "Message",
       "where": {
@@ -104,16 +104,16 @@
     }
   },
   "tasks": {
-    "Login__fillCredentials": {
+    "Login/Login__fillCredentials": {
       "steps": [
         {
           "action": "type",
-          "target": "Login__usernameInput",
+          "target": "Login/Login__usernameInput",
           "value": "{{username}}"
         },
         {
           "action": "typePassword",
-          "target": "Login__passwordInput",
+          "target": "Login/Login__passwordInput",
           "value": "{{password}}"
         }
       ],
@@ -123,27 +123,27 @@
       ],
       "label": "Fill Credentials"
     },
-    "Login__fillInvalidCredentials": {
+    "Login/Login__fillInvalidCredentials": {
       "steps": [
         {
           "action": "type",
-          "target": "Login__usernameInput",
+          "target": "Login/Login__usernameInput",
           "value": "wronguser"
         },
         {
           "action": "typePassword",
-          "target": "Login__passwordInput",
+          "target": "Login/Login__passwordInput",
           "value": "wrongpass"
         }
       ],
       "params": [],
       "label": "Fill Invalid Credentials"
     },
-    "Login__submit": {
+    "Login/Login__submit": {
       "steps": [
         {
           "action": "click",
-          "target": "Login__submitButton"
+          "target": "Login/Login__submitButton"
         }
       ],
       "params": [],
@@ -226,7 +226,7 @@
       "steps": [
         {
           "action": "task",
-          "name": "Login__fillCredentials",
+          "name": "Login/Login__fillCredentials",
           "params": {
             "username": "admin",
             "password": "password123"
@@ -234,11 +234,11 @@
         },
         {
           "action": "task",
-          "name": "Login__submit"
+          "name": "Login/Login__submit"
         },
         {
           "action": "assertHasText",
-          "target": "Login__message",
+          "target": "Login/Login__message",
           "value": "Login successful"
         }
       ],
@@ -249,15 +249,15 @@
       "steps": [
         {
           "action": "task",
-          "name": "Login__fillInvalidCredentials"
+          "name": "Login/Login__fillInvalidCredentials"
         },
         {
           "action": "task",
-          "name": "Login__submit"
+          "name": "Login/Login__submit"
         },
         {
           "action": "assertHasText",
-          "target": "Login__message",
+          "target": "Login/Login__message",
           "value": "Invalid username or password"
         }
       ],
@@ -268,11 +268,11 @@
       "steps": [
         {
           "action": "click",
-          "target": "Login__submitButton"
+          "target": "Login/Login__submitButton"
         },
         {
           "action": "assertHasText",
-          "target": "Login__message",
+          "target": "Login/Login__message",
           "value": "required"
         }
       ],
