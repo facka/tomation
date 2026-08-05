@@ -384,6 +384,14 @@ async function saveParamValues(
     }
     project.savedParams[automationName] = params;
     await saveProject(hostname, project);
+
+    // Update in-memory state so the form reflects saved params immediately
+    if (state.currentProject && state.currentHostname === hostname) {
+      if (!state.currentProject.savedParams) {
+        state.currentProject.savedParams = {};
+      }
+      state.currentProject.savedParams[automationName] = params;
+    }
   } catch (err) {
     console.error('saveParamValues: failed to write params for "' + automationName + '":', err);
   }
