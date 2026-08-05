@@ -241,9 +241,9 @@ Fix 14 functional parity gaps in the Vue 3 panel migration by implementing missi
     - _Preservation: Single file drops continue to work normally_
     - _Requirements: 2.12, 3.12_
 
-- [ ] 12. Verify RunSummary.vue back-to-home button
+- [x] 12. Verify RunSummary.vue back-to-home button
 
-  - [ ] 12.1 Confirm "Back to Home" button renders in all completion states
+  - [x] 12.1 Confirm "Back to Home" button renders in all completion states
     - Verify `RunSummary.vue` has a distinct "Back to Home" button that renders for both `RUN_COMPLETE` and `RUN_STOPPED` states
     - If missing or conditional, add/fix it so it always appears below the summary alongside the ✕ close button
     - _Bug_Condition: isBugCondition(input) where input.type == 'RUN_COMPLETE_SUMMARY' AND no back-to-home button_
