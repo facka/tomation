@@ -226,6 +226,7 @@ function setStepStatus(stepIndex: number, status: StepStatus, meta?: Partial<Log
       if (meta.retryAttempt !== undefined) entry.retryAttempt = meta.retryAttempt;
       if (meta.taskPath !== undefined) entry.taskPath = meta.taskPath;
       if (meta.taskDepth !== undefined) entry.taskDepth = meta.taskDepth;
+      if (meta.resolvedContext !== undefined) entry.resolvedContext = meta.resolvedContext;
     }
   }
 }

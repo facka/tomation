@@ -38,6 +38,7 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
         value: msg.value,
         error: msg.error,
         retryAttempt: msg.retryAttempt,
+        resolvedContext: msg.resolvedContext,
       });
       if (msg.contextKey !== undefined) {
         store.updateContext(msg.contextKey, msg.savedValue);

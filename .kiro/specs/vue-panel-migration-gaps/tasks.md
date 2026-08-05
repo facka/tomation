@@ -175,7 +175,7 @@ Fix 14 functional parity gaps in the Vue 3 panel migration by implementing missi
     - _Preservation: Close button hidden during active execution; visible after runComplete_
     - _Requirements: 2.7, 3.7, 3.14_
 
-- [ ] 8. Implement LogEntry.vue changes (resolvedContext display)
+- [x] 8. Implement LogEntry.vue changes (resolvedContext display)
 
   - [ ] 8.1 Replace `{{ctx.key}}` placeholders with resolved values
     - In `valueDisplay` computed, if `entry.resolvedContext` exists and has items, iterate over each `{key, value}` and replace all `{{ctx.key}}` occurrences in the displayed string with the resolved value
@@ -194,7 +194,7 @@ Fix 14 functional parity gaps in the Vue 3 panel migration by implementing missi
     - In `store.setStepStatus`: if `meta.resolvedContext` is provided, set `entry.resolvedContext`
     - _Requirements: 2.8_
 
-- [ ] 9. Implement ContextPopup.vue changes (masking, escape, truncation)
+- [x] 9. Implement ContextPopup.vue changes (masking, escape, truncation)
 
   - [ ] 9.1 Add sensitive key masking
     - Add `isSensitiveKey(key: string): boolean` function that checks against `/password|secret|token|key|auth/i`

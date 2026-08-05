@@ -75,8 +75,25 @@ const valueDisplay = computed(() => {
   if (entry.action === 'navigate' && !entry.value) return entry.target || '';
   if (entry.action === 'wait' && !entry.value) return '';
   if (entry.action === 'manual' && !entry.value) return '';
-  if (entry.value) return '"' + entry.value + '"';
+  if (entry.value) {
+    let displayValue = entry.value;
+    // Replace {{ctx.key}} placeholders with resolved values
+    if (entry.resolvedContext && entry.resolvedContext.length > 0) {
+      for (const { key, value } of entry.resolvedContext) {
+        const placeholder = '{{ctx.' + key + '}}';
+        const replacement = value != null ? String(value) : '';
+        displayValue = displayValue.split(placeholder).join(replacement);
+      }
+    }
+    return '"' + displayValue + '"';
+  }
   return '';
+});
+
+const resolvedContextKeys = computed(() => {
+  const ctx = props.entry.resolvedContext;
+  if (!ctx || ctx.length === 0) return null;
+  return 'from ' + ctx.map(({ key }) => 'ctx.' + key).join(', ');
 });
 
 const showRetrySkip = computed(() => {
@@ -100,6 +117,8 @@ const attemptBadgeClass = computed(() => {
     >{{ targetLabel }}</span>
 
     <span v-if="valueDisplay" class="step-value">{{ valueDisplay }}</span>
+
+    <span v-if="resolvedContextKeys" class="ctx-source">{{ resolvedContextKeys }}</span>
 
     <!-- Status indicators -->
     <template v-if="entry.status === 'in-progress'">
@@ -137,5 +156,12 @@ const attemptBadgeClass = computed(() => {
 .error-text {
   color: var(--error);
   font-size: 11px;
+}
+
+.ctx-source {
+  color: var(--text-muted, #888);
+  font-size: 10px;
+  font-style: italic;
+  margin-left: 4px;
 }
 </style>
