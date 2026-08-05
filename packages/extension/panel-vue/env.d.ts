@@ -19,9 +19,16 @@ interface ChromeRuntime {
   };
 }
 
+interface ChromeEvent<T extends (...args: any[]) => void> {
+  addListener(callback: T): void;
+  removeListener(callback: T): void;
+}
+
 interface ChromeTabs {
   query(queryInfo: { active?: boolean; currentWindow?: boolean }, callback: (tabs: ChromeTab[]) => void): void;
   create(createProperties: { url: string }): void;
+  onActivated?: ChromeEvent<(...args: any[]) => void>;
+  onUpdated?: ChromeEvent<(...args: any[]) => void>;
 }
 
 interface ChromeStorageArea {
