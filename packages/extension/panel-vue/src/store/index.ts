@@ -7,7 +7,7 @@ import type {
   LogEntry,
   StoreState,
 } from '../types/store';
-import type { Spec, SpecEntry, Project } from '../types/spec';
+import type { Spec, SpecEntry, Project, Param } from '../types/spec';
 import type { StepPlanEntry } from '../types/messages';
 import { filterTests } from '../logic/filterTests';
 import { sortAutomationsWithFavourites } from '../logic/sortFavourites';
@@ -288,6 +288,151 @@ async function saveFavourites(
   }
 }
 
+// --- Test Plan Config Persistence ---
+
+const VALID_SPEEDS = ['FAST', 'NORMAL', 'SLOW'] as const;
+
+const DEFAULT_TEST_PLAN_CONFIG: RunConfig = {
+  allowContinueOnFailure: false,
+  allowRetryOnFailure: false,
+  executionSpeed: 'NORMAL',
+};
+
+/**
+ * Persist a test plan configuration to storage.
+ * Storage key format: "config:<specId>:<runnableIndex>"
+ */
+async function saveTestPlanConfig(
+  specId: string,
+  runnableIndex: number,
+  config: RunConfig,
+): Promise<void> {
+  const key = `config:${specId}:${runnableIndex}`;
+  const data: Record<string, unknown> = {};
+  data[key] = config;
+  try {
+    await storageSet(data);
+  } catch (err) {
+    console.error('saveTestPlanConfig: failed to write config for key "' + key + '":', err);
+  }
+}
+
+/**
+ * Load a persisted test plan configuration from storage.
+ * Returns null if missing; returns defaults if stored value has invalid shape.
+ */
+async function getTestPlanConfig(
+  specId: string,
+  runnableIndex: number,
+): Promise<RunConfig | null> {
+  const key = `config:${specId}:${runnableIndex}`;
+  try {
+    const result = await storageGet(key);
+    const stored = result[key] as Record<string, unknown> | undefined;
+
+    if (!stored || typeof stored !== 'object') {
+      return null;
+    }
+
+    // Validate shape
+    if (
+      typeof stored.allowContinueOnFailure !== 'boolean' ||
+      typeof stored.allowRetryOnFailure !== 'boolean' ||
+      typeof stored.executionSpeed !== 'string' ||
+      !(VALID_SPEEDS as readonly string[]).includes(stored.executionSpeed)
+    ) {
+      console.warn(
+        'getTestPlanConfig: stored config has invalid shape for key "' + key + '", returning defaults',
+      );
+      return { ...DEFAULT_TEST_PLAN_CONFIG };
+    }
+
+    return {
+      allowContinueOnFailure: stored.allowContinueOnFailure,
+      allowRetryOnFailure: stored.allowRetryOnFailure,
+      executionSpeed: stored.executionSpeed as RunConfig['executionSpeed'],
+    };
+  } catch {
+    return null;
+  }
+}
+
+// --- Param Persistence ---
+
+/**
+ * Persist the last-used parameter values for an Automation.
+ * Stores params inside the project object at project.savedParams[automationName].
+ */
+async function saveParamValues(
+  hostname: string,
+  automationName: string,
+  params: Record<string, unknown>,
+): Promise<void> {
+  try {
+    let project = await getProject(hostname);
+    if (!project) {
+      project = {
+        host: hostname,
+        name: hostname,
+        specs: [],
+        lastUsed: new Date().toISOString(),
+      };
+    }
+    if (!project.savedParams) {
+      project.savedParams = {};
+    }
+    project.savedParams[automationName] = params;
+    await saveProject(hostname, project);
+  } catch (err) {
+    console.error('saveParamValues: failed to write params for "' + automationName + '":', err);
+  }
+}
+
+/**
+ * Load saved parameter values for an Automation from project storage.
+ * Returns null if no stored values exist or on read failure.
+ */
+async function loadParamValues(
+  hostname: string,
+  automationName: string,
+): Promise<Record<string, unknown> | null> {
+  try {
+    const project = await getProject(hostname);
+    if (project?.savedParams?.[automationName]) {
+      return project.savedParams[automationName];
+    }
+    return null;
+  } catch (err) {
+    console.error('loadParamValues: failed to read params for "' + automationName + '":', err);
+    return null;
+  }
+}
+
+// --- Required Params Helper ---
+
+/**
+ * Returns true if any non-optional parameter has no saved value.
+ * A param is considered "without value" if savedValues is null,
+ * or the param's name is not in savedValues, or its value is undefined/null/empty string.
+ */
+function hasRequiredParamsWithoutValues(
+  params: Param[],
+  savedValues: Record<string, unknown> | null,
+): boolean {
+  for (const param of params) {
+    if (param.optional === true) continue;
+    if (
+      !savedValues ||
+      savedValues[param.name] === undefined ||
+      savedValues[param.name] === null ||
+      savedValues[param.name] === ''
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // --- Init helpers ---
 
 async function loadPersistedState(hostname: string): Promise<void> {
@@ -383,5 +528,12 @@ export function useStore() {
     // Init
     loadPersistedState,
     loadProjectFromStorage,
+
+    // Persistence
+    saveTestPlanConfig,
+    getTestPlanConfig,
+    saveParamValues,
+    loadParamValues,
+    hasRequiredParamsWithoutValues,
   };
 }

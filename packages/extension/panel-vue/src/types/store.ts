@@ -28,6 +28,7 @@ export interface LogEntry {
   retryAttempt?: number;
   taskPath?: Array<{ name: string; label?: string; params?: Record<string, unknown> }>;
   taskDepth?: number;
+  resolvedContext?: Array<{ key: string; value: unknown }>;
 }
 
 export interface StoreState {

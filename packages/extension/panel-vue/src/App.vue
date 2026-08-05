@@ -5,14 +5,17 @@ import { useMessaging } from '@/composables/useMessaging';
 import HomeView from '@/components/HomeView.vue';
 import TestPlanView from '@/components/TestPlanView.vue';
 import RunView from '@/components/RunView.vue';
+import ErrorView from '@/components/ErrorView.vue';
 import type { BackgroundMessage } from '@/types/messages';
 
 const store = useStore();
-const { onMessage } = useMessaging();
+const { onMessage, getActiveTabUrl, api } = useMessaging();
 
 const manualPauseDescription = ref<string | null>(null);
 
 let unsubscribe: (() => void) | null = null;
+let tabActivatedListener: (() => void) | null = null;
+let tabUpdatedListener: ((tabId: number, changeInfo: { status?: string }) => void) | null = null;
 
 function handleBackgroundMessage(msg: BackgroundMessage): void {
   switch (msg.type) {
@@ -59,6 +62,25 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
       break;
 
     case 'RUN_COMPLETE':
+      manualPauseDescription.value = null;
+      store.setRunComplete({ total: msg.total, passed: msg.passed, failed: msg.failed });
+
+      // Persist automation params on successful run (zero failures)
+      if (
+        msg.failed === 0 &&
+        store.state.automationParams !== null &&
+        store.state.currentRunnable?.type === 'automation' &&
+        store.state.currentHostname
+      ) {
+        const automationName = (store.state.currentRunnable.data as { name: string }).name;
+        store.saveParamValues(
+          store.state.currentHostname,
+          automationName,
+          store.state.automationParams as Record<string, unknown>,
+        );
+      }
+      break;
+
     case 'RUN_STOPPED':
       manualPauseDescription.value = null;
       store.setRunComplete({ total: msg.total, passed: msg.passed, failed: msg.failed });
@@ -89,6 +111,7 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
 
     case 'BUNDLED_SPEC_ERROR':
       store.state.errorMessage = msg.error || 'Could not load playground tests';
+      store.setView('error');
       break;
 
     case 'CONTEXT_STATE':
@@ -97,11 +120,45 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
   }
 }
 
+async function syncToActiveTab(): Promise<void> {
+  if (store.state.isRunning) return;
+
+  const url = await getActiveTabUrl();
+  if (!url) return;
+
+  let hostname: string | null = null;
+  try {
+    hostname = new URL(url).hostname;
+  } catch {
+    return;
+  }
+
+  if (hostname && hostname !== store.state.currentHostname) {
+    store.setHostname(hostname);
+    store.state.lastKnownTabUrl = url;
+    store.setView('home');
+    await store.loadProjectFromStorage(hostname);
+  }
+}
+
 onMounted(async () => {
   unsubscribe = onMessage(handleBackgroundMessage);
 
+  // Register tab sync listeners
+  if (api.tabs && api.tabs.onActivated) {
+    tabActivatedListener = () => { syncToActiveTab(); };
+    api.tabs.onActivated.addListener(tabActivatedListener);
+  }
+  if (api.tabs && api.tabs.onUpdated) {
+    tabUpdatedListener = (_tabId: number, changeInfo: { status?: string }) => {
+      if (changeInfo.status === 'complete') {
+        syncToActiveTab();
+      }
+    };
+    api.tabs.onUpdated.addListener(tabUpdatedListener);
+  }
+
   // Get active tab hostname and load persisted state (project, favourites, active tab)
-  const { getActiveTabUrl } = useMessaging();
   const url = await getActiveTabUrl();
   let hostname: string | null = null;
 
@@ -125,6 +182,16 @@ onUnmounted(() => {
     unsubscribe();
     unsubscribe = null;
   }
+
+  // Clean up tab sync listeners
+  if (tabActivatedListener && api.tabs?.onActivated) {
+    api.tabs.onActivated.removeListener(tabActivatedListener);
+    tabActivatedListener = null;
+  }
+  if (tabUpdatedListener && api.tabs?.onUpdated) {
+    api.tabs.onUpdated.removeListener(tabUpdatedListener);
+    tabUpdatedListener = null;
+  }
 });
 </script>
 
@@ -141,6 +208,9 @@ onUnmounted(() => {
       v-if="store.state.currentView === 'run'"
       :manual-pause-description="manualPauseDescription"
     />
+
+    <!-- ErrorView -->
+    <ErrorView v-if="store.state.currentView === 'error'" />
   </div>
 </template>
 
