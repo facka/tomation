@@ -64,6 +64,11 @@ export function useFileLoader() {
       return;
     }
 
+    if (files.length > 1) {
+      error.value = 'Only a single file can be loaded at a time';
+      return;
+    }
+
     handleFile(files[0]);
   }
 

@@ -21,6 +21,44 @@ const fileInfo = computed(() => {
   return spec.filename;
 });
 
+function getHostFromUrl(urlStr: string): string | null {
+  try {
+    const u = new URL(urlStr);
+    return u.hostname;
+  } catch {
+    try {
+      const u2 = new URL('https://' + urlStr);
+      return u2.hostname;
+    } catch {
+      return null;
+    }
+  }
+}
+
+const urlMismatchWarning = computed(() => {
+  const spec = store.state.currentSpec;
+  const hostname = store.state.currentHostname;
+  if (!spec || !hostname) return null;
+
+  const meta = spec.spec.meta;
+  if (!meta) return null;
+
+  const urls = meta.urls || (meta.url ? [meta.url] : []);
+  if (urls.length === 0) return null;
+
+  const currentHost = hostname.trim().toLowerCase();
+  const anyMatch = urls.some((u) => {
+    const h = getHostFromUrl(u);
+    return h && h.trim().toLowerCase().includes(currentHost);
+  });
+
+  if (!anyMatch) {
+    return `This spec targets ${urls.join(', ')} but current site is ${hostname}`;
+  }
+
+  return null;
+});
+
 function onReload() {
   const input = document.getElementById('spec-file-input-alt') as HTMLInputElement | null;
   if (input) {
@@ -39,6 +77,9 @@ function onFileChange(event: Event) {
 
 <template>
   <div class="loaded-header">
+    <div v-if="urlMismatchWarning" class="url-warning-banner" role="alert">
+      ⚠️ {{ urlMismatchWarning }}
+    </div>
     <div class="loaded-meta">
       <h2>{{ specName }}</h2>
       <p v-if="specDescription" class="loaded-description">{{ specDescription }}</p>
@@ -59,5 +100,16 @@ function onFileChange(event: Event) {
 <style scoped>
 #spec-file-input-alt {
   display: none;
+}
+
+.url-warning-banner {
+  background-color: var(--warning-bg, #fff3cd);
+  color: var(--warning-text, #856404);
+  border: 1px solid var(--warning-border, #ffc107);
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  margin-bottom: 8px;
 }
 </style>

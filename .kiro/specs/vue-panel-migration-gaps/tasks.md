@@ -220,7 +220,7 @@ Fix 14 functional parity gaps in the Vue 3 panel migration by implementing missi
     - _Preservation: Values ≤ 30 chars show in full without truncation_
     - _Requirements: 2.13, 3.13_
 
-- [ ] 10. Implement LoadedHeader.vue changes (URL warning banner)
+- [x] 10. Implement LoadedHeader.vue changes (URL warning banner)
 
   - [ ] 10.1 Add URL mismatch warning banner
     - Compare spec's `meta.urls` (or `meta.url`) against `store.state.currentHostname`
@@ -231,7 +231,7 @@ Fix 14 functional parity gaps in the Vue 3 panel migration by implementing missi
     - _Preservation: No banner when URLs match current hostname_
     - _Requirements: 2.11, 3.11_
 
-- [ ] 11. Implement useFileLoader.ts changes (multiple files error)
+- [x] 11. Implement useFileLoader.ts changes (multiple files error)
 
   - [ ] 11.1 Add multiple files validation in `handleDrop`
     - Before `handleFile(files[0])`, check `files.length > 1`
