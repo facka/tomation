@@ -127,7 +127,7 @@ function onRun() {
   <div class="view active" v-if="runnable">
     <!-- Navigation row -->
     <div class="nav-row">
-      <button class="btn btn-ghost btn-sm" @click="goBack">← Back</button>
+      <button class="btn btn-ghost btn-sm" @click="goBack"><font-awesome-icon :icon="['fas', 'arrow-left']" aria-hidden="true" /> Back</button>
       <h2>
         <span v-if="sourceFile" class="runnable-path">{{ sourceFile }}</span>
         <span class="runnable-name">{{ displayName }}</span>
@@ -139,7 +139,7 @@ function onRun() {
 
     <!-- Action bar -->
     <div class="action-bar">
-      <button class="btn btn-primary" @click="onRun">▶ Run</button>
+      <button class="btn btn-primary" @click="onRun"><font-awesome-icon :icon="['fas', 'play']" aria-hidden="true" /> Run</button>
     </div>
 
     <!-- Parameter form (only for automations with params) -->

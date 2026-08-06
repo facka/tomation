@@ -37,14 +37,15 @@ function onToggleFavourite(event: Event) {
       :title="isFavourite ? 'Remove from favourites' : 'Add to favourites'"
       @click="onToggleFavourite"
     >
-      {{ isFavourite ? '★' : '☆' }}
+      <font-awesome-icon v-if="isFavourite" :icon="['fas', 'star']" />
+      <font-awesome-icon v-else :icon="['far', 'star']" />
     </button>
     <button
       class="quick-run-btn"
       title="Quick run with all steps and default params"
       @click="onQuickRun"
     >
-      ▶
+      <font-awesome-icon :icon="['fas', 'play']" />
     </button>
   </li>
 </template>

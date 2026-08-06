@@ -55,8 +55,9 @@ function closeRun() {
       <button
         v-if="runComplete || isPaused || (!isRunning && logEntries.length > 0)"
         class="btn btn-ghost btn-sm"
+        title="Close"
         @click="closeRun"
-      >✕</button>
+      ><font-awesome-icon :icon="['fas', 'xmark']" /></button>
     </div>
 
     <!-- Controller bar (during execution) -->
@@ -67,7 +68,7 @@ function closeRun() {
 
     <!-- Manual pause banner -->
     <div v-if="props.manualPauseDescription" class="manual-pause-banner">
-      <span class="pause-icon">⏸</span>
+      <span class="pause-icon"><font-awesome-icon :icon="['fas', 'pause']" /></span>
       <span class="pause-text">{{ props.manualPauseDescription }}</span>
     </div>
 

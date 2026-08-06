@@ -63,7 +63,7 @@ onUnmounted(() => {
   <div class="context-popup">
     <div class="context-popup-header">
       <span>Context Store</span>
-      <button class="btn btn-ghost btn-sm" @click="emit('close')">✕</button>
+      <button class="btn btn-ghost btn-sm" title="Close" @click="emit('close')"><font-awesome-icon :icon="['fas', 'xmark']" /></button>
     </div>
 
     <div v-if="isEmpty" class="ctx-empty">No context values stored yet.</div>

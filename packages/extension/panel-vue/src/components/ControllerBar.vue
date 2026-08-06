@@ -14,23 +14,23 @@ const emit = defineEmits<{
       class="btn btn-sm"
       :disabled="!isRunning || isPaused"
       @click="pause"
-    >⏸ Pause</button>
+    ><font-awesome-icon :icon="['fas', 'pause']" aria-hidden="true" /> Pause</button>
 
     <button
       class="btn btn-sm"
       :disabled="!isRunning || !isPaused"
       @click="resume"
-    >▶ Resume</button>
+    ><font-awesome-icon :icon="['fas', 'play']" aria-hidden="true" /> Resume</button>
 
     <button
       class="btn btn-sm btn-danger"
       :disabled="!isRunning"
       @click="stop"
-    >⏹ Stop</button>
+    ><font-awesome-icon :icon="['fas', 'stop']" aria-hidden="true" /> Stop</button>
 
     <button
       class="btn btn-sm btn-ghost"
       @click="emit('toggleContext')"
-    >📋 Context</button>
+    ><font-awesome-icon :icon="['fas', 'clipboard-list']" aria-hidden="true" /> Context</button>
   </div>
 </template>

@@ -24,7 +24,7 @@ function goHome() {
       <template v-if="skipped > 0"> | Skipped: {{ skipped }}</template>
     </div>
     <div class="run-done-actions">
-      <button class="btn btn-primary" @click="goHome">← Back to Home</button>
+      <button class="btn btn-primary" @click="goHome"><font-awesome-icon :icon="['fas', 'arrow-left']" aria-hidden="true" /> Back to Home</button>
     </div>
   </div>
 </template>

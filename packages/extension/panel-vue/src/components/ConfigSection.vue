@@ -62,7 +62,7 @@ defineExpose({ getConfig });
         type="button"
         class="info-btn"
         title="When enabled, failed steps can be retried or skipped without stopping the test run."
-      >ℹ</button>
+      ><font-awesome-icon :icon="['fas', 'circle-info']" /></button>
     </div>
 
     <div class="config-row">

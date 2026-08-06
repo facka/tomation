@@ -122,18 +122,18 @@ const attemptBadgeClass = computed(() => {
 
     <!-- Status indicators -->
     <template v-if="entry.status === 'in-progress'">
-      <span class="spinner">⟳</span>
+      <span class="spinner"><font-awesome-icon :icon="['fas', 'spinner']" spin /></span>
     </template>
 
     <template v-if="entry.status === 'pass'">
-      <span> ✓</span>
+      <span> <font-awesome-icon :icon="['fas', 'check']" /></span>
       <span v-if="entry.retryAttempt" class="attempt-badge" :class="attemptBadgeClass">
         Attempt {{ entry.retryAttempt }}
       </span>
     </template>
 
     <template v-if="entry.status === 'fail'">
-      <span> ✗</span>
+      <span> <font-awesome-icon :icon="['fas', 'xmark']" /></span>
       <span v-if="entry.retryAttempt" class="attempt-badge" :class="attemptBadgeClass">
         Attempt {{ entry.retryAttempt }}
       </span>
@@ -141,7 +141,7 @@ const attemptBadgeClass = computed(() => {
     </template>
 
     <template v-if="entry.status === 'skipped'">
-      <span class="skipped-badge"> ⊘ Skipped</span>
+      <span class="skipped-badge"> <font-awesome-icon :icon="['fas', 'ban']" /> Skipped</span>
     </template>
   </div>
 

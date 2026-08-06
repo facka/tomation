@@ -78,7 +78,7 @@ function onFileChange(event: Event) {
 <template>
   <div class="loaded-header">
     <div v-if="urlMismatchWarning" class="url-warning-banner" role="alert">
-      ⚠️ {{ urlMismatchWarning }}
+      <font-awesome-icon :icon="['fas', 'triangle-exclamation']" aria-hidden="true" /> {{ urlMismatchWarning }}
     </div>
     <div class="loaded-meta">
       <h2>{{ specName }}</h2>
@@ -86,7 +86,7 @@ function onFileChange(event: Event) {
       <p class="loaded-file-info">{{ fileInfo }}</p>
     </div>
     <div class="loaded-actions">
-      <button class="btn btn-sm btn-ghost" title="Load another spec" @click="onReload">⟳</button>
+      <button class="btn btn-sm btn-ghost" title="Load another spec" @click="onReload"><font-awesome-icon :icon="['fas', 'rotate-right']" /></button>
       <input
         type="file"
         id="spec-file-input-alt"

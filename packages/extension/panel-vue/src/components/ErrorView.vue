@@ -12,7 +12,7 @@ function dismiss(): void {
 <template>
   <div class="error-view">
     <div class="error-card">
-      <div class="error-icon">⚠️</div>
+      <div class="error-icon"><font-awesome-icon :icon="['fas', 'triangle-exclamation']" /></div>
       <p class="error-message">{{ store.state.errorMessage }}</p>
       <button class="dismiss-btn" @click="dismiss">Dismiss</button>
     </div>

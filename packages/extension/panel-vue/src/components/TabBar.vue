@@ -11,14 +11,14 @@ const store = useStore();
       :class="{ active: store.state.activeTab === 'tests' }"
       @click="store.setActiveTab('tests')"
     >
-      ☑ Tests
+      <font-awesome-icon :icon="['fas', 'list-check']" aria-hidden="true" /> Tests
     </button>
     <button
       class="tab-btn"
       :class="{ active: store.state.activeTab === 'automations' }"
       @click="store.setActiveTab('automations')"
     >
-      ⚡ Automations
+      <font-awesome-icon :icon="['fas', 'bolt']" aria-hidden="true" /> Automations
     </button>
   </div>
 </template>
