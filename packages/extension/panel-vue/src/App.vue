@@ -9,13 +9,11 @@ import ErrorView from '@/components/ErrorView.vue';
 import type { BackgroundMessage } from '@/types/messages';
 
 const store = useStore();
-const { onMessage, getActiveTabUrl, api } = useMessaging();
+const { onMessage, getActiveTabUrl } = useMessaging();
 
 const manualPauseDescription = ref<string | null>(null);
 
 let unsubscribe: (() => void) | null = null;
-let tabActivatedListener: (() => void) | null = null;
-let tabUpdatedListener: ((tabId: number, changeInfo: { status?: string }) => void) | null = null;
 
 function handleBackgroundMessage(msg: BackgroundMessage): void {
   switch (msg.type) {
@@ -99,6 +97,21 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
 
     case 'TAB_URL_UPDATE':
       store.state.lastKnownTabUrl = msg.url;
+      if (!store.state.isRunning && msg.url) {
+        try {
+          const newHostname = new URL(msg.url).hostname;
+          if (newHostname && newHostname !== store.state.currentHostname) {
+            store.setHostname(newHostname);
+            store.state.currentProject = null;
+            store.state.currentSpec = null;
+            store.state.favourites = {};
+            store.setView('home');
+            store.loadProjectFromStorage(newHostname);
+          }
+        } catch {
+          // malformed URL — ignore
+        }
+      }
       break;
 
     case 'MANUAL_PAUSE':
@@ -121,43 +134,9 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
   }
 }
 
-async function syncToActiveTab(): Promise<void> {
-  if (store.state.isRunning) return;
-
-  const url = await getActiveTabUrl();
-  if (!url) return;
-
-  let hostname: string | null = null;
-  try {
-    hostname = new URL(url).hostname;
-  } catch {
-    return;
-  }
-
-  if (hostname && hostname !== store.state.currentHostname) {
-    store.setHostname(hostname);
-    store.state.lastKnownTabUrl = url;
-    store.setView('home');
-    await store.loadProjectFromStorage(hostname);
-  }
-}
 
 onMounted(async () => {
   unsubscribe = onMessage(handleBackgroundMessage);
-
-  // Register tab sync listeners
-  if (api.tabs && api.tabs.onActivated) {
-    tabActivatedListener = () => { syncToActiveTab(); };
-    api.tabs.onActivated.addListener(tabActivatedListener);
-  }
-  if (api.tabs && api.tabs.onUpdated) {
-    tabUpdatedListener = (_tabId: number, changeInfo: { status?: string }) => {
-      if (changeInfo.status === 'complete') {
-        syncToActiveTab();
-      }
-    };
-    api.tabs.onUpdated.addListener(tabUpdatedListener);
-  }
 
   // Get active tab hostname and load persisted state (project, favourites, active tab)
   const url = await getActiveTabUrl();
@@ -182,16 +161,6 @@ onUnmounted(() => {
   if (unsubscribe) {
     unsubscribe();
     unsubscribe = null;
-  }
-
-  // Clean up tab sync listeners
-  if (tabActivatedListener && api.tabs?.onActivated) {
-    api.tabs.onActivated.removeListener(tabActivatedListener);
-    tabActivatedListener = null;
-  }
-  if (tabUpdatedListener && api.tabs?.onUpdated) {
-    api.tabs.onUpdated.removeListener(tabUpdatedListener);
-    tabUpdatedListener = null;
   }
 });
 </script>
