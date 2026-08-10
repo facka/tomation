@@ -212,8 +212,8 @@ This plan implements a "Lab" tab in the Tomation browser extension side panel th
     - Persist `'lab'` as active tab value in `chrome.storage.local`
     - _Requirements: 1.1, 1.2, 1.3, 1.5_
 
-- [ ] 10. Integration wiring — message handling in panel
-  - [ ] 10.1 Wire background messages to Lab store in App.vue
+- [x] 10. Integration wiring — message handling in panel
+  - [x] 10.1 Wire background messages to Lab store in App.vue
     - Handle `INSPECTOR_INJECTED` — update inspectMode on success, show error on failure
     - Handle `NODE_SELECTED` — call `setSelectedNode()` with received data, set inspectMode to false
     - Handle `INSPECT_CANCELLED` — set inspectMode to false
