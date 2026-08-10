@@ -1,5 +1,6 @@
 import type { RunConfig } from './store';
 import type { Spec } from './spec';
+import type { AIConfig } from './lab';
 
 // Messages sent FROM panel TO background
 export type PanelMessage =
@@ -11,7 +12,11 @@ export type PanelMessage =
   | { type: 'PAUSE' }
   | { type: 'CONTINUE' }
   | { type: 'LOAD_BUNDLED_SPEC' }
-  | { type: 'GET_CONTEXT' };
+  | { type: 'GET_CONTEXT' }
+  | { type: 'INJECT_INSPECTOR' }
+  | { type: 'REMOVE_INSPECTOR' }
+  | { type: 'GENERATE_POM'; htmlContext: string; contextMode: 'full' | 'subtree'; aiConfig: AIConfig }
+  | { type: 'GET_PAGE_HTML' };
 
 // Messages sent FROM background TO panel
 export type BackgroundMessage =
@@ -27,7 +32,14 @@ export type BackgroundMessage =
   | { type: 'MANUAL_PAUSE'; description: string }
   | { type: 'BUNDLED_SPEC_LOADED'; filename: string; spec: Spec }
   | { type: 'BUNDLED_SPEC_ERROR'; error: string }
-  | { type: 'CONTEXT_STATE'; store: Record<string, unknown> };
+  | { type: 'CONTEXT_STATE'; store: Record<string, unknown> }
+  | { type: 'INSPECTOR_INJECTED'; success: boolean; error?: string }
+  | { type: 'NODE_SELECTED'; tagName: string; attributes: Record<string, string>; outerHTML: string; childElementCount: number }
+  | { type: 'INSPECT_CANCELLED' }
+  | { type: 'PAGE_HTML'; html?: string; error?: string }
+  | { type: 'POM_GENERATED'; code: string; pomName: string }
+  | { type: 'POM_GENERATION_ERROR'; provider: string; status?: number; error: string }
+  | { type: 'POM_GENERATION_TIMEOUT' };
 
 export interface StepPlanEntry {
   action: string;
