@@ -203,7 +203,7 @@ This plan implements a "Lab" tab in the Tomation browser extension side panel th
     - Hide section when no generated code exists
     - _Requirements: 5.6, 5.10, 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 9. HomeView and TabBar modifications
+- [x] 9. HomeView and TabBar modifications
   - [ ] 9.1 Extend TabBar and HomeView to include Lab tab
     - Add "Lab" button to `TabBar.vue` after the Automations button
     - Update `store.setActiveTab` type and the `activeTab` type to accept `'lab'`
