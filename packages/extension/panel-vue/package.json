@@ -1,0 +1,25 @@
+{
+  "name": "tomation-panel-vue",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^7.3.1",
+    "@fortawesome/free-regular-svg-icons": "^7.3.1",
+    "@fortawesome/free-solid-svg-icons": "^7.3.1",
+    "@fortawesome/vue-fontawesome": "^3.3.3",
+    "vue": "3.4.38"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "5.1.4",
+    "typescript": "5.5.4",
+    "vite": "5.4.8",
+    "vite-plugin-singlefile": "2.0.2",
+    "vue-tsc": "2.1.6"
+  }
+}

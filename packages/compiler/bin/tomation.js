@@ -274,6 +274,17 @@ function runPipeline(cwd, options) {
       if (resolvedPath && fileToNamespace[resolvedPath]) {
         importMap[imp.localName] = fileToNamespace[resolvedPath];
         log('    ' + imp.localName + ' → ' + fileToNamespace[resolvedPath] + ' (from ' + imp.importPath + ')');
+      } else if (resolvedPath && !fileToNamespace[resolvedPath]) {
+        // Import resolves to a file but it's not a known POM — might be a non-POM import (ok to skip)
+        log('    ' + imp.localName + ' → (not a POM, skipped) (from ' + imp.importPath + ')');
+      } else {
+        // Import cannot be resolved — warn if it looks like a POM import (not from node_modules)
+        log('    ' + imp.localName + ' → (unresolved) (from ' + imp.importPath + ')');
+        allWarnings.push({
+          message: 'Cannot resolve import "' + imp.importPath + '" in ' + path.basename(rpf.filePath) + '. If this imports a POM file, use the ~/ alias path (e.g., import ' + imp.localName + ' from \'~/pom/...\') for correct namespace resolution.',
+          filePath: rpf.filePath,
+          line: 0,
+        });
       }
     }
 
@@ -356,6 +367,55 @@ function runPipeline(cwd, options) {
   var specTaskCount = Object.keys(spec.tasks || {}).length;
   var specTestCount = (spec.tests || []).length;
   log('  ✓ Flattened: ' + specElemCount + ' elements, ' + specTaskCount + ' tasks, ' + specTestCount + ' tests');
+
+  // Step 5b: detect unresolved task references
+  // If a test/automation step references a task name that doesn't exist in the tasks map,
+  // it likely means the import path is missing the ~/ prefix for proper namespace resolution.
+  log('  Checking for unresolved task references...');
+  var specTasks = spec.tasks || {};
+
+  // Check task steps within other tasks (nested task calls)
+  var taskKeys = Object.keys(specTasks);
+  for (var tci = 0; tci < taskKeys.length; tci++) {
+    var taskDef = specTasks[taskKeys[tci]];
+    if (!taskDef || !taskDef.steps) continue;
+    for (var tsi = 0; tsi < taskDef.steps.length; tsi++) {
+      var tStep = taskDef.steps[tsi];
+      if (tStep.action === 'task' && tStep.name && tStep.name.indexOf('__') !== -1) {
+        if (!specTasks[tStep.name]) {
+          var parentTask = taskKeys[tci];
+          var tImportVar = tStep.name.split('__')[0];
+          allWarnings.push({
+            message: 'Unresolved task reference "' + tStep.name + '" in task "' + parentTask + '" — task not found in spec. Check that the import for "' + tImportVar + '" uses the ~/ alias path (e.g., import ' + tImportVar + ' from \'~/pom/...\') so the namespace resolves correctly.',
+            filePath: '',
+            line: 0,
+          });
+        }
+      }
+    }
+  }
+
+  // Check test and automation steps
+  var allRunnables = (spec.tests || []).concat(spec.automations || []);
+  for (var uri = 0; uri < allRunnables.length; uri++) {
+    var runnable = allRunnables[uri];
+    if (!runnable || !runnable.steps) continue;
+    var runnableSteps = runnable.steps;
+    for (var usi = 0; usi < runnableSteps.length; usi++) {
+      var uStep = runnableSteps[usi];
+      if (uStep.action === 'task' && uStep.name && uStep.name.indexOf('__') !== -1) {
+        if (!specTasks[uStep.name]) {
+          var runnableName = runnable.name || 'unknown';
+          var importVar = uStep.name.split('__')[0];
+          allWarnings.push({
+            message: 'Unresolved task reference "' + uStep.name + '" in "' + runnableName + '" — task not found in spec. Check that the import for "' + importVar + '" uses the ~/ alias path (e.g., import ' + importVar + ' from \'~/pom/...\') so the namespace resolves correctly.',
+            filePath: runnable.sourceFile || '',
+            line: 0,
+          });
+        }
+      }
+    }
+  }
 
   // Step 6: validate
   log('Step 6/6: Validating spec');
