@@ -36,17 +36,17 @@ This plan implements a "Lab" tab in the Tomation browser extension side panel th
     - Generate random sequences of setSelectedNode and clearSelectedNode calls; assert state always holds exactly the last selection or null
     - **Validates: Requirements 2.6**
 
-- [ ] 2. Build system changes
-  - [ ] 2.1 Add `tomation-ai.md` bundling to build.js
+- [x] 2. Build system changes
+  - [x] 2.1 Add `tomation-ai.md` bundling to build.js
     - Copy `tomation-ai.md` from project root into `bundled/tomation-ai.md` in each target directory
     - Add existence check that fails the build with a clear error if the source file is missing
     - _Requirements: 7.1, 7.3, 7.4_
 
-  - [ ] 2.2 Add `inspector.js` to SHARED_FILES in build.js
+  - [x] 2.2 Add `inspector.js` to SHARED_FILES in build.js
     - Add `'src/inspector.js'` to the SHARED_FILES array so it's copied to both Chrome and Firefox dist
     - _Requirements: 8.1, 8.2, 8.5_
 
-  - [ ] 2.3 Update manifest generation for new permissions and resources
+  - [x] 2.3 Update manifest generation for new permissions and resources
     - Add `"scripting"` to Chrome MV3 permissions in `chromeManifest()`
     - Add `web_accessible_resources` for `bundled/tomation-ai.md` in Chrome manifest (MV3 format with resources array)
     - Add `web_accessible_resources` for `bundled/tomation-ai.md` in Firefox manifest (MV2 string array format)
