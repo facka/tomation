@@ -1998,16 +1998,8 @@ function handleInjectInspector() {
       return;
     }
     var tabId = tabs[0].id;
-    var isFirefox = typeof browser !== 'undefined';
 
-    if (isFirefox) {
-      // Firefox MV2: browser.tabs.executeScript
-      browser.tabs.executeScript(tabId, { file: 'src/inspector.js' }).then(function () {
-        safeSendMessage({ type: 'INSPECTOR_INJECTED', success: true });
-      }).catch(function (err) {
-        safeSendMessage({ type: 'INSPECTOR_INJECTED', success: false, error: err.message || String(err) });
-      });
-    } else {
+    if (chrome && chrome.scripting && chrome.scripting.executeScript) {
       // Chrome MV3: chrome.scripting.executeScript
       chrome.scripting.executeScript({
         target: { tabId: tabId },
@@ -2017,6 +2009,15 @@ function handleInjectInspector() {
       }).catch(function (err) {
         safeSendMessage({ type: 'INSPECTOR_INJECTED', success: false, error: err.message || String(err) });
       });
+    } else if (typeof browser !== 'undefined' && browser.tabs && browser.tabs.executeScript) {
+      // Firefox MV2: browser.tabs.executeScript
+      browser.tabs.executeScript(tabId, { file: 'src/inspector.js' }).then(function () {
+        safeSendMessage({ type: 'INSPECTOR_INJECTED', success: true });
+      }).catch(function (err) {
+        safeSendMessage({ type: 'INSPECTOR_INJECTED', success: false, error: err.message || String(err) });
+      });
+    } else {
+      safeSendMessage({ type: 'INSPECTOR_INJECTED', success: false, error: 'No script injection API available' });
     }
   });
 }
@@ -2029,19 +2030,17 @@ function handleRemoveInspector() {
   api.tabs.query({ active: true, currentWindow: true }, function (tabs) {
     if (!tabs || !tabs[0]) return;
     var tabId = tabs[0].id;
-    var isFirefox = typeof browser !== 'undefined';
 
-    var cleanupCode = 'if (typeof __tomationInspectorCleanup === "function") { __tomationInspectorCleanup(); }';
-
-    if (isFirefox) {
-      browser.tabs.executeScript(tabId, { code: cleanupCode }).catch(function () {});
-    } else {
+    if (chrome && chrome.scripting && chrome.scripting.executeScript) {
       chrome.scripting.executeScript({
         target: { tabId: tabId },
         func: function () {
           if (typeof __tomationInspectorCleanup === 'function') { __tomationInspectorCleanup(); }
         }
       }).catch(function () {});
+    } else if (typeof browser !== 'undefined' && browser.tabs && browser.tabs.executeScript) {
+      var cleanupCode = 'if (typeof __tomationInspectorCleanup === "function") { __tomationInspectorCleanup(); }';
+      browser.tabs.executeScript(tabId, { code: cleanupCode }).catch(function () {});
     }
   });
 }
@@ -2058,17 +2057,8 @@ function handleGetPageHtml() {
       return;
     }
     var tabId = tabs[0].id;
-    var isFirefox = typeof browser !== 'undefined';
 
-    if (isFirefox) {
-      // Firefox MV2: browser.tabs.executeScript with code
-      browser.tabs.executeScript(tabId, { code: 'document.documentElement.outerHTML' }).then(function (results) {
-        var html = results && results[0] ? results[0] : '';
-        safeSendMessage({ type: 'PAGE_HTML', html: html });
-      }).catch(function (err) {
-        safeSendMessage({ type: 'PAGE_HTML', error: err.message || String(err) });
-      });
-    } else {
+    if (chrome && chrome.scripting && chrome.scripting.executeScript) {
       // Chrome MV3: chrome.scripting.executeScript with func
       chrome.scripting.executeScript({
         target: { tabId: tabId },
@@ -2079,6 +2069,16 @@ function handleGetPageHtml() {
       }).catch(function (err) {
         safeSendMessage({ type: 'PAGE_HTML', error: err.message || String(err) });
       });
+    } else if (typeof browser !== 'undefined' && browser.tabs && browser.tabs.executeScript) {
+      // Firefox MV2: browser.tabs.executeScript with code
+      browser.tabs.executeScript(tabId, { code: 'document.documentElement.outerHTML' }).then(function (results) {
+        var html = results && results[0] ? results[0] : '';
+        safeSendMessage({ type: 'PAGE_HTML', html: html });
+      }).catch(function (err) {
+        safeSendMessage({ type: 'PAGE_HTML', error: err.message || String(err) });
+      });
+    } else {
+      safeSendMessage({ type: 'PAGE_HTML', error: 'No script execution API available' });
     }
   });
 }
