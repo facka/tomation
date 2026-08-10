@@ -60,8 +60,8 @@ This plan implements a "Lab" tab in the Tomation browser extension side panel th
 - [ ] 3. Checkpoint
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. Content script (inspector.js)
-  - [ ] 4.1 Create `packages/extension/src/inspector.js` with overlay and event handling
+- [x] 4. Content script (inspector.js)
+  - [x] 4.1 Create `packages/extension/src/inspector.js` with overlay and event handling
     - Implement `createOverlay()` — creates a positioned absolute div with colored border, high z-index, pointer-events:none
     - Implement `positionOverlay(element)` — reads `getBoundingClientRect()` and positions overlay to match
     - Implement `removeOverlay()` — removes the overlay div from the DOM
