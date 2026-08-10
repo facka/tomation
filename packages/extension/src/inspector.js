@@ -119,4 +119,7 @@
   document.addEventListener('mousemove', onMouseMove, true);
   document.addEventListener('click', onClick, true);
   document.addEventListener('keydown', onKeyDown, true);
+
+  // Expose cleanup globally so background script can call it via REMOVE_INSPECTOR
+  window.__tomationInspectorCleanup = cleanup;
 })();

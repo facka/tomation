@@ -83,25 +83,25 @@ This plan implements a "Lab" tab in the Tomation browser extension side panel th
     - Generate DOM elements with arbitrary tag names, attributes, and children; simulate click; verify message payload matches element data
     - **Validates: Requirements 2.3, 2.4**
 
-- [ ] 5. Background script message handlers
-  - [ ] 5.1 Add inspector injection handler to background.js
+- [x] 5. Background script message handlers
+  - [x] 5.1 Add inspector injection handler to background.js
     - Handle `INJECT_INSPECTOR` message: detect browser API (browser vs chrome), call `scripting.executeScript` (Chrome MV3) or `tabs.executeScript` (Firefox MV2) to inject `src/inspector.js` into active tab
     - Send `INSPECTOR_INJECTED` response with `{ success: true }` or `{ success: false, error: reason }` on failure
     - Handle `REMOVE_INSPECTOR` message: inject a cleanup snippet or send message to content script
     - _Requirements: 8.1, 8.2, 8.3, 8.4_
 
-  - [ ] 5.2 Add NODE_SELECTED and INSPECT_CANCELLED relay in background.js
+  - [x] 5.2 Add NODE_SELECTED and INSPECT_CANCELLED relay in background.js
     - Listen for `NODE_SELECTED` messages from content script and relay to panel via `safeSendMessage`
     - Listen for `INSPECT_CANCELLED` messages from content script and relay to panel
     - Handle `GET_PAGE_HTML` by executing script in active tab to capture `document.documentElement.outerHTML` and send `PAGE_HTML` response
     - _Requirements: 2.4, 4.2, 4.5_
 
-  - [ ] 5.3 Add skills file loader utility in background.js
+  - [x] 5.3 Add skills file loader utility in background.js
     - Implement `loadSkillsFile()` that fetches `chrome.runtime.getURL('bundled/tomation-ai.md')` and returns the text content
     - Cache the result after first load (file is static within a build)
     - _Requirements: 7.2, 5.3_
 
-  - [ ] 5.4 Add AI gateway and GENERATE_POM handler in background.js
+  - [x] 5.4 Add AI gateway and GENERATE_POM handler in background.js
     - Handle `GENERATE_POM` message: load skills file, construct prompt (system = skills content + generation instruction, user = HTML context)
     - Call provider adapter to build HTTP request, execute fetch with 60-second AbortController timeout
     - On success: extract code block from response, send `POM_GENERATED` with `{ code, pomName }`

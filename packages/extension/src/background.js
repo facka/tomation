@@ -1928,6 +1928,30 @@ function loadBundledSpec() {
 }
 
 // ---------------------------------------------------------------------------
+// Skills File Loader
+// ---------------------------------------------------------------------------
+
+var skillsFileCache = null;
+
+/**
+ * Load the bundled tomation-ai.md skills file from the extension package.
+ * Returns a Promise that resolves with the text content.
+ * Caches the result after first load since the file is static within a build.
+ */
+function loadSkillsFile() {
+  if (skillsFileCache !== null) {
+    return Promise.resolve(skillsFileCache);
+  }
+  var skillsUrl = api.runtime.getURL('bundled/tomation-ai.md');
+  return fetch(skillsUrl)
+    .then(function(response) { return response.text(); })
+    .then(function(text) {
+      skillsFileCache = text;
+      return text;
+    });
+}
+
+// ---------------------------------------------------------------------------
 // Tab URL Notifier
 // ---------------------------------------------------------------------------
 
@@ -1956,6 +1980,372 @@ function initTabUrlNotifier() {
       }
     });
   }
+}
+
+// ---------------------------------------------------------------------------
+// Inspector Injection Handlers
+// ---------------------------------------------------------------------------
+
+/**
+ * Handle INJECT_INSPECTOR message: inject src/inspector.js into the active tab.
+ * Detects browser API (Firefox uses browser.tabs.executeScript, Chrome uses
+ * chrome.scripting.executeScript) and sends INSPECTOR_INJECTED response.
+ */
+function handleInjectInspector() {
+  api.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+    if (!tabs || !tabs[0]) {
+      safeSendMessage({ type: 'INSPECTOR_INJECTED', success: false, error: 'No active tab found' });
+      return;
+    }
+    var tabId = tabs[0].id;
+    var isFirefox = typeof browser !== 'undefined';
+
+    if (isFirefox) {
+      // Firefox MV2: browser.tabs.executeScript
+      browser.tabs.executeScript(tabId, { file: 'src/inspector.js' }).then(function () {
+        safeSendMessage({ type: 'INSPECTOR_INJECTED', success: true });
+      }).catch(function (err) {
+        safeSendMessage({ type: 'INSPECTOR_INJECTED', success: false, error: err.message || String(err) });
+      });
+    } else {
+      // Chrome MV3: chrome.scripting.executeScript
+      chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        files: ['src/inspector.js']
+      }).then(function () {
+        safeSendMessage({ type: 'INSPECTOR_INJECTED', success: true });
+      }).catch(function (err) {
+        safeSendMessage({ type: 'INSPECTOR_INJECTED', success: false, error: err.message || String(err) });
+      });
+    }
+  });
+}
+
+/**
+ * Handle REMOVE_INSPECTOR message: inject a cleanup snippet into the active tab
+ * that calls the inspector's cleanup function to remove listeners and overlay.
+ */
+function handleRemoveInspector() {
+  api.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+    if (!tabs || !tabs[0]) return;
+    var tabId = tabs[0].id;
+    var isFirefox = typeof browser !== 'undefined';
+
+    var cleanupCode = 'if (typeof __tomationInspectorCleanup === "function") { __tomationInspectorCleanup(); }';
+
+    if (isFirefox) {
+      browser.tabs.executeScript(tabId, { code: cleanupCode }).catch(function () {});
+    } else {
+      chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        func: function () {
+          if (typeof __tomationInspectorCleanup === 'function') { __tomationInspectorCleanup(); }
+        }
+      }).catch(function () {});
+    }
+  });
+}
+
+/**
+ * Handle GET_PAGE_HTML message: execute a script in the active tab to capture
+ * the full page HTML (document.documentElement.outerHTML) and send a PAGE_HTML
+ * response to the panel.
+ */
+function handleGetPageHtml() {
+  api.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+    if (!tabs || !tabs[0]) {
+      safeSendMessage({ type: 'PAGE_HTML', error: 'No active tab found' });
+      return;
+    }
+    var tabId = tabs[0].id;
+    var isFirefox = typeof browser !== 'undefined';
+
+    if (isFirefox) {
+      // Firefox MV2: browser.tabs.executeScript with code
+      browser.tabs.executeScript(tabId, { code: 'document.documentElement.outerHTML' }).then(function (results) {
+        var html = results && results[0] ? results[0] : '';
+        safeSendMessage({ type: 'PAGE_HTML', html: html });
+      }).catch(function (err) {
+        safeSendMessage({ type: 'PAGE_HTML', error: err.message || String(err) });
+      });
+    } else {
+      // Chrome MV3: chrome.scripting.executeScript with func
+      chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        func: function () { return document.documentElement.outerHTML; }
+      }).then(function (results) {
+        var html = results && results[0] && results[0].result ? results[0].result : '';
+        safeSendMessage({ type: 'PAGE_HTML', html: html });
+      }).catch(function (err) {
+        safeSendMessage({ type: 'PAGE_HTML', error: err.message || String(err) });
+      });
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
+// AI Gateway — Provider Adapters (Task 5.4)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build an HTTP request object for the given AI provider.
+ *
+ * @param {object} aiConfig - { provider, endpointUrl, apiKey, model }
+ * @param {string} systemPrompt - The system/instruction prompt
+ * @param {string} userPrompt - The user message (HTML context)
+ * @returns {object} - { url, headers, body } ready for fetch
+ */
+function buildProviderRequest(aiConfig, systemPrompt, userPrompt) {
+  switch (aiConfig.provider) {
+    case 'anthropic':
+      return buildAnthropicRequest(aiConfig, systemPrompt, userPrompt);
+    case 'gemini':
+      return buildGeminiRequest(aiConfig, systemPrompt, userPrompt);
+    case 'custom':
+      return buildCustomRequest(aiConfig, systemPrompt, userPrompt);
+    case 'openai':
+    default:
+      return buildOpenAIRequest(aiConfig, systemPrompt, userPrompt);
+  }
+}
+
+/**
+ * Build request for OpenAI-compatible API.
+ */
+function buildOpenAIRequest(config, systemPrompt, userPrompt) {
+  return {
+    url: config.endpointUrl,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + config.apiKey
+    },
+    body: JSON.stringify({
+      model: config.model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ]
+    })
+  };
+}
+
+/**
+ * Build request for Anthropic API.
+ */
+function buildAnthropicRequest(config, systemPrompt, userPrompt) {
+  return {
+    url: config.endpointUrl,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': config.apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: config.model,
+      max_tokens: 4096,
+      system: systemPrompt,
+      messages: [
+        { role: 'user', content: userPrompt }
+      ]
+    })
+  };
+}
+
+/**
+ * Build request for Google Gemini API.
+ */
+function buildGeminiRequest(config, systemPrompt, userPrompt) {
+  var url = config.endpointUrl + '/models/' + config.model + ':generateContent?key=' + config.apiKey;
+  return {
+    url: url,
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      contents: [
+        { role: 'user', parts: [{ text: userPrompt }] }
+      ],
+      systemInstruction: { parts: [{ text: systemPrompt }] }
+    })
+  };
+}
+
+/**
+ * Build request for a custom OpenAI-compatible endpoint.
+ */
+function buildCustomRequest(config, systemPrompt, userPrompt) {
+  return {
+    url: config.endpointUrl,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + config.apiKey
+    },
+    body: JSON.stringify({
+      model: config.model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ]
+    })
+  };
+}
+
+/**
+ * Parse the AI provider response JSON and extract the generated text.
+ *
+ * @param {string} provider - 'openai' | 'anthropic' | 'gemini' | 'custom'
+ * @param {object} json - The parsed response body
+ * @returns {string} - The text content from the response
+ */
+function parseProviderResponse(provider, json) {
+  switch (provider) {
+    case 'anthropic':
+      return parseAnthropicResponse(json);
+    case 'gemini':
+      return parseGeminiResponse(json);
+    case 'custom':
+      return parseCustomResponse(json);
+    case 'openai':
+    default:
+      return parseOpenAIResponse(json);
+  }
+}
+
+/**
+ * Extract text from OpenAI response format.
+ */
+function parseOpenAIResponse(json) {
+  return json.choices[0].message.content;
+}
+
+/**
+ * Extract text from Anthropic response format.
+ */
+function parseAnthropicResponse(json) {
+  return json.content[0].text;
+}
+
+/**
+ * Extract text from Google Gemini response format.
+ */
+function parseGeminiResponse(json) {
+  return json.candidates[0].content.parts[0].text;
+}
+
+/**
+ * Extract text from custom (OpenAI-compatible) response format.
+ */
+function parseCustomResponse(json) {
+  return json.choices[0].message.content;
+}
+
+/**
+ * Extract the first markdown code block from a string.
+ * Looks for triple backtick fences with optional language tag.
+ * Returns the inner content without fences.
+ * If no code block is found, returns the full text.
+ *
+ * @param {string} text - The AI response text
+ * @returns {string} - Extracted code or the full text
+ */
+function extractCodeBlock(text) {
+  var match = text.match(/```(?:[a-zA-Z]*)\n?([\s\S]*?)```/);
+  if (match && match[1]) {
+    return match[1].trim();
+  }
+  return text;
+}
+
+/**
+ * Extract a POM name from the generated code.
+ * Looks for `export default` followed by an identifier, or a variable
+ * assignment preceding the export.
+ * Falls back to 'generated' if no name can be determined.
+ *
+ * @param {string} code - The generated POM code
+ * @returns {string} - The derived POM name
+ */
+function extractPomName(code) {
+  // Pattern: export default SomeName
+  var defaultMatch = code.match(/export\s+default\s+([A-Za-z_$][A-Za-z0-9_$]*)/);
+  if (defaultMatch && defaultMatch[1]) {
+    return defaultMatch[1];
+  }
+  // Pattern: const/var/let SomeName = ... ; export default SomeName
+  var constMatch = code.match(/(?:const|var|let)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=[\s\S]*?export\s+default\s+\1/);
+  if (constMatch && constMatch[1]) {
+    return constMatch[1];
+  }
+  return 'generated';
+}
+
+/**
+ * Handle GENERATE_POM message: load skills, construct prompt, call AI provider,
+ * parse response, and send result back to the panel.
+ *
+ * @param {object} message - { type, htmlContext, contextMode, aiConfig }
+ */
+function handleGeneratePom(message) {
+  var htmlContext = message.htmlContext;
+  var aiConfig = message.aiConfig;
+
+  loadSkillsFile().then(function (skillsContent) {
+    var systemPrompt = skillsContent + '\n\nGenerate a .pom.ts file for the following HTML. Export a default object with element descriptors using the is.TAG.where(matcher).as(label) pattern and any reusable Tasks.';
+    var userPrompt = htmlContext;
+
+    var request = buildProviderRequest(aiConfig, systemPrompt, userPrompt);
+
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function () {
+      controller.abort();
+    }, 60000);
+
+    fetch(request.url, {
+      method: 'POST',
+      headers: request.headers,
+      body: request.body,
+      signal: controller.signal
+    }).then(function (response) {
+      clearTimeout(timeoutId);
+      if (!response.ok) {
+        return response.text().then(function (errText) {
+          safeSendMessage({
+            type: 'POM_GENERATION_ERROR',
+            provider: aiConfig.provider,
+            status: response.status,
+            error: errText
+          });
+        });
+      }
+      return response.json().then(function (json) {
+        var text = parseProviderResponse(aiConfig.provider, json);
+        var code = extractCodeBlock(text);
+        var pomName = extractPomName(code);
+        safeSendMessage({
+          type: 'POM_GENERATED',
+          code: code,
+          pomName: pomName
+        });
+      });
+    }).catch(function (err) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        safeSendMessage({ type: 'POM_GENERATION_TIMEOUT' });
+      } else {
+        safeSendMessage({
+          type: 'POM_GENERATION_ERROR',
+          provider: aiConfig.provider,
+          error: err.message || String(err)
+        });
+      }
+    });
+  }).catch(function (err) {
+    safeSendMessage({
+      type: 'POM_GENERATION_ERROR',
+      provider: aiConfig.provider,
+      error: 'Failed to load skills file: ' + (err.message || String(err))
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -2015,6 +2405,24 @@ function handleMessage(message, sender, sendResponse) {
       break;
     case 'LOAD_BUNDLED_SPEC':
       loadBundledSpec();
+      break;
+    case 'INJECT_INSPECTOR':
+      handleInjectInspector();
+      break;
+    case 'REMOVE_INSPECTOR':
+      handleRemoveInspector();
+      break;
+    case 'NODE_SELECTED':
+      safeSendMessage(message);
+      break;
+    case 'INSPECT_CANCELLED':
+      safeSendMessage(message);
+      break;
+    case 'GET_PAGE_HTML':
+      handleGetPageHtml();
+      break;
+    case 'GENERATE_POM':
+      handleGeneratePom(message);
       break;
     // STEP_RESULT is handled inline by sendStepToRuntime via its own listener.
     // RUNTIME_READY for navigation is handled inline by handleNavigateStep.
@@ -2252,6 +2660,16 @@ if (typeof module !== 'undefined' && module.exports) {
     handlePanelConnect: handlePanelConnect,
     initMessageRouter: initMessageRouter,
     loadBundledSpec: loadBundledSpec,
+    loadSkillsFile: loadSkillsFile,
+    skillsFileCache: skillsFileCache,
+    handleInjectInspector: handleInjectInspector,
+    handleRemoveInspector: handleRemoveInspector,
+    handleGetPageHtml: handleGetPageHtml,
+    handleGeneratePom: handleGeneratePom,
+    buildProviderRequest: buildProviderRequest,
+    parseProviderResponse: parseProviderResponse,
+    extractCodeBlock: extractCodeBlock,
+    extractPomName: extractPomName,
     initTabUrlNotifier: initTabUrlNotifier
   };
 }
