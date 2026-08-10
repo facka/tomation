@@ -20,5 +20,12 @@ const store = useStore();
     >
       <font-awesome-icon :icon="['fas', 'bolt']" aria-hidden="true" /> Automations
     </button>
+    <button
+      class="tab-btn"
+      :class="{ active: store.state.activeTab === 'lab' }"
+      @click="store.setActiveTab('lab')"
+    >
+      <font-awesome-icon :icon="['fas', 'flask']" aria-hidden="true" /> Lab
+    </button>
   </div>
 </template>
