@@ -114,8 +114,8 @@ This plan implements a "Lab" tab in the Tomation browser extension side panel th
     - Generate arbitrary HTML context strings; verify constructed prompt contains the full skills content as system message and HTML as user message
     - **Validates: Requirements 5.3**
 
-- [ ] 6. AI provider adapters
-  - [ ] 6.1 Implement provider adapter functions in background.js
+- [x] 6. AI provider adapters
+  - [x] 6.1 Implement provider adapter functions in background.js
     - Implement `buildOpenAIRequest(config, systemPrompt, userPrompt)` — returns `{ url, headers: { Authorization: Bearer }, body: { model, messages } }`
     - Implement `buildAnthropicRequest(config, systemPrompt, userPrompt)` — returns `{ url, headers: { x-api-key, anthropic-version }, body: { model, system, messages } }`
     - Implement `buildGeminiRequest(config, systemPrompt, userPrompt)` — returns `{ url: endpoint/models/{model}:generateContent?key=, headers, body: { contents, systemInstruction } }`
@@ -142,7 +142,7 @@ This plan implements a "Lab" tab in the Tomation browser extension side panel th
 - [ ] 7. Checkpoint
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Vue components — Lab tab UI
+- [x] 8. Vue components — Lab tab UI
   - [ ] 8.1 Create `LabView.vue` container component
     - Import and render `InspectSection`, `NodePreview`, `AIConfigSection`, `GenerateSection`, `CodeOutput`
     - Call `loadAIConfig()` on mount to restore persisted configuration
