@@ -254,7 +254,7 @@ function setContextStore(store: Record<string, unknown>): void {
   state.contextStore = store;
 }
 
-function setActiveTab(tab: 'tests' | 'automations'): void {
+function setActiveTab(tab: 'tests' | 'automations' | 'lab'): void {
   state.activeTab = tab;
   // Persist active tab to storage
   storageSet({ home_active_tab: tab }).catch((err) => {
@@ -459,8 +459,8 @@ async function loadPersistedState(hostname: string): Promise<void> {
   try {
     const result = await storageGet('home_active_tab');
     const tab = result['home_active_tab'];
-    if (tab === 'tests' || tab === 'automations') {
-      state.activeTab = tab as 'tests' | 'automations';
+    if (tab === 'tests' || tab === 'automations' || tab === 'lab') {
+      state.activeTab = tab as 'tests' | 'automations' | 'lab';
     }
   } catch {
     // silent fail
@@ -494,8 +494,8 @@ async function loadProjectFromStorage(hostname: string): Promise<void> {
   try {
     const result = await storageGet('home_active_tab');
     const tab = result['home_active_tab'];
-    if (tab === 'tests' || tab === 'automations') {
-      state.activeTab = tab as 'tests' | 'automations';
+    if (tab === 'tests' || tab === 'automations' || tab === 'lab') {
+      state.activeTab = tab as 'tests' | 'automations' | 'lab';
     }
   } catch {
     // silent fail

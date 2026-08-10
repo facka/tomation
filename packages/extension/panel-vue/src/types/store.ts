@@ -40,7 +40,7 @@ export interface StoreState {
   currentRunnable: Runnable | null;
 
   // Home view
-  activeTab: 'tests' | 'automations';
+  activeTab: 'tests' | 'automations' | 'lab';
   favourites: Record<string, boolean>;
   searchQuery: string;
 
@@ -88,7 +88,7 @@ export interface StoreActions {
   setContextStore(store: Record<string, unknown>): void;
 
   // Tab & search
-  setActiveTab(tab: 'tests' | 'automations'): void;
+  setActiveTab(tab: 'tests' | 'automations' | 'lab'): void;
   setSearchQuery(query: string): void;
 }
 
