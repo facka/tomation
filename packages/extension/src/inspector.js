@@ -93,13 +93,14 @@
     }
 
     var nodeData = {
+      type: 'NODE_SELECTED',
       tagName: el.tagName,
       attributes: attributes,
       outerHTML: el.outerHTML,
       childElementCount: el.childElementCount
     };
 
-    sendMessage({ type: 'NODE_SELECTED', payload: nodeData });
+    sendMessage(nodeData);
     cleanup();
   }
 
@@ -109,7 +110,7 @@
    */
   function onKeyDown(e) {
     if (e.key === 'Escape') {
-      sendMessage({ type: 'INSPECT_CANCELLED', payload: {} });
+      sendMessage({ type: 'INSPECT_CANCELLED' });
       cleanup();
     }
   }
