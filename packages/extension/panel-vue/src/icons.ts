@@ -17,6 +17,7 @@ import {
   faArrowLeft,
   faTriangleExclamation,
   faRotateRight,
+  faFlask,
 } from '@fortawesome/free-solid-svg-icons';
 
 // Regular icons
@@ -39,4 +40,5 @@ library.add(
   faArrowLeft,
   faTriangleExclamation,
   faRotateRight,
+  faFlask,
 );
