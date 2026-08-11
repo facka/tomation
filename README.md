@@ -112,6 +112,26 @@ Open the Tomation browser extension panel, load your `.tomation.json`, and run t
 - **Folder-based namespacing** — Organize POM files in folders without naming conflicts
 - **Browser extension runtime** — Execute tests directly in the browser with visual feedback
 - **Watch mode** — `npx tomation watch` for live recompilation during development
+- **Lab: AI-Powered POM Generator** — Point, click, generate. Select any element on the page and let AI write your Page Object Model files for you.
+
+## Lab — AI-Powered POM Generation
+
+The **Lab** tab in the Tomation extension turns the tedious task of writing element selectors into a single click. Instead of manually inspecting the DOM, copying attributes, and hand-crafting POM files, you visually select a component and let your preferred AI service generate production-ready code in seconds.
+
+### How It Works
+
+1. **Inspect** — Toggle inspect mode and hover over any element on the page. A visual overlay highlights what's under your cursor.
+2. **Select** — Click to capture the element and its full subtree.
+3. **Generate** — Hit "Generate POM" and Tomation sends the structural HTML (with sensitive data stripped) to your configured AI provider.
+4. **Use** — Copy or download the generated `.pom.ts` file and drop it into your test project.
+
+### Why It Matters
+
+- **Zero boilerplate** — Stop writing repetitive `is.TAG.where(...)` patterns by hand.
+- **Smart actions** — The AI doesn't just map elements. It analyzes the component and generates reusable Task functions for common workflows (login, search, navigation, CRUD operations).
+- **Privacy-first** — HTML is sanitized before it leaves your browser. User-entered values, emails, URLs with query params, and script contents are stripped or redacted.
+- **Bring your own AI** — Works with OpenAI, Anthropic, Google Gemini, or any OpenAI-compatible endpoint. Your key, your choice.
+- **Cross-browser** — Works on Chrome and Firefox using the same extension.
 
 ## DSL Reference
 
