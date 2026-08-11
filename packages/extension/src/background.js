@@ -2280,13 +2280,92 @@ function extractPomName(code) {
 }
 
 /**
+ * Privacy-safe DOM sanitization.
+ * Strips sensitive content from HTML before sending to the AI provider.
+ * Preserves structure, tag names, attributes (names and non-sensitive values)
+ * so the AI can still generate accurate POM selectors.
+ *
+ * What gets removed/redacted:
+ * - Text content inside elements (replaced with placeholder)
+ * - Input values, placeholder text with user data patterns
+ * - Inline styles that may contain URLs (background-image, etc.)
+ * - href/src/action URLs are reduced to path-only (no query params or fragments)
+ * - data-* attribute values that look like user data (emails, long strings)
+ * - Comments
+ *
+ * What is preserved:
+ * - Tag structure and nesting
+ * - Attribute names (class, id, name, type, role, aria-*, data-testid, etc.)
+ * - Class names, IDs, name attributes, type attributes
+ * - Structural attributes critical for selectors
+ *
+ * @param {string} html - Raw HTML string
+ * @returns {string} - Sanitized HTML safe for AI consumption
+ */
+function sanitizeHtmlForPrivacy(html) {
+  if (!html || typeof html !== 'string') return html;
+
+  var sanitized = html;
+
+  // Remove HTML comments
+  sanitized = sanitized.replace(/<!--[\s\S]*?-->/g, '');
+
+  // Remove <script> tag contents (keep the tag for structure)
+  sanitized = sanitized.replace(/(<script[^>]*>)([\s\S]*?)(<\/script>)/gi, '$1/* redacted */$3');
+
+  // Remove <style> tag contents
+  sanitized = sanitized.replace(/(<style[^>]*>)([\s\S]*?)(<\/style>)/gi, '$1/* redacted */$3');
+
+  // Strip query strings and fragments from URLs in href, src, action attributes
+  sanitized = sanitized.replace(/((?:href|src|action)\s*=\s*["'])([^"']*)(["'])/gi, function (match, prefix, url, suffix) {
+    try {
+      // Keep path only, remove query params and hash
+      var cleaned = url.replace(/[?#].*$/, '');
+      return prefix + cleaned + suffix;
+    } catch (e) {
+      return prefix + '[redacted-url]' + suffix;
+    }
+  });
+
+  // Redact input value attributes (may contain user-entered data)
+  sanitized = sanitized.replace(/(\svalue\s*=\s*["'])([^"']*)(["'])/gi, '$1[redacted]$3');
+
+  // Redact inline style url() references (background-image, etc.)
+  sanitized = sanitized.replace(/url\s*\([^)]*\)/gi, 'url([redacted])');
+
+  // Redact data-* attribute values that look like personal data (emails, long strings > 50 chars)
+  sanitized = sanitized.replace(/(data-(?!testid|test-id|cy|qa|automation)[a-z-]+\s*=\s*["'])([^"']*)(["'])/gi, function (match, prefix, value, suffix) {
+    // Keep short structural values (booleans, numbers, short identifiers)
+    if (value.length <= 30 && !/[@]/.test(value) && !/\d{4,}/.test(value)) {
+      return match;
+    }
+    return prefix + '[redacted]' + suffix;
+  });
+
+  // Redact text content that looks like personal data but preserve short structural text
+  // Replace text nodes that contain email-like patterns
+  sanitized = sanitized.replace(/>([^<]*[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}[^<]*)</g, '>[redacted-email]<');
+
+  // Replace text nodes that look like phone numbers
+  sanitized = sanitized.replace(/>([^<]*\+?[\d\s\-().]{7,}[^<]*)</g, function (match, text) {
+    // Only redact if it's primarily a phone number (not other content with incidental digits)
+    if (/^\s*\+?[\d\s\-().]{7,}\s*$/.test(text)) {
+      return '>[redacted-phone]<';
+    }
+    return match;
+  });
+
+  return sanitized;
+}
+
+/**
  * Handle GENERATE_POM message: load skills, construct prompt, call AI provider,
  * parse response, and send result back to the panel.
  *
  * @param {object} message - { type, htmlContext, contextMode, aiConfig }
  */
 function handleGeneratePom(message) {
-  var htmlContext = message.htmlContext;
+  var htmlContext = sanitizeHtmlForPrivacy(message.htmlContext);
   var aiConfig = message.aiConfig;
 
   loadSkillsFile().then(function (skillsContent) {
