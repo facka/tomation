@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
@@ -15,6 +16,63 @@
         radial-gradient(circle at 18% 12%, rgba(34,197,94,0.2), transparent 36%),
         radial-gradient(circle at 84% 0%, rgba(52,211,153,0.16), transparent 35%),
         linear-gradient(160deg, #020617 0%, #020b1c 45%, #020617 100%);
+    }
+
+    .code-scroll::-webkit-scrollbar {
+      height: 8px;
+      width: 8px;
+    }
+
+    .code-scroll::-webkit-scrollbar-track {
+      background: #0b1327;
+      border-radius: 999px;
+    }
+
+    .code-scroll::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 999px;
+    }
+
+    pre[class*="language-"] {
+      margin: 0;
+      background: transparent;
+      border: 0;
+      padding: 0;
+      text-shadow: none;
+    }
+
+    code[class*="language-"] {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      line-height: 21px;
+      text-shadow: none;
+    }
+
+    #source-code-view {
+      display: block;
+      padding: 6px;
+    }
+
+    .source-file-tab {
+      border: 1px solid #334155;
+      background: rgba(15, 23, 42, 0.8);
+      color: #cbd5e1;
+    }
+
+    .source-file-tab.active {
+      border-color: rgba(52, 211, 153, 0.7);
+      background: rgba(16, 185, 129, 0.2);
+      color: #a7f3d0;
+    }
+
+    .source-hidden {
+      display: none;
+    }
+
+    @media (min-width: 1024px) {
+      .source-hidden {
+        display: block;
+      }
     }
   </style>
 </head>
@@ -62,15 +120,206 @@
     <a href="index.html" class="min-h-[44px] flex items-center border-b-2 border-emerald-400 text-sm font-medium text-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900 rounded">Navigation</a>
   </nav>
 
-  <main class="mx-auto flex min-h-[calc(100dvh-130px)] w-full max-w-xl items-center px-5 py-10">
-    <section class="w-full rounded-3xl border border-emerald-500/25 bg-slate-900/70 p-7 text-center shadow-[0_0_0_1px_rgba(34,197,94,0.18),0_20px_80px_rgba(2,6,23,0.7)] backdrop-blur">
-      <div class="mb-5 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300" id="step-indicator">Step 3 of 3</div>
-      <h1 class="mb-4 text-3xl font-bold tracking-tight text-white" id="page-title">Confirmation</h1>
-      <div class="mb-5 rounded-xl border border-emerald-400/40 bg-emerald-500/15 px-4 py-3 text-sm font-medium text-emerald-200" id="success-message">Wizard completed successfully!</div>
-      <p class="mx-auto mb-7 max-w-md text-sm leading-6 text-slate-300" id="page-description">You have reached the final step. The wizard flow is now complete.</p>
-      <a href="index.html" class="inline-flex rounded-xl border border-slate-600 bg-slate-900 px-5 py-2.5 text-sm font-semibold text-slate-100 transition hover:border-emerald-400/60" id="restart-btn">Start Over</a>
-    </section>
+  <main class="mx-auto min-h-[calc(100dvh-130px)] w-full max-w-7xl px-5 py-8 lg:py-10">
+    <div class="mb-4 flex rounded-xl border border-slate-700 bg-slate-900/80 p-1 lg:hidden" role="tablist" aria-label="Playground view mode">
+      <button id="app-tab" type="button" role="tab" aria-controls="app-panel" aria-selected="true" class="min-h-[44px] flex-1 rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-emerald-950">App</button>
+      <button id="source-tab" type="button" role="tab" aria-controls="source-panel" aria-selected="false" class="min-h-[44px] flex-1 rounded-lg px-3 py-2 text-sm font-semibold text-slate-300">Test Source</button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6 lg:items-start">
+      <section id="app-panel" role="tabpanel" aria-labelledby="app-tab" class="w-full rounded-3xl border border-emerald-500/25 bg-slate-900/70 p-7 text-center shadow-[0_0_0_1px_rgba(34,197,94,0.18),0_20px_80px_rgba(2,6,23,0.7)] backdrop-blur">
+        <div class="mb-5 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300" id="step-indicator">Step 3 of 3</div>
+        <h1 class="mb-4 text-3xl font-bold tracking-tight text-white" id="page-title">Confirmation</h1>
+        <div class="mb-5 rounded-xl border border-emerald-400/40 bg-emerald-500/15 px-4 py-3 text-sm font-medium text-emerald-200" id="success-message">Wizard completed successfully!</div>
+        <p class="mx-auto mb-7 max-w-md text-sm leading-6 text-slate-300" id="page-description">You have reached the final step. The wizard flow is now complete.</p>
+        <a href="index.html" class="inline-flex rounded-xl border border-slate-600 bg-slate-900 px-5 py-2.5 text-sm font-semibold text-slate-100 transition hover:border-emerald-400/60" id="restart-btn">Start Over</a>
+      </section>
+
+      <section id="source-panel" role="tabpanel" aria-labelledby="source-tab" class="source-hidden rounded-3xl border border-slate-700/80 bg-slate-900/70 shadow-[0_0_0_1px_rgba(34,197,94,0.12),0_20px_80px_rgba(2,6,23,0.65)] backdrop-blur">
+        <div class="flex items-center justify-between border-b border-slate-700/80 px-4 py-3">
+          <h2 class="text-sm font-semibold tracking-wide text-emerald-300">Test Source</h2>
+          <div class="flex items-center gap-2">
+            <span id="source-file-badge" class="rounded-md border border-slate-600 px-2 py-1 text-xs text-slate-300">navigation.test.ts</span>
+            <button id="source-copy-btn" type="button" class="min-h-[32px] rounded-md border border-slate-600 px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:border-emerald-400/70 hover:text-emerald-200">Copy</button>
+          </div>
+        </div>
+        <div class="border-b border-slate-700/80 px-2 py-2">
+          <div id="source-file-tabs" class="flex min-h-[44px] items-center gap-2 overflow-x-auto">
+            <button type="button" data-file="test" class="source-file-tab active rounded-md px-3 py-2 text-xs font-medium">navigation.test.ts</button>
+            <button type="button" data-file="pom" class="source-file-tab rounded-md px-3 py-2 text-xs font-medium">pom/navigation.pom.ts</button>
+          </div>
+        </div>
+        <pre class="code-scroll overflow-x-auto p-4 text-slate-200"><code id="source-code-view" class="language-typescript"></code></pre>
+      </section>
+    </div>
   </main>
+  <script>
+    (function() {
+      var appTab = document.getElementById('app-tab');
+      var sourceTab = document.getElementById('source-tab');
+      var appPanel = document.getElementById('app-panel');
+      var sourcePanel = document.getElementById('source-panel');
+
+      if (!appTab || !sourceTab || !appPanel || !sourcePanel) return;
+
+      function setView(view) {
+        var isApp = view === 'app';
+
+        appTab.setAttribute('aria-selected', isApp ? 'true' : 'false');
+        sourceTab.setAttribute('aria-selected', isApp ? 'false' : 'true');
+
+        appTab.className = isApp
+          ? 'min-h-[44px] flex-1 rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-emerald-950'
+          : 'min-h-[44px] flex-1 rounded-lg px-3 py-2 text-sm font-semibold text-slate-300';
+        sourceTab.className = isApp
+          ? 'min-h-[44px] flex-1 rounded-lg px-3 py-2 text-sm font-semibold text-slate-300'
+          : 'min-h-[44px] flex-1 rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-emerald-950';
+
+        if (window.matchMedia('(min-width: 1024px)').matches) {
+          appPanel.style.display = 'block';
+          sourcePanel.style.display = 'block';
+          return;
+        }
+
+        appPanel.style.display = isApp ? 'block' : 'none';
+        sourcePanel.style.display = isApp ? 'none' : 'block';
+      }
+
+      appTab.addEventListener('click', function() { setView('app'); });
+      sourceTab.addEventListener('click', function() { setView('source'); });
+      window.addEventListener('resize', function() {
+        setView(appTab.getAttribute('aria-selected') === 'true' ? 'app' : 'source');
+      });
+
+      setView('app');
+    })();
+  </script>
+  <script>
+    (function() {
+      var sourceFiles = {
+        test: {
+          name: 'navigation.test.ts',
+          code: `import { Test, Navigate, Wait } from '@tomationjs/dsl'
+import Navigation from '~/pom/navigation.pom'
+
+Test('Full wizard navigation flow', () => {
+  Navigate('navigation/index.html')
+  Wait(500)
+  Navigation.verifyStep1()
+  Navigate('page2.html')
+  Wait(500)
+  Navigation.verifyStep2()
+  Navigate('page3.html')
+  Wait(500)
+  Navigation.verifyStep3()
+})
+
+Test('Navigate directly to confirmation page', () => {
+  Navigate('./navigation/page3.html')
+  Wait(300)
+  Navigation.verifyStep3()
+})`
+        },
+        pom: {
+          name: 'pom/navigation.pom.ts',
+          code: `import { is, idIs, Task, AssertHasText } from '@tomationjs/dsl'
+
+const pageTitle = is.H1.where(idIs('page-title')).as('Page Title')
+const stepIndicator = is.DIV.where(idIs('step-indicator')).as('Step Indicator')
+const successMessage = is.DIV.where(idIs('success-message')).as('Success Message')
+
+const verifyStep1 = Task(() => {
+  AssertHasText(pageTitle, 'Welcome to the Wizard')
+  AssertHasText(stepIndicator, 'Step 1 of 3')
+}).as('Verify Step 1')
+
+const verifyStep2 = Task(() => {
+  AssertHasText(pageTitle, 'Provide Your Information')
+  AssertHasText(stepIndicator, 'Step 2 of 3')
+}).as('Verify Step 2')
+
+const verifyStep3 = Task(() => {
+  AssertHasText(pageTitle, 'Confirmation')
+  AssertHasText(successMessage, 'Wizard completed successfully')
+  AssertHasText(stepIndicator, 'Step 3 of 3')
+}).as('Verify Step 3')
+
+export default { pageTitle, stepIndicator, successMessage, verifyStep1, verifyStep2, verifyStep3 }`
+        }
+      };
+
+      var tabContainer = document.getElementById('source-file-tabs');
+      var codeView = document.getElementById('source-code-view');
+      var badge = document.getElementById('source-file-badge');
+      var copyBtn = document.getElementById('source-copy-btn');
+      var activeFileKey = 'test';
+      if (!tabContainer || !codeView || !badge) return;
+
+      function setSourceFile(fileKey) {
+        var file = sourceFiles[fileKey];
+        if (!file) return;
+        activeFileKey = fileKey;
+
+        badge.textContent = file.name;
+        codeView.textContent = file.code;
+
+        var buttons = tabContainer.querySelectorAll('button[data-file]');
+        for (var i = 0; i < buttons.length; i += 1) {
+          var isActive = buttons[i].getAttribute('data-file') === fileKey;
+          buttons[i].classList.toggle('active', isActive);
+        }
+
+        if (window.Prism && typeof window.Prism.highlightElement === 'function') {
+          window.Prism.highlightElement(codeView);
+        }
+      }
+
+      tabContainer.addEventListener('click', function(event) {
+        var btn = event.target.closest('button[data-file]');
+        if (!btn) return;
+        setSourceFile(btn.getAttribute('data-file'));
+      });
+
+      if (copyBtn) {
+        copyBtn.addEventListener('click', function() {
+          var current = sourceFiles[activeFileKey];
+          if (!current) return;
+
+          function onCopyDone() {
+            var originalLabel = copyBtn.textContent;
+            copyBtn.textContent = 'Copied';
+            setTimeout(function() {
+              copyBtn.textContent = originalLabel;
+            }, 1200);
+          }
+
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            navigator.clipboard.writeText(current.code).then(onCopyDone).catch(function() {});
+            return;
+          }
+
+          var textArea = document.createElement('textarea');
+          textArea.value = current.code;
+          document.body.appendChild(textArea);
+          textArea.select();
+          try {
+            document.execCommand('copy');
+            onCopyDone();
+          } catch (error) {
+            // Ignore clipboard fallback errors.
+          }
+          document.body.removeChild(textArea);
+        });
+      }
+
+      setSourceFile('test');
+      window.addEventListener('load', function() {
+        setSourceFile(activeFileKey);
+      });
+    })();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
   <script>
     // Mobile nav menu toggle
     (function() {
