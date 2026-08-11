@@ -137,6 +137,8 @@ function sendGenerateRequest(htmlContext: string) {
       {{ labState.isGenerating ? 'Generating…' : 'Generate POM' }}
     </button>
 
+    <p class="ai-disclaimer">AI can make mistakes. Please review the generated code.</p>
+
     <!-- Error -->
     <p v-if="generateError" class="generate-error">{{ generateError }}</p>
   </div>
@@ -181,5 +183,12 @@ function sendGenerateRequest(htmlContext: string) {
   padding: 6px 8px;
   background: var(--error-soft);
   border-radius: var(--radius-sm);
+}
+
+.ai-disclaimer {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 0;
+  font-style: italic;
 }
 </style>

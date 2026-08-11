@@ -2369,7 +2369,7 @@ function handleGeneratePom(message) {
   var aiConfig = message.aiConfig;
 
   loadSkillsFile().then(function (skillsContent) {
-    var systemPrompt = skillsContent + '\n\nGenerate a .pom.ts file for the following HTML. Export a default object with element descriptors using the is.TAG.where(matcher).as(label) pattern and any reusable Tasks.';
+    var systemPrompt = skillsContent + '\n\nGenerate a .pom.ts file for the following HTML. Export a default object with element descriptors using the is.TAG.where(matcher).as(label) pattern.\n\nBeyond just mapping visible elements, analyze the page semantics and generate useful Task functions that represent common user workflows on this component. For example:\n- If you see a login form, generate a `login(username, password)` Task that fills fields and submits\n- If you see a list with delete buttons, generate `deleteItem(name)` and `getItemCount()` Tasks\n- If you see a navigation menu, generate `navigateTo(section)` Task\n- If you see a search input, generate `search(query)` Task\n- If you see a modal/dialog, generate `confirm()` and `dismiss()` Tasks\n- If you see a table, generate `getRowByColumn(column, value)` Task\n- If you see pagination, generate `goToPage(n)` and `nextPage()` Tasks\n\nThink about what a QA engineer would want to do with this component and provide those high-level actions as Tasks. Each Task should combine multiple element interactions into a single meaningful operation.';
     var userPrompt = htmlContext;
 
     var request = buildProviderRequest(aiConfig, systemPrompt, userPrompt);
