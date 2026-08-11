@@ -39,6 +39,7 @@ function chromeManifest() {
   return Object.assign({}, BASE_MANIFEST, {
     manifest_version: 3,
     permissions: BASE_MANIFEST.permissions.concat(['sidePanel', 'scripting']),
+    host_permissions: ['<all_urls>'],
     background: {
       service_worker: 'src/background.js'
     },
