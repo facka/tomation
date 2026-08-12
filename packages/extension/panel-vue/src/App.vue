@@ -11,7 +11,7 @@ import type { BackgroundMessage } from '@/types/messages';
 
 const store = useStore();
 const lab = useLabStore();
-const { onMessage, getActiveTabUrl } = useMessaging();
+const { send, onMessage, getActiveTabUrl } = useMessaging();
 
 const manualPauseDescription = ref<string | null>(null);
 
@@ -99,6 +99,11 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
 
     case 'TAB_URL_UPDATE':
       store.state.lastKnownTabUrl = msg.url;
+      // Deactivate inspect mode when the user navigates away — tell the content script to clean up
+      if (lab.labState.inspectMode) {
+        send({ type: 'REMOVE_INSPECTOR' });
+        lab.setInspectMode(false);
+      }
       if (!store.state.isRunning && msg.url) {
         try {
           const newHostname = new URL(msg.url).hostname;

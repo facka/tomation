@@ -67,6 +67,7 @@
     document.removeEventListener('mousemove', onMouseMove, true);
     document.removeEventListener('click', onClick, true);
     document.removeEventListener('keydown', onKeyDown, true);
+    document.removeEventListener('visibilitychange', onVisibilityChange);
     api.runtime.onMessage.removeListener(onMessage);
     removeOverlay();
   }
@@ -128,11 +129,22 @@
     }
   }
 
+  /**
+   * Handle visibility change — cleanup when user leaves the tab.
+   */
+  function onVisibilityChange() {
+    if (document.hidden) {
+      sendMessage({ type: 'INSPECT_CANCELLED' });
+      cleanup();
+    }
+  }
+
   // Self-initialize on injection
   overlay = createOverlay();
   document.addEventListener('mousemove', onMouseMove, true);
   document.addEventListener('click', onClick, true);
   document.addEventListener('keydown', onKeyDown, true);
+  document.addEventListener('visibilitychange', onVisibilityChange);
   api.runtime.onMessage.addListener(onMessage);
 
   // Expose cleanup globally so background script can call it via REMOVE_INSPECTOR
