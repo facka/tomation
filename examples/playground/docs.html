@@ -94,6 +94,24 @@
         scroll-margin-top: 110px;
       }
     }
+
+    .heading-anchor {
+      color: var(--tw-prose-links, #6ee7b7);
+      text-decoration: none;
+      opacity: 0;
+      margin-left: 0.4em;
+      font-weight: 400;
+      transition: opacity 0.15s;
+    }
+
+    h2:hover .heading-anchor,
+    h3:hover .heading-anchor {
+      opacity: 1;
+    }
+
+    .heading-anchor:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body class="text-slate-100 antialiased">
@@ -219,7 +237,7 @@
   <main class="ml-0 md:ml-64 max-w-4xl px-6 py-10 sm:px-10">
     <h1 class="text-3xl font-extrabold tracking-tight text-white sm:text-4xl mb-8">Tomation Documentation</h1>
 
-    <h2 id="get-started" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Get Started &amp; Installation</h2>
+    <h2 id="get-started" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Get Started &amp; Installation <a href="#get-started" class="heading-anchor">#</a></h2>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       A TypeScript-first browser automation framework that lets you write readable, maintainable UI tests using a declarative DSL — then run them directly in the browser via a lightweight extension.
     </p>
@@ -235,7 +253,7 @@
     </p>
     <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-bash">npm install @tomationjs/compiler @tomationjs/dsl</code></pre></div>
 
-    <h2 id="cli" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Tomation CLI</h2>
+    <h2 id="cli" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Tomation CLI <a href="#cli" class="heading-anchor">#</a></h2>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       The Tomation CLI compiles your TypeScript POM, test, and automation files into a single <code class="text-emerald-300">.tomation.json</code> file that the browser extension can load and execute. The output file name is derived from the <code class="text-emerald-300">meta.name</code> field in your configuration.
     </p>
@@ -252,7 +270,7 @@
     </p>
     <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-bash">npx tomation watch</code></pre></div>
 
-    <h2 id="configuration" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Configuration File</h2>
+    <h2 id="configuration" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Configuration File <a href="#configuration" class="heading-anchor">#</a></h2>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       Every Tomation project requires a <code class="text-emerald-300">tomation.config.ts</code> file at the root of the project. This file tells the compiler where to find your source files and how to name the output.
     </p>
@@ -310,7 +328,7 @@ export default {
   baseUrl: './',
 }</code></pre></div>
 
-    <h3 id="element-locators" class="text-xl font-semibold text-white mt-12 mb-3">Element/Locators Builder API</h3>
+    <h3 id="element-locators" class="text-xl font-semibold text-white mt-12 mb-3">Element/Locators Builder API <a href="#element-locators" class="heading-anchor">#</a></h3>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       Tomation uses a fluent builder API to declare element locators. The core pattern is <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.TAG.where(matcher).as('Label')</code> — you pick an HTML tag, apply one or more matchers to narrow the selection, and give it a human-readable label.
     </p>
@@ -375,7 +393,7 @@ const target = is.DIV.where(idIs('anchor')).navigate('parent,child[2]').as('Targ
 const container = is.DIV.where(idIs('section')).as('Section')
 const content = is.SPAN.childOf(container).where(innerTextIs('Header')).navigate('nextSibling').as('Content')</code></pre></div>
 
-    <h3 id="where-matchers" class="text-xl font-semibold text-white mt-12 mb-3">Where Matchers</h3>
+    <h3 id="where-matchers" class="text-xl font-semibold text-white mt-12 mb-3">Where Matchers <a href="#where-matchers" class="heading-anchor">#</a></h3>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       The <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.where()</code> method accepts matcher functions that narrow down element selection by matching on attributes, text content, position, or state. You can combine multiple matchers to create precise locators.
     </p>
@@ -402,7 +420,7 @@ const content = is.SPAN.childOf(container).where(innerTextIs('Header')).navigate
       </tbody>
     </table></div>
 
-    <h3 id="user-functions" class="text-xl font-semibold text-white mt-12 mb-3">User Functions: Click, Type, Select</h3>
+    <h3 id="user-functions" class="text-xl font-semibold text-white mt-12 mb-3">User Functions: Click, Type, Select <a href="#user-functions" class="heading-anchor">#</a></h3>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       User functions simulate real user interactions with the page. They operate on element locators declared via the builder API and form the core of every test step.
     </p>
@@ -494,7 +512,7 @@ Type(firstDateOfMonth(0)).in(periodStartInput)
 Type(lastDateOfMonth(0)).in(periodEndInput)
 Type(firstDateOfMonth(1)).in(nextPeriodStartInput)</code></pre></div>
 
-    <h3 id="assertions" class="text-xl font-semibold text-white mt-12 mb-3">Assertions</h3>
+    <h3 id="assertions" class="text-xl font-semibold text-white mt-12 mb-3">Assertions <a href="#assertions" class="heading-anchor">#</a></h3>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       Assertion functions verify that the page is in the expected state after user interactions. They fail the test immediately if the condition is not met.
     </p>
@@ -520,7 +538,7 @@ AssertNotExists(Login.errorMessage)
 // Verify text content
 AssertHasText(Login.message, 'Login successful')</code></pre></div>
 
-    <h2 id="tests" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Tests</h2>
+    <h2 id="tests" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Tests <a href="#tests" class="heading-anchor">#</a></h2>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       Tests are declared using the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Test(name, callback)</code> function in <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">*.test.ts</code> files. Each test has a descriptive name and a callback containing the sequence of interactions and assertions that make up the test scenario.
     </p>
@@ -557,7 +575,7 @@ Test('Login shows error on empty submit', () => {
       Tests and automations are displayed in the extension using the format <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">sourceFile: label</code>. The sourceFile is the relative path from the project root with the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">tests/</code> or <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">automations/</code> prefix removed and file extensions stripped. For example, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">login: Login with valid credentials</code> or <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">auth/login: Login with valid credentials</code> for tests in subfolders.
     </p>
 
-    <h2 id="automations" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Automations</h2>
+    <h2 id="automations" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Automations <a href="#automations" class="heading-anchor">#</a></h2>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       Automations are like Tests but with typed parameters that are filled in at runtime via a form in the browser extension. Instead of hardcoding values, you declare a params object with typed fields — the extension generates a form for each parameter, letting you reuse the same procedure with different inputs each time.
     </p>
@@ -620,7 +638,7 @@ export default {
       </tbody>
     </table></div>
 
-    <h2 id="pom-files" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">POM Files</h2>
+    <h2 id="pom-files" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">POM Files <a href="#pom-files" class="heading-anchor">#</a></h2>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       Tomation uses the <strong class="text-white">Page Object Model (POM)</strong> pattern to organize element locators and reusable tasks into dedicated files. Each page or section of your application gets its own <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">*.pom.ts</code> file that declares elements, reusable tasks, and exports them as a single default object.
     </p>
