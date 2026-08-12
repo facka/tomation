@@ -146,13 +146,12 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
       break;
 
     case 'NODE_SELECTED':
-      lab.setSelectedNode({
+      lab.addSelectedNode({
         tagName: msg.tagName,
         attributes: msg.attributes,
         outerHTML: msg.outerHTML,
         childElementCount: msg.childElementCount,
       });
-      lab.setInspectMode(false);
       break;
 
     case 'INSPECT_CANCELLED':
@@ -160,12 +159,13 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
       break;
 
     case 'PAGE_HTML':
-      // Stored for GenerateSection's full-mode flow to consume
       if (msg.error) {
         lab.setError(msg.error);
         lab.setGenerating(false);
       }
-      // When html is present, GenerateSection handles it via its own message listener
+      if (msg.html) {
+        lab.setFullPageHtml(msg.html);
+      }
       break;
 
     case 'POM_GENERATED':

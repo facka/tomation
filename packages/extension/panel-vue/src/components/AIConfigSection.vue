@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onMounted } from 'vue';
 import { useLabStore } from '@/store/lab';
 import type { AIConfig } from '@/types/lab';
 
 const { labState, saveAIConfig } = useLabStore();
+
+const isCollapsed = ref(false);
+
+onMounted(() => {
+  const key = labState.aiConfig?.apiKey ?? '';
+  isCollapsed.value = key.trim().length > 0;
+});
 
 const PROVIDER_MODELS: Record<string, string[]> = {
   openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
@@ -58,6 +65,21 @@ const currentModels = computed(() => {
   return PROVIDER_MODELS[provider.value] ?? [];
 });
 
+const PROVIDER_LABELS: Record<string, string> = {
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+  gemini: 'Google Gemini',
+  custom: 'Custom Endpoint',
+};
+
+const collapsedProviderName = computed(() => {
+  return PROVIDER_LABELS[provider.value] ?? provider.value;
+});
+
+const collapsedModelName = computed(() => {
+  return model.value || 'No model';
+});
+
 async function onSave() {
   validationError.value = null;
   saveSuccess.value = false;
@@ -80,10 +102,15 @@ async function onSave() {
 </script>
 
 <template>
-  <details class="ai-config-section">
-    <summary class="ai-config-summary">AI Configuration</summary>
+  <div class="ai-config-section">
+    <div class="ai-config-summary" @click="isCollapsed = !isCollapsed">
+      <span v-if="isCollapsed" class="ai-config-collapsed-info">
+        AI Configuration — {{ collapsedProviderName }} · {{ collapsedModelName }} <span class="ai-config-check">✓</span>
+      </span>
+      <span v-else>AI Configuration</span>
+    </div>
 
-    <div class="ai-config-form">
+    <div v-if="!isCollapsed" class="ai-config-form">
       <!-- Provider -->
       <div class="config-field">
         <label class="config-label">Provider</label>
@@ -150,7 +177,7 @@ async function onSave() {
         <span v-if="saveSuccess" class="config-save-success">Saved ✓</span>
       </div>
     </div>
-  </details>
+  </div>
 </template>
 
 <style scoped>
@@ -239,5 +266,16 @@ async function onSave() {
   font-size: 12px;
   color: var(--success);
   font-weight: 500;
+}
+
+.ai-config-collapsed-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-config-check {
+  color: var(--success);
+  font-weight: 600;
 }
 </style>

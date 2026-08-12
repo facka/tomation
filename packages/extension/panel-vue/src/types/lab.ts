@@ -14,12 +14,14 @@ export interface AIConfig {
 
 export interface LabState {
   inspectMode: boolean;
-  selectedNode: SelectedNodeData | null;
+  selectedNodes: SelectedNodeData[];
   aiConfig: AIConfig | null;
-  contextMode: 'full' | 'subtree';
+  contextMode: 'full' | 'inspect';
   isGenerating: boolean;
   generatedCode: string | null;
   generatedPomName: string | null;
   error: string | null;
   copyConfirmation: boolean;
+  codeViewerContent: string;
+  fullPageHtml: string | null;
 }
