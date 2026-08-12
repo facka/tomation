@@ -7,6 +7,7 @@ import LoadedHeader from './LoadedHeader.vue';
 import TabBar from './TabBar.vue';
 import TestList from './TestList.vue';
 import AutomationList from './AutomationList.vue';
+import LabView from './LabView.vue';
 import type { TestEntry, AutomationEntry } from '@/types/spec';
 import type { Runnable, RunConfig } from '@/types/store';
 
@@ -88,8 +89,14 @@ async function quickRunAutomation(automation: AutomationEntry, index: number) {
 
 <template>
   <div class="view active">
+    <!-- Lab tab: visible regardless of project state -->
+    <template v-if="store.state.activeTab === 'lab'">
+      <TabBar />
+      <LabView />
+    </template>
+
     <!-- Landing page: no spec loaded -->
-    <LandingPage v-if="!store.state.currentProject" />
+    <LandingPage v-else-if="!store.state.currentProject" />
 
     <!-- Loaded state: spec loaded -->
     <template v-else>

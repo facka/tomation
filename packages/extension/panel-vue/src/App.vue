@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useStore } from '@/store';
+import { useLabStore } from '@/store/lab';
 import { useMessaging } from '@/composables/useMessaging';
 import HomeView from '@/components/HomeView.vue';
 import TestPlanView from '@/components/TestPlanView.vue';
@@ -9,7 +10,8 @@ import ErrorView from '@/components/ErrorView.vue';
 import type { BackgroundMessage } from '@/types/messages';
 
 const store = useStore();
-const { onMessage, getActiveTabUrl } = useMessaging();
+const lab = useLabStore();
+const { send, onMessage, getActiveTabUrl } = useMessaging();
 
 const manualPauseDescription = ref<string | null>(null);
 
@@ -97,6 +99,11 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
 
     case 'TAB_URL_UPDATE':
       store.state.lastKnownTabUrl = msg.url;
+      // Deactivate inspect mode when the user navigates away — tell the content script to clean up
+      if (lab.labState.inspectMode) {
+        send({ type: 'REMOVE_INSPECTOR' });
+        lab.setInspectMode(false);
+      }
       if (!store.state.isRunning && msg.url) {
         try {
           const newHostname = new URL(msg.url).hostname;
@@ -130,6 +137,58 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
 
     case 'CONTEXT_STATE':
       store.setContextStore(msg.store);
+      break;
+
+    // --- Lab messages ---
+
+    case 'INSPECTOR_INJECTED':
+      if (msg.success) {
+        lab.setInspectMode(true);
+      } else {
+        lab.setInspectMode(false);
+        lab.setError(msg.error || 'Element inspection is not available on this page');
+      }
+      break;
+
+    case 'NODE_SELECTED':
+      lab.addSelectedNode({
+        tagName: msg.tagName,
+        attributes: msg.attributes,
+        outerHTML: msg.outerHTML,
+        childElementCount: msg.childElementCount,
+      });
+      break;
+
+    case 'INSPECT_CANCELLED':
+      lab.setInspectMode(false);
+      break;
+
+    case 'PAGE_HTML':
+      if (msg.error) {
+        lab.setError(msg.error);
+        lab.setGenerating(false);
+      }
+      if (msg.html) {
+        lab.setFullPageHtml(msg.html);
+      }
+      break;
+
+    case 'POM_GENERATED':
+      lab.setGeneratedCode(msg.code, msg.pomName);
+      lab.setGenerating(false);
+      lab.setError(null);
+      break;
+
+    case 'POM_GENERATION_ERROR':
+      lab.setError(
+        `${msg.provider} returned an error${msg.status ? ` (${msg.status})` : ''}: ${msg.error}`,
+      );
+      lab.setGenerating(false);
+      break;
+
+    case 'POM_GENERATION_TIMEOUT':
+      lab.setError('Request timed out after 60 seconds. Try again or use a different model.');
+      lab.setGenerating(false);
       break;
   }
 }

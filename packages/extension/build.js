@@ -24,7 +24,8 @@ var SHARED_FILES = [
   'src/panel.js',
   'src/options.html',
   'src/options.js',
-  'src/storage.js'
+  'src/storage.js',
+  'src/inspector.js'
 ];
 
 // Playground directories to copy
@@ -37,7 +38,8 @@ var PLAYGROUND_DIRS = ['login', 'todo', 'navigation'];
 function chromeManifest() {
   return Object.assign({}, BASE_MANIFEST, {
     manifest_version: 3,
-    permissions: BASE_MANIFEST.permissions.concat(['sidePanel']),
+    permissions: BASE_MANIFEST.permissions.concat(['sidePanel', 'scripting']),
+    host_permissions: ['<all_urls>'],
     background: {
       service_worker: 'src/background.js'
     },
@@ -46,7 +48,11 @@ function chromeManifest() {
     },
     action: {
       default_title: 'Tomation'
-    }
+    },
+    web_accessible_resources: [{
+      resources: ['bundled/tomation-ai.md'],
+      matches: ['<all_urls>']
+    }]
   });
 }
 
@@ -74,7 +80,8 @@ function firefoxManifest() {
         id: 'tomation@example.com',
         strict_min_version: '54.0'
       }
-    }
+    },
+    web_accessible_resources: ['bundled/tomation-ai.md']
   });
 }
 
@@ -197,6 +204,16 @@ function buildTarget(target) {
   var bundledSpecSrc = path.join(ROOT, '../../examples/playground-tests/playground-tests.tomation.json');
   var bundledSpecDest = path.join(targetDir, 'bundled', 'playground-tests.tomation.json');
   copyFile(bundledSpecSrc, bundledSpecDest);
+
+  // Copy bundled skills file (tomation-ai.md)
+  var skillsFileSrc = path.join(ROOT, '../../tomation-ai.md');
+  if (!fs.existsSync(skillsFileSrc)) {
+    console.error('Skills file not found: ' + skillsFileSrc);
+    console.error('Expected tomation-ai.md at project root.');
+    process.exit(1);
+  }
+  var skillsFileDest = path.join(targetDir, 'bundled', 'tomation-ai.md');
+  copyFile(skillsFileSrc, skillsFileDest);
 
   console.log('Built: dist/' + target + '/');
 }
