@@ -1,4 +1,4 @@
-import { Test, Click, AssertHasText } from '@tomationjs/dsl'
+import { Test, Click, AssertHasText, Automation } from '@tomationjs/dsl'
 import Login from '~/pom/login.pom'
 
 Test('Login with valid credentials', () => {
@@ -16,4 +16,12 @@ Test('Login with invalid credentials shows error', () => {
 Test('Login shows error on empty submit', () => {
   Click(Login.submitButton)
   AssertHasText(Login.message, 'required')
+})
+
+Automation('Login', (params: { username: string, password: string }) => {
+  Login.fillCredentials({
+    username: params.username,
+    password: params.password,
+  })
+  Login.submit()
 })

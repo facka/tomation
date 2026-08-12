@@ -667,6 +667,28 @@ Click(Login.submitButton)
 // Use tasks
 Login.fillCredentials({ username: 'admin', password: 'secret' })
 Login.submit()</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Generate POM Files with the Lab</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Instead of writing POM files by hand, you can use the <strong class="text-white">Lab</strong> tab in the Tomation extension to generate them automatically using AI. The Lab lets you visually inspect page elements and produces complete <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.pom.ts</code> files — including element declarations and reusable Task functions.
+    </p>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-2"><strong class="text-white">How it works:</strong></p>
+    <ol class="list-decimal list-inside text-slate-300 text-sm leading-relaxed mb-4 space-y-1.5 pl-2">
+      <li><strong class="text-white">Configure your AI provider</strong> — Set up your API key (OpenAI, Anthropic, Gemini, or a custom endpoint) in the Lab's AI Configuration section.</li>
+      <li><strong class="text-white">Choose a context mode</strong> — Select "Full HTML" to send the entire page, or "Inspect Element" to pick specific components.</li>
+      <li><strong class="text-white">Select elements</strong> — In Inspect Element mode, click on page elements to build a multi-node selection (up to 20 nodes). Each selected element is shown in a mini-editor where you can review its HTML.</li>
+      <li><strong class="text-white">Review and edit</strong> — The Code Viewer shows the HTML that will be sent to AI. You can edit it directly before generating.</li>
+      <li><strong class="text-white">Generate</strong> — Click "Generate POM" and the AI produces a complete <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.pom.ts</code> file with element locators and Task functions for common user workflows.</li>
+    </ol>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      <span class="text-emerald-300 font-medium">Privacy:</span> Email addresses, passwords, and personally identifiable information are automatically stripped from the HTML before sending to any AI service.
+    </p>
+
+    <div class="rounded-xl border border-purple-500/30 bg-gradient-to-br from-slate-900/90 to-purple-950/30 p-4 mb-4">
+      <p class="text-sm text-slate-300"><span class="text-purple-300 font-medium">Tip:</span> The Lab generates production-ready POM files using the same DSL functions documented above (<code class="text-purple-200 bg-purple-500/10 px-1 rounded">is</code>, <code class="text-purple-200 bg-purple-500/10 px-1 rounded">Task</code>, <code class="text-purple-200 bg-purple-500/10 px-1 rounded">where matchers</code>). You can use the generated output as-is or refine it to match your project's naming conventions.</p>
+    </div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>

@@ -64,6 +64,13 @@ onMounted(async () => {
     const config = await store.getTestPlanConfig(specId, runnableIndex);
     if (config) {
       persistedConfig.value = config;
+    } else if (isAutomation.value) {
+      // Default automations to debug mode enabled
+      persistedConfig.value = {
+        allowContinueOnFailure: true,
+        allowRetryOnFailure: true,
+        executionSpeed: 'NORMAL',
+      };
     }
   }
 });

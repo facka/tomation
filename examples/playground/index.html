@@ -127,7 +127,7 @@
         <div class="max-w-2xl space-y-5">
           <span class="inline-flex items-center rounded-full border border-emerald-400/35 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">Playground</span>
           <h1 class="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">Build Browser UI Tests with a Clean, Type-Safe DX</h1>
-          <p class="max-w-xl text-sm text-slate-300 sm:text-base">Tomation helps you write readable TypeScript tests, compile them, and run them directly in the browser. Explore real examples you can run right now.</p>
+          <p class="max-w-xl text-sm text-slate-300 sm:text-base">Tomation provides a structured DSL with TypeScript-powered autocomplete and type checking. Write readable test scripts, compile them to portable JSON, and run them directly in the browser.</p>
           <a href="#examples" class="inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-bold text-emerald-950 transition hover:-translate-y-0.5 hover:bg-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">View Examples
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 3a1 1 0 0 1 1 1v9.586l2.293-2.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 1.414-1.414L9 13.586V4a1 1 0 0 1 1-1Z" clip-rule="evenodd"/></svg>
           </a>
@@ -186,10 +186,56 @@ Type('{{ctx.orderId}}').in(searchInput)</code></pre>
           </div>
         </article>
 
+        <article class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-5">
+          <span class="inline-flex rounded-full border border-emerald-400/35 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">Actions</span>
+          <h3 class="mt-3 text-xl font-semibold text-white">Simulate Real User Interactions</h3>
+          <p class="mt-2 text-sm text-slate-300">Built-in actions for clicks, typing, selecting options, navigation, and waiting. Each action targets elements declared in your POM files.</p>
+          <div class="mt-4 rounded-xl border border-slate-700 bg-slate-950 p-3">
+<pre class="code-scroll overflow-x-auto"><code class="language-typescript">Click(Login.submitButton)
+Type('admin').in(Login.usernameInput)
+TypePassword('secret').in(Login.passwordInput)
+Select('Option A').in(dropdown)
+Navigate('dashboard/index.html')
+Wait(500)</code></pre>
+          </div>
+        </article>
+
+        <article class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-5">
+          <span class="inline-flex rounded-full border border-emerald-400/35 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">Tests</span>
+          <h3 class="mt-3 text-xl font-semibold text-white">Readable Test Scenarios with Assertions</h3>
+          <p class="mt-2 text-sm text-slate-300">Define test cases using <span class="font-mono text-emerald-200">Test()</span> blocks that combine actions and assertions. Each test runs independently with visual pass/fail feedback in the extension.</p>
+          <div class="mt-4 rounded-xl border border-slate-700 bg-slate-950 p-3">
+<pre class="code-scroll overflow-x-auto"><code class="language-typescript">Test('Login with valid credentials', () => {
+  Login.fillCredentials({ username: 'admin', password: 'secret' })
+  Login.submit()
+  AssertHasText(Login.message, 'Login successful')
+})</code></pre>
+          </div>
+        </article>
+
+        <article class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-5">
+          <span class="inline-flex rounded-full border border-amber-400/35 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-300">Automations</span>
+          <h3 class="mt-3 text-xl font-semibold text-white">Parameterized Workflows with Runtime Forms</h3>
+          <p class="mt-2 text-sm text-slate-300">Automations are reusable workflows that accept parameters. Before execution, the extension renders a form where users fill in the values — making automations shareable with non-technical team members.</p>
+          <div class="mt-4 rounded-xl border border-slate-700 bg-slate-950 p-3">
+<pre class="code-scroll overflow-x-auto"><code class="language-typescript">Automation('Create New User', (
+    params: { name: 'string', role: 'string' }
+  ) => {
+    Navigate('admin/users.html')
+    Click(Admin.addUserButton)
+    Type(params.name).in(Admin.nameInput)
+    Select(params.role).in(Admin.roleSelect)
+    Click(Admin.saveButton)
+  }
+})</code></pre>
+          </div>
+          <p class="mt-3 text-xs text-slate-400 italic">Parameters appear as form fields in the extension panel before each run.</p>
+        </article>
+
         <article class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-5 lg:col-span-2">
-          <span class="inline-flex rounded-full border border-emerald-400/35 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">TypeScript-First</span>
-          <h3 class="mt-3 text-xl font-semibold text-white">Author Fast with Reusable Tasks and Strong Typing</h3>
-          <p class="mt-2 text-sm text-slate-300">Create reusable tasks, compose test scenarios, and compile them into portable .tomation.json files that run in the browser extension with visual feedback.</p>
+          <span class="inline-flex rounded-full border border-emerald-400/35 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">Structured DSL</span>
+          <h3 class="mt-3 text-xl font-semibold text-white">TypeScript Authoring, Portable JSON Execution</h3>
+          <p class="mt-2 text-sm text-slate-300">Write tests using a structured DSL with full autocomplete and type safety in your editor. The compiler transforms your scripts into portable <code class="text-emerald-200 bg-emerald-500/10 px-1 rounded">.tomation.json</code> files that run directly in the browser extension with visual step-by-step feedback.</p>
         </article>
 
         <article class="rounded-2xl border border-purple-500/30 bg-gradient-to-br from-slate-900/90 to-purple-950/30 p-5 lg:col-span-2">

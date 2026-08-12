@@ -12,6 +12,8 @@
     "build:chrome": "npm run build:chrome --workspace=packages/extension",
     "build:firefox": "npm run build:firefox --workspace=packages/extension",
     "build-vue-panel": "npm run build --prefix packages/extension/panel-vue && USE_VUE_PANEL=1 npm run build --workspace=packages/extension",
+    "playground": "npx live-server examples/playground",
+    "compile:playground": "cd examples/playground-tests && npx tomation compile",
     "test": "npm test --workspaces",
     "test:compiler": "npm test --workspace=packages/compiler",
     "test:extension": "npm test --workspace=packages/extension",
