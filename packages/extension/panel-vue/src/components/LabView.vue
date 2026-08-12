@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import { useLabStore } from '@/store/lab';
-import InspectSection from './InspectSection.vue';
-import NodePreview from './NodePreview.vue';
 import AIConfigSection from './AIConfigSection.vue';
+import InspectSection from './InspectSection.vue';
+import CodeViewer from './CodeViewer.vue';
 import GenerateSection from './GenerateSection.vue';
 import CodeOutput from './CodeOutput.vue';
 
@@ -16,9 +16,9 @@ onMounted(() => {
 
 <template>
   <div class="lab-view">
-    <InspectSection />
-    <NodePreview />
     <AIConfigSection />
+    <InspectSection />
+    <CodeViewer />
     <GenerateSection />
     <CodeOutput />
   </div>

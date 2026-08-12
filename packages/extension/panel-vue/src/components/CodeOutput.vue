@@ -41,12 +41,21 @@ function download() {
 <template>
   <div class="code-output" v-if="labState.generatedCode">
     <div class="code-output-header">
-      <h3>Generated POM</h3>
+      <div class="code-output-header-left">
+        <h3>Generated POM</h3>
+        <span class="ai-disclaimer">AI can make mistakes. Please review the generated code.</span>
+      </div>
       <div class="code-output-actions">
-        <button class="btn btn-ghost btn-sm" @click="copyToClipboard">
-          {{ labState.copyConfirmation ? 'Copied ✓' : 'Copy' }}
+        <button
+          class="btn btn-ghost btn-icon"
+          @click="copyToClipboard"
+          :title="labState.copyConfirmation ? 'Copied!' : 'Copy to clipboard'"
+        >
+          <font-awesome-icon :icon="['fas', labState.copyConfirmation ? 'check' : 'copy']" aria-hidden="true" />
         </button>
-        <button class="btn btn-ghost btn-sm" @click="download">Download</button>
+        <button class="btn btn-ghost btn-icon" @click="download" title="Download file">
+          <font-awesome-icon :icon="['fas', 'download']" aria-hidden="true" />
+        </button>
       </div>
     </div>
 
@@ -67,20 +76,42 @@ function download() {
 
 .code-output-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   padding: 8px 12px;
   background: var(--bg-elevated);
   border-bottom: 1px solid var(--border-subtle);
 }
 
+.code-output-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .code-output-header h3 {
   margin: 0;
+}
+
+.ai-disclaimer {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .code-output-actions {
   display: flex;
   gap: 4px;
+}
+
+.btn-icon {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
 }
 
 .code-block {

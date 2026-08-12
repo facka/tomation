@@ -15,7 +15,7 @@ export type PanelMessage =
   | { type: 'GET_CONTEXT' }
   | { type: 'INJECT_INSPECTOR' }
   | { type: 'REMOVE_INSPECTOR' }
-  | { type: 'GENERATE_POM'; htmlContext: string; contextMode: 'full' | 'subtree'; aiConfig: AIConfig }
+  | { type: 'GENERATE_POM'; htmlContext: string; contextMode: 'full' | 'inspect'; aiConfig: AIConfig }
   | { type: 'GET_PAGE_HTML' };
 
 // Messages sent FROM background TO panel

@@ -3,81 +3,42 @@ import { ref } from 'vue';
 import { useLabStore } from '@/store/lab';
 import { useMessaging } from '@/composables/useMessaging';
 
-const { labState, setContextMode, setGenerating, setError } = useLabStore();
-const { send, onMessage } = useMessaging();
+const { labState, setGenerating, setError } = useLabStore();
+const { send } = useMessaging();
+
+const PRIVACY_TEXT = 'Email addresses, passwords, and personally identifiable information are automatically stripped from HTML before sending to the AI service.';
 
 const generateError = ref<string | null>(null);
-
-function onContextModeChange(mode: 'full' | 'subtree') {
-  setContextMode(mode);
-}
-
-function validatePrerequisites(): string | null {
-  if (!labState.selectedNode) {
-    return 'Please select an element first using the inspector';
-  }
-  if (!labState.aiConfig) {
-    return 'Please configure your AI provider and API key first';
-  }
-  if (!labState.aiConfig.apiKey || !labState.aiConfig.apiKey.trim()) {
-    return 'Please enter a valid API key in the AI configuration';
-  }
-  if (!labState.aiConfig.model || !labState.aiConfig.model.trim()) {
-    return 'Please select a model in the AI configuration';
-  }
-  return null;
-}
 
 function generate() {
   generateError.value = null;
 
-  const prerequisiteError = validatePrerequisites();
-  if (prerequisiteError) {
-    generateError.value = prerequisiteError;
+  // Validate AI config
+  if (!labState.aiConfig) {
+    generateError.value = 'Please configure your AI provider and API key first';
+    return;
+  }
+  if (!labState.aiConfig.apiKey || !labState.aiConfig.apiKey.trim()) {
+    generateError.value = 'Please enter a valid API key in the AI configuration';
+    return;
+  }
+  if (!labState.aiConfig.model || !labState.aiConfig.model.trim()) {
+    generateError.value = 'Please select a model in the AI configuration';
     return;
   }
 
-  if (labState.contextMode === 'subtree') {
-    sendGenerateRequest(labState.selectedNode!.outerHTML);
-  } else {
-    // Full HTML mode: request page HTML first
-    requestFullPageHtml();
+  // Validate content availability based on context mode
+  if (labState.contextMode === 'inspect' && labState.selectedNodes.length === 0) {
+    generateError.value = 'Please select at least one element before generating';
+    return;
   }
-}
 
-function requestFullPageHtml() {
-  setGenerating(true);
-  send({ type: 'GET_PAGE_HTML' });
+  if (!labState.codeViewerContent || !labState.codeViewerContent.trim()) {
+    generateError.value = 'No HTML content available. Please select elements or switch to Full HTML mode.';
+    return;
+  }
 
-  // Listen for PAGE_HTML response
-  const unsubscribe = onMessage((msg) => {
-    if (msg.type === 'PAGE_HTML') {
-      unsubscribe();
-
-      if (msg.error || !msg.html) {
-        setGenerating(false);
-        generateError.value = msg.error ?? 'Could not retrieve HTML from the current page';
-        return;
-      }
-
-      // Insert marker before selected node's outerHTML
-      const selectedHtml = labState.selectedNode!.outerHTML;
-      const markerPosition = msg.html.indexOf(selectedHtml);
-      let htmlContext: string;
-
-      if (markerPosition >= 0) {
-        htmlContext =
-          msg.html.slice(0, markerPosition) +
-          '<!-- SELECTED_NODE -->' +
-          msg.html.slice(markerPosition);
-      } else {
-        // If outerHTML not found in page, fall back to prepending marker
-        htmlContext = '<!-- SELECTED_NODE -->' + selectedHtml;
-      }
-
-      sendGenerateRequest(htmlContext);
-    }
-  });
+  sendGenerateRequest(labState.codeViewerContent);
 }
 
 function sendGenerateRequest(htmlContext: string) {
@@ -95,33 +56,6 @@ function sendGenerateRequest(htmlContext: string) {
 
 <template>
   <div class="generate-section">
-    <!-- Context Mode -->
-    <div class="context-mode">
-      <h3>HTML Context</h3>
-      <div class="context-mode-options">
-        <label class="context-radio">
-          <input
-            type="radio"
-            name="contextMode"
-            value="subtree"
-            :checked="labState.contextMode === 'subtree'"
-            @change="onContextModeChange('subtree')"
-          />
-          Selected Node Subtree
-        </label>
-        <label class="context-radio">
-          <input
-            type="radio"
-            name="contextMode"
-            value="full"
-            :checked="labState.contextMode === 'full'"
-            @change="onContextModeChange('full')"
-          />
-          Full HTML
-        </label>
-      </div>
-    </div>
-
     <!-- Generate Button -->
     <button
       class="btn btn-primary generate-btn"
@@ -137,7 +71,7 @@ function sendGenerateRequest(htmlContext: string) {
       {{ labState.isGenerating ? 'Generating…' : 'Generate POM' }}
     </button>
 
-    <p class="ai-disclaimer">AI can make mistakes. Please review the generated code.</p>
+    <p class="privacy-label">{{ PRIVACY_TEXT }}</p>
 
     <!-- Error -->
     <p v-if="generateError" class="generate-error">{{ generateError }}</p>
@@ -149,28 +83,6 @@ function sendGenerateRequest(htmlContext: string) {
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-.context-mode h3 {
-  margin-bottom: 6px;
-}
-
-.context-mode-options {
-  display: flex;
-  gap: 16px;
-}
-
-.context-radio {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.context-radio input[type="radio"] {
-  accent-color: var(--accent);
 }
 
 .generate-btn {
@@ -185,7 +97,7 @@ function sendGenerateRequest(htmlContext: string) {
   border-radius: var(--radius-sm);
 }
 
-.ai-disclaimer {
+.privacy-label {
   font-size: 11px;
   color: var(--text-secondary);
   margin: 0;

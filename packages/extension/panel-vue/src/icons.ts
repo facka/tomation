@@ -18,6 +18,8 @@ import {
   faTriangleExclamation,
   faRotateRight,
   faFlask,
+  faCopy,
+  faDownload,
 } from '@fortawesome/free-solid-svg-icons';
 
 // Regular icons
@@ -41,4 +43,6 @@ library.add(
   faTriangleExclamation,
   faRotateRight,
   faFlask,
+  faCopy,
+  faDownload,
 );

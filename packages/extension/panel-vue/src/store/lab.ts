@@ -20,14 +20,16 @@ function storageSet(items: Record<string, unknown>): Promise<void> {
 
 const labState = reactive<LabState>({
   inspectMode: false,
-  selectedNode: null,
+  selectedNodes: [],
   aiConfig: null,
-  contextMode: 'subtree',
+  contextMode: 'inspect',
   isGenerating: false,
   generatedCode: null,
   generatedPomName: null,
   error: null,
   copyConfirmation: false,
+  codeViewerContent: '',
+  fullPageHtml: null,
 });
 
 // --- Actions ---
@@ -36,20 +38,56 @@ function setInspectMode(active: boolean): void {
   labState.inspectMode = active;
 }
 
-function setSelectedNode(node: SelectedNodeData): void {
-  labState.selectedNode = node;
+function addSelectedNode(node: SelectedNodeData): { added: boolean; reason?: string } {
+  if (labState.selectedNodes.length >= 20) {
+    return { added: false, reason: 'Maximum of 20 nodes reached' };
+  }
+  const isDuplicate = labState.selectedNodes.some(n => n.outerHTML === node.outerHTML);
+  if (isDuplicate) {
+    return { added: false, reason: 'duplicate' };
+  }
+  labState.selectedNodes.push(node);
+  updateCodeViewerContent();
+  return { added: true };
 }
 
-function clearSelectedNode(): void {
-  labState.selectedNode = null;
+function removeSelectedNode(index: number): void {
+  labState.selectedNodes.splice(index, 1);
+  updateCodeViewerContent();
+}
+
+function clearSelectedNodes(): void {
+  labState.selectedNodes = [];
+  updateCodeViewerContent();
 }
 
 function setAIConfig(config: AIConfig): void {
   labState.aiConfig = config;
 }
 
-function setContextMode(mode: 'full' | 'subtree'): void {
+function setContextMode(mode: 'full' | 'inspect'): void {
   labState.contextMode = mode;
+}
+
+function setCodeViewerContent(content: string): void {
+  labState.codeViewerContent = content;
+}
+
+function updateCodeViewerContent(): void {
+  if (labState.contextMode === 'inspect') {
+    labState.codeViewerContent = labState.selectedNodes
+      .map(n => n.outerHTML)
+      .join('\n');
+  } else {
+    labState.codeViewerContent = labState.fullPageHtml ?? '';
+  }
+}
+
+function setFullPageHtml(html: string): void {
+  labState.fullPageHtml = html;
+  if (labState.contextMode === 'full') {
+    labState.codeViewerContent = html;
+  }
 }
 
 function setGenerating(generating: boolean): void {
@@ -105,10 +143,14 @@ export function useLabStore() {
   return {
     labState,
     setInspectMode,
-    setSelectedNode,
-    clearSelectedNode,
+    addSelectedNode,
+    removeSelectedNode,
+    clearSelectedNodes,
     setAIConfig,
     setContextMode,
+    setCodeViewerContent,
+    updateCodeViewerContent,
+    setFullPageHtml,
     setGenerating,
     setGeneratedCode,
     setError,
