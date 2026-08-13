@@ -38,6 +38,7 @@ var USAGE = [
   'Usage: tomation <command> [options]',
   '',
   'Commands:',
+  '  init      Create a starter project in the current directory with example POM, tests, and automations',
   '  compile   Run full pipeline: resolve → parse → pom extract → dedup → flatten → validate → emit spec.json',
   '  check     Run full pipeline through validation only (no file write); exit 0 if valid, exit 1 if invalid',
   '  watch     Run compile, then watch all discovered source files; re-run full pipeline on any change',
@@ -473,6 +474,95 @@ function deriveOutputFilename(spec) {
 }
 
 // ---------------------------------------------------------------------------
+// init command
+// ---------------------------------------------------------------------------
+
+/**
+ * Recursively copy a directory, skipping files that already exist in the destination.
+ * @param {string} src - Source directory
+ * @param {string} dest - Destination directory
+ */
+function copyDirRecursive(src, dest) {
+  if (!fs.existsSync(dest)) {
+    fs.mkdirSync(dest, { recursive: true });
+  }
+
+  var entries = fs.readdirSync(src);
+  for (var i = 0; i < entries.length; i++) {
+    var entry = entries[i];
+    var srcPath = path.join(src, entry);
+    var destPath = path.join(dest, entry);
+    var stat = fs.statSync(srcPath);
+
+    if (stat.isDirectory()) {
+      copyDirRecursive(srcPath, destPath);
+    } else {
+      if (fs.existsSync(destPath)) {
+        console.warn('  ⚠ Skipping ' + path.relative(dest, destPath) + ' (already exists)');
+      } else {
+        fs.writeFileSync(destPath, fs.readFileSync(srcPath, 'utf8'), 'utf8');
+        console.log('  ✓ ' + entry);
+      }
+    }
+  }
+}
+
+/**
+ * Scaffold a starter Tomation project in the given directory.
+ * Copies template files from templates/starter/ and generates a package.json.
+ */
+function runInit(cwd) {
+  var dslVersion = compilerVersion;
+
+  // Check if directory already has a tomation.config
+  if (fs.existsSync(path.join(cwd, 'tomation.config.ts')) || fs.existsSync(path.join(cwd, 'tomation.config.js'))) {
+    console.error('Error: A tomation.config already exists in this directory.');
+    process.exit(1);
+  }
+
+  // Locate the templates/starter directory relative to this CLI script
+  var templateDir = path.join(__dirname, '..', 'templates', 'starter');
+  if (!fs.existsSync(templateDir)) {
+    console.error('Error: Template directory not found at ' + templateDir);
+    process.exit(1);
+  }
+
+  // Copy template files recursively
+  console.log('Scaffolding project...');
+  copyDirRecursive(templateDir, cwd);
+
+  // Generate package.json (not part of the template since it needs the dynamic version)
+  var pkgPath = path.join(cwd, 'package.json');
+  if (!fs.existsSync(pkgPath)) {
+    var pkg = JSON.stringify({
+      name: 'my-tomation-tests',
+      version: '1.0.0',
+      private: true,
+      scripts: {
+        compile: 'tomation compile',
+        watch: 'tomation watch'
+      },
+      dependencies: {
+        '@tomationjs/dsl': '^' + dslVersion,
+        '@tomationjs/compiler': '^' + dslVersion
+      }
+    }, null, 2) + '\n';
+    fs.writeFileSync(pkgPath, pkg, 'utf8');
+    console.log('  ✓ package.json');
+  } else {
+    console.warn('  ⚠ Skipping package.json (already exists)');
+  }
+
+  console.log('');
+  console.log('Project initialized! Next steps:');
+  console.log('  1. npm install');
+  console.log('  2. Update tomation.config.ts with your app URL');
+  console.log('  3. npx tomation compile');
+  console.log('');
+  process.exit(0);
+}
+
+// ---------------------------------------------------------------------------
 // compile command
 // ---------------------------------------------------------------------------
 
@@ -630,6 +720,9 @@ if (!subcommand || subcommand === '--verbose') {
 }
 
 switch (subcommand) {
+  case 'init':
+    runInit(cwd);
+    break;
   case 'compile':
     runCompile(cwd, options);
     break;
