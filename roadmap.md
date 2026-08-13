@@ -31,6 +31,6 @@
 
 - [ ] In playground home page add a Get Started button, with step by step to implement first tomation script
 
-- [ ] Create tomation cli with `tomation init` command to create a starter project
+- [x] Create tomation cli with `tomation init` command to create a starter project
 
-- [ ] Add Keypress action and update documentation (playground home page, docs, readme and tomation-ai.md )
+- [x] Add Keypress action and update documentation (playground home page, docs, readme and tomation-ai.md )
