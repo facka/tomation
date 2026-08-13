@@ -77,9 +77,6 @@ function onFileChange(event: Event) {
 
 <template>
   <div class="loaded-header">
-    <div v-if="urlMismatchWarning" class="url-warning-banner" role="alert">
-      <font-awesome-icon :icon="['fas', 'triangle-exclamation']" aria-hidden="true" /> {{ urlMismatchWarning }}
-    </div>
     <div class="loaded-meta">
       <h2>{{ specName }}</h2>
       <p v-if="specDescription" class="loaded-description">{{ specDescription }}</p>
@@ -94,6 +91,9 @@ function onFileChange(event: Event) {
         @change="onFileChange"
       />
     </div>
+  </div>
+  <div v-if="urlMismatchWarning" class="url-warning-banner" role="alert">
+    <font-awesome-icon :icon="['fas', 'triangle-exclamation']" aria-hidden="true" /> {{ urlMismatchWarning }}
   </div>
 </template>
 
