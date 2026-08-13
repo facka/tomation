@@ -22,6 +22,10 @@ Library summary:
 Key APIs: Task(fn).as('label'), Test, Automation, Click, Type, TypePassword, Select, Upload, Press, PressKey, PressUp, PressDown, PressLeft, PressRight, PressTab, PressEnter, PressEsc, PressSpace, SaveText, SaveAttribute, SaveValue, Save, Navigate, Wait, WaitFor, WaitForGone, Manual, AssertExists, AssertNotExists, AssertHasText, is, Element, innerTextIs, innerTextContains, idIs, classIncludes, placeholderIs, nameIs, typeIs, valueIs, ariaLabel, roleIs, titleIs, hrefContains, isDisabled, nthChild, dataAttr, closestLabelIs, today, tomorrow, yesterday, nextWeek, lastWeek, nextMonth, lastMonth, firstDateOfMonth, lastDateOfMonth
 
 Rules:
+- **CRITICAL: Only use functions exported by `@tomationjs/dsl`**. The DSL is NOT general-purpose TypeScript — it is a structured DSL that compiles to JSON. Arbitrary TypeScript/JavaScript code (loops, conditionals, console.log, fetch, DOM manipulation, async/await, try/catch, etc.) will be silently ignored after compilation. Only DSL-provided functions (actions, assertions, element builders, tasks, tests, automations) produce executable steps.
+- Do NOT use `if/else`, `for`, `while`, `switch`, `Promise`, `setTimeout`, or any control flow outside of what the DSL provides (Task conditionals via the `if` step pattern)
+- Do NOT import from any package other than `@tomationjs/dsl` (except POM file imports using `~/` aliases)
+- TypeScript annotations are allowed ONLY for type-checking during authoring (param types, interfaces) — they are stripped at compile time and produce no runtime behavior
 - Create Page Object Models (POM) files with `.pom.ts` extension
 - Create test files with `.test.ts` extension
 - Create automation files with `.automation.ts` extension
