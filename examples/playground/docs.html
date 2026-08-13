@@ -239,36 +239,85 @@
 
     <h2 id="get-started" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Get Started &amp; Installation <a href="#get-started" class="heading-anchor">#</a></h2>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
-      A TypeScript-first browser automation framework that lets you write readable, maintainable UI tests using a declarative DSL — then run them directly in the browser via a lightweight extension.
+      Tomation is a browser automation framework with a structured DSL for writing readable UI tests. You author scripts with TypeScript-powered autocomplete, compile them to portable JSON, and run them in the browser via a lightweight extension.
     </p>
 
-    <h4 class="text-lg font-medium text-white mt-6 mb-2">Browser Extension</h4>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
-      Install the Tomation extension from the <a href="https://chromewebstore.google.com/detail/plinecpdmbklpddinihlmcempieeehch?utm_source=gh-page" class="text-emerald-300 hover:text-emerald-200 underline">Chrome Web Store</a>. The extension provides the runtime environment for executing your tests and automations directly in the browser.
+      Follow these steps to go from zero to running your first test:
     </p>
 
-    <h4 class="text-lg font-medium text-white mt-6 mb-2">Compiler</h4>
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Step 1: Install the Browser Extension</h4>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
-      Install the Tomation compiler via npm to compile your TypeScript DSL files into executable test plans:
+      Install the Tomation extension from the <a href="https://chromewebstore.google.com/detail/plinecpdmbklpddinihlmcempieeehch?utm_source=gh-page" class="text-emerald-300 hover:text-emerald-200 underline">Chrome Web Store</a>. This is the runtime that executes your compiled tests directly in the browser with visual step-by-step feedback.
     </p>
-    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-bash">npm install @tomationjs/compiler @tomationjs/dsl</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Step 2: Install the Tomation CLI</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Install the CLI globally so you can use the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">tomation</code> command from anywhere:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-bash">npm install -g @tomationjs/compiler</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Step 3: Scaffold a New Project</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Create an empty folder for your tests and run <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">tomation init</code> to generate a starter project with example POM files, tests, and automations:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-bash">mkdir my-tests && cd my-tests
+tomation init
+npm install</code></pre></div>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      This creates a ready-to-use project structure:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-bash">my-tests/
+├── tomation.config.ts   # Project configuration
+├── package.json         # Dependencies (@tomationjs/dsl, @tomationjs/compiler)
+├── pom/                 # Page Object Model files (element locators + tasks)
+│   ├── login.pom.ts
+│   ├── todo.pom.ts
+│   └── navigation.pom.ts
+├── tests/               # Test files
+│   ├── login.test.ts
+│   ├── todo.test.ts
+│   └── navigation.test.ts
+└── automations/         # Parameterized workflows
+    └── todo.automation.ts</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Step 4: Compile and Run</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Compile your DSL files into a <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.tomation.json</code> file, then load it in the browser extension:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-bash">tomation compile</code></pre></div>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Open the Tomation extension side panel in Chrome, load the generated JSON file, navigate to your app, and run your tests.
+    </p>
 
     <h2 id="cli" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Tomation CLI <a href="#cli" class="heading-anchor">#</a></h2>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       The Tomation CLI compiles your TypeScript POM, test, and automation files into a single <code class="text-emerald-300">.tomation.json</code> file that the browser extension can load and execute. The output file name is derived from the <code class="text-emerald-300">meta.name</code> field in your configuration.
     </p>
 
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Installation</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Install the CLI globally to use the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">tomation</code> command directly:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-bash">npm install -g @tomationjs/compiler</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Init</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Scaffold a new Tomation project with example POM files, tests, and automations:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-bash">tomation init</code></pre></div>
+
     <h4 class="text-lg font-medium text-white mt-6 mb-2">Compile</h4>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
-      Run the compile command to produce the <code class="text-emerald-300">.tomation.json</code> output file:
+      Run the compile command from your project directory to produce the <code class="text-emerald-300">.tomation.json</code> output file:
     </p>
-    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-bash">npx tomation compile</code></pre></div>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-bash">tomation compile</code></pre></div>
 
     <h4 class="text-lg font-medium text-white mt-6 mb-2">Watch Mode</h4>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       Use watch mode for live recompilation during development. The CLI will automatically recompile whenever your source files change:
     </p>
-    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-bash">npx tomation watch</code></pre></div>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-bash">tomation watch</code></pre></div>
 
     <h2 id="configuration" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Configuration File <a href="#configuration" class="heading-anchor">#</a></h2>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
