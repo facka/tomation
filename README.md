@@ -244,6 +244,48 @@ Or equivalently via the `is` proxy:
 const alert = is.ELEMENT('//div[@role="alert"]').as('Alert Box')
 ```
 
+### Keyboard Actions
+
+Simulate key presses on the focused element or a targeted element.
+
+**Shortcut functions** (no arguments, press on focused element):
+
+| Function | Key |
+|----------|-----|
+| `PressEnter()` | Enter |
+| `PressTab()` | Tab |
+| `PressEsc()` | Escape |
+| `PressSpace()` | Space |
+| `PressUp()` | ArrowUp |
+| `PressDown()` | ArrowDown |
+| `PressLeft()` | ArrowLeft |
+| `PressRight()` | ArrowRight |
+
+**Generic functions:**
+
+| Function | Description |
+|----------|-------------|
+| `PressKey(key, options?)` | Press any key on the focused element |
+| `Press(key, options?).in(element)` | Press a key on a specific element |
+
+The `options` object supports modifier keys: `{ ctrl?: boolean, alt?: boolean, meta?: boolean, shift?: boolean }`
+
+```typescript
+import { PressKey, Press, PressEnter, PressTab } from '@tomationjs/dsl'
+
+// Shortcuts
+PressEnter()
+PressTab()
+
+// Generic with modifiers
+PressKey('a', { ctrl: true })       // Ctrl+A
+PressKey('s', { meta: true })       // Cmd+S
+
+// Targeted — press on a specific element
+Press('Enter').in(searchInput)
+Press('ArrowDown', { alt: true }).in(dropdown)
+```
+
 ### Save to Context
 
 Save actions extract dynamic values during test execution and store them in a per-run context store. Later steps can reference saved values using `{{ctx.keyName}}` template syntax.

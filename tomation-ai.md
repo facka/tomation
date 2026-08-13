@@ -104,6 +104,26 @@ Keyboard shortcut functions (no arguments needed):
 
 PressKey/Press options: `{ alt?: boolean, ctrl?: boolean, meta?: boolean, shift?: boolean }`
 
+Available key values (use the `key` string as defined in [KeyboardEvent.key](https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values)):
+- Letters: `'a'`–`'z'`, `'A'`–`'Z'`
+- Digits: `'0'`–`'9'`
+- Function keys: `'F1'`–`'F12'`
+- Navigation: `'ArrowUp'`, `'ArrowDown'`, `'ArrowLeft'`, `'ArrowRight'`, `'Home'`, `'End'`, `'PageUp'`, `'PageDown'`
+- Editing: `'Backspace'`, `'Delete'`, `'Insert'`
+- Whitespace: `'Enter'`, `'Tab'`, `' '` (space)
+- UI: `'Escape'`, `'PrintScreen'`, `'ScrollLock'`, `'Pause'`
+- Symbols: `'!'`, `'@'`, `'#'`, `'$'`, `'%'`, `'^'`, `'&'`, `'*'`, `'('`, `')'`, `'-'`, `'='`, `'['`, `']'`, `'\\'`, `';'`, `'\''`, `','`, `'.'`, `'/'`, `` '`' ``
+
+Examples:
+```ts
+PressKey('Enter')                    // Enter key
+PressKey('a', { ctrl: true })        // Ctrl+A (select all)
+PressKey('c', { meta: true })        // Cmd+C (copy on macOS)
+PressKey('F5')                       // F5 (refresh)
+PressKey('ArrowDown')                // Down arrow
+Press('Tab', { shift: true }).in(el) // Shift+Tab on a specific element
+```
+
 ---
 
 ## Save Actions Reference

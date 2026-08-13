@@ -561,6 +561,54 @@ Type(firstDateOfMonth(0)).in(periodStartInput)
 Type(lastDateOfMonth(0)).in(periodEndInput)
 Type(firstDateOfMonth(1)).in(nextPeriodStartInput)</code></pre></div>
 
+    <h4 class="text-lg font-medium text-white mt-8 mb-2">Keyboard Actions</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Simulate key presses on the focused element or a targeted element. Use shortcuts for common keys, or the generic <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">PressKey</code> / <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Press</code> for any key with modifier support.
+    </p>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-2"><strong class="text-white">Shortcut functions</strong> (press on the currently focused element):</p>
+    <div class="overflow-x-auto mb-4"><table class="w-full text-sm text-left border border-slate-700 rounded-lg overflow-hidden">
+      <thead class="bg-slate-800/80"><tr><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Function</th><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Key dispatched</th></tr></thead>
+      <tbody>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">PressEnter()</code></td><td class="px-4 py-2.5 text-slate-300">Enter</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">PressTab()</code></td><td class="px-4 py-2.5 text-slate-300">Tab</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">PressEsc()</code></td><td class="px-4 py-2.5 text-slate-300">Escape</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">PressSpace()</code></td><td class="px-4 py-2.5 text-slate-300">Space</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">PressUp()</code></td><td class="px-4 py-2.5 text-slate-300">ArrowUp</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">PressDown()</code></td><td class="px-4 py-2.5 text-slate-300">ArrowDown</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">PressLeft()</code></td><td class="px-4 py-2.5 text-slate-300">ArrowLeft</td></tr>
+        <tr><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">PressRight()</code></td><td class="px-4 py-2.5 text-slate-300">ArrowRight</td></tr>
+      </tbody>
+    </table></div>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-2"><strong class="text-white">Generic functions</strong>:</p>
+    <div class="overflow-x-auto mb-4"><table class="w-full text-sm text-left border border-slate-700 rounded-lg overflow-hidden">
+      <thead class="bg-slate-800/80"><tr><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Function</th><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Description</th></tr></thead>
+      <tbody>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">PressKey(key, options?)</code></td><td class="px-4 py-2.5 text-slate-300">Press any key on the focused element. Accepts optional modifiers.</td></tr>
+        <tr><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Press(key, options?).in(element)</code></td><td class="px-4 py-2.5 text-slate-300">Press a key on a specific targeted element.</td></tr>
+      </tbody>
+    </table></div>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-2"><strong class="text-white">Modifiers</strong> — the optional <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">options</code> object:</p>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">{ ctrl?: boolean, alt?: boolean, meta?: boolean, shift?: boolean }</code></p>
+
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">import { PressKey, Press, PressEnter, PressTab, PressEsc } from '@tomationjs/dsl'
+
+// Shortcuts — press on focused element
+PressEnter()
+PressTab()
+PressEsc()
+
+// Generic — any key with modifiers
+PressKey('a', { ctrl: true })       // Ctrl+A (select all)
+PressKey('s', { meta: true })       // Cmd+S (save)
+PressKey('Delete')                  // Delete key
+
+// Targeted — press on a specific element
+Press('Enter').in(searchInput)
+Press('ArrowDown', { alt: true }).in(dropdown)</code></pre></div>
+
     <h3 id="assertions" class="text-xl font-semibold text-white mt-12 mb-3">Assertions <a href="#assertions" class="heading-anchor">#</a></h3>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       Assertion functions verify that the page is in the expected state after user interactions. They fail the test immediately if the condition is not met.
