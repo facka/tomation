@@ -129,7 +129,7 @@ This plan implements structured test data generation for the Tomation DSL, follo
     - **Property 14: Number decimal precision**
     - **Validates: Requirements 8.2, 8.5, 8.6**
 
-- [ ] 6. Extension runtime — Data resolution and value substitution
+- [x] 6. Extension runtime — Data resolution and value substitution
   - [ ] 6.1 Add `resolveTestData()` and `resolveTemplateRecursive()` to `packages/extension/src/background.js`
     - Implement `resolveTestData(testData)` that iterates all templates and resolves Fake descriptors to concrete values
     - Implement `resolveTemplateRecursive(prefix, obj, dataStore)` for dot-path key building with nested object support

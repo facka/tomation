@@ -1,6 +1,7 @@
 // background.js — service worker / orchestrator
 // Implementation: Tasks 14, 15
 try { importScripts('storage.js'); } catch (e) { /* Node.js test environment */ }
+try { importScripts('faker.js'); } catch (e) { /* Node.js test environment */ }
 var api = typeof browser !== 'undefined' ? browser : chrome;
 
 // Open side panel when the extension icon is clicked (Chrome/Edge only)
@@ -385,8 +386,21 @@ function resolveValue(value, params, contextStore) {
     return { __ctxError: ctxError }; // signal error to caller
   }
 
+  // Resolve {{data.templateName.property}} tokens using the dataStore
+  resolved = resolved.replace(/\{\{data\.([^}]+)\}\}/g, function (match, dataPath) {
+    if (runState.dataStore && runState.dataStore.hasOwnProperty(dataPath)) {
+      return String(runState.dataStore[dataPath]);
+    }
+    console.warn('[tomation] Unknown data path "' + dataPath + '"');
+    return match;
+  });
+
   // Resolve {{paramName}} tokens
   resolved = resolved.replace(/\{\{([^}]+)\}\}/g, function (match, paramName) {
+    // Skip {{data.X.Y}} tokens (handled above, left unresolved if path unknown)
+    if (paramName.indexOf('data.') === 0) {
+      return match;
+    }
     if (params && params.hasOwnProperty(paramName)) {
       var paramVal = params[paramName];
       // Guard against object values (e.g., unresolved error descriptors) — keep token for lazy resolution
@@ -808,6 +822,7 @@ function resetRunState() {
   runState.pendingTabSwitch = null;
   runState.metaHostnames = null;
   runState.contextStore = {};
+  runState.dataStore = {};
 }
 
 // ---------------------------------------------------------------------------
@@ -1284,6 +1299,61 @@ function emitSummary(type, total, passed, failed) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Data Resolution — resolves Fake descriptors to concrete values at test start
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve all Fake placeholders in a test's data map to concrete values.
+ * Called once at the start of each test run.
+ *
+ * @param {object} testData - The test's `data` field from compiled JSON
+ *   Shape: { templateName: { prop: value|FakeDescriptor, ... }, ... }
+ * @returns {object} Flat map of "templateName.propPath" → resolved value
+ */
+function resolveTestData(testData) {
+  var dataStore = {};
+  if (!testData || typeof testData !== 'object') return dataStore;
+
+  var templateNames = Object.keys(testData);
+  for (var i = 0; i < templateNames.length; i++) {
+    var tmplName = templateNames[i];
+    var template = testData[tmplName];
+    resolveTemplateRecursive(tmplName, template, dataStore);
+  }
+  return dataStore;
+}
+
+/**
+ * Recursively resolve a template object, building dot-path keys.
+ * Fake descriptors are resolved to concrete values via resolveFake().
+ * Nested objects are traversed to build deeper dot-paths.
+ * Static literals are stored as-is.
+ *
+ * @param {string} prefix - Current dot-path prefix (e.g., "patient" or "patient.address")
+ * @param {object} obj - Current template node
+ * @param {object} dataStore - Target flat map to populate
+ */
+function resolveTemplateRecursive(prefix, obj, dataStore) {
+  var keys = Object.keys(obj);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    var value = obj[key];
+    var path = prefix + '.' + key;
+
+    if (value && typeof value === 'object' && value.type === 'fake') {
+      // Fake descriptor → resolve to concrete value
+      dataStore[path] = resolveFake(value);
+    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+      // Nested object → recurse
+      resolveTemplateRecursive(path, value, dataStore);
+    } else {
+      // Static literal value
+      dataStore[path] = value;
+    }
+  }
+}
+
 /**
  * Start a test run. Flattens steps, locks the tab, and begins the step loop.
  *
@@ -1298,6 +1368,12 @@ function startRun(tabId, test, spec, checkedSteps, config) {
 
   if (config) {
     runState.config = config;
+  }
+
+  // Resolve test data (Fake descriptors → concrete values) before step execution
+  if (test.data) {
+    runState.dataStore = resolveTestData(test.data);
+    safeSendMessage({ type: 'DATA_RESOLVED', data: runState.dataStore });
   }
 
   var resolvedSteps = flattenSteps(

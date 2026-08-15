@@ -259,26 +259,29 @@ function resolveFake(descriptor) {
 
 // ─── Module Exports ──────────────────────────────────────────────────────────
 
-module.exports = {
-  resolveFake: resolveFake,
-  generateFirstName: generateFirstName,
-  generateLastName: generateLastName,
-  generateFullName: generateFullName,
-  generateDateOfBirth: generateDateOfBirth,
-  generatePhone: generatePhone,
-  generateAddress: generateAddress,
-  generateEmail: generateEmail,
-  generateOneOf: generateOneOf,
-  generateNumber: generateNumber,
-  formatDate: formatDate,
-  pick: pick,
-  randomInt: randomInt,
-  randomDigits: randomDigits,
-  MALE_FIRST_NAMES: MALE_FIRST_NAMES,
-  FEMALE_FIRST_NAMES: FEMALE_FIRST_NAMES,
-  LAST_NAMES: LAST_NAMES,
-  STREETS: STREETS,
-  CITIES: CITIES,
-  COUNTRIES: COUNTRIES,
-  EMAIL_DOMAINS: EMAIL_DOMAINS
-};
+// Support both service worker (importScripts → globals) and Node.js (require)
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    resolveFake: resolveFake,
+    generateFirstName: generateFirstName,
+    generateLastName: generateLastName,
+    generateFullName: generateFullName,
+    generateDateOfBirth: generateDateOfBirth,
+    generatePhone: generatePhone,
+    generateAddress: generateAddress,
+    generateEmail: generateEmail,
+    generateOneOf: generateOneOf,
+    generateNumber: generateNumber,
+    formatDate: formatDate,
+    pick: pick,
+    randomInt: randomInt,
+    randomDigits: randomDigits,
+    MALE_FIRST_NAMES: MALE_FIRST_NAMES,
+    FEMALE_FIRST_NAMES: FEMALE_FIRST_NAMES,
+    LAST_NAMES: LAST_NAMES,
+    STREETS: STREETS,
+    CITIES: CITIES,
+    COUNTRIES: COUNTRIES,
+    EMAIL_DOMAINS: EMAIL_DOMAINS
+  };
+}
