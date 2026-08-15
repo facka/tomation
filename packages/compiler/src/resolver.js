@@ -37,6 +37,11 @@ const TEST_EXTENSIONS = ['.test.js', '.test.ts'];
 const AUTOMATION_EXTENSIONS = ['.automation.ts'];
 
 /**
+ * File extensions for data file discovery.
+ */
+const DATA_EXTENSIONS = ['.data.ts'];
+
+/**
  * All source file extensions recognized for discovery.
  */
 const ALL_SOURCE_EXTENSIONS = ['.ts', '.tsx', '.pom.ts', '.test.ts', '.js', '.pom.js', '.test.js'];
@@ -44,7 +49,7 @@ const ALL_SOURCE_EXTENSIONS = ['.ts', '.tsx', '.pom.ts', '.test.ts', '.js', '.po
 /**
  * Extensions to try when resolving an import specifier (in priority order).
  */
-const RESOLVE_EXTENSIONS = ['.ts', '.tsx', '.js', '.pom.ts', '.test.ts', '.pom.js', '.test.js'];
+const RESOLVE_EXTENSIONS = ['.ts', '.tsx', '.js', '.pom.ts', '.test.ts', '.data.ts', '.pom.js', '.test.js'];
 
 /**
  * Index file names to try when resolving a directory import.
@@ -198,22 +203,24 @@ function resolveSpecifier(specifier, fromFile, baseUrl) {
  * Build a dependency graph for the given set of files.
  *
  * Each node:
- *   { filePath: string, type: "pom"|"test"|"automation", imports: string[], exports: string[] }
+ *   { filePath: string, type: "pom"|"test"|"automation"|"data", imports: string[], exports: string[] }
  *
  * @param {string[]} pomFiles
  * @param {string[]} testFiles
  * @param {string} [baseUrl] - absolute path for ~/ alias resolution
  * @param {string[]} [automationFiles] - automation file paths
+ * @param {string[]} [dataFiles] - data file paths
  * @returns {{ graph: Map<string, object>, errors: string[] }} filePath → node, plus any alias resolution errors
  */
-function buildGraph(pomFiles, testFiles, baseUrl, automationFiles) {
+function buildGraph(pomFiles, testFiles, baseUrl, automationFiles, dataFiles) {
   const graph = new Map();
   const errors = [];
 
   const allFiles = [
     ...pomFiles.map(f => ({ filePath: f, type: 'pom' })),
     ...testFiles.map(f => ({ filePath: f, type: 'test' })),
-    ...(automationFiles || []).map(f => ({ filePath: f, type: 'automation' }))
+    ...(automationFiles || []).map(f => ({ filePath: f, type: 'automation' })),
+    ...(dataFiles || []).map(f => ({ filePath: f, type: 'data' }))
   ];
 
   for (const { filePath, type } of allFiles) {
@@ -474,18 +481,25 @@ function resolve(cwd) {
     ? path.resolve(cwd, config.automations)
     : path.join(cwd, 'automations');
 
+  // Resolve optional data directory (no default — when absent, data files are
+  // discovered by following import paths from test files)
+  const dataDir = config.data
+    ? path.resolve(cwd, config.data)
+    : null;
+
   // Resolve baseUrl for ~/ alias resolution (defaults to config file directory)
   const baseUrl = config.baseUrl
     ? path.resolve(cwd, config.baseUrl)
     : cwd;
 
-  // Discover all POM and test files (.ts, .tsx, .js variants)
+  // Discover all POM, test, automation, and data files
   const pomFiles = discoverFiles(pomDir, POM_EXTENSIONS);
   const testFiles = discoverFiles(testsDir, TEST_EXTENSIONS);
   const automationFiles = discoverFiles(automationsDir, AUTOMATION_EXTENSIONS);
+  const dataFiles = dataDir ? discoverFiles(dataDir, DATA_EXTENSIONS) : [];
 
   // Build dependency graph (with ~/ alias resolution)
-  const { graph, errors } = buildGraph(pomFiles, testFiles, baseUrl, automationFiles);
+  const { graph, errors } = buildGraph(pomFiles, testFiles, baseUrl, automationFiles, dataFiles);
 
   // Report unresolvable ~/ imports as errors
   if (errors.length > 0) {
@@ -526,7 +540,7 @@ function resolve(cwd) {
     meta.testFiles = config.testFiles;
   }
 
-  return { ok: true, files: sortResult.sorted, meta: meta, pomDir: pomDir, baseUrl: baseUrl, automationsDir: automationsDir };
+  return { ok: true, files: sortResult.sorted, meta: meta, pomDir: pomDir, baseUrl: baseUrl, automationsDir: automationsDir, dataDir: dataDir };
 }
 
 module.exports = { resolve, discoverFiles, parseImports, buildGraph, topologicalSort, resolveSpecifier, resolveAlias, resolveWithExtensions };

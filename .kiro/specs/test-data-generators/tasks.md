@@ -7,27 +7,27 @@ This plan implements structured test data generation for the Tomation DSL, follo
 ## Tasks
 
 - [x] 1. DSL package — Add Data and Fake stubs
-  - [ ] 1.1 Add `Data` function and `Fake` object runtime stubs to `packages/dsl/index.js`
+  - [x] 1.1 Add `Data` function and `Fake` object runtime stubs to `packages/dsl/index.js`
     - Add the `Data(template)` function that returns `{ __data: true, template: template }`
     - Add the `Fake` object with all generator methods (`firstName`, `lastName`, `fullName`, `dateOfBirth`, `phone`, `address`, `email`, `oneOf`, `number`) each returning a `{ __fake: true, type: 'fake', method, options }` descriptor
     - Export both `Data` and `Fake` from `module.exports`
     - _Requirements: 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 8.1_
 
-  - [ ] 1.2 Add TypeScript declarations for `Data` and `Fake` to `packages/dsl/index.d.ts`
+  - [x] 1.2 Add TypeScript declarations for `Data` and `Fake` to `packages/dsl/index.d.ts`
     - Declare the `DataTemplate<T>` interface with `__data: true` and `template: T`
     - Declare the `Data<T>` function with generic type inference
     - Declare the `Fake` object with typed method signatures including optional parameters (`gender`, `options`, etc.)
     - _Requirements: 1.1, 1.4, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 8.1_
 
-- [ ] 2. Compiler — Resolver and Parser support for Data files
-  - [ ] 2.1 Extend `packages/compiler/src/resolver.js` to discover `.data.ts` files
+- [x] 2. Compiler — Resolver and Parser support for Data files
+  - [x] 2.1 Extend `packages/compiler/src/resolver.js` to discover `.data.ts` files
     - Add `.data.ts` to the discovery extensions list
     - Support an optional `data` property in `tomation.config.ts` for specifying the data directory path
     - When `data` config is absent, discover `.data.ts` files by following import paths from test files (existing behavior)
     - Include discovered data files in the dependency graph and topological sort
     - _Requirements: 9.1, 9.2, 9.4, 9.5_
 
-  - [ ] 2.2 Add `parseDataDeclaration` logic to `packages/compiler/src/parser.js`
+  - [x] 2.2 Add `parseDataDeclaration` logic to `packages/compiler/src/parser.js`
     - Detect `const X = Data({...})` variable declarations in the AST
     - For properties that are `Fake.*()` call expressions, emit `{ type: "fake", method, options }` descriptors
     - For properties that are literals (string, number, boolean), emit inline values
@@ -41,7 +41,7 @@ This plan implements structured test data generation for the Tomation DSL, follo
     - Test nested object handling in Data templates
     - _Requirements: 1.2, 1.3, 10.5_
 
-  - [ ] 2.4 Add const object resolution to the compiler parser
+  - [x] 2.4 Add const object resolution to the compiler parser
     - Track top-level `const X = { key: 'value' }` declarations in a `constBindings` map during AST traversal
     - When parsing `Fake.oneOf([X.key1, X.key2])` array elements, resolve `MemberExpression` nodes to their literal values from `constBindings`
     - When parsing step values (e.g., `Type(X.key).in(el)`), resolve member expressions to literal strings
