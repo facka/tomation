@@ -159,14 +159,14 @@ This plan implements structured test data generation for the Tomation DSL, follo
 - [ ] 7. Checkpoint — Runtime resolution verification
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Extension UI — Test Data Panel
-  - [ ] 8.1 Create `packages/extension/panel-vue/src/components/TestDataPanel.vue`
+- [x] 8. Extension UI — Test Data Panel
+  - [x] 8.1 Create `packages/extension/panel-vue/src/components/TestDataPanel.vue`
     - Display a collapsible "Test Data" section showing field name → resolved value pairs in a table
     - Accept resolved data as a prop (flat map of dot-path keys to values)
     - Support collapse/expand toggle for the section
     - _Requirements: 12.1, 12.2_
 
-  - [ ] 8.2 Integrate `TestDataPanel` into the test plan view
+  - [x] 8.2 Integrate `TestDataPanel` into the test plan view
     - Import and render `TestDataPanel` at the top of the step list when the test has data references
     - Listen for `DATA_RESOLVED` messages and update the panel with new values on each test run
     - Hide the Test Data section when the loaded test has no Data_Template references

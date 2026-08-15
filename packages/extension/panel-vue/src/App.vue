@@ -190,6 +190,10 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
       lab.setError('Request timed out after 60 seconds. Try again or use a different model.');
       lab.setGenerating(false);
       break;
+
+    case 'DATA_RESOLVED':
+      store.setResolvedTestData(msg.data);
+      break;
   }
 }
 

@@ -5,6 +5,7 @@ import ControllerBar from './ControllerBar.vue';
 import LogContainer from './LogContainer.vue';
 import ContextPopup from './ContextPopup.vue';
 import RunSummary from './RunSummary.vue';
+import TestDataPanel from './TestDataPanel.vue';
 
 const props = defineProps<{
   manualPauseDescription?: string | null;
@@ -32,6 +33,11 @@ const displayName = computed(() => {
 
 const sourceFile = computed(() => runnable.value?.data.sourceFile || '');
 
+const resolvedTestData = computed(() => store.state.resolvedTestData);
+
+const hasTestData = computed(() => {
+  return resolvedTestData.value !== null && Object.keys(resolvedTestData.value).length > 0;
+});
 // --- Actions ---
 
 function toggleContext() {
@@ -64,6 +70,12 @@ function closeRun() {
     <ControllerBar
       v-if="isRunning || runComplete"
       @toggle-context="toggleContext"
+    />
+
+    <!-- Test Data panel (shown when resolved data exists) -->
+    <TestDataPanel
+      v-if="hasTestData"
+      :data="resolvedTestData!"
     />
 
     <!-- Manual pause banner -->

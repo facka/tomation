@@ -5,6 +5,7 @@ import { useMessaging } from '@/composables/useMessaging';
 import StepChecklist from './StepChecklist.vue';
 import ParamForm from './ParamForm.vue';
 import ConfigSection from './ConfigSection.vue';
+import TestDataPanel from './TestDataPanel.vue';
 import type { AutomationEntry } from '@/types/spec';
 import type { RunConfig } from '@/types/store';
 
@@ -49,6 +50,12 @@ const displayName = computed(() => {
 });
 
 const sourceFile = computed(() => runnable.value?.data.sourceFile || '');
+
+const resolvedTestData = computed(() => store.state.resolvedTestData);
+
+const hasTestData = computed(() => {
+  return resolvedTestData.value !== null && Object.keys(resolvedTestData.value).length > 0;
+});
 
 const savedParamValues = computed(() => {
   if (!store.state.currentProject?.savedParams || !runnable.value) return null;
@@ -156,6 +163,12 @@ function onRun() {
       :params="automationParams"
       :saved-values="savedParamValues"
       @update:values="onParamValuesUpdate"
+    />
+
+    <!-- Test Data panel (shown when resolved data exists) -->
+    <TestDataPanel
+      v-if="hasTestData"
+      :data="resolvedTestData!"
     />
 
     <!-- Step checklist -->

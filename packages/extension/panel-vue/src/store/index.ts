@@ -69,6 +69,7 @@ const state = reactive<StoreState>({
   runSummary: null,
   contextStore: {},
   automationParams: null,
+  resolvedTestData: null,
 
   playgroundPromptDismissed: false,
   lastKnownTabUrl: null,
@@ -176,6 +177,7 @@ function selectRunnable(specEntry: SpecEntry, runnable: Runnable): void {
 
 function clearRunnable(): void {
   state.currentRunnable = null;
+  state.resolvedTestData = null;
 }
 
 function toggleFavourite(automationName: string): void {
@@ -252,6 +254,10 @@ function updateContext(key: string, value: unknown): void {
 
 function setContextStore(store: Record<string, unknown>): void {
   state.contextStore = store;
+}
+
+function setResolvedTestData(data: Record<string, string | number> | null): void {
+  state.resolvedTestData = data;
 }
 
 function setActiveTab(tab: 'tests' | 'automations' | 'lab'): void {
@@ -531,6 +537,7 @@ export function useStore() {
     stopRun,
     updateContext,
     setContextStore,
+    setResolvedTestData,
     setActiveTab,
     setSearchQuery,
 
