@@ -6,7 +6,7 @@ This plan implements structured test data generation for the Tomation DSL, follo
 
 ## Tasks
 
-- [ ] 1. DSL package — Add Data and Fake stubs
+- [x] 1. DSL package — Add Data and Fake stubs
   - [ ] 1.1 Add `Data` function and `Fake` object runtime stubs to `packages/dsl/index.js`
     - Add the `Data(template)` function that returns `{ __data: true, template: template }`
     - Add the `Fake` object with all generator methods (`firstName`, `lastName`, `fullName`, `dateOfBirth`, `phone`, `address`, `email`, `oneOf`, `number`) each returning a `{ __fake: true, type: 'fake', method, options }` descriptor

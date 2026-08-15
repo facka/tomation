@@ -317,6 +317,52 @@ function lastDateOfMonth(offset, format) {
   return '__dateHelper:lastDateOfMonth:' + offset + (format ? ':' + format : '');
 }
 
+// --- Data and Fake Generators ---
+
+/**
+ * Data template builder — wraps a plain object as a typed Data template.
+ * @param {object} template - Object with static values and/or Fake generator calls
+ * @returns {{ __data: true, template: object }}
+ */
+function Data(template) {
+  return { __data: true, template: template };
+}
+
+/**
+ * Fake — collection of generator method stubs.
+ * Each method returns a descriptor object that the compiler serializes
+ * and the extension runtime resolves to a concrete random value.
+ */
+var Fake = {
+  firstName: function(gender) {
+    return { __fake: true, type: 'fake', method: 'firstName', options: { gender: gender } };
+  },
+  lastName: function() {
+    return { __fake: true, type: 'fake', method: 'lastName', options: {} };
+  },
+  fullName: function(gender) {
+    return { __fake: true, type: 'fake', method: 'fullName', options: { gender: gender } };
+  },
+  dateOfBirth: function(options) {
+    return { __fake: true, type: 'fake', method: 'dateOfBirth', options: options || {} };
+  },
+  phone: function(options) {
+    return { __fake: true, type: 'fake', method: 'phone', options: options || {} };
+  },
+  address: function(part) {
+    return { __fake: true, type: 'fake', method: 'address', options: { part: part || 'full' } };
+  },
+  email: function() {
+    return { __fake: true, type: 'fake', method: 'email', options: {} };
+  },
+  oneOf: function(options) {
+    return { __fake: true, type: 'fake', method: 'oneOf', options: { values: options } };
+  },
+  number: function(options) {
+    return { __fake: true, type: 'fake', method: 'number', options: options || {} };
+  }
+};
+
 // --- Save Actions ---
 
 function SaveText(element) {
@@ -453,6 +499,9 @@ module.exports = {
   PressEnter: PressEnter,
   PressEsc: PressEsc,
   PressSpace: PressSpace,
+  // Data and Fake generators
+  Data: Data,
+  Fake: Fake,
   // Save actions
   SaveText: SaveText,
   SaveAttribute: SaveAttribute,
