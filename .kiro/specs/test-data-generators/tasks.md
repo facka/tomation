@@ -72,8 +72,8 @@ This plan implements structured test data generation for the Tomation DSL, follo
 - [ ] 4. Checkpoint — Compiler pipeline verification
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. Extension runtime — Faker module
-  - [ ] 5.1 Create `packages/extension/src/faker.js` with all generator functions
+- [x] 5. Extension runtime — Faker module
+  - [x] 5.1 Create `packages/extension/src/faker.js` with all generator functions
     - Implement `pick(arr)`, `randomInt(min, max)`, `randomDigits(n)` utility functions
     - Implement `generateFirstName(options)` with male/female/random gender support using bundled name arrays
     - Implement `generateLastName()` using bundled last name array
