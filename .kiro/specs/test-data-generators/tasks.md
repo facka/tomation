@@ -49,14 +49,14 @@ This plan implements structured test data generation for the Tomation DSL, follo
     - Report validation error when a member expression references a non-existent property on a tracked const object
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5_
 
-- [ ] 3. Compiler — Validator and Flattener support for Data
-  - [ ] 3.1 Extend `packages/compiler/src/validator.js` with data validation rules
+- [x] 3. Compiler — Validator and Flattener support for Data
+  - [x] 3.1 Extend `packages/compiler/src/validator.js` with data validation rules
     - Validate that `Fake.oneOf` is called with a non-empty array; report error with file path and line number if empty
     - Validate data property references in test steps; error on references to non-existent template properties
     - Emit a warning when a `.data.ts` file exports no Data_Template definitions
     - _Requirements: 7.3, 9.6, 10.4_
 
-  - [ ] 3.2 Extend `packages/compiler/src/flattener.js` to emit the `data` field in test JSON
+  - [x] 3.2 Extend `packages/compiler/src/flattener.js` to emit the `data` field in test JSON
     - When a test references Data templates, add a `data` field to the test entry in the emitted JSON
     - Represent static values as literals and Fake generators as typed placeholder objects `{ type: "fake", method, options }`
     - Support multiple Data templates per test
