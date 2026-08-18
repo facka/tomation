@@ -19,6 +19,7 @@ const configSectionRef = ref<InstanceType<typeof ConfigSection> | null>(null);
 const checkedSteps = ref<number[]>([]);
 const paramValues = ref<Record<string, unknown>>({});
 const persistedConfig = ref<Partial<RunConfig> | undefined>(undefined);
+const dataSeeds = ref<Record<string, number | null>>({});
 
 // --- Computed ---
 
@@ -54,23 +55,46 @@ const sourceFile = computed(() => runnable.value?.data.sourceFile || '');
 const resolvedTestData = computed(() => store.state.resolvedTestData);
 
 const hasTestData = computed(() => {
-  // Show panel if resolved data exists (after run)
   if (resolvedTestData.value !== null && Object.keys(resolvedTestData.value).length > 0) {
     return true;
   }
-  // Show panel if the test defines data templates (before run)
   if (runnable.value && runnable.value.data && (runnable.value.data as any).data) {
     return Object.keys((runnable.value.data as any).data).length > 0;
   }
   return false;
 });
 
+// Extract seeds from the test's data templates (JSON __seed values)
+const jsonSeeds = computed((): Record<string, number | undefined> => {
+  const testEntry = runnable.value?.data as any;
+  if (!testEntry || !testEntry.data) return {};
+  const seeds: Record<string, number | undefined> = {};
+  for (const tmplName of Object.keys(testEntry.data)) {
+    const tmpl = testEntry.data[tmplName];
+    if (tmpl && tmpl.__seed !== undefined) {
+      seeds[tmplName] = tmpl.__seed;
+    }
+  }
+  return seeds;
+});
+
+// Merged seeds: JSON defaults + UI overrides
+const effectiveSeeds = computed((): Record<string, number | undefined> => {
+  const merged: Record<string, number | undefined> = { ...jsonSeeds.value };
+  for (const [key, val] of Object.entries(dataSeeds.value)) {
+    if (val === null) {
+      delete merged[key]; // null = force random, remove seed
+    } else if (typeof val === 'number') {
+      merged[key] = val;
+    }
+  }
+  return merged;
+});
+
 const testDataDisplay = computed((): Record<string, string | number> => {
-  // If we have resolved data (after a run), use it
   if (resolvedTestData.value !== null && Object.keys(resolvedTestData.value).length > 0) {
     return resolvedTestData.value;
   }
-  // Otherwise, show template field names with generator descriptions (before run)
   const testEntry = runnable.value?.data as any;
   if (!testEntry || !testEntry.data) return {};
   const display: Record<string, string> = {};
@@ -78,6 +102,7 @@ const testDataDisplay = computed((): Record<string, string | number> => {
   for (const tmplName of Object.keys(templates)) {
     const tmpl = templates[tmplName];
     for (const field of Object.keys(tmpl)) {
+      if (field === '__seed') continue;
       const value = tmpl[field];
       if (value && typeof value === 'object' && value.type === 'fake') {
         const opts = value.options && Object.keys(value.options).length > 0
@@ -114,6 +139,11 @@ onMounted(async () => {
         executionSpeed: 'NORMAL',
       };
     }
+    // Load persisted data seeds
+    const seeds = await store.getDataSeeds(specId, runnableIndex);
+    if (seeds) {
+      dataSeeds.value = seeds;
+    }
   }
 });
 
@@ -132,6 +162,16 @@ function onParamValuesUpdate(values: Record<string, unknown>) {
   paramValues.value = values;
 }
 
+function onSeedsUpdate(seeds: Record<string, number | null>) {
+  dataSeeds.value = seeds;
+  // Persist to storage
+  if (store.state.currentSpec && runnable.value) {
+    const specId = store.state.currentSpec.id;
+    const runnableIndex = runnable.value.index;
+    store.saveDataSeeds(specId, runnableIndex, seeds);
+  }
+}
+
 function onRun() {
   // Validate params if present
   if (hasParams.value && paramFormRef.value) {
@@ -143,6 +183,11 @@ function onRun() {
   const config: RunConfig = configSectionRef.value
     ? configSectionRef.value.getConfig()
     : { allowContinueOnFailure: false, allowRetryOnFailure: false, executionSpeed: 'NORMAL' };
+
+  // Attach data seeds if any are set
+  if (Object.keys(dataSeeds.value).length > 0) {
+    (config as any).dataSeeds = dataSeeds.value;
+  }
 
   // Persist config to storage
   if (store.state.currentSpec && runnable.value) {
@@ -204,6 +249,8 @@ function onRun() {
     <TestDataPanel
       v-if="hasTestData"
       :data="testDataDisplay"
+      :seeds="effectiveSeeds"
+      @update:seeds="onSeedsUpdate"
     />
 
     <!-- Step checklist -->

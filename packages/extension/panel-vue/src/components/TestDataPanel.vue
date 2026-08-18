@@ -3,6 +3,12 @@ import { ref, computed, watch } from 'vue';
 
 const props = defineProps<{
   data: Record<string, string | number>;
+  seeds?: Record<string, number | undefined>;
+  readonly?: boolean;
+}>();
+
+const emit = defineEmits<{
+  (e: 'update:seeds', seeds: Record<string, number | null>): void;
 }>();
 
 const collapsed = ref(false);
@@ -10,7 +16,7 @@ const selectedGroup = ref<string | null>(null);
 const copiedField = ref<string | null>(null);
 const copiedGroup = ref(false);
 
-// Group keys by the prefix before the first dot (e.g., "user.name" → group "user")
+// Group keys by the prefix before the first dot
 const groups = computed(() => {
   const map: Record<string, { key: string; shortKey: string; value: string | number }[]> = {};
   for (const fullKey of Object.keys(props.data)) {
@@ -41,7 +47,6 @@ const selectedFields = computed(() => {
   return groups.value[selectedGroup.value] || [];
 });
 
-// Build JSON object for the selected group (for copy all)
 const selectedGroupJson = computed(() => {
   if (!selectedGroup.value) return '{}';
   const obj: Record<string, string | number> = {};
@@ -50,6 +55,14 @@ const selectedGroupJson = computed(() => {
   }
   return JSON.stringify(obj, null, 2);
 });
+
+function getSeed(groupName: string): number | undefined {
+  return props.seeds?.[groupName];
+}
+
+function isSeeded(groupName: string): boolean {
+  return getSeed(groupName) !== undefined;
+}
 
 function toggle() {
   collapsed.value = !collapsed.value;
@@ -72,6 +85,31 @@ function copyGroupJson() {
     setTimeout(() => { copiedGroup.value = false; }, 1200);
   });
 }
+
+function pinSeed() {
+  if (!selectedGroup.value) return;
+  const seed = Math.floor(Math.random() * 2147483647);
+  const newSeeds: Record<string, number | null> = {};
+  if (props.seeds) {
+    for (const [k, v] of Object.entries(props.seeds)) {
+      if (v !== undefined) newSeeds[k] = v;
+    }
+  }
+  newSeeds[selectedGroup.value] = seed;
+  emit('update:seeds', newSeeds);
+}
+
+function clearSeed() {
+  if (!selectedGroup.value) return;
+  const newSeeds: Record<string, number | null> = {};
+  if (props.seeds) {
+    for (const [k, v] of Object.entries(props.seeds)) {
+      if (v !== undefined) newSeeds[k] = v;
+    }
+  }
+  newSeeds[selectedGroup.value] = null;
+  emit('update:seeds', newSeeds);
+}
 </script>
 
 <template>
@@ -92,7 +130,10 @@ function copyGroupJson() {
             class="test-data-group-btn"
             :class="{ active: selectedGroup === name }"
             @click="selectGroup(name)"
-          >{{ name }}</button>
+          >
+            <font-awesome-icon v-if="isSeeded(name)" :icon="['fas', 'lock']" class="seed-icon" />
+            {{ name }}
+          </button>
         </div>
         <button
           class="test-data-copy-all-btn"
@@ -114,6 +155,31 @@ function copyGroupJson() {
             <font-awesome-icon :icon="['fas', copiedField === field.key ? 'check' : 'copy']" />
           </button>
         </div>
+      </div>
+      <div v-if="selectedGroup" class="test-data-seed-actions">
+        <template v-if="!props.readonly">
+          <button
+            v-if="!isSeeded(selectedGroup)"
+            class="seed-action-btn"
+            title="Pin a seed for reproducible values"
+            @click="pinSeed"
+          >
+            <font-awesome-icon :icon="['fas', 'thumbtack']" /> Pin seed
+          </button>
+          <template v-else>
+            <button
+              class="seed-action-btn seed-action-clear"
+              title="Remove seed, use random values"
+              @click="clearSeed"
+            >
+              <font-awesome-icon :icon="['fas', 'lock-open']" /> Randomize
+            </button>
+            <span class="seed-value-label">Seed: {{ getSeed(selectedGroup) }}</span>
+          </template>
+        </template>
+        <span v-else-if="isSeeded(selectedGroup)" class="seed-label">
+          <font-awesome-icon :icon="['fas', 'lock']" /> Seed: {{ getSeed(selectedGroup) }}
+        </span>
       </div>
     </div>
   </div>
@@ -199,6 +265,7 @@ function copyGroupJson() {
 .test-data-group-btn {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   padding: 3px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm, 4px);
@@ -222,6 +289,17 @@ function copyGroupJson() {
   border-color: var(--accent, #4f9eff);
   color: var(--accent, #4f9eff);
   font-weight: 600;
+}
+
+.seed-icon {
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+.seed-value-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
 .test-data-fields {
@@ -287,5 +365,47 @@ function copyGroupJson() {
 
 .test-data-copy-btn:hover {
   color: var(--accent, #4f9eff);
+}
+
+.test-data-seed-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.seed-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--bg-surface);
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.seed-action-btn:hover {
+  color: var(--accent, #4f9eff);
+  border-color: var(--accent, #4f9eff);
+  background: var(--accent-subtle, rgba(79, 158, 255, 0.05));
+}
+
+.seed-action-clear:hover {
+  color: var(--warning, #f59e0b);
+  border-color: var(--warning, #f59e0b);
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.seed-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 </style>

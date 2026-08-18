@@ -56,6 +56,7 @@ const testDataDisplay = computed((): Record<string, string | number> => {
   for (const tmplName of Object.keys(templates)) {
     const tmpl = templates[tmplName];
     for (const field of Object.keys(tmpl)) {
+      if (field === '__seed') continue;
       const value = tmpl[field];
       if (value && typeof value === 'object' && value.type === 'fake') {
         const opts = value.options && Object.keys(value.options).length > 0
@@ -68,6 +69,24 @@ const testDataDisplay = computed((): Record<string, string | number> => {
     }
   }
   return display;
+});
+
+const runSeeds = computed((): Record<string, number | undefined> => {
+  // Use the seeds that were actually used during the run (from DATA_RESOLVED message)
+  if (store.state.resolvedDataSeeds) {
+    return store.state.resolvedDataSeeds;
+  }
+  // Fallback: check JSON __seed
+  const testEntry = runnable.value?.data as any;
+  if (!testEntry || !testEntry.data) return {};
+  const seeds: Record<string, number | undefined> = {};
+  for (const tmplName of Object.keys(testEntry.data)) {
+    const tmpl = testEntry.data[tmplName];
+    if (tmpl && tmpl.__seed !== undefined) {
+      seeds[tmplName] = tmpl.__seed;
+    }
+  }
+  return seeds;
 });
 // --- Actions ---
 
@@ -107,6 +126,8 @@ function closeRun() {
     <TestDataPanel
       v-if="hasTestData"
       :data="testDataDisplay"
+      :seeds="runSeeds"
+      :readonly="true"
     />
 
     <!-- Manual pause banner -->

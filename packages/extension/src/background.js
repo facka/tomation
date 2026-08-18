@@ -1308,10 +1308,12 @@ function emitSummary(type, total, passed, failed) {
  * Called once at the start of each test run.
  *
  * @param {object} testData - The test's `data` field from compiled JSON
- *   Shape: { templateName: { prop: value|FakeDescriptor, ... }, ... }
+ *   Shape: { templateName: { __seed?: number, prop: value|FakeDescriptor, ... }, ... }
+ * @param {object} [dataSeeds] - Override seeds from UI config
+ *   Shape: { templateName: number|null } — number = use this seed, null = force random
  * @returns {object} Flat map of "templateName.propPath" → resolved value
  */
-function resolveTestData(testData) {
+function resolveTestData(testData, dataSeeds) {
   var dataStore = {};
   if (!testData || typeof testData !== 'object') return dataStore;
 
@@ -1319,7 +1321,31 @@ function resolveTestData(testData) {
   for (var i = 0; i < templateNames.length; i++) {
     var tmplName = templateNames[i];
     var template = testData[tmplName];
+
+    // Determine seed: config override > JSON __seed > random (no seed)
+    var seed = undefined;
+    if (dataSeeds && dataSeeds.hasOwnProperty(tmplName)) {
+      // Config override: number = use seed, null = force random
+      var overrideSeed = dataSeeds[tmplName];
+      if (typeof overrideSeed === 'number') {
+        seed = overrideSeed;
+      }
+      // null means force random — leave seed undefined
+    } else if (template && template.__seed !== undefined) {
+      seed = template.__seed;
+    }
+
+    // Activate seeded PRNG if seed is set
+    if (seed !== undefined && typeof setSeededRandom === 'function' && typeof mulberry32 === 'function') {
+      setSeededRandom(mulberry32(seed));
+    }
+
     resolveTemplateRecursive(tmplName, template, dataStore);
+
+    // Deactivate seeded PRNG after resolving this template
+    if (seed !== undefined && typeof setSeededRandom === 'function') {
+      setSeededRandom(null);
+    }
   }
   return dataStore;
 }
@@ -1338,6 +1364,8 @@ function resolveTemplateRecursive(prefix, obj, dataStore) {
   var keys = Object.keys(obj);
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
+    // Skip internal __seed metadata field
+    if (key === '__seed') continue;
     var value = obj[key];
     var path = prefix + '.' + key;
 
@@ -1373,8 +1401,20 @@ function startRun(tabId, test, spec, checkedSteps, config) {
   // Resolve test data (Fake descriptors → concrete values) before step execution
   if (test.data) {
     if (typeof resetSequenceCounters === 'function') resetSequenceCounters();
-    runState.dataStore = resolveTestData(test.data);
-    safeSendMessage({ type: 'DATA_RESOLVED', data: runState.dataStore });
+    var dataSeeds = (config && config.dataSeeds) || {};
+    runState.dataStore = resolveTestData(test.data, dataSeeds);
+    // Build effective seeds map to send to the panel
+    var effectiveSeeds = {};
+    var tmplNames = Object.keys(test.data);
+    for (var si = 0; si < tmplNames.length; si++) {
+      var tn = tmplNames[si];
+      if (dataSeeds.hasOwnProperty(tn) && typeof dataSeeds[tn] === 'number') {
+        effectiveSeeds[tn] = dataSeeds[tn];
+      } else if (test.data[tn] && test.data[tn].__seed !== undefined) {
+        effectiveSeeds[tn] = test.data[tn].__seed;
+      }
+    }
+    safeSendMessage({ type: 'DATA_RESOLVED', data: runState.dataStore, seeds: effectiveSeeds });
   }
 
   var resolvedSteps = flattenSteps(

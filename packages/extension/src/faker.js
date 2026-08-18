@@ -3,6 +3,45 @@
 
 'use strict';
 
+// ─── Seeded PRNG (Mulberry32) ────────────────────────────────────────────────
+
+/**
+ * Mulberry32 — a fast 32-bit seeded PRNG.
+ * @param {number} seed - integer seed value
+ * @returns {function} function that returns float in [0, 1) each call
+ */
+function mulberry32(seed) {
+  var state = seed | 0;
+  return function() {
+    state = (state + 0x6D2B79F5) | 0;
+    var t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Active random function — either a seeded PRNG or null (use Math.random).
+ * Set by resolveTestData when processing a seeded template.
+ */
+var _activeRandom = null;
+
+/**
+ * Get the current random function (seeded or Math.random).
+ * @returns {number} float in [0, 1)
+ */
+function rng() {
+  return _activeRandom ? _activeRandom() : Math.random();
+}
+
+/**
+ * Set the active seeded PRNG. Pass null to revert to Math.random.
+ * @param {function|null} fn
+ */
+function setSeededRandom(fn) {
+  _activeRandom = fn;
+}
+
 // ─── Data Arrays ─────────────────────────────────────────────────────────────
 
 var MALE_FIRST_NAMES = ['James', 'John', 'Robert', 'Michael', 'William', 'David', 'Richard', 'Joseph', 'Thomas', 'Charles', 'Christopher', 'Daniel', 'Matthew', 'Anthony', 'Mark', 'Steven', 'Paul', 'Andrew', 'Joshua', 'Kenneth'];
@@ -27,7 +66,7 @@ var EMAIL_DOMAINS = ['example.com', 'test.org', 'mail.net', 'demo.io', 'sample.d
  * @returns {*}
  */
 function pick(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
+  return arr[Math.floor(rng() * arr.length)];
 }
 
 /**
@@ -37,7 +76,7 @@ function pick(arr) {
  * @returns {number}
  */
 function randomInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  return Math.floor(rng() * (max - min + 1)) + min;
 }
 
 /**
@@ -48,7 +87,7 @@ function randomInt(min, max) {
 function randomDigits(n) {
   var result = '';
   for (var i = 0; i < n; i++) {
-    result += String(Math.floor(Math.random() * 10));
+    result += String(Math.floor(rng() * 10));
   }
   return result;
 }
@@ -89,7 +128,7 @@ function generateFirstName(options) {
   if (gender === 'male') return pick(MALE_FIRST_NAMES);
   if (gender === 'female') return pick(FEMALE_FIRST_NAMES);
   // Random gender
-  return Math.random() < 0.5 ? pick(MALE_FIRST_NAMES) : pick(FEMALE_FIRST_NAMES);
+  return rng() < 0.5 ? pick(MALE_FIRST_NAMES) : pick(FEMALE_FIRST_NAMES);
 }
 
 /**
@@ -133,7 +172,7 @@ function generateDateOfBirth(options) {
   var earliest = new Date(now.getFullYear() - maxAge - 1, now.getMonth(), now.getDate() + 1);
 
   var range = latest.getTime() - earliest.getTime();
-  var randomTime = earliest.getTime() + Math.floor(Math.random() * range);
+  var randomTime = earliest.getTime() + Math.floor(rng() * range);
   var dob = new Date(randomTime);
 
   return formatDate(dob, format);
@@ -227,7 +266,7 @@ function generateNumber(options) {
     return randomInt(min, max);
   }
 
-  var raw = min + Math.random() * (max - min);
+  var raw = min + rng() * (max - min);
   var factor = Math.pow(10, decimals);
   return Math.round(raw * factor) / factor;
 }
@@ -248,9 +287,9 @@ function generateUuid() {
     } else if (i === 14) {
       result += '4'; // version 4
     } else if (i === 19) {
-      result += hex[8 + Math.floor(Math.random() * 4)]; // variant bits
+      result += hex[8 + Math.floor(rng() * 4)]; // variant bits
     } else {
-      result += hex[Math.floor(Math.random() * 16)];
+      result += hex[Math.floor(rng() * 16)];
     }
   }
   return result;
@@ -391,6 +430,8 @@ function resolveFake(descriptor) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     resolveFake: resolveFake,
+    mulberry32: mulberry32,
+    setSeededRandom: setSeededRandom,
     generateFirstName: generateFirstName,
     generateLastName: generateLastName,
     generateFullName: generateFullName,
@@ -410,6 +451,7 @@ if (typeof module !== 'undefined' && module.exports) {
     pick: pick,
     randomInt: randomInt,
     randomDigits: randomDigits,
+    rng: rng,
     MALE_FIRST_NAMES: MALE_FIRST_NAMES,
     FEMALE_FIRST_NAMES: FEMALE_FIRST_NAMES,
     LAST_NAMES: LAST_NAMES,

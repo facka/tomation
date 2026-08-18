@@ -78,7 +78,16 @@ function collectDataTemplates(parsedFiles) {
     for (var j = 0; j < file.dataTemplates.length; j++) {
       var decl = file.dataTemplates[j];
       if (decl && decl.name && decl.template) {
-        allTemplates[decl.name] = decl.template;
+        var tmpl = {};
+        // If the template has a seed, include it as __seed
+        if (decl.seed !== undefined) {
+          tmpl.__seed = decl.seed;
+        }
+        var keys = Object.keys(decl.template);
+        for (var k = 0; k < keys.length; k++) {
+          tmpl[keys[k]] = decl.template[keys[k]];
+        }
+        allTemplates[decl.name] = tmpl;
       }
     }
   }

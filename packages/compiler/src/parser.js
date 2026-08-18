@@ -393,7 +393,23 @@ function parseDataDeclaration(declarator, constBindings, filePath, warnings) {
   const template = parseDataTemplate(objArg, constBindings, filePath, warnings);
   if (!template) return null;
 
-  return { name: varName, template };
+  // Extract optional second argument for options (e.g., { seed: 42 })
+  var seed = undefined;
+  if (args.length >= 2 && args[1] && args[1].type === 'ObjectExpression') {
+    var optionsProps = args[1].properties || [];
+    for (var oi = 0; oi < optionsProps.length; oi++) {
+      var prop = optionsProps[oi];
+      if (prop.type === 'Property' && prop.key && prop.key.type === 'Identifier' && prop.key.name === 'seed') {
+        if (prop.value && prop.value.type === 'Literal' && typeof prop.value.value === 'number') {
+          seed = prop.value.value;
+        }
+      }
+    }
+  }
+
+  var result = { name: varName, template: template };
+  if (seed !== undefined) result.seed = seed;
+  return result;
 }
 
 // ---------------------------------------------------------------------------

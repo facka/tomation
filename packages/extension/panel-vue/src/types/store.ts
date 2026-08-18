@@ -53,6 +53,7 @@ export interface StoreState {
   contextStore: Record<string, unknown>;
   automationParams: Record<string, unknown> | null;
   resolvedTestData: Record<string, string | number> | null;
+  resolvedDataSeeds: Record<string, number> | null;
 
   // UI state
   playgroundPromptDismissed: boolean;

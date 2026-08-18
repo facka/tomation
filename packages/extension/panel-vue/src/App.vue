@@ -192,7 +192,7 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
       break;
 
     case 'DATA_RESOLVED':
-      store.setResolvedTestData(msg.data);
+      store.setResolvedTestData(msg.data, msg.seeds);
       break;
   }
 }

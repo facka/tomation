@@ -301,9 +301,10 @@ export interface DataTemplate<T> {
 /**
  * Declares a reusable data template.
  * @param template - Object with static values and/or Fake generator calls.
+ * @param options - Optional configuration (e.g., { seed: 42 } for reproducible values).
  * @returns A typed DataTemplate that provides autocompletion for property access.
  */
-export declare function Data<T extends Record<string, any>>(template: T): DataTemplate<T> & T;
+export declare function Data<T extends Record<string, any>>(template: T, options?: { seed?: number }): DataTemplate<T> & T;
 
 // --- Fake Generators ---
 

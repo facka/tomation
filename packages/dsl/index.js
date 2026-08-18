@@ -322,10 +322,13 @@ function lastDateOfMonth(offset, format) {
 /**
  * Data template builder — wraps a plain object as a typed Data template.
  * @param {object} template - Object with static values and/or Fake generator calls
- * @returns {{ __data: true, template: object }}
+ * @param {object} [options] - Optional options { seed?: number }
+ * @returns {{ __data: true, template: object, options?: object }}
  */
-function Data(template) {
-  return { __data: true, template: template };
+function Data(template, options) {
+  var result = { __data: true, template: template };
+  if (options) result.options = options;
+  return result;
 }
 
 /**
