@@ -10,5 +10,5 @@
       "~/*": ["./*"],
     }
   },
-  "include": ["pom/**/*.ts", "tests/**/*.ts"]
+  "include": ["pom/**/*.ts", "tests/**/*.ts", "data/**/*.ts"]
 }

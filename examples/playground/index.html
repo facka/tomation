@@ -234,6 +234,21 @@ Wait(500)</code></pre>
           <p class="mt-2 text-sm text-slate-300">Write tests using a structured DSL with full autocomplete and type safety in your editor. The compiler transforms your scripts into portable <code class="text-emerald-200 bg-emerald-500/10 px-1 rounded">.tomation.json</code> files that run directly in the browser extension with visual step-by-step feedback.</p>
         </article>
 
+        <article class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-5">
+          <span class="inline-flex rounded-full border border-emerald-400/35 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">Test Data</span>
+          <h3 class="mt-3 text-xl font-semibold text-white">Data Templates &amp; Fake Generators</h3>
+          <p class="mt-2 text-sm text-slate-300">Define reusable data templates with <span class="font-mono text-emerald-200">Data()</span> and generate realistic random values using <span class="font-mono text-emerald-200">Fake</span> generators. Each test run produces fresh names, emails, phones, and more — no hardcoded values.</p>
+          <div class="mt-4 rounded-xl border border-slate-700 bg-slate-950 p-3">
+<pre class="code-scroll overflow-x-auto"><code class="language-typescript">import { Data, Fake } from '@tomationjs/dsl'
+
+const user = Data({
+  name: Fake.fullName(),
+  email: Fake.email(),
+  role: Fake.oneOf(['Admin', 'Editor', 'Viewer']),
+})</code></pre>
+          </div>
+        </article>
+
         <article class="rounded-2xl border border-purple-500/30 bg-gradient-to-br from-slate-900/90 to-purple-950/30 p-5 lg:col-span-2">
           <span class="inline-flex rounded-full border border-purple-400/35 bg-purple-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-purple-300">Lab — AI-Powered</span>
           <h3 class="mt-3 text-xl font-semibold text-white">Generate POM Files with a Single Click</h3>

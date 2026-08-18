@@ -172,8 +172,8 @@ This plan implements structured test data generation for the Tomation DSL, follo
     - Hide the Test Data section when the loaded test has no Data_Template references
     - _Requirements: 12.1, 12.3, 12.4_
 
-- [ ] 9. Integration — End-to-end wiring and validation
-  - [ ] 9.1 Create an example `.data.ts` file in `examples/playground-tests/` demonstrating the feature
+- [x] 9. Integration — End-to-end wiring and validation
+  - [x] 9.1 Create an example `.data.ts` file in `examples/playground-tests/` demonstrating the feature
     - Define a sample Data template (e.g., patient registration data) using `Data()` and `Fake.*` generators
     - Import and reference the Data template from an existing or new test file
     - Verify the compiled `.tomation.json` output includes the `data` field with correct structure

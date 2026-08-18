@@ -25,11 +25,12 @@ var SHARED_FILES = [
   'src/options.html',
   'src/options.js',
   'src/storage.js',
-  'src/inspector.js'
+  'src/inspector.js',
+  'src/faker.js'
 ];
 
 // Playground directories to copy
-var PLAYGROUND_DIRS = ['login', 'todo', 'navigation'];
+var PLAYGROUND_DIRS = ['login', 'todo', 'navigation', 'user-form'];
 
 // ---------------------------------------------------------------------------
 // Manifest templates
