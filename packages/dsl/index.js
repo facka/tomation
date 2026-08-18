@@ -360,6 +360,21 @@ var Fake = {
   },
   number: function(options) {
     return { __fake: true, type: 'fake', method: 'number', options: options || {} };
+  },
+  uuid: function() {
+    return { __fake: true, type: 'fake', method: 'uuid', options: {} };
+  },
+  sentence: function(options) {
+    return { __fake: true, type: 'fake', method: 'sentence', options: options || {} };
+  },
+  pastDate: function(options) {
+    return { __fake: true, type: 'fake', method: 'pastDate', options: options || {} };
+  },
+  futureDate: function(options) {
+    return { __fake: true, type: 'fake', method: 'futureDate', options: options || {} };
+  },
+  sequence: function(options) {
+    return { __fake: true, type: 'fake', method: 'sequence', options: options || {} };
   }
 };
 

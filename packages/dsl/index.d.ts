@@ -330,4 +330,14 @@ export declare const Fake: {
   oneOf(options: string[]): string;
   /** Generate a random number within optional bounds and precision. */
   number(options?: { min?: number; max?: number; decimals?: number }): number;
+  /** Generate a random UUID v4. */
+  uuid(): string;
+  /** Generate a random sentence. Optionally specify word count range. */
+  sentence(options?: { minWords?: number; maxWords?: number }): string;
+  /** Generate a random date in the past. Optionally specify how many days back and format. */
+  pastDate(options?: { within?: number; format?: string }): string;
+  /** Generate a random date in the future. Optionally specify how many days ahead and format. */
+  futureDate(options?: { within?: number; format?: string }): string;
+  /** Generate a sequential value with optional prefix and zero-padding. */
+  sequence(options?: { prefix?: string; pad?: number }): string;
 };

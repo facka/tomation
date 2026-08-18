@@ -1372,6 +1372,7 @@ function startRun(tabId, test, spec, checkedSteps, config) {
 
   // Resolve test data (Fake descriptors → concrete values) before step execution
   if (test.data) {
+    if (typeof resetSequenceCounters === 'function') resetSequenceCounters();
     runState.dataStore = resolveTestData(test.data);
     safeSendMessage({ type: 'DATA_RESOLVED', data: runState.dataStore });
   }

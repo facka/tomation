@@ -233,6 +233,129 @@ function generateNumber(options) {
 }
 
 
+// ─── UUID Generator ──────────────────────────────────────────────────────────
+
+/**
+ * Generate a random UUID v4 string.
+ * @returns {string} e.g., "550e8400-e29b-41d4-a716-446655440000"
+ */
+function generateUuid() {
+  var hex = '0123456789abcdef';
+  var result = '';
+  for (var i = 0; i < 36; i++) {
+    if (i === 8 || i === 13 || i === 18 || i === 23) {
+      result += '-';
+    } else if (i === 14) {
+      result += '4'; // version 4
+    } else if (i === 19) {
+      result += hex[8 + Math.floor(Math.random() * 4)]; // variant bits
+    } else {
+      result += hex[Math.floor(Math.random() * 16)];
+    }
+  }
+  return result;
+}
+
+
+// ─── Sentence Generator ──────────────────────────────────────────────────────
+
+var SENTENCE_WORDS = [
+  'the', 'quick', 'brown', 'fox', 'jumps', 'over', 'lazy', 'dog',
+  'a', 'bright', 'sunny', 'day', 'brought', 'new', 'opportunities',
+  'system', 'processes', 'data', 'efficiently', 'while', 'maintaining',
+  'high', 'quality', 'standards', 'across', 'all', 'modules',
+  'patient', 'record', 'was', 'updated', 'successfully', 'in', 'database',
+  'user', 'completed', 'registration', 'form', 'with', 'valid', 'information',
+  'test', 'results', 'confirmed', 'expected', 'behavior', 'of', 'application'
+];
+
+/**
+ * Generate a random sentence.
+ * @param {object} options - { minWords?: number, maxWords?: number }
+ * @returns {string}
+ */
+function generateSentence(options) {
+  var minWords = (options && options.minWords !== undefined) ? options.minWords : 5;
+  var maxWords = (options && options.maxWords !== undefined) ? options.maxWords : 12;
+  var count = randomInt(minWords, maxWords);
+  var words = [];
+  for (var i = 0; i < count; i++) {
+    words.push(pick(SENTENCE_WORDS));
+  }
+  // Capitalize first word and end with period
+  words[0] = words[0][0].toUpperCase() + words[0].slice(1);
+  return words.join(' ') + '.';
+}
+
+
+// ─── Past/Future Date Generators ─────────────────────────────────────────────
+
+/**
+ * Generate a random date in the past.
+ * @param {object} options - { within?: number (days, default 365), format?: string }
+ * @returns {string}
+ */
+function generatePastDate(options) {
+  var within = (options && options.within !== undefined) ? options.within : 365;
+  var format = (options && options.format) || 'YYYY-MM-DD';
+
+  var now = new Date();
+  var daysBack = randomInt(1, within);
+  var past = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
+  return formatDate(past, format);
+}
+
+/**
+ * Generate a random date in the future.
+ * @param {object} options - { within?: number (days, default 365), format?: string }
+ * @returns {string}
+ */
+function generateFutureDate(options) {
+  var within = (options && options.within !== undefined) ? options.within : 365;
+  var format = (options && options.format) || 'YYYY-MM-DD';
+
+  var now = new Date();
+  var daysAhead = randomInt(1, within);
+  var future = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000);
+  return formatDate(future, format);
+}
+
+
+// ─── Sequence Generator ──────────────────────────────────────────────────────
+
+var _sequenceCounters = {};
+
+/**
+ * Generate a sequential value with optional prefix and zero-padding.
+ * Counter increments per unique prefix across a test run.
+ * @param {object} options - { prefix?: string, pad?: number }
+ * @returns {string} e.g., "PAT-001", "PAT-002"
+ */
+function generateSequence(options) {
+  var prefix = (options && options.prefix) || '';
+  var pad = (options && options.pad !== undefined) ? options.pad : 0;
+
+  if (!_sequenceCounters[prefix]) {
+    _sequenceCounters[prefix] = 0;
+  }
+  _sequenceCounters[prefix]++;
+  var num = String(_sequenceCounters[prefix]);
+  if (pad > 0) {
+    while (num.length < pad) {
+      num = '0' + num;
+    }
+  }
+  return prefix + num;
+}
+
+/**
+ * Reset all sequence counters (called between test runs).
+ */
+function resetSequenceCounters() {
+  _sequenceCounters = {};
+}
+
+
 // ─── Dispatch Function ───────────────────────────────────────────────────────
 
 /**
@@ -251,6 +374,11 @@ function resolveFake(descriptor) {
     case 'email':       return generateEmail();
     case 'oneOf':       return generateOneOf(descriptor.options);
     case 'number':      return generateNumber(descriptor.options);
+    case 'uuid':        return generateUuid();
+    case 'sentence':    return generateSentence(descriptor.options);
+    case 'pastDate':    return generatePastDate(descriptor.options);
+    case 'futureDate':  return generateFutureDate(descriptor.options);
+    case 'sequence':    return generateSequence(descriptor.options);
     default:
       console.warn('[tomation] Unknown fake method: ' + descriptor.method);
       return '';
@@ -272,6 +400,12 @@ if (typeof module !== 'undefined' && module.exports) {
     generateEmail: generateEmail,
     generateOneOf: generateOneOf,
     generateNumber: generateNumber,
+    generateUuid: generateUuid,
+    generateSentence: generateSentence,
+    generatePastDate: generatePastDate,
+    generateFutureDate: generateFutureDate,
+    generateSequence: generateSequence,
+    resetSequenceCounters: resetSequenceCounters,
     formatDate: formatDate,
     pick: pick,
     randomInt: randomInt,
