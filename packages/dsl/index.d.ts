@@ -303,7 +303,7 @@ export interface DataTemplate<T> {
  * @param template - Object with static values and/or Fake generator calls.
  * @returns A typed DataTemplate that provides autocompletion for property access.
  */
-export declare function Data<T extends Record<string, any>>(template: T): DataTemplate<T>;
+export declare function Data<T extends Record<string, any>>(template: T): DataTemplate<T> & T;
 
 // --- Fake Generators ---
 
