@@ -54,7 +54,42 @@ const sourceFile = computed(() => runnable.value?.data.sourceFile || '');
 const resolvedTestData = computed(() => store.state.resolvedTestData);
 
 const hasTestData = computed(() => {
-  return resolvedTestData.value !== null && Object.keys(resolvedTestData.value).length > 0;
+  // Show panel if resolved data exists (after run)
+  if (resolvedTestData.value !== null && Object.keys(resolvedTestData.value).length > 0) {
+    return true;
+  }
+  // Show panel if the test defines data templates (before run)
+  if (runnable.value && runnable.value.data && (runnable.value.data as any).data) {
+    return Object.keys((runnable.value.data as any).data).length > 0;
+  }
+  return false;
+});
+
+const testDataDisplay = computed((): Record<string, string | number> => {
+  // If we have resolved data (after a run), use it
+  if (resolvedTestData.value !== null && Object.keys(resolvedTestData.value).length > 0) {
+    return resolvedTestData.value;
+  }
+  // Otherwise, show template field names with generator descriptions (before run)
+  const testEntry = runnable.value?.data as any;
+  if (!testEntry || !testEntry.data) return {};
+  const display: Record<string, string> = {};
+  const templates = testEntry.data;
+  for (const tmplName of Object.keys(templates)) {
+    const tmpl = templates[tmplName];
+    for (const field of Object.keys(tmpl)) {
+      const value = tmpl[field];
+      if (value && typeof value === 'object' && value.type === 'fake') {
+        const opts = value.options && Object.keys(value.options).length > 0
+          ? '(' + JSON.stringify(value.options) + ')'
+          : '';
+        display[tmplName + '.' + field] = 'Fake.' + value.method + opts;
+      } else {
+        display[tmplName + '.' + field] = String(value);
+      }
+    }
+  }
+  return display;
 });
 
 const savedParamValues = computed(() => {
@@ -168,7 +203,7 @@ function onRun() {
     <!-- Test Data panel (shown when resolved data exists) -->
     <TestDataPanel
       v-if="hasTestData"
-      :data="resolvedTestData!"
+      :data="testDataDisplay"
     />
 
     <!-- Step checklist -->

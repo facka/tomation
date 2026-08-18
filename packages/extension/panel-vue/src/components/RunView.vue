@@ -36,7 +36,38 @@ const sourceFile = computed(() => runnable.value?.data.sourceFile || '');
 const resolvedTestData = computed(() => store.state.resolvedTestData);
 
 const hasTestData = computed(() => {
-  return resolvedTestData.value !== null && Object.keys(resolvedTestData.value).length > 0;
+  if (resolvedTestData.value !== null && Object.keys(resolvedTestData.value).length > 0) {
+    return true;
+  }
+  if (runnable.value && runnable.value.data && (runnable.value.data as any).data) {
+    return Object.keys((runnable.value.data as any).data).length > 0;
+  }
+  return false;
+});
+
+const testDataDisplay = computed((): Record<string, string | number> => {
+  if (resolvedTestData.value !== null && Object.keys(resolvedTestData.value).length > 0) {
+    return resolvedTestData.value;
+  }
+  const testEntry = runnable.value?.data as any;
+  if (!testEntry || !testEntry.data) return {};
+  const display: Record<string, string> = {};
+  const templates = testEntry.data;
+  for (const tmplName of Object.keys(templates)) {
+    const tmpl = templates[tmplName];
+    for (const field of Object.keys(tmpl)) {
+      const value = tmpl[field];
+      if (value && typeof value === 'object' && value.type === 'fake') {
+        const opts = value.options && Object.keys(value.options).length > 0
+          ? '(' + JSON.stringify(value.options) + ')'
+          : '';
+        display[tmplName + '.' + field] = 'Fake.' + value.method + opts;
+      } else {
+        display[tmplName + '.' + field] = String(value);
+      }
+    }
+  }
+  return display;
 });
 // --- Actions ---
 
@@ -75,7 +106,7 @@ function closeRun() {
     <!-- Test Data panel (shown when resolved data exists) -->
     <TestDataPanel
       v-if="hasTestData"
-      :data="resolvedTestData!"
+      :data="testDataDisplay"
     />
 
     <!-- Manual pause banner -->
