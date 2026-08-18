@@ -1,14 +1,50 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed, watch } from 'vue';
 
-defineProps<{
+const props = defineProps<{
   data: Record<string, string | number>;
 }>();
 
 const collapsed = ref(false);
+const selectedGroup = ref<string | null>(null);
+
+// Group keys by the prefix before the first dot (e.g., "user.name" → group "user")
+const groups = computed(() => {
+  const map: Record<string, { key: string; shortKey: string; value: string | number }[]> = {};
+  for (const fullKey of Object.keys(props.data)) {
+    const dotIdx = fullKey.indexOf('.');
+    const group = dotIdx !== -1 ? fullKey.slice(0, dotIdx) : fullKey;
+    const shortKey = dotIdx !== -1 ? fullKey.slice(dotIdx + 1) : fullKey;
+    if (!map[group]) map[group] = [];
+    map[group].push({ key: fullKey, shortKey, value: props.data[fullKey] });
+  }
+  return map;
+});
+
+const groupNames = computed(() => Object.keys(groups.value));
+
+// Auto-select first group when data changes
+watch(() => props.data, () => {
+  if (groupNames.value.length > 0) {
+    if (!selectedGroup.value || !groupNames.value.includes(selectedGroup.value)) {
+      selectedGroup.value = groupNames.value[0];
+    }
+  } else {
+    selectedGroup.value = null;
+  }
+}, { immediate: true });
+
+const selectedFields = computed(() => {
+  if (!selectedGroup.value) return [];
+  return groups.value[selectedGroup.value] || [];
+});
 
 function toggle() {
   collapsed.value = !collapsed.value;
+}
+
+function selectGroup(name: string) {
+  selectedGroup.value = name;
 }
 </script>
 
@@ -19,15 +55,25 @@ function toggle() {
         <font-awesome-icon :icon="['fas', collapsed ? 'chevron-right' : 'chevron-down']" aria-hidden="true" />
         Test Data
       </h3>
+      <span class="test-data-count">{{ groupNames.length }} template{{ groupNames.length !== 1 ? 's' : '' }}</span>
     </div>
-    <table v-if="!collapsed" class="test-data-table">
-      <tbody>
-        <tr v-for="(value, key) in data" :key="key">
-          <td class="test-data-key">{{ key }}</td>
-          <td class="test-data-value">{{ value }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <div v-if="!collapsed" class="test-data-body">
+      <div class="test-data-groups">
+        <button
+          v-for="name in groupNames"
+          :key="name"
+          class="test-data-group-btn"
+          :class="{ active: selectedGroup === name }"
+          @click="selectGroup(name)"
+        >{{ name }}</button>
+      </div>
+      <div v-if="selectedFields.length > 0" class="test-data-fields">
+        <div v-for="field in selectedFields" :key="field.key" class="test-data-field-row">
+          <span class="test-data-field-key">{{ field.shortKey }}</span>
+          <span class="test-data-field-value">{{ field.value }}</span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -43,7 +89,8 @@ function toggle() {
 .test-data-header {
   display: flex;
   align-items: center;
-  padding: 10px 12px;
+  justify-content: space-between;
+  padding: 8px 12px;
   cursor: pointer;
   user-select: none;
   background: var(--bg-elevated);
@@ -55,35 +102,94 @@ function toggle() {
   align-items: center;
   gap: 6px;
   margin: 0;
-}
-
-.test-data-table {
-  width: 100%;
-  border-collapse: collapse;
   font-size: 12px;
+  font-weight: 600;
 }
 
-.test-data-table tr {
+.test-data-count {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.test-data-body {
+  max-height: 250px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.test-data-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.test-data-table tr:last-child {
-  border-bottom: none;
+.test-data-group-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--bg-surface);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
-.test-data-key {
-  padding: 6px 12px;
+.test-data-group-btn:hover {
+  background: var(--bg-elevated);
+  border-color: var(--accent, #4f9eff);
+  color: var(--text-primary);
+}
+
+.test-data-group-btn.active {
+  background: var(--accent-subtle, rgba(79, 158, 255, 0.1));
+  border-color: var(--accent, #4f9eff);
+  color: var(--accent, #4f9eff);
+  font-weight: 600;
+}
+
+.test-data-fields {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.test-data-field-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 12px;
+}
+
+.test-data-field-row:hover {
+  background: var(--bg-elevated);
+}
+
+.test-data-field-key {
   font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
   white-space: nowrap;
-  width: 1%;
+  min-width: 70px;
 }
 
-.test-data-value {
-  padding: 6px 12px;
+.test-data-field-key::after {
+  content: ':';
+}
+
+.test-data-field-value {
   font-family: var(--font-mono);
+  font-size: 11px;
   color: var(--text-primary);
   word-break: break-all;
+  line-height: 1.4;
 }
 </style>
