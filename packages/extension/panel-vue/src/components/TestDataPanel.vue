@@ -7,6 +7,8 @@ const props = defineProps<{
 
 const collapsed = ref(false);
 const selectedGroup = ref<string | null>(null);
+const copiedField = ref<string | null>(null);
+const copiedGroup = ref(false);
 
 // Group keys by the prefix before the first dot (e.g., "user.name" → group "user")
 const groups = computed(() => {
@@ -39,12 +41,36 @@ const selectedFields = computed(() => {
   return groups.value[selectedGroup.value] || [];
 });
 
+// Build JSON object for the selected group (for copy all)
+const selectedGroupJson = computed(() => {
+  if (!selectedGroup.value) return '{}';
+  const obj: Record<string, string | number> = {};
+  for (const field of selectedFields.value) {
+    obj[field.shortKey] = field.value;
+  }
+  return JSON.stringify(obj, null, 2);
+});
+
 function toggle() {
   collapsed.value = !collapsed.value;
 }
 
 function selectGroup(name: string) {
   selectedGroup.value = name;
+}
+
+function copyValue(field: { key: string; value: string | number }) {
+  navigator.clipboard.writeText(String(field.value)).then(() => {
+    copiedField.value = field.key;
+    setTimeout(() => { copiedField.value = null; }, 1200);
+  });
+}
+
+function copyGroupJson() {
+  navigator.clipboard.writeText(selectedGroupJson.value).then(() => {
+    copiedGroup.value = true;
+    setTimeout(() => { copiedGroup.value = false; }, 1200);
+  });
 }
 </script>
 
@@ -58,19 +84,35 @@ function selectGroup(name: string) {
       <span class="test-data-count">{{ groupNames.length }} template{{ groupNames.length !== 1 ? 's' : '' }}</span>
     </div>
     <div v-if="!collapsed" class="test-data-body">
-      <div class="test-data-groups">
+      <div class="test-data-groups-row">
+        <div class="test-data-groups">
+          <button
+            v-for="name in groupNames"
+            :key="name"
+            class="test-data-group-btn"
+            :class="{ active: selectedGroup === name }"
+            @click="selectGroup(name)"
+          >{{ name }}</button>
+        </div>
         <button
-          v-for="name in groupNames"
-          :key="name"
-          class="test-data-group-btn"
-          :class="{ active: selectedGroup === name }"
-          @click="selectGroup(name)"
-        >{{ name }}</button>
+          class="test-data-copy-all-btn"
+          title="Copy group as JSON"
+          @click.stop="copyGroupJson"
+        >
+          <font-awesome-icon :icon="['fas', copiedGroup ? 'check' : 'copy']" />
+        </button>
       </div>
       <div v-if="selectedFields.length > 0" class="test-data-fields">
         <div v-for="field in selectedFields" :key="field.key" class="test-data-field-row">
           <span class="test-data-field-key">{{ field.shortKey }}</span>
           <span class="test-data-field-value">{{ field.value }}</span>
+          <button
+            class="test-data-copy-btn"
+            title="Copy value"
+            @click.stop="copyValue(field)"
+          >
+            <font-awesome-icon :icon="['fas', copiedField === field.key ? 'check' : 'copy']" />
+          </button>
         </div>
       </div>
     </div>
@@ -118,12 +160,40 @@ function selectGroup(name: string) {
   flex-direction: column;
 }
 
+.test-data-groups-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
 .test-data-groups {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border-subtle);
+  flex: 1;
+}
+
+.test-data-copy-all-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  flex-shrink: 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.test-data-copy-all-btn:hover {
+  color: var(--accent, #4f9eff);
+  border-color: var(--accent, #4f9eff);
 }
 
 .test-data-group-btn {
@@ -172,6 +242,10 @@ function selectGroup(name: string) {
   background: var(--bg-elevated);
 }
 
+.test-data-field-row:hover .test-data-copy-btn {
+  opacity: 1;
+}
+
 .test-data-field-key {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -191,5 +265,27 @@ function selectGroup(name: string) {
   color: var(--text-primary);
   word-break: break-all;
   line-height: 1.4;
+  flex: 1;
+}
+
+.test-data-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.test-data-copy-btn:hover {
+  color: var(--accent, #4f9eff);
 }
 </style>
