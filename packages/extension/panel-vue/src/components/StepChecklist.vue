@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import type { Step, PageElement } from '@/types/spec';
-import { resolveTargetLabel } from '@/logic/stepLabel';
+import { resolveTargetLabel, getAssertSuffix } from '@/logic/stepLabel';
 
 const props = defineProps<{
   steps: Step[];
@@ -175,6 +175,49 @@ function getValueDisplay(step: Step): string | null {
   return null;
 }
 
+/**
+ * Returns the preposition to display between action/value and the target element.
+ * e.g. "in" for click/type, "has text" for assertions, "to" for navigate.
+ */
+function getPreposition(step: Step): string | null {
+  const action = step.action.toLowerCase();
+  if (action === 'navigate') return null;
+  if (action === 'wait') return null;
+  if (action === 'manual') return null;
+  if (action === 'asserthastext' || action === 'assertcontainstext') return 'in';
+  if (action === 'assertexists' || action === 'assertnotexists') return null;
+  if (action === 'assertgone') return null;
+  if (action === 'savetext' || action === 'savevalue' || action === 'saveattribute') return 'from';
+  // Default: actions with a target use "in"
+  if (step.target) return 'in';
+  return null;
+}
+
+/**
+ * Whether the value should be displayed BEFORE the target (with preposition between).
+ * e.g. Type "admin" in [input] → value before target
+ * vs. Click in [button] → no value before target
+ */
+function hasTargetPreposition(step: Step): boolean {
+  const action = step.action.toLowerCase();
+  // Actions where value comes before the target
+  return (action === 'type' || action === 'typepassword' || action === 'select') && !!step.target;
+}
+
+/**
+ * Whether this step is an assert action with special sentence formatting.
+ */
+function isAssertStep(step: Step): boolean {
+  return getAssertSuffix(step.action.toLowerCase()) !== null;
+}
+
+/**
+ * Get the human-readable suffix for an assert step (e.g. "has text", "exists").
+ */
+function getAssertStepSuffix(step: Step): string {
+  return getAssertSuffix(step.action.toLowerCase()) || '';
+}
+
 function getParamsDisplay(params: Record<string, unknown> | undefined): { type: 'inline' | 'badge'; text: string; tooltip?: string } | null {
   if (!params || typeof params !== 'object') return null;
   const keys = Object.keys(params);
@@ -234,16 +277,39 @@ function capitalize(str: string): string {
           </template>
         </template>
 
+        <!-- Assert step (sentence format) -->
+        <template v-else-if="isAssertStep(item.step)">
+          <span class="step-action">Assert that</span>
+          <span
+            v-if="item.step.target"
+            class="element-badge"
+            :title="getElementTooltip(item.step.target)"
+          >{{ getTargetLabel(item.step) }}</span>
+          <span class="step-preposition">{{ getAssertStepSuffix(item.step) }}</span>
+          <span
+            v-if="getValueDisplay(item.step)"
+            class="step-value"
+          >{{ getValueDisplay(item.step) }}</span>
+        </template>
+
         <!-- Regular step -->
         <template v-else>
           <span class="step-action">{{ getActionLabel(item.step) }}</span>
+          <span
+            v-if="getValueDisplay(item.step) && hasTargetPreposition(item.step)"
+            class="step-value"
+          >{{ getValueDisplay(item.step) }}</span>
+          <span
+            v-if="item.step.target && getPreposition(item.step)"
+            class="step-preposition"
+          >{{ getPreposition(item.step) }}</span>
           <span
             v-if="item.step.target"
             class="element-badge"
             :title="getElementTooltip(item.step.target)"
           >{{ getTargetLabel(item.step) }}</span>
           <span
-            v-if="getValueDisplay(item.step)"
+            v-if="getValueDisplay(item.step) && !hasTargetPreposition(item.step)"
             class="step-value"
           >{{ getValueDisplay(item.step) }}</span>
           <template v-if="item.step.params && !item.isTask">

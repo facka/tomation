@@ -462,6 +462,10 @@ h3 {
   flex: 1;
   cursor: pointer;
   line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 
 .step-checklist input[type="checkbox"] {
@@ -594,6 +598,9 @@ h3 {
   font-family: var(--font-mono);
   line-height: 1.5;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .log-entry:last-child { border-bottom: none; }
@@ -734,7 +741,8 @@ h3 {
 }
 
 .element-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   background: var(--accent-soft);
   color: var(--accent-text);
   font-weight: 600;
@@ -751,6 +759,11 @@ h3 {
 .step-value {
   color: var(--text-muted);
   font-style: italic;
+}
+
+.step-preposition {
+  color: var(--text-muted);
+  font-size: 11px;
 }
 
 .step-params {
