@@ -11,6 +11,8 @@ Library summary:
 - Save actions: `SaveText`, `SaveAttribute`, `SaveValue`, `Save`
 - Press key shortcuts: `PressUp`, `PressDown`, `PressLeft`, `PressRight`, `PressTab`, `PressEnter`, `PressEsc`, `PressSpace`
 - Date helpers: `today`, `tomorrow`, `yesterday`, `nextWeek`, `lastWeek`, `nextMonth`, `lastMonth`, `firstDateOfMonth`, `lastDateOfMonth`
+- Data templates: `Data()` wraps an object with static values and `Fake` generators into a reusable template
+- Fake generators: `Fake.firstName`, `Fake.lastName`, `Fake.fullName`, `Fake.email`, `Fake.phone`, `Fake.dateOfBirth`, `Fake.address`, `Fake.oneOf`, `Fake.number`, `Fake.uuid`, `Fake.sentence`, `Fake.pastDate`, `Fake.futureDate`, `Fake.sequence`
 - Tasks are reusable multi-step workflows with parameters and conditionals
 - Tests are named scenarios composed of action calls and task invocations
 - Automations are parameterized test procedures with user-provided values at runtime
@@ -19,7 +21,7 @@ Library summary:
 - Template strings with `${}` are evaluated at runtime for dynamic values
 - Context values are referenced with `{{ctx.keyName}}` syntax in any step that accepts a string
 
-Key APIs: Task(fn).as('label'), Test, Automation, Click, Type, TypePassword, Select, Upload, Press, PressKey, PressUp, PressDown, PressLeft, PressRight, PressTab, PressEnter, PressEsc, PressSpace, SaveText, SaveAttribute, SaveValue, Save, Navigate, Wait, WaitFor, WaitForGone, Manual, AssertExists, AssertNotExists, AssertHasText, is, Element, innerTextIs, innerTextContains, idIs, classIncludes, placeholderIs, nameIs, typeIs, valueIs, ariaLabel, roleIs, titleIs, hrefContains, isDisabled, nthChild, dataAttr, closestLabelIs, today, tomorrow, yesterday, nextWeek, lastWeek, nextMonth, lastMonth, firstDateOfMonth, lastDateOfMonth
+Key APIs: Task(fn).as('label'), Test, Automation, Click, Type, TypePassword, Select, Upload, Press, PressKey, PressUp, PressDown, PressLeft, PressRight, PressTab, PressEnter, PressEsc, PressSpace, SaveText, SaveAttribute, SaveValue, Save, Navigate, Wait, WaitFor, WaitForGone, Manual, AssertExists, AssertNotExists, AssertHasText, is, Element, innerTextIs, innerTextContains, idIs, classIncludes, placeholderIs, nameIs, typeIs, valueIs, ariaLabel, roleIs, titleIs, hrefContains, isDisabled, nthChild, dataAttr, closestLabelIs, today, tomorrow, yesterday, nextWeek, lastWeek, nextMonth, lastMonth, firstDateOfMonth, lastDateOfMonth, Data, Fake
 
 Rules:
 - **CRITICAL: Only use functions exported by `@tomationjs/dsl`**. The DSL is NOT general-purpose TypeScript — it is a structured DSL that compiles to JSON. Arbitrary TypeScript/JavaScript code (loops, conditionals, console.log, fetch, DOM manipulation, async/await, try/catch, etc.) will be silently ignored after compilation. Only DSL-provided functions (actions, assertions, element builders, tasks, tests, automations) produce executable steps.
@@ -314,6 +316,98 @@ export default {
 
 Compile with: `npx tomation compile`
 Watch mode: `npx tomation watch`
+
+---
+
+## Test Data & Fake Generators
+
+Data templates produce fresh random values for each test run — no hardcoded strings needed. Define them in `.data.ts` files.
+
+### Defining a Data Template
+
+```ts
+// data/user.data.ts
+import { Data, Fake } from '@tomationjs/dsl'
+
+const user = Data({
+  name: Fake.fullName(),
+  email: Fake.email(),
+  phone: Fake.phone({ country: 'US' }),
+  dob: Fake.dateOfBirth({ minAge: 18, maxAge: 65, format: 'MM/DD/YYYY' }),
+  role: Fake.oneOf(['Admin', 'Editor', 'Viewer']),
+  address: Fake.address(),
+  id: Fake.uuid(),
+  notes: Fake.sentence({ minWords: 5, maxWords: 12 }),
+  lastVisit: Fake.pastDate({ within: 90 }),
+  nextAppt: Fake.futureDate({ within: 30, format: 'MM/DD/YYYY' }),
+  patientId: Fake.sequence({ prefix: 'PAT-', pad: 3 }),
+  city: 'Springfield',  // static values are also supported
+})
+
+export default user
+```
+
+### Using Data in Tests
+
+Import and reference properties directly — the compiler handles the rest:
+
+```ts
+import { Test, AssertHasText } from '@tomationjs/dsl'
+import user from '~/data/user.data'
+import Form from '~/pom/form.pom'
+
+Test('Register with generated data', () => {
+  Form.fill({ name: user.name, email: user.email })
+  Form.submit()
+  AssertHasText(Form.message, 'Success')
+})
+```
+
+### Fake Generator Reference
+
+| Method | Description | Options |
+|--------|-------------|---------|
+| `Fake.firstName(gender?)` | Random first name | `'male' \| 'female'` |
+| `Fake.lastName()` | Random last name | — |
+| `Fake.fullName(gender?)` | First + last | `'male' \| 'female'` |
+| `Fake.email()` | Random email | — |
+| `Fake.phone(options?)` | Phone by country | `{ country: 'US'\|'UK'\|'ES' }` |
+| `Fake.dateOfBirth(options?)` | DOB with age range | `{ minAge, maxAge, format }` |
+| `Fake.address(part?)` | Address or part | `'full'\|'street'\|'city'\|'country'\|'zip'` |
+| `Fake.oneOf(values)` | Pick from array | `string[]` |
+| `Fake.number(options?)` | Random number | `{ min, max, decimals }` |
+| `Fake.uuid()` | UUID v4 | — |
+| `Fake.sentence(options?)` | Random sentence | `{ minWords, maxWords }` |
+| `Fake.pastDate(options?)` | Date in the past | `{ within (days), format }` |
+| `Fake.futureDate(options?)` | Date in the future | `{ within (days), format }` |
+| `Fake.sequence(options?)` | Incremental counter | `{ prefix, pad }` |
+
+### Seed (Reproducible Values)
+
+Pin a seed for deterministic output across runs:
+
+```ts
+const user = Data({
+  name: Fake.fullName(),
+  email: Fake.email(),
+}, { seed: 42 })
+```
+
+Seeds can also be pinned/unpinned from the extension UI without editing code.
+
+### Configuration
+
+Add a `data` property to `tomation.config.ts`:
+
+```ts
+export default {
+  pom: './pom',
+  tests: './tests',
+  data: './data',  // data files directory
+}
+```
+
+Data files use the `.data.ts` extension and are imported via `~/` aliases.
 
 ---
 
