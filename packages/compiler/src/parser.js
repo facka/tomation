@@ -205,6 +205,112 @@ function buildConstBindings(ast) {
     }
   });
 
+  // Also extract TypeScript enum IIFE patterns:
+  // var EnumName; (function(EnumName) { EnumName["Key"] = "value"; ... })(EnumName || (EnumName = {}));
+  const enumBindings = buildEnumBindings(ast);
+  for (const key of Object.keys(enumBindings)) {
+    if (!(key in bindings)) {
+      bindings[key] = enumBindings[key];
+    }
+  }
+
+  return bindings;
+}
+
+/**
+ * Detect transpiled TypeScript enum IIFE patterns and extract their key-value pairs.
+ * After ts.transpileModule, `enum X { A = 'a', B = 'b' }` becomes:
+ *   var X; (function(X) { X["A"] = "a"; X["B"] = "b"; })(X || (X = {}));
+ *
+ * @param {object} ast - parsed AST (acorn Program node)
+ * @returns {object} bindings map: { enumName: { memberName: literalValue, ... }, ... }
+ */
+function buildEnumBindings(ast) {
+  const bindings = {};
+
+  // First, collect all `var X;` declarations (uninitialized) as potential enum names
+  const varDecls = new Set();
+  walk(ast, node => {
+    if (node.type !== 'VariableDeclaration') return;
+    if (node.kind !== 'var') return;
+    for (const declarator of node.declarations) {
+      if (!declarator || declarator.type !== 'VariableDeclarator') continue;
+      if (!declarator.id || declarator.id.type !== 'Identifier') continue;
+      if (declarator.init) continue; // must be uninitialized: `var X;`
+      varDecls.add(declarator.id.name);
+    }
+  });
+
+  // Then find IIFE call expressions: (function(X) { ... })(X || (X = {}))
+  walk(ast, node => {
+    if (node.type !== 'ExpressionStatement') return;
+    const expr = node.expression;
+    if (!expr || expr.type !== 'CallExpression') return;
+    const callee = expr.callee;
+    if (!callee || callee.type !== 'FunctionExpression') return;
+    if (!callee.params || callee.params.length !== 1) return;
+    const paramNode = callee.params[0];
+    if (!paramNode || paramNode.type !== 'Identifier') return;
+    const enumName = paramNode.name;
+
+    // The argument should be `X || (X = {})` or just `X`
+    if (!expr.arguments || expr.arguments.length !== 1) return;
+    const arg = expr.arguments[0];
+    let matchesEnum = false;
+    if (arg.type === 'LogicalExpression' && arg.operator === '||') {
+      // left should be Identifier with same name
+      if (arg.left && arg.left.type === 'Identifier' && arg.left.name === enumName) {
+        matchesEnum = true;
+      }
+    } else if (arg.type === 'Identifier' && arg.name === enumName) {
+      matchesEnum = true;
+    } else if (arg.type === 'AssignmentExpression' && arg.left && arg.left.type === 'Identifier' && arg.left.name === enumName) {
+      matchesEnum = true;
+    }
+
+    if (!matchesEnum) return;
+    if (!varDecls.has(enumName)) return;
+
+    // Extract assignments: EnumName["Key"] = "value" or EnumName.Key = "value"
+    const body = callee.body;
+    if (!body || body.type !== 'BlockStatement') return;
+
+    const obj = {};
+    let hasEntries = false;
+
+    for (const stmt of body.body) {
+      if (stmt.type !== 'ExpressionStatement') continue;
+      const assignExpr = stmt.expression;
+      if (!assignExpr || assignExpr.type !== 'AssignmentExpression') continue;
+      if (assignExpr.operator !== '=') continue;
+
+      // Left side: EnumName["Key"] or EnumName.Key
+      const left = assignExpr.left;
+      if (!left || left.type !== 'MemberExpression') continue;
+      if (!left.object || left.object.type !== 'Identifier' || left.object.name !== enumName) continue;
+
+      let memberKey = null;
+      if (left.computed && left.property && left.property.type === 'Literal') {
+        memberKey = String(left.property.value);
+      } else if (!left.computed && left.property && left.property.type === 'Identifier') {
+        memberKey = left.property.name;
+      }
+      if (!memberKey) continue;
+
+      // Right side: literal value
+      const right = assignExpr.right;
+      const val = extractString(right) ?? extractNumber(right) ?? extractBoolean(right);
+      if (val !== null && val !== undefined) {
+        obj[memberKey] = val;
+        hasEntries = true;
+      }
+    }
+
+    if (hasEntries) {
+      bindings[enumName] = obj;
+    }
+  });
+
   return bindings;
 }
 
@@ -893,7 +999,7 @@ function extractTemplateValue(node) {
  * @param {object} node - AST node
  * @returns {string|null}
  */
-function extractStringOrTemplate(node, dataTemplateVars) {
+function extractStringOrTemplate(node, dataTemplateVars, constBindings) {
   if (!node) return null;
   const plain = extractString(node);
   if (plain !== null) return plain;
@@ -902,6 +1008,7 @@ function extractStringOrTemplate(node, dataTemplateVars) {
   if (node.type === 'Identifier') return '{{' + node.name + '}}';
   // Handle params.X member access → {{X}} template placeholder
   // But first check for data template variable references → {{data.X.Y}}
+  // And const/enum bindings → resolved literal
   if (
     node.type === 'MemberExpression' &&
     node.object && node.object.type === 'Identifier' &&
@@ -909,6 +1016,13 @@ function extractStringOrTemplate(node, dataTemplateVars) {
   ) {
     if (dataTemplateVars && dataTemplateVars.has(node.object.name)) {
       return '{{data.' + node.object.name + '.' + node.property.name + '}}';
+    }
+    // Resolve const/enum member expressions (e.g., TechSkill.TypeScript → "TypeScript")
+    if (constBindings && node.object.name in constBindings) {
+      const resolved = constBindings[node.object.name][node.property.name];
+      if (resolved !== null && resolved !== undefined) {
+        return String(resolved);
+      }
     }
     return '{{' + node.property.name + '}}';
   }
@@ -1420,7 +1534,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
         // Optional params object
         const paramsArg = exprNode.arguments[0];
         if (paramsArg && paramsArg.type === 'ObjectExpression') {
-          const params = extractTaskInvocationParams(paramsArg, dataTemplateVars);
+          const params = extractTaskInvocationParams(paramsArg, dataTemplateVars, constBindings);
           if (params && Object.keys(params).length > 0) step.params = params;
         }
         return step;
@@ -1520,7 +1634,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
           }
           if (args.length === 1 && args[0] && args[0].type === 'ObjectExpression') {
             const step = { action: 'task', name: fnName };
-            const params = extractTaskInvocationParams(args[0], dataTemplateVars);
+            const params = extractTaskInvocationParams(args[0], dataTemplateVars, constBindings);
             if (params && Object.keys(params).length > 0) step.params = params;
             return step;
           }
@@ -1542,7 +1656,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
  * @param {object} objNode - ObjectExpression AST node
  * @returns {object} params object
  */
-function extractTaskInvocationParams(objNode, dataTemplateVars) {
+function extractTaskInvocationParams(objNode, dataTemplateVars, constBindings) {
   if (!objNode || objNode.type !== 'ObjectExpression') return {};
   const params = {};
   for (const prop of objNode.properties) {
@@ -1553,7 +1667,7 @@ function extractTaskInvocationParams(objNode, dataTemplateVars) {
     if (!key) continue;
 
     // Try string/template, then number, then boolean
-    const strVal = extractStringOrTemplate(prop.value, dataTemplateVars);
+    const strVal = extractStringOrTemplate(prop.value, dataTemplateVars, constBindings);
     if (strVal !== null) {
       params[key] = strVal;
       continue;
@@ -2526,12 +2640,11 @@ function parseSource(source, filePath, rawSource, options) {
   // Build constBindings from local const object declarations
   const constBindings = buildConstBindings(ast);
 
-  // Resolve imported const objects from ~/paths
-  // For each named import that references a ~/ path, try to read and parse the source
+  // Resolve imported const objects and enums from ~/paths
+  // For each import (named or default) that references a ~/ path, try to read and parse the source
   // to extract const bindings from the imported file
   const resolvedImportPaths = new Set(); // avoid parsing same file twice
   for (const imp of result.imports) {
-    if (!imp.named) continue;
     if (!imp.importPath.startsWith('~/') && !imp.importPath.startsWith('.')) continue;
     // Only attempt cross-file resolution if the local name isn't already a local const binding
     if (imp.localName in constBindings) continue;
@@ -2827,4 +2940,4 @@ function parseSource(source, filePath, rawSource, options) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractIfStep, extractCondition, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, parseDataTemplate, buildConstBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };
+module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractIfStep, extractCondition, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, parseDataTemplate, buildConstBindings, buildEnumBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };
