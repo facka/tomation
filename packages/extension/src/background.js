@@ -1,6 +1,7 @@
 // background.js — service worker / orchestrator
 // Implementation: Tasks 14, 15
 try { importScripts('storage.js'); } catch (e) { /* Node.js test environment */ }
+try { importScripts('faker.js'); } catch (e) { /* Node.js test environment */ }
 var api = typeof browser !== 'undefined' ? browser : chrome;
 
 // Open side panel when the extension icon is clicked (Chrome/Edge only)
@@ -385,8 +386,21 @@ function resolveValue(value, params, contextStore) {
     return { __ctxError: ctxError }; // signal error to caller
   }
 
+  // Resolve {{data.templateName.property}} tokens using the dataStore
+  resolved = resolved.replace(/\{\{data\.([^}]+)\}\}/g, function (match, dataPath) {
+    if (runState.dataStore && runState.dataStore.hasOwnProperty(dataPath)) {
+      return String(runState.dataStore[dataPath]);
+    }
+    console.warn('[tomation] Unknown data path "' + dataPath + '"');
+    return match;
+  });
+
   // Resolve {{paramName}} tokens
   resolved = resolved.replace(/\{\{([^}]+)\}\}/g, function (match, paramName) {
+    // Skip {{data.X.Y}} tokens (handled above, left unresolved if path unknown)
+    if (paramName.indexOf('data.') === 0) {
+      return match;
+    }
     if (params && params.hasOwnProperty(paramName)) {
       var paramVal = params[paramName];
       // Guard against object values (e.g., unresolved error descriptors) — keep token for lazy resolution
@@ -808,6 +822,7 @@ function resetRunState() {
   runState.pendingTabSwitch = null;
   runState.metaHostnames = null;
   runState.contextStore = {};
+  runState.dataStore = {};
 }
 
 // ---------------------------------------------------------------------------
@@ -1284,6 +1299,89 @@ function emitSummary(type, total, passed, failed) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Data Resolution — resolves Fake descriptors to concrete values at test start
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve all Fake placeholders in a test's data map to concrete values.
+ * Called once at the start of each test run.
+ *
+ * @param {object} testData - The test's `data` field from compiled JSON
+ *   Shape: { templateName: { __seed?: number, prop: value|FakeDescriptor, ... }, ... }
+ * @param {object} [dataSeeds] - Override seeds from UI config
+ *   Shape: { templateName: number|null } — number = use this seed, null = force random
+ * @returns {object} Flat map of "templateName.propPath" → resolved value
+ */
+function resolveTestData(testData, dataSeeds) {
+  var dataStore = {};
+  if (!testData || typeof testData !== 'object') return dataStore;
+
+  var templateNames = Object.keys(testData);
+  for (var i = 0; i < templateNames.length; i++) {
+    var tmplName = templateNames[i];
+    var template = testData[tmplName];
+
+    // Determine seed: config override > JSON __seed > random (no seed)
+    var seed = undefined;
+    if (dataSeeds && dataSeeds.hasOwnProperty(tmplName)) {
+      // Config override: number = use seed, null = force random
+      var overrideSeed = dataSeeds[tmplName];
+      if (typeof overrideSeed === 'number') {
+        seed = overrideSeed;
+      }
+      // null means force random — leave seed undefined
+    } else if (template && template.__seed !== undefined) {
+      seed = template.__seed;
+    }
+
+    // Activate seeded PRNG if seed is set
+    if (seed !== undefined && typeof setSeededRandom === 'function' && typeof mulberry32 === 'function') {
+      setSeededRandom(mulberry32(seed));
+    }
+
+    resolveTemplateRecursive(tmplName, template, dataStore);
+
+    // Deactivate seeded PRNG after resolving this template
+    if (seed !== undefined && typeof setSeededRandom === 'function') {
+      setSeededRandom(null);
+    }
+  }
+  return dataStore;
+}
+
+/**
+ * Recursively resolve a template object, building dot-path keys.
+ * Fake descriptors are resolved to concrete values via resolveFake().
+ * Nested objects are traversed to build deeper dot-paths.
+ * Static literals are stored as-is.
+ *
+ * @param {string} prefix - Current dot-path prefix (e.g., "patient" or "patient.address")
+ * @param {object} obj - Current template node
+ * @param {object} dataStore - Target flat map to populate
+ */
+function resolveTemplateRecursive(prefix, obj, dataStore) {
+  var keys = Object.keys(obj);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    // Skip internal __seed metadata field
+    if (key === '__seed') continue;
+    var value = obj[key];
+    var path = prefix + '.' + key;
+
+    if (value && typeof value === 'object' && value.type === 'fake') {
+      // Fake descriptor → resolve to concrete value
+      dataStore[path] = resolveFake(value);
+    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+      // Nested object → recurse
+      resolveTemplateRecursive(path, value, dataStore);
+    } else {
+      // Static literal value
+      dataStore[path] = value;
+    }
+  }
+}
+
 /**
  * Start a test run. Flattens steps, locks the tab, and begins the step loop.
  *
@@ -1298,6 +1396,25 @@ function startRun(tabId, test, spec, checkedSteps, config) {
 
   if (config) {
     runState.config = config;
+  }
+
+  // Resolve test data (Fake descriptors → concrete values) before step execution
+  if (test.data) {
+    if (typeof resetSequenceCounters === 'function') resetSequenceCounters();
+    var dataSeeds = (config && config.dataSeeds) || {};
+    runState.dataStore = resolveTestData(test.data, dataSeeds);
+    // Build effective seeds map to send to the panel
+    var effectiveSeeds = {};
+    var tmplNames = Object.keys(test.data);
+    for (var si = 0; si < tmplNames.length; si++) {
+      var tn = tmplNames[si];
+      if (dataSeeds.hasOwnProperty(tn) && typeof dataSeeds[tn] === 'number') {
+        effectiveSeeds[tn] = dataSeeds[tn];
+      } else if (test.data[tn] && test.data[tn].__seed !== undefined) {
+        effectiveSeeds[tn] = test.data[tn].__seed;
+      }
+    }
+    safeSendMessage({ type: 'DATA_RESOLVED', data: runState.dataStore, seeds: effectiveSeeds });
   }
 
   var resolvedSteps = flattenSteps(

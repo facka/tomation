@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - Tomation Playground</title>
+  <title>User Registration — Tomation Playground</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -109,7 +109,6 @@
       <a href="https://github.com/facka/tomation" aria-label="GitHub" class="hidden sm:inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md text-slate-300 transition hover:text-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.009-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
       </a>
-      <!-- Hamburger (mobile only) -->
       <button id="nav-menu-btn" aria-label="Open menu" aria-expanded="false" class="sm:hidden inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md text-slate-300 transition hover:text-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
@@ -129,10 +128,10 @@
   <!-- Secondary Examples Navbar (Tier 2) -->
   <nav aria-label="Examples navigation" class="sticky top-[60px] z-30 flex items-center gap-1 border-b border-slate-700/70 bg-slate-900/80 px-4 py-2 backdrop-blur sm:px-6 lg:px-8">
     <a href="../playground.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-slate-400 hover:text-slate-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Playground</a>
-    <a href="index.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-emerald-300 border-b-2 border-emerald-400 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Login</a>
+    <a href="../login/index.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-slate-400 hover:text-slate-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Login</a>
     <a href="../todo/index.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-slate-400 hover:text-slate-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Todo</a>
     <a href="../navigation/index.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-slate-400 hover:text-slate-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Navigation</a>
-    <a href="../user-form/index.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-slate-400 hover:text-slate-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">User Form</a>
+    <a href="index.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-emerald-300 border-b-2 border-emerald-400 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">User Form</a>
   </nav>
 
   <main class="mx-auto min-h-[calc(100dvh-130px)] w-full max-w-7xl px-5 py-8 lg:py-10">
@@ -144,20 +143,41 @@
     <div class="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6 lg:items-start">
       <section id="app-panel" role="tabpanel" aria-labelledby="app-tab" class="rounded-3xl border border-emerald-500/25 bg-slate-900/70 p-7 shadow-[0_0_0_1px_rgba(34,197,94,0.18),0_20px_80px_rgba(2,6,23,0.7)] backdrop-blur">
         <div class="mb-5">
-          <h1 class="text-3xl font-bold tracking-tight text-white">Login</h1>
-          <p class="mt-2 text-sm text-slate-300">Use admin / password123 for valid access.</p>
+          <h1 class="text-3xl font-bold tracking-tight text-white">User Registration</h1>
+          <p class="mt-2 text-sm text-slate-300">Fill in user details to register. All fields are required.</p>
         </div>
 
-        <form id="login-form" class="space-y-4">
+        <form id="registration-form" class="space-y-4">
           <div>
-            <label for="username" class="mb-1.5 block text-sm font-medium text-slate-200">Username</label>
-            <input type="text" id="username" name="username" placeholder="Enter username" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none">
+            <label for="full-name" class="mb-1.5 block text-sm font-medium text-slate-200">Full Name</label>
+            <input type="text" id="full-name" name="fullName" placeholder="John Smith" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none">
           </div>
           <div>
-            <label for="password" class="mb-1.5 block text-sm font-medium text-slate-200">Password</label>
-            <input type="password" id="password" name="password" placeholder="Enter password" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none">
+            <label for="email" class="mb-1.5 block text-sm font-medium text-slate-200">Email</label>
+            <input type="email" id="email" name="email" placeholder="user@example.com" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none">
           </div>
-          <button type="submit" id="login-btn" class="w-full rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-bold text-emerald-950 transition hover:bg-emerald-300">Log In</button>
+          <div>
+            <label for="phone" class="mb-1.5 block text-sm font-medium text-slate-200">Phone</label>
+            <input type="tel" id="phone" name="phone" placeholder="(555) 123-4567" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none">
+          </div>
+          <div>
+            <label for="dob" class="mb-1.5 block text-sm font-medium text-slate-200">Date of Birth</label>
+            <input type="text" id="dob" name="dob" placeholder="MM/DD/YYYY" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none">
+          </div>
+          <div>
+            <label for="role" class="mb-1.5 block text-sm font-medium text-slate-200">Role</label>
+            <select id="role" name="role" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none">
+              <option value="">Select a role...</option>
+              <option value="Admin">Admin</option>
+              <option value="Editor">Editor</option>
+              <option value="Viewer">Viewer</option>
+            </select>
+          </div>
+          <div>
+            <label for="address" class="mb-1.5 block text-sm font-medium text-slate-200">Address</label>
+            <input type="text" id="address" name="address" placeholder="123 Main St, Springfield 12345" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none">
+          </div>
+          <button type="submit" id="register-btn" class="w-full rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-bold text-emerald-950 transition hover:bg-emerald-300">Register</button>
         </form>
 
         <div id="message" class="mt-4 hidden rounded-xl px-3 py-2 text-sm"></div>
@@ -167,14 +187,15 @@
         <div class="flex items-center justify-between border-b border-slate-700/80 px-4 py-3">
           <h2 class="text-sm font-semibold tracking-wide text-emerald-300">Test Source</h2>
           <div class="flex items-center gap-2">
-            <span id="source-file-badge" class="rounded-md border border-slate-600 px-2 py-1 text-xs text-slate-300">login.test.ts</span>
+            <span id="source-file-badge" class="rounded-md border border-slate-600 px-2 py-1 text-xs text-slate-300">user-form.test.ts</span>
             <button id="source-copy-btn" type="button" class="min-h-[32px] rounded-md border border-slate-600 px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:border-emerald-400/70 hover:text-emerald-200">Copy</button>
           </div>
         </div>
         <div class="border-b border-slate-700/80 px-2 py-2">
           <div id="source-file-tabs" class="flex min-h-[44px] items-center gap-2 overflow-x-auto">
-            <button type="button" data-file="test" class="source-file-tab active rounded-md px-3 py-2 text-xs font-medium">login.test.ts</button>
-            <button type="button" data-file="pom" class="source-file-tab rounded-md px-3 py-2 text-xs font-medium">pom/login.pom.ts</button>
+            <button type="button" data-file="test" class="source-file-tab active rounded-md px-3 py-2 text-xs font-medium">user-form.test.ts</button>
+            <button type="button" data-file="data" class="source-file-tab rounded-md px-3 py-2 text-xs font-medium">data/user.data.ts</button>
+            <button type="button" data-file="pom" class="source-file-tab rounded-md px-3 py-2 text-xs font-medium">pom/user-form.pom.ts</button>
           </div>
         </div>
         <pre class="code-scroll overflow-x-auto p-4 text-slate-200"><code id="source-code-view" class="language-typescript"></code></pre>
@@ -183,34 +204,32 @@
   </main>
 
   <script>
-    var form = document.getElementById('login-form');
+    var form = document.getElementById('registration-form');
     var messageEl = document.getElementById('message');
 
     form.addEventListener('submit', function(e) {
       e.preventDefault();
-      var username = document.getElementById('username').value.trim();
-      var password = document.getElementById('password').value;
+      var fullName = document.getElementById('full-name').value.trim();
+      var email = document.getElementById('email').value.trim();
+      var phone = document.getElementById('phone').value.trim();
+      var dob = document.getElementById('dob').value.trim();
+      var role = document.getElementById('role').value;
+      var address = document.getElementById('address').value.trim();
 
       messageEl.className = 'mt-4 hidden rounded-xl px-3 py-2 text-sm';
       messageEl.style.display = 'none';
       messageEl.textContent = '';
 
-      if (!username || !password) {
+      if (!fullName || !email || !phone || !dob || !role || !address) {
         messageEl.className = 'mt-4 rounded-xl px-3 py-2 text-sm error';
         messageEl.style.display = 'block';
-        messageEl.textContent = 'Username and password are required';
+        messageEl.textContent = 'All fields are required';
         return;
       }
 
-      if (username === 'admin' && password === 'password123') {
-        messageEl.className = 'mt-4 rounded-xl px-3 py-2 text-sm success';
-        messageEl.style.display = 'block';
-        messageEl.textContent = 'Login successful! Welcome, admin.';
-      } else {
-        messageEl.className = 'mt-4 rounded-xl px-3 py-2 text-sm error';
-        messageEl.style.display = 'block';
-        messageEl.textContent = 'Invalid username or password';
-      }
+      messageEl.className = 'mt-4 rounded-xl px-3 py-2 text-sm success';
+      messageEl.style.display = 'block';
+      messageEl.textContent = 'User registered successfully: ' + fullName;
     });
   </script>
   <script>
@@ -258,52 +277,73 @@
     (function() {
       var sourceFiles = {
         test: {
-          name: 'login.test.ts',
-          code: `import { Test, Click, AssertHasText } from '@tomationjs/dsl'
-import Login from '~/pom/login.pom'
+          name: 'user-form.test.ts',
+          code: `import { Test, AssertHasText } from '@tomationjs/dsl'
+import user from '~/data/user.data'
+import UserForm from '~/pom/user-form.pom'
 
-Test('Login with valid credentials', () => {
-  Login.fillCredentials({ username: 'admin', password: 'password123' })
-  Login.submit()
-  AssertHasText(Login.message, 'Login successful')
-})
-
-Test('Login with invalid credentials shows error', () => {
-  Login.fillInvalidCredentials()
-  Login.submit()
-  AssertHasText(Login.message, 'Invalid username or password')
-})
-
-Test('Login shows error on empty submit', () => {
-  Click(Login.submitButton)
-  AssertHasText(Login.message, 'required')
+Test('Register user with generated data', () => {
+  UserForm.fillForm({
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    dob: user.dob,
+    role: user.role,
+    address: user.address,
+  })
+  UserForm.submit()
+  AssertHasText(UserForm.message, 'User registered successfully')
 })`
         },
-        pom: {
-          name: 'pom/login.pom.ts',
-          code: `import { is, idIs, Task, Type, TypePassword, Click } from '@tomationjs/dsl'
+        data: {
+          name: 'data/user.data.ts',
+          code: `import { Data, Fake } from '@tomationjs/dsl'
 
-const usernameInput = is.INPUT.where(idIs('username')).as('Username')
-const passwordInput = is.INPUT.where(idIs('password')).as('Password')
-const submitButton = is.BUTTON.where(idIs('login-btn')).as('Submit')
+const user = Data({
+  name: Fake.fullName(),
+  email: Fake.email(),
+  phone: Fake.phone({ country: 'US' }),
+  dob: Fake.dateOfBirth({ minAge: 18, maxAge: 65, format: 'MM/DD/YYYY' }),
+  role: Fake.oneOf(['Admin', 'Editor', 'Viewer']),
+  address: Fake.address(),
+})
+
+export default user`
+        },
+        pom: {
+          name: 'pom/user-form.pom.ts',
+          code: `import { is, idIs, Task, Type, Select, Click } from '@tomationjs/dsl'
+
+const nameInput = is.INPUT.where(idIs('full-name')).as('Full Name')
+const emailInput = is.INPUT.where(idIs('email')).as('Email')
+const phoneInput = is.INPUT.where(idIs('phone')).as('Phone')
+const dobInput = is.INPUT.where(idIs('dob')).as('Date of Birth')
+const roleSelect = is.SELECT.where(idIs('role')).as('Role')
+const addressInput = is.INPUT.where(idIs('address')).as('Address')
+const registerButton = is.BUTTON.where(idIs('register-btn')).as('Register')
 const message = is.DIV.where(idIs('message')).as('Message')
 
-const fillCredentials = Task((params: { username: string; password: string }) => {
-  const { username, password } = params
-  Type(username).in(usernameInput)
-  TypePassword(password).in(passwordInput)
-}).as('Fill Credentials')
-
-const fillInvalidCredentials = Task(() => {
-  Type('wronguser').in(usernameInput)
-  TypePassword('wrongpass').in(passwordInput)
-}).as('Fill Invalid Credentials')
+const fillForm = Task((params: {
+  name: string; email: string; phone: string;
+  dob: string; role: string; address: string;
+}) => {
+  Type(params.name).in(nameInput)
+  Type(params.email).in(emailInput)
+  Type(params.phone).in(phoneInput)
+  Type(params.dob).in(dobInput)
+  Select(params.role).in(roleSelect)
+  Type(params.address).in(addressInput)
+}).as('Fill Registration Form')
 
 const submit = Task(() => {
-  Click(submitButton)
-}).as('Submit Form')
+  Click(registerButton)
+}).as('Submit Registration')
 
-export default { usernameInput, passwordInput, submitButton, message, fillCredentials, fillInvalidCredentials, submit }`
+export default {
+  nameInput, emailInput, phoneInput, dobInput,
+  roleSelect, addressInput, registerButton, message,
+  fillForm, submit
+}`
         }
       };
 
@@ -364,9 +404,7 @@ export default { usernameInput, passwordInput, submitButton, message, fillCreden
           try {
             document.execCommand('copy');
             onCopyDone();
-          } catch (error) {
-            // Ignore clipboard fallback errors.
-          }
+          } catch (error) {}
           document.body.removeChild(textArea);
         });
       }
@@ -379,9 +417,7 @@ export default { usernameInput, passwordInput, submitButton, message, fillCreden
   </script>
   <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
   <script>
-    // Mobile nav menu toggle
     (function() {
       var btn = document.getElementById('nav-menu-btn');
       var menu = document.getElementById('nav-mobile-menu');

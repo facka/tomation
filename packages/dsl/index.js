@@ -317,6 +317,70 @@ function lastDateOfMonth(offset, format) {
   return '__dateHelper:lastDateOfMonth:' + offset + (format ? ':' + format : '');
 }
 
+// --- Data and Fake Generators ---
+
+/**
+ * Data template builder — wraps a plain object as a typed Data template.
+ * @param {object} template - Object with static values and/or Fake generator calls
+ * @param {object} [options] - Optional options { seed?: number }
+ * @returns {{ __data: true, template: object, options?: object }}
+ */
+function Data(template, options) {
+  var result = { __data: true, template: template };
+  if (options) result.options = options;
+  return result;
+}
+
+/**
+ * Fake — collection of generator method stubs.
+ * Each method returns a descriptor object that the compiler serializes
+ * and the extension runtime resolves to a concrete random value.
+ */
+var Fake = {
+  firstName: function(gender) {
+    return { __fake: true, type: 'fake', method: 'firstName', options: { gender: gender } };
+  },
+  lastName: function() {
+    return { __fake: true, type: 'fake', method: 'lastName', options: {} };
+  },
+  fullName: function(gender) {
+    return { __fake: true, type: 'fake', method: 'fullName', options: { gender: gender } };
+  },
+  dateOfBirth: function(options) {
+    return { __fake: true, type: 'fake', method: 'dateOfBirth', options: options || {} };
+  },
+  phone: function(options) {
+    return { __fake: true, type: 'fake', method: 'phone', options: options || {} };
+  },
+  address: function(part) {
+    return { __fake: true, type: 'fake', method: 'address', options: { part: part || 'full' } };
+  },
+  email: function() {
+    return { __fake: true, type: 'fake', method: 'email', options: {} };
+  },
+  oneOf: function(options) {
+    return { __fake: true, type: 'fake', method: 'oneOf', options: { values: options } };
+  },
+  number: function(options) {
+    return { __fake: true, type: 'fake', method: 'number', options: options || {} };
+  },
+  uuid: function() {
+    return { __fake: true, type: 'fake', method: 'uuid', options: {} };
+  },
+  sentence: function(options) {
+    return { __fake: true, type: 'fake', method: 'sentence', options: options || {} };
+  },
+  pastDate: function(options) {
+    return { __fake: true, type: 'fake', method: 'pastDate', options: options || {} };
+  },
+  futureDate: function(options) {
+    return { __fake: true, type: 'fake', method: 'futureDate', options: options || {} };
+  },
+  sequence: function(options) {
+    return { __fake: true, type: 'fake', method: 'sequence', options: options || {} };
+  }
+};
+
 // --- Save Actions ---
 
 function SaveText(element) {
@@ -453,6 +517,9 @@ module.exports = {
   PressEnter: PressEnter,
   PressEsc: PressEsc,
   PressSpace: PressSpace,
+  // Data and Fake generators
+  Data: Data,
+  Fake: Fake,
   // Save actions
   SaveText: SaveText,
   SaveAttribute: SaveAttribute,

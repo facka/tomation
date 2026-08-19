@@ -5,6 +5,7 @@ import ControllerBar from './ControllerBar.vue';
 import LogContainer from './LogContainer.vue';
 import ContextPopup from './ContextPopup.vue';
 import RunSummary from './RunSummary.vue';
+import TestDataPanel from './TestDataPanel.vue';
 
 const props = defineProps<{
   manualPauseDescription?: string | null;
@@ -32,6 +33,61 @@ const displayName = computed(() => {
 
 const sourceFile = computed(() => runnable.value?.data.sourceFile || '');
 
+const resolvedTestData = computed(() => store.state.resolvedTestData);
+
+const hasTestData = computed(() => {
+  if (resolvedTestData.value !== null && Object.keys(resolvedTestData.value).length > 0) {
+    return true;
+  }
+  if (runnable.value && runnable.value.data && (runnable.value.data as any).data) {
+    return Object.keys((runnable.value.data as any).data).length > 0;
+  }
+  return false;
+});
+
+const testDataDisplay = computed((): Record<string, string | number> => {
+  if (resolvedTestData.value !== null && Object.keys(resolvedTestData.value).length > 0) {
+    return resolvedTestData.value;
+  }
+  const testEntry = runnable.value?.data as any;
+  if (!testEntry || !testEntry.data) return {};
+  const display: Record<string, string> = {};
+  const templates = testEntry.data;
+  for (const tmplName of Object.keys(templates)) {
+    const tmpl = templates[tmplName];
+    for (const field of Object.keys(tmpl)) {
+      if (field === '__seed') continue;
+      const value = tmpl[field];
+      if (value && typeof value === 'object' && value.type === 'fake') {
+        const opts = value.options && Object.keys(value.options).length > 0
+          ? '(' + JSON.stringify(value.options) + ')'
+          : '';
+        display[tmplName + '.' + field] = 'Fake.' + value.method + opts;
+      } else {
+        display[tmplName + '.' + field] = String(value);
+      }
+    }
+  }
+  return display;
+});
+
+const runSeeds = computed((): Record<string, number | undefined> => {
+  // Use the seeds that were actually used during the run (from DATA_RESOLVED message)
+  if (store.state.resolvedDataSeeds) {
+    return store.state.resolvedDataSeeds;
+  }
+  // Fallback: check JSON __seed
+  const testEntry = runnable.value?.data as any;
+  if (!testEntry || !testEntry.data) return {};
+  const seeds: Record<string, number | undefined> = {};
+  for (const tmplName of Object.keys(testEntry.data)) {
+    const tmpl = testEntry.data[tmplName];
+    if (tmpl && tmpl.__seed !== undefined) {
+      seeds[tmplName] = tmpl.__seed;
+    }
+  }
+  return seeds;
+});
 // --- Actions ---
 
 function toggleContext() {
@@ -64,6 +120,14 @@ function closeRun() {
     <ControllerBar
       v-if="isRunning || runComplete"
       @toggle-context="toggleContext"
+    />
+
+    <!-- Test Data panel (shown when resolved data exists) -->
+    <TestDataPanel
+      v-if="hasTestData"
+      :data="testDataDisplay"
+      :seeds="runSeeds"
+      :readonly="true"
     />
 
     <!-- Manual pause banner -->

@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import type { LogEntry } from '@/types/store';
 import type { PageElement } from '@/types/spec';
-import { resolveTargetLabel } from '@/logic/stepLabel';
+import { resolveTargetLabel, getAssertSuffix } from '@/logic/stepLabel';
 
 const props = defineProps<{
   entry: LogEntry;
@@ -96,6 +96,34 @@ const resolvedContextKeys = computed(() => {
   return 'from ' + ctx.map(({ key }) => 'ctx.' + key).join(', ');
 });
 
+const preposition = computed(() => {
+  const action = props.entry.action?.toLowerCase() || '';
+  if (action === 'navigate') return null;
+  if (action === 'wait') return null;
+  if (action === 'manual') return null;
+  if (action === 'asserthastext' || action === 'assertcontainstext') return 'in';
+  if (action === 'assertexists' || action === 'assertnotexists') return null;
+  if (action === 'assertgone') return null;
+  if (action === 'savetext' || action === 'savevalue' || action === 'saveattribute') return 'from';
+  if (props.entry.target) return 'in';
+  return null;
+});
+
+const hasTargetPreposition = computed(() => {
+  const action = props.entry.action?.toLowerCase() || '';
+  return (action === 'type' || action === 'typepassword' || action === 'select') && !!props.entry.target;
+});
+
+const isAssert = computed(() => {
+  const action = props.entry.action?.toLowerCase() || '';
+  return getAssertSuffix(action) !== null;
+});
+
+const assertSuffix = computed(() => {
+  const action = props.entry.action?.toLowerCase() || '';
+  return getAssertSuffix(action) || '';
+});
+
 const showRetrySkip = computed(() => {
   return props.awaitingAction && props.debugMode && props.entry.status === 'fail';
 });
@@ -108,15 +136,46 @@ const attemptBadgeClass = computed(() => {
 
 <template>
   <div class="log-entry" :class="statusClass" :style="indentStyle">
-    <span class="step-action">{{ actionLabel }}</span>
+    <!-- Assert steps: "Assert that [element] has text "value"" -->
+    <template v-if="isAssert">
+      <span class="step-action">Assert that</span>
 
-    <span
-      v-if="entry.target && entry.action !== 'navigate'"
-      class="element-badge"
-      :title="targetTooltip"
-    >{{ targetLabel }}</span>
+      <span
+        v-if="entry.target"
+        class="element-badge"
+        :title="targetTooltip"
+      >{{ targetLabel }}</span>
 
-    <span v-if="valueDisplay" class="step-value">{{ valueDisplay }}</span>
+      <span class="step-preposition">{{ assertSuffix }}</span>
+
+      <span v-if="valueDisplay" class="step-value">{{ valueDisplay }}</span>
+    </template>
+
+    <!-- Regular steps -->
+    <template v-else>
+      <span class="step-action">{{ actionLabel }}</span>
+
+      <span
+        v-if="valueDisplay && hasTargetPreposition"
+        class="step-value"
+      >{{ valueDisplay }}</span>
+
+      <span
+        v-if="preposition"
+        class="step-preposition"
+      >{{ preposition }}</span>
+
+      <span
+        v-if="entry.target && entry.action !== 'navigate'"
+        class="element-badge"
+        :title="targetTooltip"
+      >{{ targetLabel }}</span>
+
+      <span
+        v-if="valueDisplay && !hasTargetPreposition"
+        class="step-value"
+      >{{ valueDisplay }}</span>
+    </template>
 
     <span v-if="resolvedContextKeys" class="ctx-source">{{ resolvedContextKeys }}</span>
 

@@ -61,6 +61,129 @@ function computeSourcePath(filePath, cwd) {
 }
 
 /**
+ * Collect all Data template declarations from parsed files into a single map.
+ * Templates from all files (test files, data files) are merged by template name.
+ *
+ * @param {Array<object>} parsedFiles - Array of ParsedFile objects
+ * @returns {object} Map of templateName → template structure
+ */
+function collectDataTemplates(parsedFiles) {
+  var allTemplates = {};
+  if (!Array.isArray(parsedFiles)) return allTemplates;
+
+  for (var i = 0; i < parsedFiles.length; i++) {
+    var file = parsedFiles[i];
+    if (!file || !Array.isArray(file.dataTemplates)) continue;
+
+    for (var j = 0; j < file.dataTemplates.length; j++) {
+      var decl = file.dataTemplates[j];
+      if (decl && decl.name && decl.template) {
+        var tmpl = {};
+        // If the template has a seed, include it as __seed
+        if (decl.seed !== undefined) {
+          tmpl.__seed = decl.seed;
+        }
+        var keys = Object.keys(decl.template);
+        for (var k = 0; k < keys.length; k++) {
+          tmpl[keys[k]] = decl.template[keys[k]];
+        }
+        allTemplates[decl.name] = tmpl;
+      }
+    }
+  }
+
+  return allTemplates;
+}
+
+/**
+ * Check if a test's steps contain {{data.*}} token references.
+ * Walks steps recursively (including if.then branches).
+ *
+ * @param {Array} steps - Test step array
+ * @returns {boolean} true if at least one step references a data token
+ */
+function stepsReferenceData(steps) {
+  if (!Array.isArray(steps)) return false;
+
+  for (var i = 0; i < steps.length; i++) {
+    var step = steps[i];
+    if (!step || typeof step !== 'object') continue;
+
+    // Check value field for {{data.*}} tokens
+    if (typeof step.value === 'string' && /\{\{data\.[^}]+\}\}/.test(step.value)) {
+      return true;
+    }
+
+    // Check params object values
+    if (step.params && typeof step.params === 'object') {
+      var paramKeys = Object.keys(step.params);
+      for (var pk = 0; pk < paramKeys.length; pk++) {
+        var paramVal = step.params[paramKeys[pk]];
+        if (typeof paramVal === 'string' && /\{\{data\.[^}]+\}\}/.test(paramVal)) {
+          return true;
+        }
+      }
+    }
+
+    // Recurse into conditional branches
+    if (step.action === 'if' && Array.isArray(step.then)) {
+      if (stepsReferenceData(step.then)) return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Extract the set of template names referenced by {{data.X.Y}} tokens in steps.
+ *
+ * @param {Array} steps - Test step array
+ * @returns {object} Set of template names (keys)
+ */
+function extractReferencedTemplateNames(steps) {
+  var names = {};
+  if (!Array.isArray(steps)) return names;
+
+  var regex = /\{\{data\.([^.}]+)\.[^}]+\}\}/g;
+
+  for (var i = 0; i < steps.length; i++) {
+    var step = steps[i];
+    if (!step || typeof step !== 'object') continue;
+
+    if (typeof step.value === 'string') {
+      var match;
+      while ((match = regex.exec(step.value)) !== null) {
+        names[match[1]] = true;
+      }
+      regex.lastIndex = 0;
+    }
+
+    if (step.params && typeof step.params === 'object') {
+      var paramKeys = Object.keys(step.params);
+      for (var pk = 0; pk < paramKeys.length; pk++) {
+        var paramVal = step.params[paramKeys[pk]];
+        if (typeof paramVal === 'string') {
+          while ((match = regex.exec(paramVal)) !== null) {
+            names[match[1]] = true;
+          }
+          regex.lastIndex = 0;
+        }
+      }
+    }
+
+    if (step.action === 'if' && Array.isArray(step.then)) {
+      var nestedNames = extractReferencedTemplateNames(step.then);
+      var nestedKeys = Object.keys(nestedNames);
+      for (var nk = 0; nk < nestedKeys.length; nk++) {
+        names[nestedKeys[nk]] = true;
+      }
+    }
+  }
+
+  return names;
+}
+
+/**
  * Merge all POM results and test files into a flat spec-shaped object.
  *
  * @param {Array<object>} pomResults       - Array of PomResult from extractPom()
@@ -150,10 +273,26 @@ function flattenSpec(pomResults, parsedTestFiles, meta, options) {
 
   // --- Collect all tests from all parsed test files ---
   var tests = [];
+
+  // Collect all data templates from all parsed files (test files + data files)
+  var allDataTemplates = collectDataTemplates(parsedTestFiles);
+  var hasAnyTemplates = Object.keys(allDataTemplates).length > 0;
+
   if (Array.isArray(parsedTestFiles)) {
     for (var fi = 0; fi < parsedTestFiles.length; fi++) {
       var testFile = parsedTestFiles[fi];
       if (!testFile || !Array.isArray(testFile.tests)) continue;
+
+      // Collect data templates local to this file
+      var fileTemplates = {};
+      if (testFile.dataTemplates && testFile.dataTemplates.length > 0) {
+        for (var dti = 0; dti < testFile.dataTemplates.length; dti++) {
+          var decl = testFile.dataTemplates[dti];
+          if (decl && decl.name && decl.template) {
+            fileTemplates[decl.name] = decl.template;
+          }
+        }
+      }
 
       for (var tti = 0; tti < testFile.tests.length; tti++) {
         var testDef = testFile.tests[tti];
@@ -171,6 +310,32 @@ function flattenSpec(pomResults, parsedTestFiles, meta, options) {
         if (testFile.filePath) {
           testOut.sourceFile = computeSourcePath(testFile.filePath, cwd);
         }
+
+        // Attach data templates to the test if it references them
+        if (hasAnyTemplates && testOut.steps) {
+          var referencedNames = extractReferencedTemplateNames(testOut.steps);
+          var referencedKeys = Object.keys(referencedNames);
+
+          if (referencedKeys.length > 0) {
+            // Include only referenced templates
+            var testData = {};
+            for (var rk = 0; rk < referencedKeys.length; rk++) {
+              var tmplName = referencedKeys[rk];
+              if (allDataTemplates[tmplName]) {
+                testData[tmplName] = allDataTemplates[tmplName];
+              }
+            }
+            if (Object.keys(testData).length > 0) {
+              testOut.data = testData;
+            }
+          } else if (Object.keys(fileTemplates).length > 0) {
+            // If no explicit {{data.*}} references but the file declares templates,
+            // include all file-local templates (supports tests that use templates
+            // via other mechanisms)
+            testOut.data = fileTemplates;
+          }
+        }
+
         tests.push(testOut);
       }
     }
@@ -238,4 +403,4 @@ function flattenSpec(pomResults, parsedTestFiles, meta, options) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { flattenSpec };
+module.exports = { flattenSpec, collectDataTemplates, stepsReferenceData, extractReferencedTemplateNames };

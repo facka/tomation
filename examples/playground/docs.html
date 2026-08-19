@@ -83,14 +83,16 @@
     /* Offset scroll targets to account for sticky navbar height */
     [id="get-started"], [id="cli"], [id="configuration"],
     [id="element-locators"], [id="where-matchers"], [id="user-functions"],
-    [id="assertions"], [id="tests"], [id="automations"], [id="pom-files"] {
+    [id="save-to-context"], [id="date-helpers"], [id="keyboard-actions"],
+    [id="assertions"], [id="test-data"], [id="tests"], [id="automations"], [id="pom-files"] {
       scroll-margin-top: 70px;
     }
 
     @media (max-width: 767px) {
       [id="get-started"], [id="cli"], [id="configuration"],
       [id="element-locators"], [id="where-matchers"], [id="user-functions"],
-      [id="assertions"], [id="tests"], [id="automations"], [id="pom-files"] {
+      [id="save-to-context"], [id="date-helpers"], [id="keyboard-actions"],
+      [id="assertions"], [id="test-data"], [id="tests"], [id="automations"], [id="pom-files"] {
         scroll-margin-top: 110px;
       }
     }
@@ -208,8 +210,28 @@
             </a>
           </li>
           <li>
+            <a href="#save-to-context" class="sidebar-link block rounded-md py-1.5 pl-7 pr-3 text-sm text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
+              Save to Context
+            </a>
+          </li>
+          <li>
+            <a href="#date-helpers" class="sidebar-link block rounded-md py-1.5 pl-7 pr-3 text-sm text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
+              Date Helpers
+            </a>
+          </li>
+          <li>
+            <a href="#keyboard-actions" class="sidebar-link block rounded-md py-1.5 pl-7 pr-3 text-sm text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
+              Keyboard Actions
+            </a>
+          </li>
+          <li>
             <a href="#assertions" class="sidebar-link block rounded-md py-1.5 pl-7 pr-3 text-sm text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
               Assertions
+            </a>
+          </li>
+          <li>
+            <a href="#test-data" class="sidebar-link block rounded-md py-1.5 pl-7 pr-3 text-sm text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
+              Test Data &amp; Fake Generators
             </a>
           </li>
         </ul>
@@ -355,6 +377,10 @@ npm install</code></pre></div>
             <td class="px-4 py-2 font-mono text-emerald-300 text-xs whitespace-nowrap">automations</td>
             <td class="px-4 py-2 text-slate-400">Path to automation files directory (optional)</td>
           </tr>
+          <tr class="border-b border-slate-700/50">
+            <td class="px-4 py-2 font-mono text-emerald-300 text-xs whitespace-nowrap">data</td>
+            <td class="px-4 py-2 text-slate-400">Path to data files directory (optional)</td>
+          </tr>
           <tr>
             <td class="px-4 py-2 font-mono text-emerald-300 text-xs whitespace-nowrap">baseUrl</td>
             <td class="px-4 py-2 text-slate-400">Base path for relative URL resolution</td>
@@ -374,6 +400,7 @@ export default {
   pom: './pom',
   tests: './tests',
   automations: './automations',
+  data: './data',
   baseUrl: './',
 }</code></pre></div>
 
@@ -501,7 +528,7 @@ TypePassword('s3cretP@ss').in(passwordInput)
 // Select a dropdown option
 Select('Admin').in(roleDropdown)</code></pre></div>
 
-    <h4 class="text-lg font-medium text-white mt-6 mb-2">Save to Context</h4>
+    <h4 id="save-to-context" class="text-lg font-medium text-white mt-6 mb-2">Save to Context <a href="#save-to-context" class="heading-anchor">#</a></h4>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       Save functions capture runtime values from the page and store them in a shared context object. Saved values can be referenced later in the same test using the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">{{ctx.keyName}}</code> interpolation syntax.
     </p>
@@ -534,7 +561,7 @@ Save('2024-01-15').as('targetDate')
 // Reference saved values later in the test
 Type('{{ctx.greeting}}').in(noteInput)</code></pre></div>
 
-    <h4 class="text-lg font-medium text-white mt-6 mb-2">Date Helpers</h4>
+    <h4 id="date-helpers" class="text-lg font-medium text-white mt-6 mb-2">Date Helpers <a href="#date-helpers" class="heading-anchor">#</a></h4>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       Date helpers generate formatted date strings relative to the current date. They are useful for filling date inputs with dynamic values that stay correct over time. All helpers accept an optional format string (default: <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">YYYY-MM-DD</code>).
     </p>
@@ -561,7 +588,7 @@ Type(firstDateOfMonth(0)).in(periodStartInput)
 Type(lastDateOfMonth(0)).in(periodEndInput)
 Type(firstDateOfMonth(1)).in(nextPeriodStartInput)</code></pre></div>
 
-    <h4 class="text-lg font-medium text-white mt-8 mb-2">Keyboard Actions</h4>
+    <h4 id="keyboard-actions" class="text-lg font-medium text-white mt-8 mb-2">Keyboard Actions <a href="#keyboard-actions" class="heading-anchor">#</a></h4>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       Simulate key presses on the focused element or a targeted element. Use shortcuts for common keys, or the generic <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">PressKey</code> / <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Press</code> for any key with modifier support.
     </p>
@@ -608,6 +635,95 @@ PressKey('Delete')                  // Delete key
 // Targeted — press on a specific element
 Press('Enter').in(searchInput)
 Press('ArrowDown', { alt: true }).in(dropdown)</code></pre></div>
+
+    <h3 id="test-data" class="text-xl font-semibold text-white mt-12 mb-3">Test Data &amp; Fake Generators <a href="#test-data" class="heading-anchor">#</a></h3>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Define reusable data templates with <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Data()</code> and generate realistic random values using <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Fake</code> generators. Each test run produces fresh values — no more hardcoded strings.
+    </p>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Defining a Data Template</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Create a <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.data.ts</code> file and use <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Data()</code> to declare a template with static values and Fake generator calls:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">// data/user.data.ts
+import { Data, Fake } from '@tomationjs/dsl'
+
+const user = Data({
+  name: Fake.fullName(),
+  email: Fake.email(),
+  phone: Fake.phone({ country: 'US' }),
+  dob: Fake.dateOfBirth({ minAge: 18, maxAge: 65, format: 'MM/DD/YYYY' }),
+  role: Fake.oneOf(['Admin', 'Editor', 'Viewer']),
+  address: Fake.address(),
+  id: Fake.uuid(),
+  notes: Fake.sentence(),
+})
+
+export default user</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Using Data in Tests</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Import the data template and reference its properties directly. The compiler resolves them to <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">{{data.templateName.property}}</code> tokens, and the runtime generates fresh values each run:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">// tests/registration.test.ts
+import { Test, AssertHasText } from '@tomationjs/dsl'
+import user from '~/data/user.data'
+import Form from '~/pom/registration.pom'
+
+Test('Register with generated data', () => {
+  Form.fillForm({
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+  })
+  Form.submit()
+  AssertHasText(Form.message, 'Registration successful')
+})</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Fake Generator Reference</h4>
+    <div class="overflow-x-auto mb-4"><table class="w-full text-sm text-left border border-slate-700 rounded-lg overflow-hidden">
+      <thead class="bg-slate-800/80"><tr><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Method</th><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Description</th><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Options</th></tr></thead>
+      <tbody>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="text-emerald-300 text-xs font-mono">Fake.firstName(gender?)</code></td><td class="px-4 py-2.5 text-slate-300">Random first name</td><td class="px-4 py-2.5 text-slate-300"><code class="text-xs">'male' | 'female'</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="text-emerald-300 text-xs font-mono">Fake.lastName()</code></td><td class="px-4 py-2.5 text-slate-300">Random last name</td><td class="px-4 py-2.5 text-slate-300">—</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="text-emerald-300 text-xs font-mono">Fake.fullName(gender?)</code></td><td class="px-4 py-2.5 text-slate-300">First + last name</td><td class="px-4 py-2.5 text-slate-300"><code class="text-xs">'male' | 'female'</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="text-emerald-300 text-xs font-mono">Fake.email()</code></td><td class="px-4 py-2.5 text-slate-300">Random email address</td><td class="px-4 py-2.5 text-slate-300">—</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="text-emerald-300 text-xs font-mono">Fake.phone(options?)</code></td><td class="px-4 py-2.5 text-slate-300">Phone number by country</td><td class="px-4 py-2.5 text-slate-300"><code class="text-xs">{ country: 'US'|'UK'|'ES' }</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="text-emerald-300 text-xs font-mono">Fake.dateOfBirth(options?)</code></td><td class="px-4 py-2.5 text-slate-300">DOB with age constraints</td><td class="px-4 py-2.5 text-slate-300"><code class="text-xs">{ minAge, maxAge, format }</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="text-emerald-300 text-xs font-mono">Fake.address(part?)</code></td><td class="px-4 py-2.5 text-slate-300">Address or component</td><td class="px-4 py-2.5 text-slate-300"><code class="text-xs">'full'|'street'|'city'|'country'|'zip'</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="text-emerald-300 text-xs font-mono">Fake.oneOf(values)</code></td><td class="px-4 py-2.5 text-slate-300">Pick from array</td><td class="px-4 py-2.5 text-slate-300"><code class="text-xs">string[]</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="text-emerald-300 text-xs font-mono">Fake.number(options?)</code></td><td class="px-4 py-2.5 text-slate-300">Random number</td><td class="px-4 py-2.5 text-slate-300"><code class="text-xs">{ min, max, decimals }</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="text-emerald-300 text-xs font-mono">Fake.uuid()</code></td><td class="px-4 py-2.5 text-slate-300">UUID v4 string</td><td class="px-4 py-2.5 text-slate-300">—</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="text-emerald-300 text-xs font-mono">Fake.sentence(options?)</code></td><td class="px-4 py-2.5 text-slate-300">Random sentence</td><td class="px-4 py-2.5 text-slate-300"><code class="text-xs">{ minWords, maxWords }</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="text-emerald-300 text-xs font-mono">Fake.pastDate(options?)</code></td><td class="px-4 py-2.5 text-slate-300">Date in the past</td><td class="px-4 py-2.5 text-slate-300"><code class="text-xs">{ within (days), format }</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="text-emerald-300 text-xs font-mono">Fake.futureDate(options?)</code></td><td class="px-4 py-2.5 text-slate-300">Date in the future</td><td class="px-4 py-2.5 text-slate-300"><code class="text-xs">{ within (days), format }</code></td></tr>
+        <tr><td class="px-4 py-2.5 text-slate-300"><code class="text-emerald-300 text-xs font-mono">Fake.sequence(options?)</code></td><td class="px-4 py-2.5 text-slate-300">Sequential counter</td><td class="px-4 py-2.5 text-slate-300"><code class="text-xs">{ prefix, pad }</code></td></tr>
+      </tbody>
+    </table></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Reproducible Data with Seed</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Pin a seed to generate the same values every run — useful for reproducing failures:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">const user = Data({
+  name: Fake.fullName(),
+  email: Fake.email(),
+}, { seed: 42 })  // Same values every run</code></pre></div>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      You can also pin/unpin seeds from the extension UI in the Test Data panel without editing code.
+    </p>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Configuration</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Add a <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">data</code> property to your <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">tomation.config.ts</code> to specify where data files are located:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">export default {
+  meta: { name: 'My App', urls: ['http://localhost:3000'] },
+  pom: './pom',
+  tests: './tests',
+  data: './data',  // ← data files directory
+  baseUrl: './',
+}</code></pre></div>
 
     <h3 id="assertions" class="text-xl font-semibold text-white mt-12 mb-3">Assertions <a href="#assertions" class="heading-anchor">#</a></h3>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">

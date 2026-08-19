@@ -39,7 +39,8 @@ export type BackgroundMessage =
   | { type: 'PAGE_HTML'; html?: string; error?: string }
   | { type: 'POM_GENERATED'; code: string; pomName: string }
   | { type: 'POM_GENERATION_ERROR'; provider: string; status?: number; error: string }
-  | { type: 'POM_GENERATION_TIMEOUT' };
+  | { type: 'POM_GENERATION_TIMEOUT' }
+  | { type: 'DATA_RESOLVED'; data: Record<string, string | number>; seeds?: Record<string, number> };
 
 export interface StepPlanEntry {
   action: string;

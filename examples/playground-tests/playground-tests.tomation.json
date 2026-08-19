@@ -8,7 +8,7 @@
     "urls": [
       "https://facka.github.io/tomation"
     ],
-    "compilerVersion": "1.3.0"
+    "compilerVersion": "1.4.0"
   },
   "pageElements": {
     "Login__usernameInput": {
@@ -100,6 +100,62 @@
       "label": "Delete Button",
       "where": {
         "classIncludes": "delete-btn"
+      }
+    },
+    "UserForm__nameInput": {
+      "tag": "input",
+      "label": "Full Name",
+      "where": {
+        "id": "full-name"
+      }
+    },
+    "UserForm__emailInput": {
+      "tag": "input",
+      "label": "Email",
+      "where": {
+        "id": "email"
+      }
+    },
+    "UserForm__phoneInput": {
+      "tag": "input",
+      "label": "Phone",
+      "where": {
+        "id": "phone"
+      }
+    },
+    "UserForm__dobInput": {
+      "tag": "input",
+      "label": "Date of Birth",
+      "where": {
+        "id": "dob"
+      }
+    },
+    "UserForm__roleSelect": {
+      "tag": "select",
+      "label": "Role",
+      "where": {
+        "id": "role"
+      }
+    },
+    "UserForm__addressInput": {
+      "tag": "input",
+      "label": "Address",
+      "where": {
+        "id": "address"
+      }
+    },
+    "UserForm__registerButton": {
+      "tag": "button",
+      "label": "Register",
+      "where": {
+        "id": "register-btn"
+      }
+    },
+    "UserForm__message": {
+      "tag": "div",
+      "label": "Message",
+      "where": {
+        "id": "message"
       }
     }
   },
@@ -218,6 +274,52 @@
         "text"
       ],
       "label": "Add Item"
+    },
+    "UserForm__fillForm": {
+      "steps": [
+        {
+          "action": "type",
+          "target": "UserForm__nameInput",
+          "value": "{{name}}"
+        },
+        {
+          "action": "type",
+          "target": "UserForm__emailInput",
+          "value": "{{email}}"
+        },
+        {
+          "action": "type",
+          "target": "UserForm__phoneInput",
+          "value": "{{phone}}"
+        },
+        {
+          "action": "type",
+          "target": "UserForm__dobInput",
+          "value": "{{dob}}"
+        },
+        {
+          "action": "select",
+          "target": "UserForm__roleSelect",
+          "value": "{{role}}"
+        },
+        {
+          "action": "type",
+          "target": "UserForm__addressInput",
+          "value": "{{address}}"
+        }
+      ],
+      "params": [],
+      "label": "Fill Registration Form"
+    },
+    "UserForm__submit": {
+      "steps": [
+        {
+          "action": "click",
+          "target": "UserForm__registerButton"
+        }
+      ],
+      "params": [],
+      "label": "Submit Registration"
     }
   },
   "tests": [
@@ -339,6 +441,155 @@
       "sourceFile": "navigation"
     },
     {
+      "name": "Register a new patient with generated data",
+      "steps": [
+        {
+          "action": "type",
+          "target": "Login__usernameInput",
+          "value": "{{data.patient.name}}"
+        },
+        {
+          "action": "type",
+          "target": "Login__passwordInput",
+          "value": "{{data.patient.email}}"
+        },
+        {
+          "action": "click",
+          "target": "Login__submitButton"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Login__message",
+          "value": "Login successful"
+        }
+      ],
+      "sourceFile": "registration",
+      "data": {
+        "patient": {
+          "name": {
+            "type": "fake",
+            "method": "fullName",
+            "options": {}
+          },
+          "dob": {
+            "type": "fake",
+            "method": "dateOfBirth",
+            "options": {
+              "minAge": 18,
+              "maxAge": 65,
+              "format": "MM/DD/YYYY"
+            }
+          },
+          "phone": {
+            "type": "fake",
+            "method": "phone",
+            "options": {
+              "country": "US"
+            }
+          },
+          "email": {
+            "type": "fake",
+            "method": "email",
+            "options": {}
+          },
+          "address": {
+            "type": "fake",
+            "method": "address",
+            "options": {}
+          },
+          "gender": {
+            "type": "fake",
+            "method": "oneOf",
+            "options": {
+              "values": [
+                "Male",
+                "Female",
+                "Non-binary"
+              ]
+            }
+          },
+          "city": "Springfield"
+        }
+      }
+    },
+    {
+      "name": "Verify patient data fields are populated",
+      "steps": [
+        {
+          "action": "type",
+          "target": "Login__usernameInput",
+          "value": "{{data.patient.name}}"
+        },
+        {
+          "action": "type",
+          "target": "Login__passwordInput",
+          "value": "{{data.patient.phone}}"
+        },
+        {
+          "action": "type",
+          "target": "Login__usernameInput",
+          "value": "{{data.patient.dob}}"
+        },
+        {
+          "action": "type",
+          "target": "Login__passwordInput",
+          "value": "{{data.patient.address}}"
+        },
+        {
+          "action": "click",
+          "target": "Login__submitButton"
+        }
+      ],
+      "sourceFile": "registration",
+      "data": {
+        "patient": {
+          "name": {
+            "type": "fake",
+            "method": "fullName",
+            "options": {}
+          },
+          "dob": {
+            "type": "fake",
+            "method": "dateOfBirth",
+            "options": {
+              "minAge": 18,
+              "maxAge": 65,
+              "format": "MM/DD/YYYY"
+            }
+          },
+          "phone": {
+            "type": "fake",
+            "method": "phone",
+            "options": {
+              "country": "US"
+            }
+          },
+          "email": {
+            "type": "fake",
+            "method": "email",
+            "options": {}
+          },
+          "address": {
+            "type": "fake",
+            "method": "address",
+            "options": {}
+          },
+          "gender": {
+            "type": "fake",
+            "method": "oneOf",
+            "options": {
+              "values": [
+                "Male",
+                "Female",
+                "Non-binary"
+              ]
+            }
+          },
+          "city": "Springfield"
+        }
+      }
+    },
+    {
       "name": "Add a todo item and verify it exists",
       "steps": [
         {
@@ -420,6 +671,94 @@
         }
       ],
       "sourceFile": "todo"
+    },
+    {
+      "name": "Register user with generated data",
+      "steps": [
+        {
+          "action": "task",
+          "name": "UserForm__fillForm",
+          "params": {
+            "name": "{{data.user.name}}",
+            "email": "{{data.user.email}}",
+            "phone": "{{data.user.phone}}",
+            "dob": "{{data.user.dob}}",
+            "role": "{{data.user.role}}",
+            "address": "{{data.user.address}}"
+          }
+        },
+        {
+          "action": "task",
+          "name": "UserForm__submit"
+        },
+        {
+          "action": "assertHasText",
+          "target": "UserForm__message",
+          "value": "User registered successfully"
+        }
+      ],
+      "sourceFile": "user-form",
+      "data": {
+        "user": {
+          "name": {
+            "type": "fake",
+            "method": "fullName",
+            "options": {}
+          },
+          "email": {
+            "type": "fake",
+            "method": "email",
+            "options": {}
+          },
+          "phone": {
+            "type": "fake",
+            "method": "phone",
+            "options": {
+              "country": "US"
+            }
+          },
+          "dob": {
+            "type": "fake",
+            "method": "dateOfBirth",
+            "options": {
+              "minAge": 18,
+              "maxAge": 65,
+              "format": "MM/DD/YYYY"
+            }
+          },
+          "role": {
+            "type": "fake",
+            "method": "oneOf",
+            "options": {
+              "values": [
+                "Admin",
+                "Editor",
+                "Viewer"
+              ]
+            }
+          },
+          "address": {
+            "type": "fake",
+            "method": "address",
+            "options": {}
+          }
+        }
+      }
+    },
+    {
+      "name": "Register user shows error on empty submit",
+      "steps": [
+        {
+          "action": "task",
+          "name": "UserForm__submit"
+        },
+        {
+          "action": "assertHasText",
+          "target": "UserForm__message",
+          "value": "All fields are required"
+        }
+      ],
+      "sourceFile": "user-form"
     }
   ],
   "automations": [

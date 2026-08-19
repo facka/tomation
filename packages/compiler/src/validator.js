@@ -208,6 +208,34 @@ function validateSpec(obj) {
     return { ok: false, error: cycleError };
   }
 
+  // Validate data fields on tests (Requirements: 7.3, 10.4)
+  for (var dvi = 0; dvi < tests.length; dvi++) {
+    var dvTest = tests[dvi];
+    if (!dvTest || !dvTest.data || typeof dvTest.data !== 'object') continue;
+
+    // Validate each data template entry
+    var dvTemplateNames = Object.keys(dvTest.data);
+    for (var dvti = 0; dvti < dvTemplateNames.length; dvti++) {
+      var dvTmplName = dvTemplateNames[dvti];
+      var dvTemplate = dvTest.data[dvTmplName];
+      if (!dvTemplate || typeof dvTemplate !== 'object') continue;
+
+      // Validate Fake.oneOf has non-empty values array (Requirement 7.3)
+      var oneOfError = validateDataTemplateOneOf(dvTmplName, dvTemplate);
+      if (oneOfError !== null) {
+        return { ok: false, error: oneOfError };
+      }
+    }
+
+    // Validate {{data.X.Y}} references in test steps (Requirement 10.4)
+    if (Array.isArray(dvTest.steps)) {
+      var dataRefError = validateDataReferences(dvTest.steps, dvTest.data, dvTest.name || ('index ' + dvi));
+      if (dataRefError !== null) {
+        return { ok: false, error: dataRefError };
+      }
+    }
+  }
+
   return { ok: true, spec: obj };
 }
 
@@ -349,6 +377,129 @@ function collectTaskRefs(steps) {
   }
 
   return refs;
+}
+
+/**
+ * Recursively validate that no Fake.oneOf descriptor has an empty values array.
+ * Returns an error string if invalid, or null if all entries are valid.
+ *
+ * @param {string} templateName - Name of the Data template (for error messages)
+ * @param {object} template - Template object (may be nested)
+ * @returns {string|null}
+ */
+function validateDataTemplateOneOf(templateName, template) {
+  if (!template || typeof template !== 'object') return null;
+
+  var keys = Object.keys(template);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    var value = template[key];
+    if (!value || typeof value !== 'object') continue;
+
+    // Check if this is a Fake descriptor
+    if (value.type === 'fake' && value.method === 'oneOf') {
+      var values = value.options && value.options.values;
+      if (!values || !Array.isArray(values) || values.length === 0) {
+        return 'Fake.oneOf requires at least one option in data template "' + templateName + '" property "' + key + '"';
+      }
+    }
+
+    // Recurse into nested objects (non-fake, non-array objects)
+    if (value.type !== 'fake' && !Array.isArray(value)) {
+      var nestedError = validateDataTemplateOneOf(templateName + '.' + key, value);
+      if (nestedError !== null) return nestedError;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Validate that {{data.X.Y}} references in test steps point to existing template properties.
+ * Returns an error string if invalid, or null if all references are valid.
+ *
+ * @param {Array} steps - Test step array
+ * @param {object} dataMap - Test's data map (templateName → template structure)
+ * @param {string} testName - Test name for error messages
+ * @returns {string|null}
+ */
+function validateDataReferences(steps, dataMap, testName) {
+  if (!Array.isArray(steps) || !dataMap) return null;
+
+  var regex = /\{\{data\.([^}]+)\}\}/g;
+
+  for (var i = 0; i < steps.length; i++) {
+    var step = steps[i];
+    if (!step || typeof step !== 'object') continue;
+
+    // Check value field
+    if (typeof step.value === 'string') {
+      var match;
+      while ((match = regex.exec(step.value)) !== null) {
+        var err = validateSingleDataPath(match[1], dataMap, testName);
+        if (err !== null) return err;
+      }
+      regex.lastIndex = 0;
+    }
+
+    // Check params object values
+    if (step.params && typeof step.params === 'object') {
+      var paramKeys = Object.keys(step.params);
+      for (var pk = 0; pk < paramKeys.length; pk++) {
+        var paramVal = step.params[paramKeys[pk]];
+        if (typeof paramVal === 'string') {
+          while ((match = regex.exec(paramVal)) !== null) {
+            var paramErr = validateSingleDataPath(match[1], dataMap, testName);
+            if (paramErr !== null) return paramErr;
+          }
+          regex.lastIndex = 0;
+        }
+      }
+    }
+
+    // Recurse into conditional branches
+    if (step.action === 'if' && Array.isArray(step.then)) {
+      var nestedError = validateDataReferences(step.then, dataMap, testName);
+      if (nestedError !== null) return nestedError;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Validate a single data path (e.g., "patient.name") against the data map.
+ * Returns an error string if the path doesn't resolve, or null if valid.
+ *
+ * @param {string} dataPath - Dot-separated path (e.g., "patient.name")
+ * @param {object} dataMap - Test's data map (templateName → template structure)
+ * @param {string} testName - Test name for error messages
+ * @returns {string|null}
+ */
+function validateSingleDataPath(dataPath, dataMap, testName) {
+  var parts = dataPath.split('.');
+  if (parts.length < 2) {
+    return 'Invalid data reference "{{data.' + dataPath + '}}" in test "' + testName + '": expected format {{data.templateName.property}}';
+  }
+
+  var templateName = parts[0];
+  if (!dataMap[templateName]) {
+    return 'Unknown data template "' + templateName + '" referenced in test "' + testName + '"';
+  }
+
+  // Walk the template structure to verify the property path exists
+  var current = dataMap[templateName];
+  for (var i = 1; i < parts.length; i++) {
+    if (!current || typeof current !== 'object') {
+      return 'Unknown data property "' + parts.slice(1).join('.') + '" on template "' + templateName + '" in test "' + testName + '"';
+    }
+    if (!(parts[i] in current)) {
+      return 'Unknown data property "' + parts.slice(1).join('.') + '" on template "' + templateName + '" in test "' + testName + '"';
+    }
+    current = current[parts[i]];
+  }
+
+  return null;
 }
 
 module.exports = { validateSpec, KNOWN_ACTIONS };

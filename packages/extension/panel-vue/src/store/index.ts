@@ -69,6 +69,8 @@ const state = reactive<StoreState>({
   runSummary: null,
   contextStore: {},
   automationParams: null,
+  resolvedTestData: null,
+  resolvedDataSeeds: null,
 
   playgroundPromptDismissed: false,
   lastKnownTabUrl: null,
@@ -176,6 +178,8 @@ function selectRunnable(specEntry: SpecEntry, runnable: Runnable): void {
 
 function clearRunnable(): void {
   state.currentRunnable = null;
+  state.resolvedTestData = null;
+  state.resolvedDataSeeds = null;
 }
 
 function toggleFavourite(automationName: string): void {
@@ -252,6 +256,11 @@ function updateContext(key: string, value: unknown): void {
 
 function setContextStore(store: Record<string, unknown>): void {
   state.contextStore = store;
+}
+
+function setResolvedTestData(data: Record<string, string | number> | null, seeds?: Record<string, number>): void {
+  state.resolvedTestData = data;
+  state.resolvedDataSeeds = seeds || null;
 }
 
 function setActiveTab(tab: 'tests' | 'automations' | 'lab'): void {
@@ -353,6 +362,46 @@ async function getTestPlanConfig(
       allowRetryOnFailure: stored.allowRetryOnFailure,
       executionSpeed: stored.executionSpeed as RunConfig['executionSpeed'],
     };
+  } catch {
+    return null;
+  }
+}
+
+// --- Data Seeds Persistence ---
+
+/**
+ * Persist data seeds for a test plan.
+ * Storage key format: "dataSeeds:<specId>:<runnableIndex>"
+ */
+async function saveDataSeeds(
+  specId: string,
+  runnableIndex: number,
+  seeds: Record<string, number | null>,
+): Promise<void> {
+  const key = `dataSeeds:${specId}:${runnableIndex}`;
+  const data: Record<string, unknown> = {};
+  data[key] = seeds;
+  try {
+    await storageSet(data);
+  } catch (err) {
+    console.error('saveDataSeeds: failed to write for key "' + key + '":', err);
+  }
+}
+
+/**
+ * Load persisted data seeds for a test plan.
+ * Returns null if missing.
+ */
+async function getDataSeeds(
+  specId: string,
+  runnableIndex: number,
+): Promise<Record<string, number | null> | null> {
+  const key = `dataSeeds:${specId}:${runnableIndex}`;
+  try {
+    const result = await storageGet(key);
+    const stored = result[key] as Record<string, number | null> | undefined;
+    if (!stored || typeof stored !== 'object') return null;
+    return stored;
   } catch {
     return null;
   }
@@ -531,6 +580,7 @@ export function useStore() {
     stopRun,
     updateContext,
     setContextStore,
+    setResolvedTestData,
     setActiveTab,
     setSearchQuery,
 
@@ -541,6 +591,8 @@ export function useStore() {
     // Persistence
     saveTestPlanConfig,
     getTestPlanConfig,
+    saveDataSeeds,
+    getDataSeeds,
     saveParamValues,
     loadParamValues,
     hasRequiredParamsWithoutValues,

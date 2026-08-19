@@ -195,7 +195,7 @@ function runPipeline(cwd, options) {
 
     // Parse the (now plain JS) source
     log('    Parsing...');
-    var parsed = parseSource(source, filePath, rawSource);
+    var parsed = parseSource(source, filePath, rawSource, { baseUrl: resolveResult.baseUrl });
     if (parsed.error) {
       log('    ✗ Parse failed: ' + parsed.error.message);
       return { ok: false, error: parsed.error.message };
@@ -237,6 +237,16 @@ function runPipeline(cwd, options) {
       parsedAutomationFiles.push(pf);
     } else {
       log('  Test file: ' + path.basename(pf.filePath) + ' (' + (pf.tests || []).length + ' test(s))');
+      // Warn if a .data.ts file exports no Data_Template definitions (Requirement 9.6)
+      if (pf.filePath && pf.filePath.endsWith('.data.ts')) {
+        if (!pf.dataTemplates || pf.dataTemplates.length === 0) {
+          allWarnings.push({
+            message: 'Data file "' + path.basename(pf.filePath) + '" exports no Data templates',
+            filePath: pf.filePath,
+            line: 0,
+          });
+        }
+      }
       parsedTestFiles.push(pf);
     }
   }

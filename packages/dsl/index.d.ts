@@ -286,3 +286,59 @@ export declare function nextMonth(format?: string): string;
 export declare function lastMonth(format?: string): string;
 export declare function firstDateOfMonth(offset: number, format?: string): string;
 export declare function lastDateOfMonth(offset: number, format?: string): string;
+
+// --- Data Template ---
+
+/**
+ * A typed Data template wrapper.
+ * Enables typed property access for referencing data values in test steps.
+ */
+export interface DataTemplate<T> {
+  __data: true;
+  template: T;
+}
+
+/**
+ * Declares a reusable data template.
+ * @param template - Object with static values and/or Fake generator calls.
+ * @param options - Optional configuration (e.g., { seed: 42 } for reproducible values).
+ * @returns A typed DataTemplate that provides autocompletion for property access.
+ */
+export declare function Data<T extends Record<string, any>>(template: T, options?: { seed?: number }): DataTemplate<T> & T;
+
+// --- Fake Generators ---
+
+/**
+ * The Fake object provides generator methods that produce placeholder descriptors
+ * at compile time, resolved to random values by the extension runtime.
+ */
+export declare const Fake: {
+  /** Generate a random first name. Optionally specify gender. */
+  firstName(gender?: 'male' | 'female'): string;
+  /** Generate a random last name. */
+  lastName(): string;
+  /** Generate a random full name (first + last). Optionally specify gender. */
+  fullName(gender?: 'male' | 'female'): string;
+  /** Generate a random date of birth with optional age constraints and format. */
+  dateOfBirth(options?: { minAge?: number; maxAge?: number; format?: string }): string;
+  /** Generate a phone number for a specific country format. */
+  phone(options?: { country?: 'US' | 'UK' | 'ES' }): string;
+  /** Generate an address or address component. */
+  address(part?: 'full' | 'street' | 'city' | 'country' | 'zip'): string;
+  /** Generate a random email address. */
+  email(): string;
+  /** Pick a random value from the provided array. */
+  oneOf(options: string[]): string;
+  /** Generate a random number within optional bounds and precision. */
+  number(options?: { min?: number; max?: number; decimals?: number }): number;
+  /** Generate a random UUID v4. */
+  uuid(): string;
+  /** Generate a random sentence. Optionally specify word count range. */
+  sentence(options?: { minWords?: number; maxWords?: number }): string;
+  /** Generate a random date in the past. Optionally specify how many days back and format. */
+  pastDate(options?: { within?: number; format?: string }): string;
+  /** Generate a random date in the future. Optionally specify how many days ahead and format. */
+  futureDate(options?: { within?: number; format?: string }): string;
+  /** Generate a sequential value with optional prefix and zero-padding. */
+  sequence(options?: { prefix?: string; pad?: number }): string;
+};

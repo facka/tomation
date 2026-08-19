@@ -52,6 +52,8 @@ export interface StoreState {
   runSummary: { total: number; passed: number; failed: number } | null;
   contextStore: Record<string, unknown>;
   automationParams: Record<string, unknown> | null;
+  resolvedTestData: Record<string, string | number> | null;
+  resolvedDataSeeds: Record<string, number> | null;
 
   // UI state
   playgroundPromptDismissed: boolean;
