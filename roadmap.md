@@ -34,3 +34,9 @@
 - [x] Create tomation cli with `tomation init` command to create a starter project
 
 - [x] Add Keypress action and update documentation (playground home page, docs, readme and tomation-ai.md )
+
+- Add CI/CD in github action to publish extension to stores
+  Chrome: https://github.com/marketplace/actions/publish-chrome-extension
+  Edge: https://github.com/wdzeng/edge-addon
+  Firefox: https://github.com/wdzeng/firefox-addon
+
