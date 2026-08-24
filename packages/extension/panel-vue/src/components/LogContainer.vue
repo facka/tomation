@@ -148,14 +148,29 @@ function computeTaskHeaderStatus(pathKey: string): TaskHeaderStatus {
   return 'queued';
 }
 
-// --- Auto-scroll ---
+// --- Auto-scroll to last updated step ---
 
 watch(
   () => logEntries.value.map((e) => e.status),
   () => {
     nextTick(() => {
-      if (containerRef.value) {
-        containerRef.value.scrollTop = containerRef.value.scrollHeight;
+      if (!containerRef.value) return;
+      // Find the last entry that is not 'queued' (most recently updated)
+      const entries = logEntries.value;
+      let lastActiveIndex = -1;
+      for (let i = entries.length - 1; i >= 0; i--) {
+        if (entries[i].status !== 'queued') {
+          lastActiveIndex = i;
+          break;
+        }
+      }
+      if (lastActiveIndex === -1) return;
+
+      // Find the corresponding DOM element and scroll it into view
+      const entryKey = 'entry-' + entries[lastActiveIndex].stepIndex;
+      const el = containerRef.value.querySelector('[data-key="' + entryKey + '"]');
+      if (el) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       }
     });
   },
@@ -197,6 +212,7 @@ function onSkip(stepIndex: number) {
       />
       <LogEntryComponent
         v-else-if="item.type === 'log-entry' && item.logEntry"
+        :data-key="item.key"
         :entry="item.logEntry"
         :page-elements="pageElements"
         :debug-mode="debugMode"
