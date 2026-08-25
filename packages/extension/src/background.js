@@ -1908,8 +1908,8 @@ function handleRetryStep(msg) {
 
       runState.retryAttempt = 0;
 
-      // Resume step loop
-      runStepLoop();
+      // Resume step loop (yield to macrotask to allow message delivery)
+      setTimeout(function () { runStepLoop(); }, 0);
     } else {
       // Re-emit STEP_FAILED_AWAITING_ACTION — keep run alive for unlimited retries
       safeSendMessage({
@@ -1951,7 +1951,10 @@ function handleSkipStep(msg) {
   runState.failedStepIndex = null;
   runState.stepIndex = msg.stepIndex + 1;
 
-  runStepLoop();
+  // Yield to macrotask queue before resuming the step loop.
+  // This ensures the SKIP_STEP message response is fully processed
+  // before RUN_COMPLETE (or next STEP_STARTING) is dispatched to the panel.
+  setTimeout(function () { runStepLoop(); }, 0);
 }
 
 /**

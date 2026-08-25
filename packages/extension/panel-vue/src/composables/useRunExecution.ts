@@ -52,6 +52,18 @@ export function useRunExecution() {
   function skip(stepIndex: number): void {
     send({ type: 'SKIP_STEP', stepIndex });
     store.setStepStatus(stepIndex, 'skipped');
+
+    // If this was the last active step (no more queued steps), complete the run
+    // as a defensive measure in case RUN_COMPLETE from background is delayed.
+    const entries = store.state.logEntries;
+    const hasRemainingSteps = entries.some(
+      (e, i) => i > stepIndex && e.status === 'queued',
+    );
+    if (!hasRemainingSteps) {
+      const passed = entries.filter((e) => e.status === 'pass').length;
+      const failed = entries.filter((e) => e.status === 'fail').length;
+      store.setRunComplete({ total: entries.length, passed, failed });
+    }
   }
 
   return { isRunning, isPaused, logEntries, summary, pause, resume, stop, retry, skip };
