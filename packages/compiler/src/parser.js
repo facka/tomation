@@ -1702,10 +1702,18 @@ function extractTaskInvocationParams(objNode, dataTemplateVars, constBindings) {
  * Resolves identifiers against tracked destructured params.
  *
  * Supported patterns:
- *   if (paramName)           → { param: "paramName", op: "truthy" }
- *   if (!paramName)          → { param: "paramName", op: "falsy" }
- *   if (paramName === 'val') → { param: "paramName", op: "equals", value: "val" }
- *   if (paramName !== 'val') → { param: "paramName", op: "notEquals", value: "val" }
+ *   if (paramName)              → { param: "paramName", op: "truthy" }
+ *   if (!paramName)             → { param: "paramName", op: "falsy" }
+ *   if (paramName === 'val')    → { param: "paramName", op: "equals", value: "val" }
+ *   if (paramName !== 'val')    → { param: "paramName", op: "notEquals", value: "val" }
+ *   if (paramName == true)      → { param: "paramName", op: "truthy" }
+ *   if (paramName === true)     → { param: "paramName", op: "truthy" }
+ *   if (paramName == false)     → { param: "paramName", op: "falsy" }
+ *   if (paramName === false)    → { param: "paramName", op: "falsy" }
+ *   if (paramName !== true)     → { param: "paramName", op: "falsy" }
+ *   if (paramName != true)      → { param: "paramName", op: "falsy" }
+ *   if (paramName !== false)    → { param: "paramName", op: "truthy" }
+ *   if (paramName != false)     → { param: "paramName", op: "truthy" }
  *
  * @param {object} testNode - the `test` property of an IfStatement AST node
  * @param {Set<string>} trackedParams - set of known param names from destructuring
@@ -1735,22 +1743,40 @@ function extractCondition(testNode, trackedParams) {
     return null;
   }
 
-  // Pattern: paramName === 'value' or paramName !== 'value'
+  // Pattern: paramName ===/==/!==/!= value (string or boolean)
   if (
     testNode.type === 'BinaryExpression' &&
-    (testNode.operator === '===' || testNode.operator === '!==')
+    (testNode.operator === '===' || testNode.operator === '!==' ||
+     testNode.operator === '==' || testNode.operator === '!=')
   ) {
     const left = testNode.left && testNode.left.type === 'Identifier'
       ? testNode.left.name
       : null;
+    if (!left || !trackedParams.has(left)) return null;
+
+    const isEquality = testNode.operator === '===' || testNode.operator === '==';
+
+    // Boolean literal on the right: treat as truthy/falsy
+    const boolVal = extractBoolean(testNode.right);
+    if (boolVal !== null) {
+      // param == true  /  param === true  → truthy
+      // param != true  /  param !== true  → falsy
+      // param == false /  param === false → falsy
+      // param != false /  param !== false → truthy
+      const isTruthy = isEquality ? boolVal === true : boolVal === false;
+      return { param: left, op: isTruthy ? 'truthy' : 'falsy' };
+    }
+
+    // String literal on the right: equals/notEquals
     const right = extractString(testNode.right);
-    if (left && trackedParams.has(left) && right !== null) {
+    if (right !== null) {
       return {
         param: left,
-        op: testNode.operator === '===' ? 'equals' : 'notEquals',
+        op: isEquality ? 'equals' : 'notEquals',
         value: right,
       };
     }
+
     return null;
   }
 
