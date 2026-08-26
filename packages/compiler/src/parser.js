@@ -548,17 +548,27 @@ function isMethodCall(node, methodName) {
  * @param {object} callNode - CallExpression for the matcher factory
  * @param {Array} [warnings] - mutable warnings array
  * @param {string} [filePath] - current file path for warning messages
+ * @param {object} [constBindings] - const/enum bindings map for resolving member expressions
  * @returns {object} where descriptor or empty object
  */
-function extractMatcherCall(callNode, warnings, filePath) {
+function extractMatcherCall(callNode, warnings, filePath, constBindings) {
   if (!callNode || callNode.type !== 'CallExpression') return {};
   const callee = callNode.callee;
   const calleeName = callee.type === 'Identifier' ? callee.name : null;
   if (!calleeName) return {};
 
   if (!warnings) warnings = [];
+  if (!constBindings) constBindings = {};
   const args = callNode.arguments;
   const line = lineOf(callNode);
+
+  // Helper: resolve a string from a literal or a const/enum member expression
+  function resolveString(node) {
+    const lit = extractString(node);
+    if (lit !== null) return lit;
+    const resolved = resolveConstMemberExpression(node, constBindings, filePath, warnings);
+    return typeof resolved === 'string' ? resolved : null;
+  }
 
   // --- Special-shape matchers ---
 
@@ -590,8 +600,8 @@ function extractMatcherCall(callNode, warnings, filePath) {
 
   // 2-arg string: dataAttr
   if (calleeName === 'dataAttr') {
-    const name = extractString(args[0]);
-    const val = extractString(args[1]);
+    const name = resolveString(args[0]);
+    const val = resolveString(args[1]);
     if (name === null || val === null) {
       warnings.push({
         message: `'dataAttr' requires two string arguments at ${filePath}:${line}`,
@@ -612,8 +622,8 @@ function extractMatcherCall(callNode, warnings, filePath) {
 
   // 2-arg string: closestLabelIs
   if (calleeName === 'closestLabelIs') {
-    const tag = extractString(args[0]);
-    const text = extractString(args[1]);
+    const tag = resolveString(args[0]);
+    const text = resolveString(args[1]);
     if (tag === null || text === null) {
       warnings.push({
         message: `'closestLabelIs' requires two string arguments at ${filePath}:${line}`,
@@ -626,7 +636,7 @@ function extractMatcherCall(callNode, warnings, filePath) {
   }
 
   // --- Standard 1-arg string matchers ---
-  const arg = extractString(args[0]);
+  const arg = resolveString(args[0]);
   if (arg === null) return {};
 
   const matcherMap = {
@@ -662,9 +672,10 @@ function extractMatcherCall(callNode, warnings, filePath) {
  * @param {object} node - VariableDeclarator AST node
  * @param {string} filePath - current file path for error reporting
  * @param {Array} [warnings] - mutable warnings array for matcher extraction diagnostics
+ * @param {object} [constBindings] - const/enum bindings map for resolving member expressions
  * @returns {{ element: object|null, error: object|null }}
  */
-function extractElement(node, filePath, warnings) {
+function extractElement(node, filePath, warnings, constBindings) {
   if (node.type !== 'VariableDeclarator') return { element: null, error: null };
   if (!node.init || node.init.type !== 'CallExpression') return { element: null, error: null };
   if (!warnings) warnings = [];
@@ -734,7 +745,7 @@ function extractElement(node, filePath, warnings) {
       }
       const arg = current.arguments[0];
       if (arg && arg.type === 'CallExpression') {
-        matchers = extractMatcherCall(arg, warnings, filePath);
+        matchers = extractMatcherCall(arg, warnings, filePath, constBindings);
       }
       current = current.callee.object;
     } else if (methodName === 'childOf') {
@@ -2761,7 +2772,7 @@ function parseSource(source, filePath, rawSource, options) {
     if (node.type !== 'VariableDeclaration') return;
     for (const declarator of node.declarations) {
       // Try tag-based element pattern first
-      const { element, error } = extractElement(declarator, filePath, result.warnings);
+      const { element, error } = extractElement(declarator, filePath, result.warnings, constBindings);
       if (error) {
         result.warnings.push(error);
       }
