@@ -84,7 +84,7 @@
     [id="get-started"], [id="cli"], [id="configuration"],
     [id="element-locators"], [id="where-matchers"], [id="user-functions"],
     [id="save-to-context"], [id="date-helpers"], [id="keyboard-actions"],
-    [id="assertions"], [id="test-data"], [id="enums-and-consts"], [id="tests"], [id="automations"], [id="pom-files"] {
+    [id="assertions"], [id="test-data"], [id="enums-and-consts"], [id="conditionals"], [id="tests"], [id="automations"], [id="pom-files"] {
       scroll-margin-top: 70px;
     }
 
@@ -92,7 +92,7 @@
       [id="get-started"], [id="cli"], [id="configuration"],
       [id="element-locators"], [id="where-matchers"], [id="user-functions"],
       [id="save-to-context"], [id="date-helpers"], [id="keyboard-actions"],
-      [id="assertions"], [id="test-data"], [id="enums-and-consts"], [id="tests"], [id="automations"], [id="pom-files"] {
+      [id="assertions"], [id="test-data"], [id="enums-and-consts"], [id="conditionals"], [id="tests"], [id="automations"], [id="pom-files"] {
         scroll-margin-top: 110px;
       }
     }
@@ -237,6 +237,11 @@
           <li>
             <a href="#enums-and-consts" class="sidebar-link block rounded-md py-1.5 pl-7 pr-3 text-sm text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
               Enums &amp; Const Maps
+            </a>
+          </li>
+          <li>
+            <a href="#conditionals" class="sidebar-link block rounded-md py-1.5 pl-7 pr-3 text-sm text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
+              Conditionals in Tasks
             </a>
           </li>
         </ul>
@@ -768,6 +773,53 @@ Select(TechSkill.TypeScript).in(skillsDropdown)</code></pre></div>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       Both forms work the same way: the compiler reads the enum or const map at build time and replaces <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">TechSkill.TypeScript</code> with <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">"TypeScript"</code> in the output JSON. This keeps your test code readable while avoiding magic strings.
     </p>
+
+    <h4 id="conditionals" class="text-lg font-medium text-white mt-8 mb-2">Conditionals in Tasks <a href="#conditionals" class="heading-anchor">#</a></h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Tasks support conditional logic using standard <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">if</code> statements. The condition must reference a parameter from the task's <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">params</code> object. Steps inside the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">if</code> block only execute when the condition is met at runtime.
+    </p>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-2"><strong class="text-white">Supported condition patterns:</strong></p>
+    <div class="overflow-x-auto mb-4"><table class="w-full text-sm text-left border border-slate-700 rounded-lg overflow-hidden">
+      <thead class="bg-slate-800/80"><tr><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Pattern</th><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Meaning</th></tr></thead>
+      <tbody>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">if (param)</code></td><td class="px-4 py-2.5 text-slate-300">Truthy — execute when param is provided / non-empty</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">if (!param)</code></td><td class="px-4 py-2.5 text-slate-300">Falsy — execute when param is absent / empty</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">if (param == true)</code></td><td class="px-4 py-2.5 text-slate-300">Boolean truthy — same as <code class="text-emerald-300">if (param)</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">if (param == false)</code></td><td class="px-4 py-2.5 text-slate-300">Boolean falsy — same as <code class="text-emerald-300">if (!param)</code></td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">if (param === 'value')</code></td><td class="px-4 py-2.5 text-slate-300">Equals — execute when param matches a specific string</td></tr>
+        <tr><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">if (param !== 'value')</code></td><td class="px-4 py-2.5 text-slate-300">Not equals — execute when param does not match</td></tr>
+      </tbody>
+    </table></div>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-4"><strong class="text-white">Example — optional steps based on boolean params:</strong></p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">import { Task, Click } from '@tomationjs/dsl'
+
+const applyFilters = Task((params: { unreviewed?: boolean, archived?: boolean }) => {
+  const { unreviewed, archived } = params
+  Click(clearAllButton)
+  if (unreviewed == true) {
+    Click(unreviewedCheckbox)
+  }
+  if (archived == true) {
+    Click(archivedCheckbox)
+  }
+}).as('Apply Filters')</code></pre></div>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-4"><strong class="text-white">Example — branching on a string param:</strong></p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">const selectRole = Task((params: { role: string }) => {
+  const { role } = params
+  if (role === 'admin') {
+    Click(adminRadio)
+  }
+  if (role === 'viewer') {
+    Click(viewerRadio)
+  }
+}).as('Select Role')</code></pre></div>
+
+    <div class="rounded-xl border border-purple-500/30 bg-gradient-to-br from-slate-900/90 to-purple-950/30 p-4 mb-4">
+      <p class="text-sm text-slate-300"><span class="text-purple-300 font-medium">Note:</span> Only parameters destructured from <code class="text-purple-200 bg-purple-500/10 px-1 rounded">params</code> can be used in conditions. <code class="text-purple-200 bg-purple-500/10 px-1 rounded">else</code> blocks are not supported — use a separate <code class="text-purple-200 bg-purple-500/10 px-1 rounded">if</code> with the negated condition instead. Both <code class="text-purple-200 bg-purple-500/10 px-1 rounded">==</code> and <code class="text-purple-200 bg-purple-500/10 px-1 rounded">===</code> are accepted.</p>
+    </div>
 
     <h3 id="assertions" class="text-xl font-semibold text-white mt-12 mb-3">Assertions <a href="#assertions" class="heading-anchor">#</a></h3>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
