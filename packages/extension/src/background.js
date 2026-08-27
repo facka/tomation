@@ -423,13 +423,20 @@ function resolveValue(value, params, contextStore) {
 
 /**
  * Evaluate a conditional expression against the current params context.
+ * Supports both param-based conditions and ctx-based conditions.
  *
- * @param {object} condition - The condition object { param, op, value? }
+ * @param {object} condition - The condition object { param?, source?, key?, op, value? }
  * @param {object} params - The current params map
+ * @param {object} [contextStore] - The per-run context store (key → value)
  * @returns {boolean} - Whether the condition is met
  */
-function evaluateCondition(condition, params) {
-  var val = params[condition.param];
+function evaluateCondition(condition, params, contextStore) {
+  var val;
+  if (condition.source === 'ctx') {
+    val = contextStore && contextStore.hasOwnProperty(condition.key) ? contextStore[condition.key] : undefined;
+  } else {
+    val = params[condition.param];
+  }
   switch (condition.op) {
     case 'truthy':    return !!val;
     case 'falsy':     return !val;
@@ -500,6 +507,11 @@ function expandStep(step, tasksMap, pageElements, params) {
   }
 
   if (step.action === 'if') {
+    // Context-based conditions must be deferred to execution time
+    // because contextStore is not populated until steps actually run.
+    if (step.condition.source === 'ctx') {
+      return [{ action: 'ctxIf', condition: step.condition, then: step.then, _tasksMap: tasksMap, _pageElements: pageElements, _params: params }];
+    }
     if (evaluateCondition(step.condition, params)) {
       var result = [];
       for (var i = 0; i < step.then.length; i++) {
@@ -1552,6 +1564,26 @@ function runStepLoop() {
       }
       emitLog(currentIndex, step, true);
       runState.passCount++;
+      runState.stepIndex++;
+      return runStepLoop();
+    }
+
+    // Handle ctxIf steps: evaluate context-based condition at runtime and splice in then-steps
+    if (step.action === 'ctxIf') {
+      if (evaluateCondition(step.condition, step._params || {}, runState.contextStore)) {
+        // Condition met: expand then-steps and splice them into the steps array
+        var ctxIfExpanded = [];
+        for (var ci = 0; ci < step.then.length; ci++) {
+          var ctxExpanded = expandStep(step.then[ci], step._tasksMap || {}, step._pageElements || {}, step._params || {});
+          for (var cj = 0; cj < ctxExpanded.length; cj++) {
+            ctxIfExpanded.push(ctxExpanded[cj]);
+          }
+        }
+        // Insert expanded steps right after this ctxIf step
+        var spliceArgs = [currentIndex + 1, 0].concat(ctxIfExpanded);
+        Array.prototype.splice.apply(runState.steps, spliceArgs);
+      }
+      // Advance past the ctxIf step (whether condition was met or not)
       runState.stepIndex++;
       return runStepLoop();
     }

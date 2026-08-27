@@ -148,6 +148,30 @@ export declare const is: {
   ELEMENT: (xpath: string) => XPathElementBuilder;
 };
 
+// --- Context Object ---
+
+/**
+ * The `ctx` object provides access to values saved during test execution
+ * via SaveText, SaveAttribute, SaveValue, or Save actions.
+ *
+ * Use `ctx.keyName` anywhere a value is accepted — as an action argument or
+ * inside an if-condition. It resolves to the saved value at runtime.
+ *
+ * @example
+ * // As a value argument
+ * SaveText(welcomeMessage).as('greeting')
+ * Type(ctx.greeting).in(noteInput)
+ * AssertHasText(banner, ctx.greeting)
+ *
+ * @example
+ * // In an if-condition
+ * SaveText(statusLabel).as('currentStatus')
+ * if (ctx.currentStatus === 'Active') {
+ *   Click(deactivateButton)
+ * }
+ */
+export declare const ctx: Record<string, string>;
+
 // --- Task, Test, and Automation ---
 
 /**

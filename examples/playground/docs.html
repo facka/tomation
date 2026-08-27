@@ -540,7 +540,7 @@ Select('Admin').in(roleDropdown)</code></pre></div>
 
     <h4 id="save-to-context" class="text-lg font-medium text-white mt-6 mb-2">Save to Context <a href="#save-to-context" class="heading-anchor">#</a></h4>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
-      Save functions capture runtime values from the page and store them in a shared context object. Saved values can be referenced later in the same test using the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">{{ctx.keyName}}</code> interpolation syntax.
+      Save functions capture runtime values from the page and store them in a shared context object. Saved values can be referenced later in the same test in two ways: the typed <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">ctx.keyName</code> object (recommended — gives you autocomplete) or the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">{{ctx.keyName}}</code> string interpolation syntax. Both resolve to the same saved value at runtime.
     </p>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">SaveText(element).as('key')</code> — Save the element's text content to context.
@@ -554,7 +554,7 @@ Select('Admin').in(roleDropdown)</code></pre></div>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Save(expression).as('key')</code> — Save a computed expression or literal value to context.
     </p>
-    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">import { SaveText, SaveAttribute, SaveValue, Save } from '@tomationjs/dsl'
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">import { ctx, SaveText, SaveAttribute, SaveValue, Save, Type, Navigate } from '@tomationjs/dsl'
 
 // Save the text content of an element
 SaveText(welcomeMessage).as('greeting')
@@ -568,8 +568,22 @@ SaveValue(searchInput).as('lastSearch')
 // Save a computed expression
 Save('2024-01-15').as('targetDate')
 
-// Reference saved values later in the test
+// Reference saved values with the typed ctx object (recommended)
+Type(ctx.greeting).in(noteInput)
+Navigate(ctx.profileUrl)
+
+// Or with the {{ctx.key}} string interpolation form
 Type('{{ctx.greeting}}').in(noteInput)</code></pre></div>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Saved context values can also be used in <a href="#conditionals" class="text-emerald-300 hover:text-emerald-200 underline">if-conditions</a> to branch test logic based on runtime state:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">import { ctx, SaveText, Click } from '@tomationjs/dsl'
+
+SaveText(statusBadge).as('status')
+if (ctx.status === 'Pending') {
+  Click(approveButton)
+}</code></pre></div>
 
     <h4 id="date-helpers" class="text-lg font-medium text-white mt-6 mb-2">Date Helpers <a href="#date-helpers" class="heading-anchor">#</a></h4>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
@@ -818,7 +832,40 @@ const applyFilters = Task((params: { unreviewed?: boolean, archived?: boolean })
 }).as('Select Role')</code></pre></div>
 
     <div class="rounded-xl border border-purple-500/30 bg-gradient-to-br from-slate-900/90 to-purple-950/30 p-4 mb-4">
-      <p class="text-sm text-slate-300"><span class="text-purple-300 font-medium">Note:</span> Only parameters destructured from <code class="text-purple-200 bg-purple-500/10 px-1 rounded">params</code> can be used in conditions. <code class="text-purple-200 bg-purple-500/10 px-1 rounded">else</code> blocks are not supported — use a separate <code class="text-purple-200 bg-purple-500/10 px-1 rounded">if</code> with the negated condition instead. Both <code class="text-purple-200 bg-purple-500/10 px-1 rounded">==</code> and <code class="text-purple-200 bg-purple-500/10 px-1 rounded">===</code> are accepted.</p>
+      <p class="text-sm text-slate-300"><span class="text-purple-300 font-medium">Note:</span> For param-based conditions, the identifier must be destructured from <code class="text-purple-200 bg-purple-500/10 px-1 rounded">params</code>. <code class="text-purple-200 bg-purple-500/10 px-1 rounded">else</code> blocks are not supported — use a separate <code class="text-purple-200 bg-purple-500/10 px-1 rounded">if</code> with the negated condition instead. Both <code class="text-purple-200 bg-purple-500/10 px-1 rounded">==</code> and <code class="text-purple-200 bg-purple-500/10 px-1 rounded">===</code> are accepted.</p>
+    </div>
+
+    <h4 class="text-lg font-medium text-white mt-8 mb-2">Context-Based Conditionals</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      You can also branch based on values saved to the runtime context using <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">SaveText</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">SaveAttribute</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">SaveValue</code>, or <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Save</code>. Use the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">ctx</code> object in the condition — it references values that were saved earlier in the test run.
+    </p>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-2"><strong class="text-white">Supported context condition patterns:</strong></p>
+    <div class="overflow-x-auto mb-4"><table class="w-full text-sm text-left border border-slate-700 rounded-lg overflow-hidden">
+      <thead class="bg-slate-800/80"><tr><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Pattern</th><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Meaning</th></tr></thead>
+      <tbody>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">if (ctx.key)</code></td><td class="px-4 py-2.5 text-slate-300">Truthy — execute when the saved value is non-empty</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">if (!ctx.key)</code></td><td class="px-4 py-2.5 text-slate-300">Falsy — execute when the saved value is empty or not set</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">if (ctx.key === 'value')</code></td><td class="px-4 py-2.5 text-slate-300">Equals — execute when the saved value matches</td></tr>
+        <tr><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">if (ctx.key !== 'value')</code></td><td class="px-4 py-2.5 text-slate-300">Not equals — execute when the saved value doesn't match</td></tr>
+      </tbody>
+    </table></div>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-4"><strong class="text-white">Example — conditional steps based on a saved value:</strong></p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">import { ctx, SaveText, Click, Test } from '@tomationjs/dsl'
+
+Test('Toggle status based on current state', () => {
+  SaveText(statusLabel).as('currentStatus')
+  if (ctx.currentStatus === 'Active') {
+    Click(deactivateButton)
+  }
+  if (ctx.currentStatus === 'Inactive') {
+    Click(activateButton)
+  }
+})</code></pre></div>
+
+    <div class="rounded-xl border border-purple-500/30 bg-gradient-to-br from-slate-900/90 to-purple-950/30 p-4 mb-4">
+      <p class="text-sm text-slate-300"><span class="text-purple-300 font-medium">Important:</span> Context conditions are evaluated at <strong class="text-white">runtime</strong> — the <code class="text-purple-200 bg-purple-500/10 px-1 rounded">SaveText</code> (or similar) step must execute before the <code class="text-purple-200 bg-purple-500/10 px-1 rounded">if (ctx.key)</code> condition is reached. If the key has not been saved yet, the condition evaluates as falsy.</p>
     </div>
 
     <h3 id="assertions" class="text-xl font-semibold text-white mt-12 mb-3">Assertions <a href="#assertions" class="heading-anchor">#</a></h3>

@@ -1025,6 +1025,10 @@ function extractStringOrTemplate(node, dataTemplateVars, constBindings) {
     node.object && node.object.type === 'Identifier' &&
     node.property && node.property.type === 'Identifier'
   ) {
+    // Context value reference: ctx.greeting → {{ctx.greeting}}
+    if (node.object.name === 'ctx') {
+      return '{{ctx.' + node.property.name + '}}';
+    }
     if (dataTemplateVars && dataTemplateVars.has(node.object.name)) {
       return '{{data.' + node.object.name + '.' + node.property.name + '}}';
     }
@@ -1334,12 +1338,16 @@ function extractValueExpression(node, filePath, warnings, constBindings, dataTem
   // Identifier reference (e.g., destructured param variable)
   if (node.type === 'Identifier') return '{{' + node.name + '}}';
 
-  // MemberExpression: check for data template vars FIRST, then const object resolution, then fall back to param reference
+  // MemberExpression: check for ctx FIRST, then data template vars, then const object resolution, then fall back to param reference
   if (
     node.type === 'MemberExpression' &&
     node.object && node.object.type === 'Identifier' &&
     node.property && node.property.type === 'Identifier'
   ) {
+    // Context value reference: ctx.greeting → {{ctx.greeting}}
+    if (node.object.name === 'ctx') {
+      return '{{ctx.' + node.property.name + '}}';
+    }
     // Data template variable reference: user.name → {{data.user.name}}
     if (dataTemplateVars && dataTemplateVars.has(node.object.name)) {
       return '{{data.' + node.object.name + '.' + node.property.name + '}}';
@@ -1699,7 +1707,8 @@ function extractTaskInvocationParams(objNode, dataTemplateVars, constBindings) {
 
 /**
  * Extract the condition from an if-statement's test expression.
- * Resolves identifiers against tracked destructured params.
+ * Resolves identifiers against tracked destructured params, and
+ * recognizes ctx.keyName member expressions for context-based conditions.
  *
  * Supported patterns:
  *   if (paramName)              → { param: "paramName", op: "truthy" }
@@ -1714,6 +1723,12 @@ function extractTaskInvocationParams(objNode, dataTemplateVars, constBindings) {
  *   if (paramName != true)      → { param: "paramName", op: "falsy" }
  *   if (paramName !== false)    → { param: "paramName", op: "truthy" }
  *   if (paramName != false)     → { param: "paramName", op: "truthy" }
+ *   if (ctx.key)               → { source: "ctx", key: "key", op: "truthy" }
+ *   if (!ctx.key)              → { source: "ctx", key: "key", op: "falsy" }
+ *   if (ctx.key === 'value')   → { source: "ctx", key: "key", op: "equals", value: "value" }
+ *   if (ctx.key !== 'value')   → { source: "ctx", key: "key", op: "notEquals", value: "value" }
+ *   if (ctx.key == true)       → { source: "ctx", key: "key", op: "truthy" }
+ *   if (ctx.key == false)      → { source: "ctx", key: "key", op: "falsy" }
  *
  * @param {object} testNode - the `test` property of an IfStatement AST node
  * @param {Set<string>} trackedParams - set of known param names from destructuring
@@ -1721,6 +1736,28 @@ function extractTaskInvocationParams(objNode, dataTemplateVars, constBindings) {
  */
 function extractCondition(testNode, trackedParams) {
   if (!testNode) return null;
+
+  // --- Helper: check if a node is a ctx.keyName MemberExpression ---
+  function getCtxKey(node) {
+    if (
+      node &&
+      node.type === 'MemberExpression' &&
+      node.object &&
+      node.object.type === 'Identifier' &&
+      node.object.name === 'ctx' &&
+      node.property &&
+      node.property.type === 'Identifier'
+    ) {
+      return node.property.name;
+    }
+    return null;
+  }
+
+  // Pattern: ctx.key (truthy)
+  var ctxKey = getCtxKey(testNode);
+  if (ctxKey) {
+    return { source: 'ctx', key: ctxKey, op: 'truthy' };
+  }
 
   // Pattern: paramName (truthy)
   if (testNode.type === 'Identifier') {
@@ -1730,46 +1767,55 @@ function extractCondition(testNode, trackedParams) {
     return null;
   }
 
-  // Pattern: !paramName (falsy)
+  // Pattern: !ctx.key (falsy) or !paramName (falsy)
   if (
     testNode.type === 'UnaryExpression' &&
     testNode.operator === '!' &&
-    testNode.argument &&
-    testNode.argument.type === 'Identifier'
+    testNode.argument
   ) {
-    if (trackedParams.has(testNode.argument.name)) {
+    var negCtxKey = getCtxKey(testNode.argument);
+    if (negCtxKey) {
+      return { source: 'ctx', key: negCtxKey, op: 'falsy' };
+    }
+    if (testNode.argument.type === 'Identifier' && trackedParams.has(testNode.argument.name)) {
       return { param: testNode.argument.name, op: 'falsy' };
     }
     return null;
   }
 
-  // Pattern: paramName ===/==/!==/!= value (string or boolean)
+  // Pattern: paramName/ctx.key ===/==/!==/!= value (string or boolean)
   if (
     testNode.type === 'BinaryExpression' &&
     (testNode.operator === '===' || testNode.operator === '!==' ||
      testNode.operator === '==' || testNode.operator === '!=')
   ) {
+    const isEquality = testNode.operator === '===' || testNode.operator === '==';
+
+    // Determine if left side is a ctx.key or a tracked param
+    var binCtxKey = getCtxKey(testNode.left);
     const left = testNode.left && testNode.left.type === 'Identifier'
       ? testNode.left.name
       : null;
-    if (!left || !trackedParams.has(left)) return null;
 
-    const isEquality = testNode.operator === '===' || testNode.operator === '==';
+    // Must be either ctx.key or a tracked param
+    if (!binCtxKey && (!left || !trackedParams.has(left))) return null;
 
     // Boolean literal on the right: treat as truthy/falsy
     const boolVal = extractBoolean(testNode.right);
     if (boolVal !== null) {
-      // param == true  /  param === true  → truthy
-      // param != true  /  param !== true  → falsy
-      // param == false /  param === false → falsy
-      // param != false /  param !== false → truthy
       const isTruthy = isEquality ? boolVal === true : boolVal === false;
+      if (binCtxKey) {
+        return { source: 'ctx', key: binCtxKey, op: isTruthy ? 'truthy' : 'falsy' };
+      }
       return { param: left, op: isTruthy ? 'truthy' : 'falsy' };
     }
 
     // String literal on the right: equals/notEquals
     const right = extractString(testNode.right);
     if (right !== null) {
+      if (binCtxKey) {
+        return { source: 'ctx', key: binCtxKey, op: isEquality ? 'equals' : 'notEquals', value: right };
+      }
       return {
         param: left,
         op: isEquality ? 'equals' : 'notEquals',
