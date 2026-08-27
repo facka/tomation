@@ -215,23 +215,35 @@ function setStepPlan(steps: StepPlanEntry[]): void {
     value: step.value,
     taskPath: step.taskPath,
     taskDepth: step.taskDepth,
+    condition: step.condition,
+    taken: step.taken,
   }));
 }
 
 function setStepStatus(stepIndex: number, status: StepStatus, meta?: Partial<LogEntry>): void {
-  const entry = state.logEntries[stepIndex];
-  if (entry) {
-    entry.status = status;
-    if (meta) {
-      if (meta.action !== undefined) entry.action = meta.action;
-      if (meta.target !== undefined) entry.target = meta.target;
-      if (meta.value !== undefined) entry.value = meta.value;
-      if (meta.error !== undefined) entry.error = meta.error;
-      if (meta.retryAttempt !== undefined) entry.retryAttempt = meta.retryAttempt;
-      if (meta.taskPath !== undefined) entry.taskPath = meta.taskPath;
-      if (meta.taskDepth !== undefined) entry.taskDepth = meta.taskDepth;
-      if (meta.resolvedContext !== undefined) entry.resolvedContext = meta.resolvedContext;
-    }
+  let entry = state.logEntries[stepIndex];
+  // Runtime may splice steps (e.g. context-based conditionals) that were not part
+  // of the initial plan. Create a log entry on demand so those steps stay visible.
+  if (!entry) {
+    entry = {
+      stepIndex,
+      status,
+      action: meta?.action ?? '',
+    };
+    state.logEntries[stepIndex] = entry;
+  }
+  entry.status = status;
+  if (meta) {
+    if (meta.action !== undefined) entry.action = meta.action;
+    if (meta.target !== undefined) entry.target = meta.target;
+    if (meta.value !== undefined) entry.value = meta.value;
+    if (meta.error !== undefined) entry.error = meta.error;
+    if (meta.retryAttempt !== undefined) entry.retryAttempt = meta.retryAttempt;
+    if (meta.taskPath !== undefined) entry.taskPath = meta.taskPath;
+    if (meta.taskDepth !== undefined) entry.taskDepth = meta.taskDepth;
+    if (meta.resolvedContext !== undefined) entry.resolvedContext = meta.resolvedContext;
+    if (meta.condition !== undefined) entry.condition = meta.condition;
+    if (meta.taken !== undefined) entry.taken = meta.taken;
   }
 }
 

@@ -4,6 +4,18 @@ import type { StepPlanEntry } from './messages';
 export type ViewName = 'home' | 'test-plan' | 'run' | 'error';
 export type RunnableType = 'test' | 'automation';
 export type StepStatus = 'queued' | 'in-progress' | 'pass' | 'fail' | 'skipped';
+
+/**
+ * Describes an evaluated conditional (if / When). Attached to a "condition"
+ * log entry so the run view can show the branch decision.
+ */
+export interface StepCondition {
+  source?: 'ctx';
+  param?: string;
+  key?: string;
+  op: 'truthy' | 'falsy' | 'equals' | 'notEquals';
+  value?: string;
+}
 export type TaskHeaderStatus = 'queued' | 'in-progress' | 'pass' | 'warning';
 
 export interface Runnable {
@@ -29,6 +41,9 @@ export interface LogEntry {
   taskPath?: Array<{ name: string; label?: string; params?: Record<string, unknown> }>;
   taskDepth?: number;
   resolvedContext?: Array<{ key: string; value: unknown }>;
+  // Present on conditional (if / When) rows
+  condition?: StepCondition;
+  taken?: boolean;
 }
 
 export interface StoreState {

@@ -1,4 +1,5 @@
 import type { Step, PageElement } from '@/types/spec';
+import type { StepCondition } from '@/types/store';
 
 /**
  * Capitalize the first letter of a string.
@@ -41,6 +42,12 @@ export function buildStepLabel(
   if (step.action === 'task' && step.name) {
     const taskLabel = step.name.replace('__', '.');
     return 'Task ' + taskLabel;
+  }
+
+  // Conditional (if / When) steps
+  const actionForCondition = step.action.toLowerCase();
+  if (actionForCondition === 'condition' || actionForCondition === 'ctxif') {
+    return 'If ' + describeCondition((step as unknown as { condition?: StepCondition }).condition);
   }
 
   const action = capitalize(step.action);
@@ -119,5 +126,26 @@ export function getAssertSuffix(actionLower: string): string | null {
     case 'assertgone': return 'is gone';
     case 'assertvisible': return 'is visible';
     default: return null;
+  }
+}
+
+/**
+ * Build a human-readable description of a conditional (if / When).
+ * Examples:
+ *   ctx.status === 'Active'  → "ctx.status equals \"Active\""
+ *   param unreviewed truthy  → "unreviewed is set"
+ *   ctx.role !== 'viewer'    → "ctx.role does not equal \"viewer\""
+ */
+export function describeCondition(condition: StepCondition | undefined): string {
+  if (!condition) return '';
+  const subject = condition.source === 'ctx'
+    ? 'ctx.' + (condition.key ?? '')
+    : (condition.param ?? '');
+  switch (condition.op) {
+    case 'truthy':    return subject + ' is set';
+    case 'falsy':     return subject + ' is not set';
+    case 'equals':    return subject + ' equals "' + (condition.value ?? '') + '"';
+    case 'notEquals': return subject + ' does not equal "' + (condition.value ?? '') + '"';
+    default:          return subject;
   }
 }

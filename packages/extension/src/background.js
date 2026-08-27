@@ -481,7 +481,7 @@ function flattenSteps(testSteps, tasksMap, pageElements, checkedIndexes, initial
     }
 
     var step = testSteps[i];
-    var expanded = expandStep(step, tasksMap, pageElements, params);
+    var expanded = expandStep(step, tasksMap, pageElements, params, []);
     for (var j = 0; j < expanded.length; j++) {
       result.push(expanded[j]);
     }
@@ -501,38 +501,53 @@ function flattenSteps(testSteps, tasksMap, pageElements, checkedIndexes, initial
  * @param {object} params - Current parameter context for template resolution
  * @returns {Array} - Array of resolved step message objects
  */
-function expandStep(step, tasksMap, pageElements, params) {
+function expandStep(step, tasksMap, pageElements, params, taskPath) {
+  taskPath = taskPath || [];
+
   if (step.action === 'task') {
-    return expandTaskStep(step, tasksMap, pageElements, params);
+    return expandTaskStep(step, tasksMap, pageElements, params, taskPath);
   }
 
   if (step.action === 'if') {
     // Context-based conditions must be deferred to execution time
     // because contextStore is not populated until steps actually run.
     if (step.condition.source === 'ctx') {
-      return [{ action: 'ctxIf', condition: step.condition, then: step.then, _tasksMap: tasksMap, _pageElements: pageElements, _params: params }];
+      return [{
+        action: 'ctxIf', condition: step.condition, then: step.then,
+        _tasksMap: tasksMap, _pageElements: pageElements, _params: params,
+        _taskPath: taskPath, _condDepth: 0
+      }];
     }
-    if (evaluateCondition(step.condition, params)) {
-      var result = [];
+    // Param-based conditions are resolved now. Emit a visible "condition" marker
+    // step so the execution log shows the branch decision, then the then-steps
+    // (nested one level deeper) if the condition is met. The body keeps the same
+    // taskPath so it stays inside the surrounding task; nesting under the
+    // condition row itself is expressed via _condDepth.
+    var conditionMet = evaluateCondition(step.condition, params);
+    var result = [{ action: 'condition', condition: step.condition, taken: conditionMet, _taskPath: taskPath, _condDepth: 0 }];
+    if (conditionMet) {
       for (var i = 0; i < step.then.length; i++) {
-        var expanded = expandStep(step.then[i], tasksMap, pageElements, params);
+        var expanded = expandStep(step.then[i], tasksMap, pageElements, params, taskPath);
         for (var j = 0; j < expanded.length; j++) {
-          result.push(expanded[j]);
+          var child = expanded[j];
+          child._condDepth = (child._condDepth || 0) + 1;
+          result.push(child);
         }
       }
-      return result;
     }
-    return [];
+    return result;
   }
 
   // saveExpression steps are handled entirely in the background at execution time;
   // bypass buildStepMessage so that value resolution happens in runStepLoop
   // (where contextStore contains values saved by preceding steps).
   if (step.action === 'saveExpression') {
-    return [{ action: 'saveExpression', value: step.value, key: step.key }];
+    return [{ action: 'saveExpression', value: step.value, key: step.key, _taskPath: taskPath }];
   }
 
-  return [buildStepMessage(step, pageElements, params)];
+  var msg = buildStepMessage(step, pageElements, params);
+  msg._taskPath = taskPath;
+  return [msg];
 }
 
 /**
@@ -545,7 +560,8 @@ function expandStep(step, tasksMap, pageElements, params) {
  * @param {object} parentParams - Inherited params from an outer task context
  * @returns {Array} - Array of resolved step message objects
  */
-function expandTaskStep(step, tasksMap, pageElements, parentParams) {
+function expandTaskStep(step, tasksMap, pageElements, parentParams, parentPath) {
+  parentPath = parentPath || [];
   var taskName = step.name;
   var taskDef = tasksMap[taskName];
 
@@ -583,9 +599,16 @@ function expandTaskStep(step, tasksMap, pageElements, parentParams) {
   var result = [];
   var taskSteps = taskDef.steps;
 
+  // Extend the path with this task so child steps render nested under its header.
+  var childPath = parentPath.concat([{
+    name: step.name,
+    label: taskDef.label || null,
+    params: step.params || null
+  }]);
+
   for (var i = 0; i < taskSteps.length; i++) {
     var childStep = taskSteps[i];
-    var expanded = expandStep(childStep, tasksMap, pageElements, mergedParams);
+    var expanded = expandStep(childStep, tasksMap, pageElements, mergedParams, childPath);
     for (var j = 0; j < expanded.length; j++) {
       result.push(expanded[j]);
     }
@@ -1076,7 +1099,7 @@ function sendStepToRuntime(step, stepIndex) {
   var msg = {};
   var keys = Object.keys(step);
   for (var i = 0; i < keys.length; i++) {
-    if (keys[i] === '__needsCtxResolve') continue;
+    if (keys[i] === '__needsCtxResolve' || keys[i] === '_condDepth' || keys[i] === '_taskPath') continue;
     msg[keys[i]] = step[keys[i]];
   }
   msg.type = 'EXECUTE_STEP';
@@ -1179,6 +1202,13 @@ function emitLog(stepIndex, step, ok, error) {
   if (step.name) logMsg.name = step.name;
   if (step.params) logMsg.params = step.params;
   if (step.gone != null) logMsg.gone = step.gone;
+  // Condition marker steps carry the evaluated condition and whether the branch was taken
+  if (step.condition) logMsg.condition = step.condition;
+  if (step.taken != null) logMsg.taken = step.taken;
+  // Task path + conditional nesting depth (used to group/indent bodies under
+  // their condition row). Forwarded for runtime-spliced steps not in the plan.
+  if (step._taskPath) logMsg.taskPath = step._taskPath;
+  if (step._condDepth != null) logMsg.taskDepth = (step._taskPath ? step._taskPath.length : 0) + step._condDepth;
   if (error) {
     logMsg.error = error;
   }
@@ -1200,75 +1230,23 @@ function emitLog(stepIndex, step, ok, error) {
 
 /**
  * Build and send the STEP_PLAN message to the panel.
- * Recursively annotates each resolved step with its full task path for hierarchical rendering.
+ *
+ * Each resolved step already carries its full task path (`_taskPath`) and any
+ * conditional nesting depth (`_condDepth`), stamped during expandStep. Reading
+ * them directly keeps the plan perfectly aligned with the resolved step order
+ * (no re-walk, no desync between the plan and what actually runs).
  *
  * @param {Array} resolvedSteps - The flattened step array from flattenSteps()
- * @param {Array} originalSteps - The test's top-level steps array
- * @param {object} tasksMap - The spec's tasks map (key → { params?, steps[], label? })
- * @param {Array|Set} checkedSteps - Checked top-level step indices
+ * @param {Array} originalSteps - The test's top-level steps array (unused; kept for signature compatibility)
+ * @param {object} tasksMap - The spec's tasks map (unused; path comes from resolved steps)
+ * @param {Array|Set} checkedSteps - Checked top-level step indices (unused; flattenSteps already applied checks)
  */
 function emitStepPlan(resolvedSteps, originalSteps, tasksMap, checkedSteps) {
-  // Build a checked lookup matching flattenSteps logic
-  var checked;
-  if (checkedSteps && typeof checkedSteps.has === 'function') {
-    checked = checkedSteps;
-  } else if (Array.isArray(checkedSteps)) {
-    checked = {};
-    for (var ci = 0; ci < checkedSteps.length; ci++) {
-      checked[checkedSteps[ci]] = true;
-    }
-    checked.has = function (idx) { return this[idx] === true; };
-  } else {
-    checked = { has: function () { return true; } };
-  }
-
-  // Build taskPath for each resolved step by recursively walking the step tree.
-  // taskPath is an array of { name, label, params } objects representing the nesting hierarchy.
-  var stepAnnotations = []; // array of { taskPath: [...], taskDepth: N } per resolved step
-  var resolvedIdx = 0;
-  var pageElements = runState.spec ? runState.spec.pageElements || {} : {};
-
-  function annotateSteps(steps, parentPath, checkedSet) {
-    for (var i = 0; i < steps.length; i++) {
-      if (checkedSet && !checkedSet.has(i)) continue;
-
-      var step = steps[i];
-
-      if (step.action === 'task') {
-        var taskDef = tasksMap[step.name];
-        if (!taskDef) continue;
-
-        var taskEntry = {
-          name: step.name,
-          label: taskDef.label || null,
-          params: step.params || null
-        };
-        var childPath = parentPath.concat([taskEntry]);
-
-        // Recursively annotate the task's child steps
-        annotateSteps(taskDef.steps || [], childPath, null);
-      } else if (step.action === 'if') {
-        // if-steps expand — count how many resolved steps they produce
-        var tempIfExpanded = expandStep(step, tasksMap, pageElements, {});
-        for (var ifIdx = 0; ifIdx < tempIfExpanded.length; ifIdx++) {
-          stepAnnotations[resolvedIdx] = { taskPath: parentPath, taskDepth: parentPath.length };
-          resolvedIdx++;
-        }
-      } else {
-        // Non-task step: assign the current path
-        stepAnnotations[resolvedIdx] = { taskPath: parentPath, taskDepth: parentPath.length };
-        resolvedIdx++;
-      }
-    }
-  }
-
-  annotateSteps(originalSteps, [], checked);
-
-  // Build plan entries from resolvedSteps with annotations
   var planSteps = [];
   for (var s = 0; s < resolvedSteps.length; s++) {
     var rs = resolvedSteps[s];
-    var ann = stepAnnotations[s] || { taskPath: [], taskDepth: 0 };
+    var taskPath = rs._taskPath || [];
+    var lastTask = taskPath.length > 0 ? taskPath[taskPath.length - 1] : null;
     var entry = {
       action: rs.action,
       target: rs.target || null,
@@ -1276,17 +1254,31 @@ function emitStepPlan(resolvedSteps, originalSteps, tasksMap, checkedSteps) {
       url: rs.url || null,
       description: rs.description || null,
       ms: (rs.ms != null) ? rs.ms : null,
-      taskName: ann.taskPath.length > 0 ? ann.taskPath[ann.taskPath.length - 1].name : null,
-      taskLabel: ann.taskPath.length > 0 ? ann.taskPath[ann.taskPath.length - 1].label : null,
-      taskParams: ann.taskPath.length > 0 ? ann.taskPath[ann.taskPath.length - 1].params : null,
-      taskPath: ann.taskPath,
-      taskDepth: ann.taskDepth
+      taskName: lastTask ? lastTask.name : null,
+      taskLabel: lastTask ? lastTask.label : null,
+      taskParams: lastTask ? lastTask.params : null,
+      taskPath: taskPath,
+      // Base depth is the task nesting; conditional bodies add _condDepth so they
+      // indent one level under their condition row.
+      taskDepth: taskPath.length + (rs._condDepth || 0)
     };
     if (rs.gone != null) {
       entry.gone = rs.gone;
     }
     if (rs.contextKey != null) {
       entry.contextKey = rs.contextKey;
+    }
+    // Conditional rows: surface the condition and whether the branch was taken.
+    // Note: ctxIf rows are placeholders resolved at runtime; normalize their
+    // action to 'condition' so the panel renders them consistently.
+    if (rs.action === 'ctxIf') {
+      entry.action = 'condition';
+    }
+    if (rs.condition != null) {
+      entry.condition = rs.condition;
+    }
+    if (rs.taken != null) {
+      entry.taken = rs.taken;
     }
     planSteps.push(entry);
   }
@@ -1568,21 +1560,40 @@ function runStepLoop() {
       return runStepLoop();
     }
 
-    // Handle ctxIf steps: evaluate context-based condition at runtime and splice in then-steps
+    // Handle condition marker steps (param-based if/When, resolved at flatten time).
+    // These are non-executing log-only rows that show the branch decision.
+    if (step.action === 'condition') {
+      emitLog(currentIndex, step, true);
+      runState.passCount++;
+      runState.stepIndex++;
+      return runStepLoop();
+    }
+
+    // Handle ctxIf steps: evaluate context-based condition at runtime, log the
+    // decision, and splice in then-steps when the condition is met.
     if (step.action === 'ctxIf') {
-      if (evaluateCondition(step.condition, step._params || {}, runState.contextStore)) {
-        // Condition met: expand then-steps and splice them into the steps array
+      var ctxConditionMet = evaluateCondition(step.condition, step._params || {}, runState.contextStore);
+      var ctxBaseDepth = step._condDepth || 0;
+      var ctxTaskPath = step._taskPath || [];
+      if (ctxConditionMet) {
+        // Condition met: expand then-steps and splice them into the steps array,
+        // nested one level deeper than the condition row.
         var ctxIfExpanded = [];
         for (var ci = 0; ci < step.then.length; ci++) {
-          var ctxExpanded = expandStep(step.then[ci], step._tasksMap || {}, step._pageElements || {}, step._params || {});
+          var ctxExpanded = expandStep(step.then[ci], step._tasksMap || {}, step._pageElements || {}, step._params || {}, ctxTaskPath);
           for (var cj = 0; cj < ctxExpanded.length; cj++) {
-            ctxIfExpanded.push(ctxExpanded[cj]);
+            var ctxChild = ctxExpanded[cj];
+            ctxChild._condDepth = (ctxChild._condDepth || 0) + ctxBaseDepth + 1;
+            ctxIfExpanded.push(ctxChild);
           }
         }
         // Insert expanded steps right after this ctxIf step
         var spliceArgs = [currentIndex + 1, 0].concat(ctxIfExpanded);
         Array.prototype.splice.apply(runState.steps, spliceArgs);
       }
+      // Emit a visible "condition" log row showing whether the branch was taken.
+      emitLog(currentIndex, { action: 'condition', condition: step.condition, taken: ctxConditionMet, _condDepth: ctxBaseDepth, _taskPath: ctxTaskPath }, true);
+      runState.passCount++;
       // Advance past the ctxIf step (whether condition was met or not)
       runState.stepIndex++;
       return runStepLoop();
@@ -1609,6 +1620,10 @@ function runStepLoop() {
       if (step.name) startMsg.name = step.name;
       if (step.params) startMsg.params = step.params;
       if (step.gone != null) startMsg.gone = step.gone;
+      // Runtime-spliced conditional bodies carry their task path + nesting depth
+      // so the run view can group and indent them under the condition row.
+      if (step._taskPath) startMsg.taskPath = step._taskPath;
+      if (step._condDepth != null) startMsg.taskDepth = (step._taskPath ? step._taskPath.length : 0) + step._condDepth;
       safeSendMessage(startMsg);
 
       return sendStepToRuntime(step, currentIndex).then(function (result) {

@@ -28,6 +28,8 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
         action: msg.action,
         target: msg.target,
         value: msg.value,
+        taskDepth: msg.taskDepth,
+        taskPath: msg.taskPath,
       });
       break;
 
@@ -39,6 +41,10 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
         error: msg.error,
         retryAttempt: msg.retryAttempt,
         resolvedContext: msg.resolvedContext,
+        condition: msg.condition,
+        taken: msg.taken,
+        taskDepth: msg.taskDepth,
+        taskPath: msg.taskPath,
       });
       if (msg.contextKey !== undefined) {
         store.updateContext(msg.contextKey, msg.savedValue);

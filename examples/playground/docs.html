@@ -868,6 +868,36 @@ Test('Toggle status based on current state', () => {
       <p class="text-sm text-slate-300"><span class="text-purple-300 font-medium">Important:</span> Context conditions are evaluated at <strong class="text-white">runtime</strong> — the <code class="text-purple-200 bg-purple-500/10 px-1 rounded">SaveText</code> (or similar) step must execute before the <code class="text-purple-200 bg-purple-500/10 px-1 rounded">if (ctx.key)</code> condition is reached. If the key has not been saved yet, the condition evaluates as falsy.</p>
     </div>
 
+    <h4 class="text-lg font-medium text-white mt-8 mb-2">The When() Helper</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">When(condition, () =&gt; { ... })</code> is a functional-style alternative to an <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">if</code> block. It accepts the same param- and context-based conditions and behaves identically at runtime — it's purely a matter of style. The callback holds the steps to run when the condition is met.
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">import { When, ctx, Click, Type } from '@tomationjs/dsl'
+
+// Block body — group multiple steps under one condition
+When(ctx.status === 'Active', () => {
+  Click(deactivateButton)
+  Type('archived').in(reasonInput)
+})
+
+// Concise body — a single step
+When(unreviewed, () => Click(unreviewedCheckbox))</code></pre></div>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      The equivalent <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">if</code> form is exactly the same — use whichever reads better for your team:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">if (ctx.status === 'Active') {
+  Click(deactivateButton)
+  Type('archived').in(reasonInput)
+}</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-8 mb-2">Conditionals in the Execution Log</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Both <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">if</code> and <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">When</code> conditions show up as their own rows in the execution log, so you can see each branch decision as the test runs. A condition row displays the evaluated expression and whether the branch was taken:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-text">If ctx.status equals "Active"   ✓ condition met
+   Click Deactivate Button      ✓
+If unreviewed is set            ⊘ skipped</code></pre></div>
+
     <h3 id="assertions" class="text-xl font-semibold text-white mt-12 mb-3">Assertions <a href="#assertions" class="heading-anchor">#</a></h3>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       Assertion functions verify that the page is in the expected state after user interactions. They fail the test immediately if the condition is not met.

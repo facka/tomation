@@ -1753,21 +1753,38 @@ function extractCondition(testNode, trackedParams) {
     return null;
   }
 
+  // --- Helper: resolve a node to a param name. Accepts a bare tracked
+  // identifier (e.g., `unreviewed`) or a `params.X` member expression
+  // (consistent with how value expressions treat params.X → {{X}}).
+  function getParamName(node) {
+    if (!node) return null;
+    if (node.type === 'Identifier' && trackedParams.has(node.name)) {
+      return node.name;
+    }
+    if (
+      node.type === 'MemberExpression' &&
+      node.object && node.object.type === 'Identifier' &&
+      node.object.name === 'params' &&
+      node.property && node.property.type === 'Identifier'
+    ) {
+      return node.property.name;
+    }
+    return null;
+  }
+
   // Pattern: ctx.key (truthy)
   var ctxKey = getCtxKey(testNode);
   if (ctxKey) {
     return { source: 'ctx', key: ctxKey, op: 'truthy' };
   }
 
-  // Pattern: paramName (truthy)
-  if (testNode.type === 'Identifier') {
-    if (trackedParams.has(testNode.name)) {
-      return { param: testNode.name, op: 'truthy' };
-    }
-    return null;
+  // Pattern: paramName / params.X (truthy)
+  var truthyParam = getParamName(testNode);
+  if (truthyParam) {
+    return { param: truthyParam, op: 'truthy' };
   }
 
-  // Pattern: !ctx.key (falsy) or !paramName (falsy)
+  // Pattern: !ctx.key (falsy) or !paramName / !params.X (falsy)
   if (
     testNode.type === 'UnaryExpression' &&
     testNode.operator === '!' &&
@@ -1777,13 +1794,14 @@ function extractCondition(testNode, trackedParams) {
     if (negCtxKey) {
       return { source: 'ctx', key: negCtxKey, op: 'falsy' };
     }
-    if (testNode.argument.type === 'Identifier' && trackedParams.has(testNode.argument.name)) {
-      return { param: testNode.argument.name, op: 'falsy' };
+    var negParam = getParamName(testNode.argument);
+    if (negParam) {
+      return { param: negParam, op: 'falsy' };
     }
     return null;
   }
 
-  // Pattern: paramName/ctx.key ===/==/!==/!= value (string or boolean)
+  // Pattern: paramName/params.X/ctx.key ===/==/!==/!= value (string or boolean)
   if (
     testNode.type === 'BinaryExpression' &&
     (testNode.operator === '===' || testNode.operator === '!==' ||
@@ -1791,14 +1809,12 @@ function extractCondition(testNode, trackedParams) {
   ) {
     const isEquality = testNode.operator === '===' || testNode.operator === '==';
 
-    // Determine if left side is a ctx.key or a tracked param
+    // Determine if left side is a ctx.key or a param (bare or params.X)
     var binCtxKey = getCtxKey(testNode.left);
-    const left = testNode.left && testNode.left.type === 'Identifier'
-      ? testNode.left.name
-      : null;
+    var binParam = getParamName(testNode.left);
 
-    // Must be either ctx.key or a tracked param
-    if (!binCtxKey && (!left || !trackedParams.has(left))) return null;
+    // Must be either ctx.key or a param
+    if (!binCtxKey && !binParam) return null;
 
     // Boolean literal on the right: treat as truthy/falsy
     const boolVal = extractBoolean(testNode.right);
@@ -1807,7 +1823,7 @@ function extractCondition(testNode, trackedParams) {
       if (binCtxKey) {
         return { source: 'ctx', key: binCtxKey, op: isTruthy ? 'truthy' : 'falsy' };
       }
-      return { param: left, op: isTruthy ? 'truthy' : 'falsy' };
+      return { param: binParam, op: isTruthy ? 'truthy' : 'falsy' };
     }
 
     // String literal on the right: equals/notEquals
@@ -1817,7 +1833,7 @@ function extractCondition(testNode, trackedParams) {
         return { source: 'ctx', key: binCtxKey, op: isEquality ? 'equals' : 'notEquals', value: right };
       }
       return {
-        param: left,
+        param: binParam,
         op: isEquality ? 'equals' : 'notEquals',
         value: right,
       };
@@ -1877,6 +1893,68 @@ function extractIfStep(stmt, filePath, trackedParams, warnings, source, declared
 }
 
 /**
+ * Extract a conditional if-step from a When(condition, () => { ...steps }) call expression.
+ * This is the functional-style equivalent of an if-block and produces the same
+ * { action: 'if', condition, then } shape so it reuses all downstream machinery.
+ *
+ * @param {object} exprNode - CallExpression AST node for When(...)
+ * @param {string} filePath - current file path for error reporting
+ * @param {Set<string>} trackedParams - set of known param names from destructuring
+ * @param {Array} warnings - array to push warnings into
+ * @param {string} [source] - original source code for snippet extraction
+ * @param {Set<string>} [declaredTaskNames] - task names declared in this file
+ * @param {object} [constBindings] - const object bindings map
+ * @param {Set<string>} [dataTemplateVars] - data template variable names
+ * @returns {object|null} conditional step or null if the pattern is invalid
+ */
+function extractWhenStep(exprNode, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataTemplateVars) {
+  if (!exprNode || exprNode.type !== 'CallExpression') return null;
+  if (!exprNode.callee || exprNode.callee.type !== 'Identifier' || exprNode.callee.name !== 'When') return null;
+
+  const args = exprNode.arguments || [];
+  const conditionNode = args[0];
+  const bodyNode = args[1];
+
+  // Extract the condition (param- or ctx-based)
+  const condition = extractCondition(conditionNode, trackedParams);
+  if (!condition) {
+    warnings.push({
+      message: `Unsupported When() condition at ${filePath}:${lineOf(exprNode)} — only param/ctx truthiness or equality checks are allowed`,
+      filePath,
+      line: lineOf(exprNode),
+    });
+    return null;
+  }
+
+  // The second argument must be a function whose body holds the conditional steps
+  if (
+    !bodyNode ||
+    (bodyNode.type !== 'ArrowFunctionExpression' && bodyNode.type !== 'FunctionExpression')
+  ) {
+    warnings.push({
+      message: `When() requires a callback function as its second argument at ${filePath}:${lineOf(exprNode)}`,
+      filePath,
+      line: lineOf(exprNode),
+    });
+    return null;
+  }
+
+  // Function body may be a BlockStatement (() => { ... }) or a single expression (() => Click(x))
+  let thenSteps = [];
+  if (bodyNode.body && bodyNode.body.type === 'BlockStatement') {
+    thenSteps = extractSteps(bodyNode.body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataTemplateVars);
+  } else if (bodyNode.body) {
+    // Concise arrow body: () => Click(x) — wrap the single expression as a step
+    const singleStep = extractStep(bodyNode.body, filePath, declaredTaskNames, warnings, constBindings, dataTemplateVars);
+    if (singleStep) thenSteps = [singleStep];
+  }
+
+  if (thenSteps.length === 0) return null;
+
+  return { action: 'if', condition, then: thenSteps };
+}
+
+/**
  * Extract steps from a BlockStatement body (the function body of a Task or Test).
  * Iterates statements, handling param destructuring tracking, if-statements for
  * conditional steps, and ExpressionStatements for action steps.
@@ -1923,6 +2001,22 @@ function extractSteps(body, filePath, trackedParams, warnings, source, declaredT
       const ifStep = extractIfStep(stmt, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataTemplateVars);
       if (ifStep) {
         steps.push(ifStep);
+      }
+      continue;
+    }
+
+    // Handle When(condition, () => {...}) → conditional step (functional if-block)
+    if (
+      stmt.type === 'ExpressionStatement' &&
+      stmt.expression &&
+      stmt.expression.type === 'CallExpression' &&
+      stmt.expression.callee &&
+      stmt.expression.callee.type === 'Identifier' &&
+      stmt.expression.callee.name === 'When'
+    ) {
+      const whenStep = extractWhenStep(stmt.expression, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataTemplateVars);
+      if (whenStep) {
+        steps.push(whenStep);
       }
       continue;
     }
@@ -3023,4 +3117,4 @@ function parseSource(source, filePath, rawSource, options) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractIfStep, extractCondition, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, parseDataTemplate, buildConstBindings, buildEnumBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };
+module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractIfStep, extractWhenStep, extractCondition, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, parseDataTemplate, buildConstBindings, buildEnumBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };

@@ -1,3 +1,5 @@
+import type { StepCondition } from './store';
+
 export interface PageElement {
   tag: string;
   label?: string;
@@ -18,6 +20,9 @@ export interface Step {
   params?: Record<string, unknown>;
   gone?: boolean;
   contextKey?: string;
+  // Conditional (if / When) steps
+  condition?: StepCondition;
+  then?: Step[];
 }
 
 export interface Param {

@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import type { LogEntry } from '@/types/store';
 import type { PageElement } from '@/types/spec';
-import { resolveTargetLabel, getAssertSuffix } from '@/logic/stepLabel';
+import { resolveTargetLabel, getAssertSuffix, describeCondition } from '@/logic/stepLabel';
 
 const props = defineProps<{
   entry: LogEntry;
@@ -119,6 +119,15 @@ const isAssert = computed(() => {
   return getAssertSuffix(action) !== null;
 });
 
+const isCondition = computed(() => {
+  const action = props.entry.action?.toLowerCase() || '';
+  return action === 'condition' || action === 'ctxif';
+});
+
+const conditionDescription = computed(() => describeCondition(props.entry.condition));
+
+const conditionTaken = computed(() => props.entry.taken === true);
+
 const assertSuffix = computed(() => {
   const action = props.entry.action?.toLowerCase() || '';
   return getAssertSuffix(action) || '';
@@ -136,8 +145,22 @@ const attemptBadgeClass = computed(() => {
 
 <template>
   <div class="log-entry" :class="statusClass" :style="indentStyle">
+    <!-- Conditional steps: "If [condition] → taken / not taken" -->
+    <template v-if="isCondition">
+      <span class="step-action">If</span>
+      <span class="condition-expr">{{ conditionDescription }}</span>
+      <span class="condition-outcome" :class="conditionTaken ? 'taken' : 'not-taken'">
+        <template v-if="conditionTaken">
+          <font-awesome-icon :icon="['fas', 'check']" /> condition met
+        </template>
+        <template v-else>
+          <font-awesome-icon :icon="['fas', 'ban']" /> skipped
+        </template>
+      </span>
+    </template>
+
     <!-- Assert steps: "Assert that [element] has text "value"" -->
-    <template v-if="isAssert">
+    <template v-else-if="isAssert">
       <span class="step-action">Assert that</span>
 
       <span
@@ -179,19 +202,19 @@ const attemptBadgeClass = computed(() => {
 
     <span v-if="resolvedContextKeys" class="ctx-source">{{ resolvedContextKeys }}</span>
 
-    <!-- Status indicators -->
-    <template v-if="entry.status === 'in-progress'">
+    <!-- Status indicators (condition rows render their own outcome badge) -->
+    <template v-if="!isCondition && entry.status === 'in-progress'">
       <span class="spinner"><font-awesome-icon :icon="['fas', 'spinner']" spin /></span>
     </template>
 
-    <template v-if="entry.status === 'pass'">
+    <template v-if="!isCondition && entry.status === 'pass'">
       <span> <font-awesome-icon :icon="['fas', 'check']" /></span>
       <span v-if="entry.retryAttempt" class="attempt-badge" :class="attemptBadgeClass">
         Attempt {{ entry.retryAttempt }}
       </span>
     </template>
 
-    <template v-if="entry.status === 'fail'">
+    <template v-if="!isCondition && entry.status === 'fail'">
       <span> <font-awesome-icon :icon="['fas', 'xmark']" /></span>
       <span v-if="entry.retryAttempt" class="attempt-badge" :class="attemptBadgeClass">
         Attempt {{ entry.retryAttempt }}
@@ -222,5 +245,25 @@ const attemptBadgeClass = computed(() => {
   font-size: 10px;
   font-style: italic;
   margin-left: 4px;
+}
+
+.condition-expr {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--text-secondary, #aaa);
+  margin: 0 4px;
+}
+
+.condition-outcome {
+  font-size: 10px;
+  margin-left: 4px;
+}
+
+.condition-outcome.taken {
+  color: var(--success, #22c55e);
+}
+
+.condition-outcome.not-taken {
+  color: var(--text-muted, #888);
 }
 </style>

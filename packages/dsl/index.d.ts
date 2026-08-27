@@ -252,6 +252,28 @@ export declare function WaitFor(element: ElementDescriptor): any;
 export declare function WaitForGone(element: ElementDescriptor): any;
 export declare function Manual(description: string): any;
 
+// --- Conditional ---
+
+/**
+ * Conditionally run a group of steps. The condition may reference a task
+ * parameter or a saved context value (`ctx.key`). It is the functional-style
+ * equivalent of an `if` block and is resolved the same way at runtime.
+ *
+ * The condition decision is shown as its own row in the execution log.
+ *
+ * @param condition - A boolean expression over a param or `ctx.key`
+ * @param body - Callback containing the steps to run when the condition is met
+ *
+ * @example
+ * When(ctx.status === 'Active', () => {
+ *   Click(deactivateButton)
+ * })
+ *
+ * @example
+ * When(unreviewed, () => Click(unreviewedCheckbox))
+ */
+export declare function When(condition: boolean, body: () => void): any;
+
 // --- File Upload ---
 
 export declare function Upload(filePath: string): { in(element: ElementDescriptor): any };

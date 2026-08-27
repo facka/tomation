@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import type { Step, PageElement } from '@/types/spec';
-import { resolveTargetLabel, getAssertSuffix } from '@/logic/stepLabel';
+import { resolveTargetLabel, getAssertSuffix, describeCondition } from '@/logic/stepLabel';
 
 const props = defineProps<{
   steps: Step[];
@@ -19,8 +19,10 @@ interface ChecklistItem {
   stepIndex: number; // top-level step index (sent to background)
   depth: number;
   isTask: boolean;
+  isCondition?: boolean;
   step: Step;
   taskLabel?: string;
+  conditionLabel?: string;
   childIndex?: number; // index within task sub-steps
 }
 
@@ -51,6 +53,20 @@ const flatItems = computed(() => {
         // Recurse into child steps
         const childSteps = taskDef.steps || [];
         flattenSteps(childSteps, topIndex, depth + 1);
+      } else if (step.action === 'if' || step.action === 'condition' || step.action === 'ctxIf') {
+        // Conditional header — show the condition, then nest its body
+        items.push({
+          stepIndex: topIndex,
+          depth,
+          isTask: false,
+          isCondition: true,
+          step,
+          conditionLabel: describeCondition(step.condition),
+          childIndex: parentIndex !== null ? si : undefined,
+        });
+        // Recurse into the conditional body (nested under the condition)
+        const thenSteps = step.then || [];
+        flattenSteps(thenSteps, topIndex, depth + 1);
       } else {
         items.push({
           stepIndex: topIndex,
@@ -275,6 +291,12 @@ function capitalize(str: string): string {
               :title="getParamsDisplay(item.step.params)!.tooltip"
             >{{ getParamsDisplay(item.step.params)!.text }}</span>
           </template>
+        </template>
+
+        <!-- Conditional (if / When) header -->
+        <template v-else-if="item.isCondition">
+          <span class="step-action">If</span>
+          <span class="condition-expr">{{ item.conditionLabel }}</span>
         </template>
 
         <!-- Assert step (sentence format) -->

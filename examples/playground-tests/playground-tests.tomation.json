@@ -8,7 +8,7 @@
     "urls": [
       "https://facka.github.io/tomation"
     ],
-    "compilerVersion": "1.5.0"
+    "compilerVersion": "1.5.1"
   },
   "pageElements": {
     "Login__usernameInput": {
@@ -149,6 +149,27 @@
       "label": "Address",
       "where": {
         "id": "address"
+      }
+    },
+    "UserForm__juniorRadio": {
+      "tag": "input",
+      "label": "Junior Seniority",
+      "where": {
+        "id": "seniority-junior"
+      }
+    },
+    "UserForm__semiseniorRadio": {
+      "tag": "input",
+      "label": "Semisenior Seniority",
+      "where": {
+        "id": "seniority-semisenior"
+      }
+    },
+    "UserForm__seniorRadio": {
+      "tag": "input",
+      "label": "Senior Seniority",
+      "where": {
+        "id": "seniority-senior"
       }
     },
     "UserForm__registerButton": {
@@ -318,6 +339,45 @@
           "action": "type",
           "target": "UserForm__addressInput",
           "value": "{{address}}"
+        },
+        {
+          "action": "if",
+          "condition": {
+            "param": "isJunior",
+            "op": "truthy"
+          },
+          "then": [
+            {
+              "action": "click",
+              "target": "UserForm__juniorRadio"
+            }
+          ]
+        },
+        {
+          "action": "if",
+          "condition": {
+            "param": "isSemisenior",
+            "op": "truthy"
+          },
+          "then": [
+            {
+              "action": "click",
+              "target": "UserForm__semiseniorRadio"
+            }
+          ]
+        },
+        {
+          "action": "if",
+          "condition": {
+            "param": "isSenior",
+            "op": "truthy"
+          },
+          "then": [
+            {
+              "action": "click",
+              "target": "UserForm__seniorRadio"
+            }
+          ]
         }
       ],
       "params": [],
@@ -697,7 +757,8 @@
             "dob": "{{data.user.dob}}",
             "role": "{{data.user.role}}",
             "skills": "TypeScript",
-            "address": "{{data.user.address}}"
+            "address": "{{data.user.address}}",
+            "isSenior": true
           }
         },
         {

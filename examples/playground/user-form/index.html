@@ -188,6 +188,23 @@
               <option value="Node.js">Node.js</option>
             </select>
           </div>
+          <fieldset>
+            <legend class="mb-1.5 block text-sm font-medium text-slate-200">Seniority</legend>
+            <div class="flex flex-wrap gap-4">
+              <label class="flex items-center gap-2 text-sm text-slate-200">
+                <input type="radio" id="seniority-junior" name="seniority" value="Junior" class="h-4 w-4 accent-emerald-400">
+                Junior
+              </label>
+              <label class="flex items-center gap-2 text-sm text-slate-200">
+                <input type="radio" id="seniority-semisenior" name="seniority" value="Semisenior" class="h-4 w-4 accent-emerald-400">
+                Semisenior
+              </label>
+              <label class="flex items-center gap-2 text-sm text-slate-200">
+                <input type="radio" id="seniority-senior" name="seniority" value="Senior" class="h-4 w-4 accent-emerald-400">
+                Senior
+              </label>
+            </div>
+          </fieldset>
           <button type="submit" id="register-btn" class="w-full rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-bold text-emerald-950 transition hover:bg-emerald-300">Register</button>
         </form>
 
@@ -228,12 +245,14 @@
       var role = document.getElementById('role').value;
       var skills = document.getElementById('skills').value;
       var address = document.getElementById('address').value.trim();
+      var seniorityEl = document.querySelector('input[name="seniority"]:checked');
+      var seniority = seniorityEl ? seniorityEl.value : '';
 
       messageEl.className = 'mt-4 hidden rounded-xl px-3 py-2 text-sm';
       messageEl.style.display = 'none';
       messageEl.textContent = '';
 
-      if (!fullName || !email || !phone || !dob || !role || !skills || !address) {
+      if (!fullName || !email || !phone || !dob || !role || !skills || !address || !seniority) {
         messageEl.className = 'mt-4 rounded-xl px-3 py-2 text-sm error';
         messageEl.style.display = 'block';
         messageEl.textContent = 'All fields are required';
@@ -305,6 +324,7 @@ Test('Register user with generated data', () => {
     role: user.role,
     skills: TechSkill.TypeScript,
     address: user.address,
+    isSenior: true,
   })
   UserForm.submit()
   AssertHasText(UserForm.message, 'User registered successfully')
@@ -339,7 +359,7 @@ export default TechSkill`
         },
         pom: {
           name: 'pom/user-form.pom.ts',
-          code: `import { is, idIs, Task, Type, Select, Click } from '@tomationjs/dsl'
+          code: `import { is, idIs, Task, Type, Select, Click, When } from '@tomationjs/dsl'
 
 const nameInput = is.INPUT.where(idIs('full-name')).as('Full Name')
 const emailInput = is.INPUT.where(idIs('email')).as('Email')
@@ -348,12 +368,16 @@ const dobInput = is.INPUT.where(idIs('dob')).as('Date of Birth')
 const roleSelect = is.SELECT.where(idIs('role')).as('Role')
 const skillsSelect = is.SELECT.where(idIs('skills')).as('Tech Skills')
 const addressInput = is.INPUT.where(idIs('address')).as('Address')
+const juniorRadio = is.INPUT.where(idIs('seniority-junior')).as('Junior Seniority')
+const semiseniorRadio = is.INPUT.where(idIs('seniority-semisenior')).as('Semisenior Seniority')
+const seniorRadio = is.INPUT.where(idIs('seniority-senior')).as('Senior Seniority')
 const registerButton = is.BUTTON.where(idIs('register-btn')).as('Register')
 const message = is.DIV.where(idIs('message')).as('Message')
 
 const fillForm = Task((params: {
   name: string; email: string; phone: string;
   dob: string; role: string; skills: string; address: string;
+  isJunior?: boolean; isSemisenior?: boolean; isSenior?: boolean;
 }) => {
   Type(params.name).in(nameInput)
   Type(params.email).in(emailInput)
@@ -362,6 +386,11 @@ const fillForm = Task((params: {
   Select(params.role).in(roleSelect)
   Select(params.skills).in(skillsSelect)
   Type(params.address).in(addressInput)
+
+  // Only one seniority radio can be selected — pick the one that matches
+  When(params.isJunior, () => Click(juniorRadio))
+  When(params.isSemisenior, () => Click(semiseniorRadio))
+  When(params.isSenior, () => Click(seniorRadio))
 }).as('Fill Registration Form')
 
 const submit = Task(() => {
@@ -370,7 +399,9 @@ const submit = Task(() => {
 
 export default {
   nameInput, emailInput, phoneInput, dobInput,
-  roleSelect, skillsSelect, addressInput, registerButton, message,
+  roleSelect, skillsSelect, addressInput,
+  juniorRadio, semiseniorRadio, seniorRadio,
+  registerButton, message,
   fillForm, submit
 }`
         }

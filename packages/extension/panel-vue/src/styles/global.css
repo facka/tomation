@@ -766,6 +766,12 @@ h3 {
   font-size: 11px;
 }
 
+.condition-expr {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
 .step-params {
   color: var(--text-secondary);
   font-family: var(--font-mono);
