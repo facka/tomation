@@ -286,6 +286,51 @@ const user = Data({
       </article>
     </section>
 
+    <section class="mt-12 space-y-6">
+      <div>
+        <h2 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">Readable Tests, Zero async/await</h2>
+      </div>
+
+      <article class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-5 sm:p-7">
+        <span class="inline-flex rounded-full border border-emerald-400/35 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">Command Queue</span>
+        <h3 class="mt-3 text-xl font-semibold text-white">Write Steps, Not Promises</h3>
+
+        <p class="mt-2 text-sm text-slate-300">Browser automation is asynchronous, so most tools make you scatter <span class="font-mono text-emerald-200">await</span> across every line. The intent of the test gets buried under async plumbing that has nothing to do with what you're testing.</p>
+
+        <p class="mt-3 text-sm text-slate-300">Tomation uses a <strong class="text-white">deferred execution pattern</strong>: each DSL call doesn't run immediately — it <strong class="text-white">enqueues a command</strong>. Your test body reads like a plain, top-to-bottom list of steps, and the engine runs them in order at execution time.</p>
+
+        <div class="mt-5 grid gap-4 lg:grid-cols-2">
+          <div>
+            <p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Async everywhere</p>
+            <div class="rounded-xl border border-slate-700 bg-slate-950 p-3">
+<pre class="code-scroll overflow-x-auto"><code class="language-typescript">await page.click('#login-btn')
+await page.fill('#username', 'admin')
+await page.fill('#password', 'secret')
+await page.click('#submit')
+await expect(page.locator('#msg'))
+  .toHaveText('Login successful')</code></pre>
+            </div>
+          </div>
+          <div>
+            <p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">Clean command queue</p>
+            <div class="rounded-xl border border-slate-700 bg-slate-950 p-3">
+<pre class="code-scroll overflow-x-auto"><code class="language-typescript">Click(Login.submitButton)
+Type('admin').in(Login.usernameInput)
+TypePassword('secret').in(Login.passwordInput)
+Click(Login.submitButton)
+AssertHasText(Login.message, 'Login successful')</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <ul class="mt-5 space-y-1.5 text-sm text-slate-300">
+          <li class="flex items-start gap-2"><span class="mt-0.5 text-emerald-300">→</span> <span><strong class="text-white">No async/await noise</strong> — every line is a step, so tests read like a script a person would follow.</span></li>
+          <li class="flex items-start gap-2"><span class="mt-0.5 text-emerald-300">→</span> <span><strong class="text-white">Ordering is guaranteed</strong> — commands run sequentially in the order you wrote them, no forgotten <span class="font-mono text-emerald-200">await</span> causing race conditions.</span></li>
+          <li class="flex items-start gap-2"><span class="mt-0.5 text-emerald-300">→</span> <span><strong class="text-white">Inspectable before it runs</strong> — because steps are queued, the extension can show the full plan and let you run, retry, or skip individual steps.</span></li>
+        </ul>
+      </article>
+    </section>
+
     <footer class="mt-12 text-center text-sm text-slate-400">
       <div class="mb-2">
         <a class="font-semibold text-emerald-300 hover:text-emerald-200" href="https://github.com/facka/tomation">View on GitHub</a>
