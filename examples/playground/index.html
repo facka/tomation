@@ -263,6 +263,29 @@ const user = Data({
       </div>
     </section>
 
+    <section class="mt-12 space-y-6">
+      <div>
+        <h2 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">Never Restart a Test from Scratch</h2>
+      </div>
+
+      <article class="rounded-2xl border border-amber-400/30 bg-gradient-to-br from-slate-900/90 to-amber-950/20 p-5 sm:p-7">
+        <span class="inline-flex rounded-full border border-amber-400/35 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-300">Pause · Live-Fix · Resume</span>
+        <h3 class="mt-3 text-xl font-semibold text-white">Fix What Went Wrong Without Losing Your Place</h3>
+
+        <p class="mt-2 text-sm text-slate-300">Tests break for reasons that have nothing to do with your selectors — an <strong class="text-white">unexpected modal</strong> blocks a click, the app is in a <strong class="text-white">dirty state</strong> from a previous run, or a <strong class="text-white">stale session</strong> throws you off course. These moments don't mean your test is wrong.</p>
+
+        <p class="mt-3 text-sm text-slate-300">When a step hits an unexpected failure, Tomation <strong class="text-white">pauses execution and keeps the browser alive</strong>. The DOM stays live and interactive — nothing is lost.</p>
+
+        <ul class="mt-4 space-y-1.5 text-sm text-slate-300">
+          <li class="flex items-start gap-2"><span class="mt-0.5 text-amber-300">→</span> <span><strong class="text-white">Take over the page by hand</strong> — dismiss the modal, reset the state, or navigate manually to get things back on track.</span></li>
+          <li class="flex items-start gap-2"><span class="mt-0.5 text-amber-300">→</span> <span><strong class="text-white">Retry the paused step</strong> once the page is ready, or <strong class="text-white">skip it</strong> and move on.</span></li>
+          <li class="flex items-start gap-2"><span class="mt-0.5 text-amber-300">→</span> <span><strong class="text-white">Resume from where you left off</strong> — the rest of the run continues, no restart from step one.</span></li>
+        </ul>
+
+        <p class="mt-4 text-xs text-slate-400 italic">Traditional test runners stop at the first thrown action — you fix the code and re-run the whole test to get back to that point. Tomation lets you fix the situation live and keep going.</p>
+      </article>
+    </section>
+
     <footer class="mt-12 text-center text-sm text-slate-400">
       <div class="mb-2">
         <a class="font-semibold text-emerald-300 hover:text-emerald-200" href="https://github.com/facka/tomation">View on GitHub</a>
