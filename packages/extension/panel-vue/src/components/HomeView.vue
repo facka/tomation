@@ -85,13 +85,29 @@ async function quickRunAutomation(automation: AutomationEntry, index: number) {
   store.startRun(config, params);
   send({ type: 'RUN_AUTOMATION', automationIndex: index, params, checkedSteps, config });
 }
+
+// Return to the landing page from the standalone Lab (no project loaded)
+function backFromLab() {
+  store.setActiveTab('tests');
+}
 </script>
 
 <template>
   <div class="view active">
     <!-- Lab tab: visible regardless of project state -->
     <template v-if="store.state.activeTab === 'lab'">
-      <TabBar />
+      <!-- Standalone mode (no spec loaded): show a titled header + back button -->
+      <div v-if="!store.state.currentProject" class="lab-standalone-header">
+        <button class="btn btn-ghost btn-sm" @click="backFromLab" aria-label="Back">
+          <font-awesome-icon :icon="['fas', 'arrow-left']" aria-hidden="true" />
+        </button>
+        <div class="lab-header-meta">
+          <h2>Lab</h2>
+          <p class="lab-header-subtitle">POM generation powered by AI</p>
+        </div>
+      </div>
+      <!-- Loaded mode: normal tab navigation -->
+      <TabBar v-else />
       <LabView />
     </template>
 

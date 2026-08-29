@@ -325,47 +325,8 @@ h3 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 48px 24px 32px;
+  padding: 32px 16px 24px;
   text-align: center;
-  min-height: 300px;
-}
-
-.landing-icon {
-  font-size: 40px;
-  margin-bottom: 16px;
-  opacity: 0.8;
-}
-
-.landing-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 6px;
-}
-
-.landing-subtitle {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-bottom: 20px;
-  line-height: 1.5;
-}
-
-.landing-subtitle code {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  background: var(--bg-elevated);
-  padding: 1px 5px;
-  border-radius: 3px;
-  border: 1px solid var(--border-subtle);
-}
-
-.landing-actions {
-  margin-bottom: 24px;
-}
-
-.landing-actions input[type="file"] {
-  display: none;
 }
 
 /* --------------------------------------------------------------------------
@@ -1087,48 +1048,83 @@ h3 {
 /* --------------------------------------------------------------------------
    Onboarding Landing Page
    -------------------------------------------------------------------------- */
-.landing-welcome {
+/* Header: brand + tagline */
+.landing-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.landing-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.landing-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.landing-brand-name {
   font-size: 18px;
   font-weight: 700;
-  text-align: center;
-  margin-bottom: 4px;
+  color: var(--text-primary);
 }
 
 .landing-tagline {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary);
-  max-width: 40ch;
-  text-align: center;
-  margin-bottom: 16px;
+  max-width: 42ch;
+  line-height: 1.5;
 }
 
-.landing-get-started {
-  padding: 8px 20px;
+/* Primary action cards */
+.landing-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
 }
 
+/* Load Spec dropzone — styled as an equal-weight action card */
 .drop-zone-unified {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   width: 100%;
-  max-width: 320px;
-  border: 2px dashed var(--border);
-  border-radius: var(--radius-lg);
-  padding: 24px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+  padding: 18px 16px;
   cursor: pointer;
   text-align: center;
   transition: border-color 0.15s ease, background 0.15s ease;
-  margin-top: 16px;
 }
 
 .drop-zone-unified:hover {
-  border-color: var(--accent-text);
+  border-color: var(--accent);
+  background: var(--bg-hover);
 }
 
 .drop-zone-unified.drag-over {
   border-color: var(--accent);
+  border-style: dashed;
   background: var(--accent-soft);
 }
 
@@ -1141,23 +1137,13 @@ h3 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 14px;
   font-weight: 600;
   font-size: 13px;
-  color: #fff;
-  background: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.drop-zone-unified:hover .drop-zone-label {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
+  color: var(--text-primary);
 }
 
 .drop-zone-helper {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
@@ -1165,10 +1151,67 @@ h3 {
   color: var(--error);
   font-size: 12px;
   margin-top: 6px;
+  text-align: center;
 }
 
 .drop-zone-error:empty {
   display: none;
+}
+
+/* Open Lab card — matches the dropzone card weight */
+.landing-action-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.landing-action-card:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.landing-action-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.landing-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 14px;
+}
+
+.landing-action-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.landing-action-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.landing-action-subtitle {
+  font-size: 11px;
+  color: var(--text-secondary);
 }
 
 /* --------------------------------------------------------------------------
@@ -1196,57 +1239,80 @@ h3 {
   gap: 8px;
 }
 
-.landing-playground-link {
-  color: var(--accent-text);
-  font-size: 13px;
-  text-decoration: none;
-  margin-top: 16px;
-}
-
-.landing-playground-link:hover {
-  text-decoration: underline;
-}
-
 /* --------------------------------------------------------------------------
-   Landing Automations Section
+   Landing Footer (secondary links & docs)
    -------------------------------------------------------------------------- */
-.landing-automations {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  margin-top: 16px;
+.landing-footer {
   width: 100%;
   max-width: 320px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+  text-align: center;
 }
 
-.landing-automations summary {
-  padding: 10px 12px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  color: var(--text-primary);
-}
-
-.automations-content {
-  padding: 12px;
-  font-size: 13px;
+.landing-footer-hint {
+  font-size: 11px;
+  color: var(--text-muted);
   line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+.landing-footer-hint code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: var(--bg-elevated);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
 }
 
-.automations-content p {
-  margin-bottom: 8px;
-}
-
-.automations-content p:last-child {
-  margin-bottom: 0;
-}
-
-.automations-content pre {
-  background: var(--bg-elevated);
-  font-family: var(--font-mono);
+.landing-footer-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   font-size: 12px;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  overflow-x: auto;
-  margin: 8px 0;
 }
+
+.landing-footer-links a {
+  color: var(--accent-text);
+  text-decoration: none;
+}
+
+.landing-footer-links a:hover {
+  text-decoration: underline;
+}
+
+.landing-footer-sep {
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Standalone Lab Header
+   -------------------------------------------------------------------------- */
+.lab-standalone-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+.lab-standalone-header .lab-header-meta {
+  min-width: 0;
+}
+
+.lab-standalone-header h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.lab-standalone-header .lab-header-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+

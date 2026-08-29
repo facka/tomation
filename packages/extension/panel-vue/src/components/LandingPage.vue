@@ -6,13 +6,6 @@ import DropZone from './DropZone.vue';
 const store = useStore();
 const { send } = useMessaging();
 
-function onGetStarted() {
-  const input = document.getElementById('spec-file-input') as HTMLInputElement | null;
-  if (input) {
-    input.click();
-  }
-}
-
 function onLoadPlayground() {
   send({ type: 'LOAD_BUNDLED_SPEC' });
 }
@@ -20,26 +13,45 @@ function onLoadPlayground() {
 function onDismissPlayground() {
   store.state.playgroundPromptDismissed = true;
 }
+
+function onOpenLab() {
+  store.setActiveTab('lab');
+}
 </script>
 
 <template>
   <div class="home-landing">
-    <!-- Welcome -->
-    <h1 class="landing-welcome">Welcome to Tomation</h1>
-    <p class="landing-tagline">
-      Run browser UI tests directly from your sidebar — load a spec and watch it execute step by
-      step.
-    </p>
+    <!-- Brand + welcome -->
+    <header class="landing-header">
+      <div class="landing-brand">
+        <span class="landing-brand-mark">T</span>
+        <span class="landing-brand-name">Tomation</span>
+      </div>
+      <p class="landing-tagline">
+        Run browser UI tests from your sidebar, or generate Page Object Models with AI.
+      </p>
+    </header>
 
-    <!-- Get Started -->
-    <button class="btn btn-primary landing-get-started" @click="onGetStarted">Get Started</button>
+    <!-- Primary actions -->
+    <div class="landing-actions">
+      <!-- Load Spec (also accepts drag &amp; drop) -->
+      <DropZone />
 
-    <!-- Unified Drop Zone -->
-    <DropZone />
+      <!-- Open Lab -->
+      <button type="button" class="landing-action-card" @click="onOpenLab">
+        <span class="landing-action-icon">
+          <font-awesome-icon :icon="['fas', 'flask']" aria-hidden="true" />
+        </span>
+        <span class="landing-action-text">
+          <span class="landing-action-title">Open the Lab</span>
+          <span class="landing-action-subtitle">Generate POM files with AI — no spec needed</span>
+        </span>
+      </button>
+    </div>
 
-    <!-- Playground Prompt -->
+    <!-- Playground Prompt (contextual: only on the playground) -->
     <div v-if="store.showPlaygroundPrompt.value" class="playground-prompt">
-      <p class="playground-prompt-text">You're on the Tomation Playground! Load example tests?</p>
+      <p class="playground-prompt-text">You're on the Tomation Playground. Load the example tests?</p>
       <div class="playground-prompt-actions">
         <button class="btn btn-primary btn-sm" @click="onLoadPlayground">
           Load Playground Tests
@@ -48,34 +60,19 @@ function onDismissPlayground() {
       </div>
     </div>
 
-    <!-- Playground Link -->
-    <a
-      class="landing-playground-link"
-      href="https://facka.github.io/tomation/"
-      target="_blank"
-      rel="noopener"
-    >
-      Try examples in the Playground
-    </a>
-
-    <!-- Automations Section -->
-    <details class="landing-automations">
-      <summary>How to write automations</summary>
-      <div class="automations-content">
-        <p>
-          Automations are written in TypeScript using the <code>@tomationjs/dsl</code> package.
-          Define page elements, compose reusable tasks, and write tests that read like plain English.
-        </p>
-        <p>
-          Compile your TypeScript files to a <code>.tomation.json</code> spec by running:
-        </p>
-        <pre><code>npx @tomationjs/compiler</code></pre>
-        <p>
-          <a href="https://facka.github.io/tomation/" target="_blank" rel="noopener">
-            Read the full documentation →
-          </a>
-        </p>
-      </div>
-    </details>
+    <!-- Footer: secondary links &amp; documentation -->
+    <footer class="landing-footer">
+      <p class="landing-footer-hint">
+        Compile your TypeScript files with <code>npx @tomationjs/compiler</code> to produce a
+        <code>.tomation.json</code> spec.
+      </p>
+      <nav class="landing-footer-links" aria-label="Resources">
+        <a href="https://facka.github.io/tomation/docs.html" target="_blank" rel="noopener">Documentation</a>
+        <span class="landing-footer-sep" aria-hidden="true">·</span>
+        <a href="https://facka.github.io/tomation/" target="_blank" rel="noopener">Playground</a>
+        <span class="landing-footer-sep" aria-hidden="true">·</span>
+        <a href="https://github.com/facka/tomation" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </footer>
   </div>
 </template>
