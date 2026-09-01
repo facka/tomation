@@ -30,7 +30,7 @@ All parsing/validation runs in the LSP server process. The mapper, position clas
     - Wire document events (`onDidOpen`, `onDidChangeContent`, `onDidClose`, `onDidSave`) and `onDidChangeWatchedFiles` to the scheduler; register `onCompletion`, `onHover`, `onDefinition` delegating to providers
     - _Requirements: 1.4, 2.1, 2.3, 3.1, 3.2, 3.4, 3.5, 6.6, 7.6_
 
-- [ ] 2. Utilities: DSL file detection, settings, and scheduler
+- [x] 2. Utilities: DSL file detection, settings, and scheduler
   - [~] 2.1 Implement `src/server/util/dslFile.ts`
     - `isDslFile(uri)` matches `*.pom.ts`, `*.test.ts`, `*.automation.ts`, `*.data.ts`; `fileKind(uri)` returns the kind
     - _Requirements: 2.1, 2.2, 2.3_
