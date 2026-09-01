@@ -148,6 +148,16 @@
         "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
         "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
         "timestamp": 1788213174557
+      },
+      {
+        "executionId": "bf2cef6b-6f6c-4c19-b974-80e88a0e2aa9",
+        "chatSessionId": "sess_46d9ee3b-9a02-4698-b6da-498dff555dbe",
+        "timestamp": 1788265423269
+      },
+      {
+        "executionId": "bf2cef6b-6f6c-4c19-b974-80e88a0e2aa9",
+        "chatSessionId": "sess_46d9ee3b-9a02-4698-b6da-498dff555dbe",
+        "timestamp": 1788268619335
       }
     ],
     "7.2 Implement the docs map `src/server/providers/docs.ts`": [
@@ -155,6 +165,16 @@
         "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
         "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
         "timestamp": 1788213174661
+      },
+      {
+        "executionId": "bf2cef6b-6f6c-4c19-b974-80e88a0e2aa9",
+        "chatSessionId": "sess_46d9ee3b-9a02-4698-b6da-498dff555dbe",
+        "timestamp": 1788265427373
+      },
+      {
+        "executionId": "bf2cef6b-6f6c-4c19-b974-80e88a0e2aa9",
+        "chatSessionId": "sess_46d9ee3b-9a02-4698-b6da-498dff555dbe",
+        "timestamp": 1788268623481
       }
     ],
     "7.3 Implement the completion provider `src/server/providers/completionProvider.ts`": [
@@ -162,6 +182,16 @@
         "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
         "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
         "timestamp": 1788213174767
+      },
+      {
+        "executionId": "bf2cef6b-6f6c-4c19-b974-80e88a0e2aa9",
+        "chatSessionId": "sess_46d9ee3b-9a02-4698-b6da-498dff555dbe",
+        "timestamp": 1788268630064
+      },
+      {
+        "executionId": "bf2cef6b-6f6c-4c19-b974-80e88a0e2aa9",
+        "chatSessionId": "sess_46d9ee3b-9a02-4698-b6da-498dff555dbe",
+        "timestamp": 1788269998391
       }
     ],
     "7.4 Implement the hover provider `src/server/providers/hoverProvider.ts`": [
@@ -169,6 +199,16 @@
         "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
         "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
         "timestamp": 1788213174864
+      },
+      {
+        "executionId": "bf2cef6b-6f6c-4c19-b974-80e88a0e2aa9",
+        "chatSessionId": "sess_46d9ee3b-9a02-4698-b6da-498dff555dbe",
+        "timestamp": 1788268634075
+      },
+      {
+        "executionId": "bf2cef6b-6f6c-4c19-b974-80e88a0e2aa9",
+        "chatSessionId": "sess_46d9ee3b-9a02-4698-b6da-498dff555dbe",
+        "timestamp": 1788270003899
       }
     ],
     "7.5 Implement the definition provider `src/server/providers/definitionProvider.ts`": [
@@ -176,6 +216,16 @@
         "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
         "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
         "timestamp": 1788213174974
+      },
+      {
+        "executionId": "bf2cef6b-6f6c-4c19-b974-80e88a0e2aa9",
+        "chatSessionId": "sess_46d9ee3b-9a02-4698-b6da-498dff555dbe",
+        "timestamp": 1788268638316
+      },
+      {
+        "executionId": "bf2cef6b-6f6c-4c19-b974-80e88a0e2aa9",
+        "chatSessionId": "sess_46d9ee3b-9a02-4698-b6da-498dff555dbe",
+        "timestamp": 1788270008299
       }
     ],
     "8.1 Wire settings into runtime behavior": [
@@ -254,6 +304,13 @@
         "executionId": "38f30b7d-c443-4087-906f-36ee04bde14e",
         "chatSessionId": "sess_3aaafa35-d63a-463e-b991-74c367c43d7a",
         "timestamp": 1788264846023
+      }
+    ],
+    "7. Authoring providers": [
+      {
+        "executionId": "bf2cef6b-6f6c-4c19-b974-80e88a0e2aa9",
+        "chatSessionId": "sess_46d9ee3b-9a02-4698-b6da-498dff555dbe",
+        "timestamp": 1788270008421
       }
     ]
   }

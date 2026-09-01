@@ -99,26 +99,26 @@ All parsing/validation runs in the LSP server process. The mapper, position clas
     - POM fixture → expected element/task symbols with correct namespaced keys, tags, labels, lines; cross-file `~/` import resolves to the right namespace; deleting a file removes its symbols
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 14.3_
 
-- [ ] 7. Authoring providers
-  - [~] 7.1 Implement position classifier `src/server/providers/positionContext.ts`
+- [x] 7. Authoring providers
+  - [x] 7.1 Implement position classifier `src/server/providers/positionContext.ts`
     - Classify the cursor into `isTag`, `builderChain`, `whereArg`, `elementRef`, `taskRef`, `topLevelAction`, `symbolAt`, or `none`
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 9.1, 10.1_
 
-  - [~] 7.2 Implement the docs map `src/server/providers/docs.ts`
+  - [x] 7.2 Implement the docs map `src/server/providers/docs.ts`
     - Static table mapping DSL symbols (actions, matcher factories, builder methods, `is`, `Test`/`Task`/`Automation`/`When`) to short Markdown descriptions and argument hints
     - _Requirements: 8.7, 9.1_
 
-  - [~] 7.3 Implement the completion provider `src/server/providers/completionProvider.ts`
+  - [x] 7.3 Implement the completion provider `src/server/providers/completionProvider.ts`
     - `isTag` → HTML tags + `ELEMENT`; `builderChain` → `where`/`childOf`/`navigate`/`as`; `whereArg` → matcher factories with argument snippets; `elementRef` → element names from the index (local + namespaced); `taskRef` → task names from the index; `topLevelAction` → DSL actions/constructs
     - Attach docs where available; only add items (never suppress TS); return no items when disabled, index unavailable, or position `none`
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9, 12.5_
 
-  - [~] 7.4 Implement the hover provider `src/server/providers/hoverProvider.ts`
+  - [x] 7.4 Implement the hover provider `src/server/providers/hoverProvider.ts`
     - DSL symbol → docs-map description; `elementRef` → element tag/label/whereSummary/location; `taskRef` → task name/location; otherwise return null (defer to TS)
     - Gated by `hover.enabled`
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 12.6_
 
-  - [~] 7.5 Implement the definition provider `src/server/providers/definitionProvider.ts`
+  - [x] 7.5 Implement the definition provider `src/server/providers/definitionProvider.ts`
     - `elementRef`/`taskRef` → `Location` from the index (open the other DSL file when cross-file); otherwise return null (defer to TS); unresolved → no result
     - Gated by `hover.enabled`
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 12.6_
