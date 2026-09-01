@@ -71,6 +71,18 @@ export interface SpecEntry {
   spec: Spec;
 }
 
+/**
+ * A user-created copy of an automation, saved under its own label with its
+ * own parameter values. Does not modify the source spec.
+ */
+export interface AutomationInstance {
+  id: string;
+  sourceAutomationName: string;
+  label: string;
+  params: Record<string, unknown>;
+  createdAt: string;
+}
+
 export interface Project {
   host: string;
   name: string;
@@ -78,4 +90,5 @@ export interface Project {
   lastUsed: string;
   savedParams?: Record<string, Record<string, unknown>>;
   favourites?: Record<string, boolean>;
+  instances?: AutomationInstance[];
 }

@@ -20,11 +20,16 @@ const checkedSteps = ref<number[]>([]);
 const paramValues = ref<Record<string, unknown>>({});
 const persistedConfig = ref<Partial<RunConfig> | undefined>(undefined);
 const dataSeeds = ref<Record<string, number | null>>({});
+const showDuplicateDialog = ref(false);
+const duplicateLabel = ref('');
+const duplicateCopyParams = ref(true);
+const duplicateMessage = ref<string | null>(null);
 
 // --- Computed ---
 
 const runnable = computed(() => store.state.currentRunnable);
 const isAutomation = computed(() => runnable.value?.type === 'automation');
+const instanceId = computed(() => runnable.value?.instanceId ?? null);
 
 const hasParams = computed(() => {
   if (!isAutomation.value || !runnable.value) return false;
@@ -118,7 +123,12 @@ const testDataDisplay = computed((): Record<string, string | number> => {
 });
 
 const savedParamValues = computed(() => {
-  if (!store.state.currentProject?.savedParams || !runnable.value) return null;
+  if (!runnable.value) return null;
+  if (instanceId.value) {
+    const instance = store.state.currentProject?.instances?.find((i) => i.id === instanceId.value);
+    return instance?.params ?? null;
+  }
+  if (!store.state.currentProject?.savedParams) return null;
   return store.state.currentProject.savedParams[runnable.value.data.name] || null;
 });
 
@@ -152,6 +162,29 @@ onMounted(async () => {
 function goBack() {
   store.clearRunnable();
   store.setView('home');
+}
+
+function openDuplicateDialog() {
+  duplicateLabel.value = displayName.value + ' copy';
+  duplicateCopyParams.value = hasParams.value;
+  duplicateMessage.value = null;
+  showDuplicateDialog.value = true;
+}
+
+function cancelDuplicate() {
+  showDuplicateDialog.value = false;
+}
+
+async function confirmDuplicate() {
+  const label = duplicateLabel.value.trim();
+  const hostname = store.state.currentHostname;
+  if (!label || !hostname || !runnable.value) return;
+
+  const params = duplicateCopyParams.value ? paramValues.value : {};
+  await store.duplicateAutomation(hostname, runnable.value.data.name, label, params);
+
+  showDuplicateDialog.value = false;
+  duplicateMessage.value = `Saved as "${label}" — find it under Automations → Your copies.`;
 }
 
 function onCheckedStepsUpdate(steps: number[]) {
@@ -234,6 +267,25 @@ function onRun() {
     <!-- Action bar -->
     <div class="action-bar">
       <button class="btn btn-primary" @click="onRun"><font-awesome-icon :icon="['fas', 'play']" aria-hidden="true" /> Run</button>
+      <button v-if="isAutomation" class="btn btn-ghost btn-sm" @click="openDuplicateDialog">
+        <font-awesome-icon :icon="['fas', 'copy']" aria-hidden="true" /> Duplicate
+      </button>
+    </div>
+
+    <p v-if="duplicateMessage" class="duplicate-success-message">{{ duplicateMessage }}</p>
+
+    <!-- Duplicate dialog -->
+    <div v-if="showDuplicateDialog" class="duplicate-dialog">
+      <label for="duplicate-label">Name for the copy</label>
+      <input id="duplicate-label" type="text" v-model="duplicateLabel" maxlength="100" />
+      <label v-if="hasParams" class="duplicate-copy-params">
+        <input type="checkbox" v-model="duplicateCopyParams" />
+        Copy current parameter values
+      </label>
+      <div class="duplicate-dialog-actions">
+        <button class="btn btn-primary btn-sm" @click="confirmDuplicate" :disabled="!duplicateLabel.trim()">Save copy</button>
+        <button class="btn btn-ghost btn-sm" @click="cancelDuplicate">Cancel</button>
+      </div>
     </div>
 
     <!-- Parameter form (only for automations with params) -->

@@ -20,6 +20,7 @@ import {
   faFlask,
   faCopy,
   faDownload,
+  faTrash,
 } from '@fortawesome/free-solid-svg-icons';
 
 // Regular icons
@@ -45,4 +46,5 @@ library.add(
   faFlask,
   faCopy,
   faDownload,
+  faTrash,
 );

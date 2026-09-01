@@ -174,7 +174,8 @@ function handleDeleteSpecClick(e) {
  * Handle Export All button click.
  */
 function handleExportAll() {
-  exportAll().then(function (data) {
+  var includeValues = document.getElementById('export-include-values').checked;
+  exportAll(includeValues).then(function (data) {
     var json = JSON.stringify(data, null, 2);
     var blob = new Blob([json], { type: 'application/json' });
     var url = URL.createObjectURL(blob);

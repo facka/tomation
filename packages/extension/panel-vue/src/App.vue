@@ -79,12 +79,21 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
         store.state.currentRunnable?.type === 'automation' &&
         store.state.currentHostname
       ) {
-        const automationName = (store.state.currentRunnable.data as { name: string }).name;
-        store.saveParamValues(
-          store.state.currentHostname,
-          automationName,
-          store.state.automationParams as Record<string, unknown>,
-        );
+        const instanceId = store.state.currentRunnable.instanceId;
+        if (instanceId) {
+          store.saveInstanceParamValues(
+            store.state.currentHostname,
+            instanceId,
+            store.state.automationParams as Record<string, unknown>,
+          );
+        } else {
+          const automationName = (store.state.currentRunnable.data as { name: string }).name;
+          store.saveParamValues(
+            store.state.currentHostname,
+            automationName,
+            store.state.automationParams as Record<string, unknown>,
+          );
+        }
       }
       break;
 

@@ -478,6 +478,88 @@ async function loadParamValues(
   }
 }
 
+/**
+ * Create a labeled copy ("instance") of an automation, saved separately from
+ * the source spec, with its own parameter values.
+ */
+async function duplicateAutomation(
+  hostname: string,
+  sourceAutomationName: string,
+  label: string,
+  params: Record<string, unknown>,
+): Promise<void> {
+  try {
+    let project = await getProject(hostname);
+    if (!project) {
+      project = {
+        host: hostname,
+        name: hostname,
+        specs: [],
+        lastUsed: new Date().toISOString(),
+      };
+    }
+    if (!project.instances) {
+      project.instances = [];
+    }
+    project.instances.push({
+      id: generateUUID(),
+      sourceAutomationName,
+      label,
+      params: { ...params },
+      createdAt: new Date().toISOString(),
+    });
+    await saveProject(hostname, project);
+
+    if (state.currentProject && state.currentHostname === hostname) {
+      state.currentProject.instances = project.instances;
+    }
+  } catch (err) {
+    console.error('duplicateAutomation: failed to save copy "' + label + '":', err);
+  }
+}
+
+/**
+ * Delete a previously created automation instance (copy).
+ */
+async function deleteInstance(hostname: string, instanceId: string): Promise<void> {
+  try {
+    const project = await getProject(hostname);
+    if (!project || !project.instances) return;
+    project.instances = project.instances.filter((inst) => inst.id !== instanceId);
+    await saveProject(hostname, project);
+
+    if (state.currentProject && state.currentHostname === hostname) {
+      state.currentProject.instances = project.instances;
+    }
+  } catch (err) {
+    console.error('deleteInstance: failed to remove instance "' + instanceId + '":', err);
+  }
+}
+
+/**
+ * Persist parameter values for a specific automation instance (copy).
+ */
+async function saveInstanceParamValues(
+  hostname: string,
+  instanceId: string,
+  params: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const project = await getProject(hostname);
+    if (!project || !project.instances) return;
+    const instance = project.instances.find((inst) => inst.id === instanceId);
+    if (!instance) return;
+    instance.params = params;
+    await saveProject(hostname, project);
+
+    if (state.currentProject && state.currentHostname === hostname) {
+      state.currentProject.instances = project.instances;
+    }
+  } catch (err) {
+    console.error('saveInstanceParamValues: failed to write params for instance "' + instanceId + '":', err);
+  }
+}
+
 // --- Required Params Helper ---
 
 /**
@@ -607,6 +689,9 @@ export function useStore() {
     getDataSeeds,
     saveParamValues,
     loadParamValues,
+    duplicateAutomation,
+    deleteInstance,
+    saveInstanceParamValues,
     hasRequiredParamsWithoutValues,
   };
 }
