@@ -56,15 +56,15 @@ All parsing/validation runs in the LSP server process. The mapper, position clas
     - Assert `.ts` content is type-stripped before `parseSource`; assert a simulated load failure sets `ready=false` and does not throw
     - _Requirements: 5.5, 13.4_
 
-- [ ] 4. Diagnostic mapping and file-scoped diagnostics
-  - [~] 4.1 Implement `src/server/diagnostics/diagnosticMapper.ts`
+- [x] 4. Diagnostic mapping and file-scoped diagnostics
+  - [x] 4.1 Implement `src/server/diagnostics/diagnosticMapper.ts`
     - Pure `toDiagnostics({ parseError, warnings, validationError, documentText })` → `Diagnostic[]`
     - Severity: parse warnings → Warning; parse/strip/validation errors and fatal warnings → Error
     - Range: 1-based engine `line` → whole-line 0-based range; `line` 0/missing → line 0; prefer precise column range when present
     - Set `source="tomation"`; attach a stable `code` when the message matches a known pattern; dedup identical `(severity, range, message)`
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 15.4_
 
-  - [~] 4.2 Implement `src/server/diagnostics/fileDiagnostics.ts`
+  - [x] 4.2 Implement `src/server/diagnostics/fileDiagnostics.ts`
     - Read the live buffer; for `.ts` run `stripTypes` (a strip error yields exactly one Error diagnostic and stops); then `parseSource`
     - Map `parsed.error` and `parsed.warnings` via the mapper; wrap the pass in try/catch so a thrown error becomes a single Error diagnostic and the provider keeps working
     - Publish via `sendDiagnostics` so a re-run replaces (not appends) the file's prior diagnostics
@@ -75,8 +75,8 @@ All parsing/validation runs in the LSP server process. The mapper, position clas
     - File diagnostics: representative snippets (unrecognized statement, unresolved import, `else` block, unknown action) via a stubbed engine; strip error yields one Error
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.7, 14.3, 15.3, 15.4_
 
-- [ ] 5. Project-scoped diagnostics
-  - [~] 5.1 Implement `src/server/diagnostics/projectDiagnostics.ts`
+- [x] 5. Project-scoped diagnostics
+  - [x] 5.1 Implement `src/server/diagnostics/projectDiagnostics.ts`
     - Locate `tomation.config.{ts,js}` per workspace folder; if absent, skip project validation (file-scoped still applies)
     - If the config is present but malformed/unreadable, skip project validation entirely for that folder and log; do not emit misleading errors
     - Otherwise run `engine.runProjectPipeline`; on success clear prior project diagnostics; on failure attribute per-file warnings to their `filePath:line` and attribute a single `validateSpec` error to the config file (line 1)

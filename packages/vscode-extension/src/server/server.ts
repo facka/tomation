@@ -35,8 +35,10 @@ import { isDslFile } from './util/dslFile';
 import { readSettings, TomationSettings } from './util/settings';
 import { createScheduler, Scheduler } from './util/debounce';
 import { createLogger, Logger } from './output';
+import { createEngine, Engine } from './engine/engine';
 import { validateFile } from './diagnostics/fileDiagnostics';
 import { validateProject } from './diagnostics/projectDiagnostics';
+import { createDiagnosticStore, DiagnosticStore } from './diagnostics/diagnosticStore';
 import { createProjectIndex, ProjectIndex } from './index/projectIndex';
 import { provideCompletion } from './providers/completionProvider';
 import { provideHover } from './providers/hoverProvider';
@@ -56,6 +58,18 @@ interface WorkspaceFolderInfo {
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments<TextDocument>(TextDocument);
 const logger: Logger = createLogger(connection);
+
+// One long-lived engine adapter shared across every validation (Req 11.5).
+// Created once here — never per-run — so the compiler loads a single time.
+const engine: Engine = createEngine();
+
+// One shared per-URI diagnostic store. Both the file-scoped and project-scoped
+// passes route their diagnostics through this so the two scopes MERGE per URI
+// instead of clobbering each other via independent `sendDiagnostics` calls
+// (design Flow B, Req 6.5, 15.2). The store publishes through the connection.
+const diagnosticStore: DiagnosticStore = createDiagnosticStore((uri, diagnostics) =>
+  connection.sendDiagnostics({ uri, diagnostics })
+);
 
 // Server-wide state captured on initialize and refreshed on config change.
 let settings: TomationSettings = readSettings(undefined);
@@ -108,7 +122,7 @@ function scheduleFileValidation(uri: string): void {
     return;
   }
   scheduler.scheduleFile(uri, (token) =>
-    validateFile({ connection, documents }, uri, token)
+    validateFile({ documents, engine, store: diagnosticStore }, uri, token)
   );
 }
 
@@ -131,7 +145,11 @@ function scheduleProjectValidation(uri: string): void {
     return;
   }
   scheduler.scheduleProject(folderUri, (token) =>
-    validateProject({ connection }, folderUri, token)
+    validateProject(
+      { engine, store: diagnosticStore, logger },
+      folderUri,
+      token
+    )
   );
 }
 
@@ -194,8 +212,10 @@ documents.onDidChangeContent((event) => {
 documents.onDidClose((event) => {
   // The manager delivers one `onDidClose` when the last editor for a URI
   // closes, so clearing here is correct: retain diagnostics while any editor
-  // for the same URI remains open (Req 3.5).
-  connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
+  // for the same URI remains open (Req 3.5). Clear only the file-scoped bucket
+  // via the store so any project-scoped diagnostics for the URI survive the
+  // close and are still published (they are re-merged automatically).
+  diagnosticStore.setFileDiagnostics(event.document.uri, []);
 });
 
 documents.onDidSave((event) => {
