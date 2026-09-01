@@ -87,7 +87,7 @@ All parsing/validation runs in the LSP server process. The mapper, position clas
     - Malformed config → skipped with no diagnostics; validateSpec error → config line 1; per-file warning → correct file/line
     - _Requirements: 6.2, 6.3, 14.3_
 
-- [ ] 6. Project Symbol Index
+- [x] 6. Project Symbol Index
   - [~] 6.1 Implement `src/server/index/projectIndex.ts`
     - Build per-folder `ElementSymbol`/`TaskSymbol` maps by parsing DSL files (reuse the engine adapter): capture `variableName`, resolved `namespacedKey` (via `deriveNamespace` + `__`), `tag`, `label`, `whereSummary`, `filePath`, `line`, plus `paramNames` for tasks
     - Resolve cross-file references using `resolveSpecifier` over each file's `imports[]` so keys match compiled output

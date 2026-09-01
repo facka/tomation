@@ -32,6 +32,7 @@ import {
 import { TextDocument } from 'vscode-languageserver-textdocument';
 
 import { isDslFile } from './util/dslFile';
+import { uriToFsPath } from './util/uri';
 import { readSettings, TomationSettings } from './util/settings';
 import { createScheduler, Scheduler } from './util/debounce';
 import { createLogger, Logger } from './output';
@@ -110,7 +111,14 @@ function indexForUri(uri: string): ProjectIndex | undefined {
   }
   let index = indexesByFolder.get(folderUri);
   if (!index) {
-    index = createProjectIndex();
+    // One index per workspace folder (Req 7.6). Give it the shared engine, the
+    // live-buffer manager, and the folder's filesystem path (folder URI → cwd
+    // via `uriToFsPath`) so it can derive namespaces that match compiled output.
+    index = createProjectIndex({
+      engine,
+      documents,
+      folderCwd: uriToFsPath(folderUri),
+    });
     indexesByFolder.set(folderUri, index);
   }
   return index;

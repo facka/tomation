@@ -119,6 +119,25 @@ export interface Engine {
   resolveProject(cwd: string): ResolveResult;
   /** Run the full pipeline for a project rooted at `cwd`. */
   runProjectPipeline(cwd: string): PipelineResult;
+  /**
+   * Derive the PascalCase namespace for a POM/automation file relative to a
+   * base directory (POM/automation root), mirroring the compiler so index keys
+   * match compiled output (Req 7.4). Returns `null` when the compiler is
+   * unavailable or the derivation throws (e.g. an underscore in the filename),
+   * so callers can skip that file's symbols gracefully rather than crash.
+   */
+  deriveNamespace(filePath: string, baseDir: string | null): string | null;
+  /**
+   * Resolve an import specifier (from `fromFilePath`, using `baseUrl` for `~/`
+   * aliasing) to an absolute file path, mirroring the compiler so cross-file
+   * reference keys match compiled output (Req 7.2). Returns `null` when the
+   * compiler is unavailable or resolution throws / yields nothing.
+   */
+  resolveSpecifier(
+    specifier: string,
+    fromFilePath: string,
+    baseUrl: string
+  ): string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -265,6 +284,42 @@ class CompilerEngine implements Engine {
       return { ok: false, error: this.unavailableError() };
     }
     return this.compiler.resolve(cwd);
+  }
+
+  /**
+   * Wrap `pom.deriveNamespace` (Req 7.4). The compiler throws when a filename
+   * or folder contains underscores; the index only wants a graceful `null` in
+   * that case so it can skip the file's symbols rather than fail the pass.
+   */
+  deriveNamespace(filePath: string, baseDir: string | null): string | null {
+    if (!this.compiler) {
+      return null;
+    }
+    try {
+      return this.compiler.deriveNamespace(filePath, baseDir);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Wrap `resolver.resolveSpecifier` (Req 7.2). Returns `null` when the
+   * compiler is unavailable or resolution throws / yields nothing, so callers
+   * can silently skip an unresolvable import.
+   */
+  resolveSpecifier(
+    specifier: string,
+    fromFilePath: string,
+    baseUrl: string
+  ): string | null {
+    if (!this.compiler) {
+      return null;
+    }
+    try {
+      return this.compiler.resolveSpecifier(specifier, fromFilePath, baseUrl) ?? null;
+    } catch {
+      return null;
+    }
   }
 
   /**
