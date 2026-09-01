@@ -45,8 +45,8 @@ All parsing/validation runs in the LSP server process. The mapper, position clas
     - Coalesce project validation per workspace folder; avoid redundant re-runs
     - _Requirements: 3.3, 11.2, 11.3, 11.4, 11.5_
 
-- [ ] 3. Engine adapter over `@tomationjs/compiler`
-  - [~] 3.1 Implement `src/server/engine/engine.ts`
+- [x] 3. Engine adapter over `@tomationjs/compiler`
+  - [x] 3.1 Implement `src/server/engine/engine.ts`
     - Lazily `require` the compiler submodules (`parser.parseSource`, `ts-stripper.stripTypes`, `resolver.resolve`/`resolveSpecifier`, `pom.extractPom`/`deriveNamespace`, `deduplicator.deduplicateKeys`, `flattener.flattenSpec`, `validator.validateSpec`) inside try/catch; set `ready=false`/`loadError` on failure without throwing
     - Expose `parseSource`, `stripTypes`, `resolveProject`, and `runProjectPipeline` (mirroring the CLI `runPipeline` sequence: resolve → stripTypes → parseSource → extractPom → deduplicateKeys → flattenSpec → validateSpec)
     - For `.ts` files, strip types before parsing, passing raw TS source as `rawSource`
