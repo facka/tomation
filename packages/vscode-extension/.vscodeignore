@@ -1,0 +1,20 @@
+# Source — the .vsix ships only the bundled dist/ output
+src/**
+test/**
+
+# Source maps
+**/*.map
+
+# Dev config and tooling
+tsconfig.json
+esbuild.js
+.vscodeignore
+.gitignore
+
+# Compiler dependency source (bundled into dist/, not shipped separately)
+node_modules/**
+
+# Misc
+**/.DS_Store
+**/*.ts
+!dist/**

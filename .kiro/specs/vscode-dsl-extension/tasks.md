@@ -8,7 +8,7 @@ All parsing/validation runs in the LSP server process. The mapper, position clas
 
 ## Tasks
 
-- [ ] 1. Scaffold the extension package and monorepo integration
+- [x] 1. Scaffold the extension package and monorepo integration
   - [x] 1.1 Create `packages/vscode-extension` with manifest and build tooling
     - Add `package.json` with `engines.vscode`, `main` pointing to the bundled client, `contributes`, and narrow `activationEvents` (`workspaceContains:**/*.pom.ts`, `**/*.test.ts`, `**/*.automation.ts`, `**/*.data.ts`, `**/tomation.config.ts`, `**/tomation.config.js`)
     - Add `@tomationjs/compiler` as a workspace dependency and `vscode-languageclient`/`vscode-languageserver`/`vscode-languageserver-textdocument` as dependencies
@@ -24,7 +24,7 @@ All parsing/validation runs in the LSP server process. The mapper, position clas
     - In `deactivate()`, stop the client (terminates the server, disposes diagnostics, watchers)
     - _Requirements: 1.3, 1.4, 1.5, 2.1, 2.4, 9.5, 11.5, 15.5_
 
-  - [~] 1.3 Implement the server bootstrap `src/server/server.ts`
+  - [x] 1.3 Implement the server bootstrap `src/server/server.ts`
     - Create the LSP connection and a `TextDocuments<TextDocument>` manager
     - `onInitialize`: advertise `textDocumentSync` (incremental), `completionProvider` (trigger chars `.`, `(`, `'`), `hoverProvider`, `definitionProvider`; capture `initializationOptions` (settings, workspace folders)
     - Wire document events (`onDidOpen`, `onDidChangeContent`, `onDidClose`, `onDidSave`) and `onDidChangeWatchedFiles` to the scheduler; register `onCompletion`, `onHover`, `onDefinition` delegating to providers

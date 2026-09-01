@@ -1,0 +1,175 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Create `packages/vscode-extension` with manifest and build tooling": [
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213173264
+      },
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213185410
+      },
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213316546
+      }
+    ],
+    "1.2 Implement the client activation shim `src/client/extension.ts`": [
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213173426
+      },
+      {
+        "executionId": "a57abe54-1196-4bff-9d71-36837cf25a91",
+        "chatSessionId": "sess_c3cbc759-c9d5-4263-a20f-9a5feeb95d10",
+        "timestamp": 1788215275229
+      },
+      {
+        "executionId": "a57abe54-1196-4bff-9d71-36837cf25a91",
+        "chatSessionId": "sess_c3cbc759-c9d5-4263-a20f-9a5feeb95d10",
+        "timestamp": 1788219317816
+      }
+    ],
+    "1.3 Implement the server bootstrap `src/server/server.ts`": [
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213173544
+      },
+      {
+        "executionId": "657fd77c-10d1-4763-9d35-1c55d13e9adb",
+        "chatSessionId": "sess_05fc9821-ed8b-46bc-806b-de5bc64f5af5",
+        "timestamp": 1788224159044
+      },
+      {
+        "executionId": "657fd77c-10d1-4763-9d35-1c55d13e9adb",
+        "chatSessionId": "sess_05fc9821-ed8b-46bc-806b-de5bc64f5af5",
+        "timestamp": 1788224541407
+      }
+    ],
+    "2.1 Implement `src/server/util/dslFile.ts`": [
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213173676
+      }
+    ],
+    "2.2 Implement `src/server/util/settings.ts`": [
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213173775
+      }
+    ],
+    "2.3 Implement `src/server/util/debounce.ts` scheduler": [
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213173895
+      }
+    ],
+    "3.1 Implement `src/server/engine/engine.ts`": [
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213173995
+      }
+    ],
+    "4.1 Implement `src/server/diagnostics/diagnosticMapper.ts`": [
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213174093
+      }
+    ],
+    "4.2 Implement `src/server/diagnostics/fileDiagnostics.ts`": [
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213174194
+      }
+    ],
+    "5.1 Implement `src/server/diagnostics/projectDiagnostics.ts`": [
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213174293
+      }
+    ],
+    "6.1 Implement `src/server/index/projectIndex.ts`": [
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213174400
+      }
+    ],
+    "7.1 Implement position classifier `src/server/providers/positionContext.ts`": [
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213174557
+      }
+    ],
+    "7.2 Implement the docs map `src/server/providers/docs.ts`": [
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213174661
+      }
+    ],
+    "7.3 Implement the completion provider `src/server/providers/completionProvider.ts`": [
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213174767
+      }
+    ],
+    "7.4 Implement the hover provider `src/server/providers/hoverProvider.ts`": [
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213174864
+      }
+    ],
+    "7.5 Implement the definition provider `src/server/providers/definitionProvider.ts`": [
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213174974
+      }
+    ],
+    "8.1 Wire settings into runtime behavior": [
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213175081
+      }
+    ],
+    "8.2 Implement commands and engine-load feedback": [
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213175240
+      }
+    ],
+    "9.1 Finalize build, packaging, and README": [
+      {
+        "executionId": "f03a2b6b-dae0-47c6-8104-d154497cb801",
+        "chatSessionId": "sess_e4748af1-d9ae-42fa-acf9-140a0aba3433",
+        "timestamp": 1788213175343
+      }
+    ],
+    "1. Scaffold the extension package and monorepo integration": [
+      {
+        "executionId": "657fd77c-10d1-4763-9d35-1c55d13e9adb",
+        "chatSessionId": "sess_05fc9821-ed8b-46bc-806b-de5bc64f5af5",
+        "timestamp": 1788224541540
+      }
+    ]
+  }
+}

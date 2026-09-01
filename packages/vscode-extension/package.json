@@ -1,0 +1,99 @@
+{
+  "name": "tomation-vscode-extension",
+  "displayName": "Tomation DSL",
+  "description": "Live diagnostics and DSL-aware authoring assistance (completions, hover, go-to-definition) for Tomation DSL files.",
+  "version": "1.5.2",
+  "publisher": "tomationjs",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages"
+  ],
+  "main": "./dist/client.js",
+  "activationEvents": [
+    "workspaceContains:**/*.pom.ts",
+    "workspaceContains:**/*.test.ts",
+    "workspaceContains:**/*.automation.ts",
+    "workspaceContains:**/*.data.ts",
+    "workspaceContains:**/tomation.config.ts",
+    "workspaceContains:**/tomation.config.js"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "tomation.validateActiveFile",
+        "title": "Tomation: Validate Active File"
+      },
+      {
+        "command": "tomation.validateWorkspace",
+        "title": "Tomation: Validate Workspace"
+      },
+      {
+        "command": "tomation.clearDiagnostics",
+        "title": "Tomation: Clear Diagnostics"
+      }
+    ],
+    "configuration": {
+      "title": "Tomation",
+      "properties": {
+        "tomation.validation.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable Tomation validation entirely."
+        },
+        "tomation.validation.projectScope": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable project-scoped (cross-file) validation independently of file-scoped validation."
+        },
+        "tomation.validation.debounceInterval": {
+          "type": "number",
+          "default": 300,
+          "description": "Idle delay in milliseconds after the last keystroke before re-validating a changed DSL file."
+        },
+        "tomation.validation.runOn": {
+          "type": "string",
+          "enum": [
+            "type",
+            "save"
+          ],
+          "default": "type",
+          "description": "Choose when validation runs: on type or on save."
+        },
+        "tomation.completion.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable Tomation authoring completions."
+        },
+        "tomation.hover.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable Tomation hover documentation and go-to-definition."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "test": "node --test",
+    "package": "vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "@tomationjs/compiler": "^1.5.2",
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.11"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.24.0",
+    "esbuild": "^0.21.5",
+    "typescript": "^5.4.0"
+  }
+}
