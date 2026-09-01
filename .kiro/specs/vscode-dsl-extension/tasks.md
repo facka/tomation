@@ -127,7 +127,7 @@ All parsing/validation runs in the LSP server process. The mapper, position clas
     - `positionContext`: representative positions map to the expected kind; completion: each kind yields the expected item set from a stubbed index, `none`/unavailable yields no items; hover/definition: element reference resolves to summary/location, non-Tomation symbol yields null
     - _Requirements: 8.1, 8.4, 8.8, 8.9, 9.2, 9.4, 10.1, 10.4, 14.3_
 
-- [ ] 8. Settings behavior, commands, and feedback
+- [x] 8. Settings behavior, commands, and feedback
   - [~] 8.1 Wire settings into runtime behavior
     - Apply `validation.enabled` (clear + stop when off), `validation.projectScope`, `debounceInterval`, `runOn` (skip on-type when `"save"`), `completion.enabled`, `hover.enabled`
     - On config change, act only when a value actually changed; no reload prompt when nothing changed; attempt reload prompt only for settings that cannot hot-apply

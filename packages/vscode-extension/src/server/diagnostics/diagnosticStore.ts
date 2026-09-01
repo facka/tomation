@@ -94,6 +94,16 @@ export interface DiagnosticStore {
    */
   clearProjectWhere(predicate: (uri: string) => boolean): void;
 
+  /**
+   * Clear ALL Tomation diagnostics for every known URI — both the file-scoped
+   * and project-scoped buckets — and publish an empty set for each so the
+   * squiggles/Problems entries disappear everywhere. Used by the
+   * `tomation.clearDiagnostics` command (Req 13.3) and by the
+   * `validation.enabled=false` path (Req 12.1), which both need to wipe the
+   * entire published set rather than a single scope or URI.
+   */
+  clearAll(): void;
+
   /** Return the current merged set for a URI (primarily for tests). */
   get(uri: string): Diagnostic[];
 }
@@ -154,6 +164,16 @@ export function createDiagnosticStore(
           publishMerged(uri, buckets);
         }
       }
+    },
+
+    clearAll(): void {
+      // Publish an empty set for every URI that currently holds any
+      // diagnostics, then drop all state. Snapshot the keys first because
+      // publishing an empty merged set deletes the entry mid-iteration.
+      for (const uri of [...byUri.keys()]) {
+        publish(uri, []);
+      }
+      byUri.clear();
     },
 
     get(uri: string): Diagnostic[] {
