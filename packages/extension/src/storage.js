@@ -146,11 +146,32 @@ function getAllProjects() {
 
 /**
  * Export all storage data as a JSON-serializable object.
+ * @param {boolean} [includeValues=true] - When false, strips saved automation
+ *   parameter values (project.savedParams and instance params) from the export
+ *   so a shared file doesn't leak filled-in data.
  * @returns {Promise<object>}
  */
-function exportAll() {
+function exportAll(includeValues) {
   return api.storage.local.get(null).then(function (result) {
-    return result || {};
+    var data = result || {};
+    if (includeValues === false) {
+      data = JSON.parse(JSON.stringify(data));
+      var keys = Object.keys(data);
+      for (var i = 0; i < keys.length; i++) {
+        var entry = data[keys[i]];
+        if (entry && typeof entry === 'object' && entry.host) {
+          if (entry.savedParams) {
+            entry.savedParams = {};
+          }
+          if (entry.instances) {
+            for (var j = 0; j < entry.instances.length; j++) {
+              entry.instances[j].params = {};
+            }
+          }
+        }
+      }
+    }
+    return data;
   });
 }
 
@@ -336,6 +357,93 @@ function loadParamValues(hostname, automationName) {
 }
 
 /**
+ * Create a labeled copy ("instance") of an automation, saved separately from
+ * the source spec, with its own parameter values.
+ * @param {string} hostname - The project hostname
+ * @param {string} sourceAutomationName - Name of the automation being duplicated
+ * @param {string} label - User-given name for the new copy
+ * @param {object} params - Parameter values to seed the copy with (may be empty)
+ * @returns {Promise<object>} the created instance
+ */
+function duplicateAutomation(hostname, sourceAutomationName, label, params) {
+  return getProject(hostname).then(function (project) {
+    if (!project) {
+      project = {
+        host: hostname,
+        name: hostname,
+        specs: [],
+        lastUsed: new Date().toISOString()
+      };
+    }
+    if (!project.instances) {
+      project.instances = [];
+    }
+    var instance = {
+      id: generateUUID(),
+      sourceAutomationName: sourceAutomationName,
+      label: label,
+      params: params ? JSON.parse(JSON.stringify(params)) : {},
+      createdAt: new Date().toISOString()
+    };
+    project.instances.push(instance);
+    return saveProject(hostname, project).then(function () {
+      return instance;
+    });
+  });
+}
+
+/**
+ * Delete a previously created automation instance (copy).
+ * @param {string} hostname
+ * @param {string} instanceId
+ * @returns {Promise<void>}
+ */
+function deleteInstance(hostname, instanceId) {
+  return getProject(hostname).then(function (project) {
+    if (!project || !project.instances) {
+      return;
+    }
+    var filtered = [];
+    for (var i = 0; i < project.instances.length; i++) {
+      if (project.instances[i].id !== instanceId) {
+        filtered.push(project.instances[i]);
+      }
+    }
+    project.instances = filtered;
+    return saveProject(hostname, project);
+  });
+}
+
+/**
+ * Persist parameter values for a specific automation instance (copy).
+ * @param {string} hostname
+ * @param {string} instanceId
+ * @param {object} params
+ * @returns {Promise<void>}
+ */
+function saveInstanceParamValues(hostname, instanceId, params) {
+  return getProject(hostname).then(function (project) {
+    if (!project || !project.instances) {
+      return;
+    }
+    var instance = null;
+    for (var i = 0; i < project.instances.length; i++) {
+      if (project.instances[i].id === instanceId) {
+        instance = project.instances[i];
+        break;
+      }
+    }
+    if (!instance) {
+      return;
+    }
+    instance.params = params;
+    return saveProject(hostname, project);
+  }).catch(function (err) {
+    console.error('saveInstanceParamValues: failed to write params for instance "' + instanceId + '":', err);
+  });
+}
+
+/**
  * Persist favourite automations for a given project hostname.
  * Stores favourites inside the project object at project.favourites.
  * Catches and logs write failures without throwing (silent fail).
@@ -453,6 +561,9 @@ if (typeof module !== 'undefined' && module.exports) {
     saveTestPlanConfig: saveTestPlanConfig,
     saveParamValues: saveParamValues,
     loadParamValues: loadParamValues,
+    duplicateAutomation: duplicateAutomation,
+    deleteInstance: deleteInstance,
+    saveInstanceParamValues: saveInstanceParamValues,
     saveFavourites: saveFavourites,
     loadFavourites: loadFavourites,
     deleteFavourites: deleteFavourites,

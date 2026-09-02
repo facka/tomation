@@ -555,3 +555,92 @@ test('Property (UUID preservation): addSpec with same filename preserves UUID an
     { numRuns: 100 }
   );
 });
+
+// ---------------------------------------------------------------------------
+// duplicateAutomation / deleteInstance / saveInstanceParamValues
+// ---------------------------------------------------------------------------
+
+test('duplicateAutomation creates an instance with a copy of the given params', async function () {
+  resetStore();
+  await storage.saveProject('host.com', { host: 'host.com', name: 'host.com', specs: [], lastUsed: '2024-01-01T00:00:00.000Z' });
+
+  var instance = await storage.duplicateAutomation('host.com', 'Login', 'Login - UserB', { user: 'a' });
+
+  assert.equal(instance.sourceAutomationName, 'Login');
+  assert.equal(instance.label, 'Login - UserB');
+  assert.deepEqual(instance.params, { user: 'a' });
+  assert.equal(store['host.com'].instances.length, 1);
+});
+
+test('duplicateAutomation with empty params does not carry over previous values', async function () {
+  resetStore();
+  await storage.saveProject('host.com', { host: 'host.com', name: 'host.com', specs: [], lastUsed: '2024-01-01T00:00:00.000Z' });
+
+  var instance = await storage.duplicateAutomation('host.com', 'Login', 'Login - UserB', {});
+  assert.deepEqual(instance.params, {});
+});
+
+test('saveInstanceParamValues updates only the matching instance', async function () {
+  resetStore();
+  await storage.saveProject('host.com', { host: 'host.com', name: 'host.com', specs: [], lastUsed: '2024-01-01T00:00:00.000Z' });
+  var a = await storage.duplicateAutomation('host.com', 'Login', 'A', {});
+  var b = await storage.duplicateAutomation('host.com', 'Login', 'B', {});
+
+  await storage.saveInstanceParamValues('host.com', a.id, { user: 'a' });
+
+  var project = await storage.getProject('host.com');
+  assert.deepEqual(project.instances.find(function (i) { return i.id === a.id; }).params, { user: 'a' });
+  assert.deepEqual(project.instances.find(function (i) { return i.id === b.id; }).params, {});
+});
+
+test('deleteInstance removes only the targeted instance', async function () {
+  resetStore();
+  await storage.saveProject('host.com', { host: 'host.com', name: 'host.com', specs: [], lastUsed: '2024-01-01T00:00:00.000Z' });
+  var a = await storage.duplicateAutomation('host.com', 'Login', 'A', {});
+  await storage.duplicateAutomation('host.com', 'Login', 'B', {});
+
+  await storage.deleteInstance('host.com', a.id);
+
+  var project = await storage.getProject('host.com');
+  assert.equal(project.instances.length, 1);
+  assert.equal(project.instances[0].label, 'B');
+});
+
+// ---------------------------------------------------------------------------
+// exportAll(includeValues)
+// ---------------------------------------------------------------------------
+
+test('exportAll(false) strips savedParams and instance params without mutating storage', async function () {
+  resetStore();
+  await storage.saveProject('host.com', {
+    host: 'host.com',
+    name: 'host.com',
+    specs: [],
+    lastUsed: '2024-01-01T00:00:00.000Z',
+    savedParams: { Login: { user: 'a', pass: 'secret' } }
+  });
+  await storage.duplicateAutomation('host.com', 'Login', 'Copy', { user: 'a', pass: 'secret' });
+
+  var exported = await storage.exportAll(false);
+
+  assert.deepEqual(exported['host.com'].savedParams, {});
+  assert.deepEqual(exported['host.com'].instances[0].params, {});
+  // Original storage must remain untouched
+  var project = await storage.getProject('host.com');
+  assert.deepEqual(project.savedParams, { Login: { user: 'a', pass: 'secret' } });
+  assert.deepEqual(project.instances[0].params, { user: 'a', pass: 'secret' });
+});
+
+test('exportAll(true) (or omitted) preserves saved values', async function () {
+  resetStore();
+  await storage.saveProject('host.com', {
+    host: 'host.com',
+    name: 'host.com',
+    specs: [],
+    lastUsed: '2024-01-01T00:00:00.000Z',
+    savedParams: { Login: { user: 'a' } }
+  });
+
+  var exported = await storage.exportAll();
+  assert.deepEqual(exported['host.com'].savedParams, { Login: { user: 'a' } });
+});

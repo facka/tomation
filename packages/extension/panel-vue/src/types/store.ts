@@ -22,6 +22,8 @@ export interface Runnable {
   type: RunnableType;
   index: number;
   data: TestEntry | AutomationEntry;
+  // Present when running a saved copy of an automation instead of the automation itself
+  instanceId?: string;
 }
 
 export interface RunConfig {

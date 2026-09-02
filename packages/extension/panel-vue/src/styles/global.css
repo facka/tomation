@@ -506,6 +506,46 @@ h3 {
 }
 
 /* --------------------------------------------------------------------------
+   Duplicate Automation Dialog
+   -------------------------------------------------------------------------- */
+.duplicate-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.duplicate-dialog label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.duplicate-copy-params {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.duplicate-dialog-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.duplicate-success-message {
+  font-size: 12px;
+  color: var(--success);
+}
+
+.instances-heading {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 12px 0 4px;
+}
+
+/* --------------------------------------------------------------------------
    Controller Bar
    -------------------------------------------------------------------------- */
 .controller-bar {

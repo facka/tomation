@@ -3,7 +3,7 @@ import type { TestEntry, AutomationEntry } from '@/types/spec';
 
 defineProps<{
   item: TestEntry | AutomationEntry;
-  type: 'test' | 'automation';
+  type: 'test' | 'automation' | 'instance';
   isFavourite?: boolean;
 }>();
 
@@ -11,6 +11,7 @@ const emit = defineEmits<{
   (e: 'select'): void;
   (e: 'quickRun'): void;
   (e: 'toggleFavourite'): void;
+  (e: 'delete'): void;
 }>();
 
 function onQuickRun(event: Event) {
@@ -21,6 +22,11 @@ function onQuickRun(event: Event) {
 function onToggleFavourite(event: Event) {
   event.stopPropagation();
   emit('toggleFavourite');
+}
+
+function onDelete(event: Event) {
+  event.stopPropagation();
+  emit('delete');
 }
 </script>
 
@@ -41,6 +47,14 @@ function onToggleFavourite(event: Event) {
       <font-awesome-icon v-else :icon="['far', 'star']" />
     </button>
     <button
+      v-if="type === 'instance'"
+      class="favourite-btn"
+      title="Delete this copy"
+      @click="onDelete"
+    >
+      <font-awesome-icon :icon="['fas', 'trash']" />
+    </button>
+    <button
       class="quick-run-btn"
       title="Quick run with all steps and default params"
       @click="onQuickRun"
@@ -49,3 +63,4 @@ function onToggleFavourite(event: Event) {
     </button>
   </li>
 </template>
+
