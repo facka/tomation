@@ -138,8 +138,8 @@ All parsing/validation runs in the LSP server process. The mapper, position clas
     - When the compiler engine fails to load, surface one clear actionable error, never silently fail, and keep non-engine functionality available; log lifecycle/errors to the output channel
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5_
 
-- [ ] 9. Packaging, docs, and end-to-end verification
-  - [~] 9.1 Finalize build, packaging, and README
+- [~] 9. Packaging, docs, and end-to-end verification
+  - [x] 9.1 Finalize build, packaging, and README
     - Package-level `build` (esbuild), `watch`, `test`, and `package` (`vsce package` → `.vsix`) scripts; ensure bundling produces a standalone artifact
     - README documenting supported file types, settings, commands, and the minimum VS Code version
     - _Requirements: 1.6, 14.1, 14.2, 14.4, 14.5, 14.6_
