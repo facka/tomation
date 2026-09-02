@@ -5,7 +5,8 @@
   "workspaces": [
     "packages/dsl",
     "packages/compiler",
-    "packages/extension"
+    "packages/extension",
+    "packages/vscode-extension"
   ],
   "scripts": {
     "build": "npm run build --prefix packages/extension/panel-vue && npm run build --workspace=packages/extension",
