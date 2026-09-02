@@ -1,6 +1,6 @@
 # Tomation DSL
 
-Live diagnostics and DSL-aware authoring assistance for [Tomation](https://github.com/tomationjs) DSL files. The extension reuses the `@tomationjs/compiler` engine to validate your files as you type and to power completions, hover documentation, and go-to-definition — without replacing the built-in TypeScript language features.
+Live diagnostics and DSL-aware authoring assistance for [Tomation](https://github.com/facka/tomation) DSL files. The extension reuses the `@tomationjs/compiler` engine to validate your files as you type and to power completions, hover documentation, and go-to-definition — without replacing the built-in TypeScript language features.
 
 ## Requirements
 
