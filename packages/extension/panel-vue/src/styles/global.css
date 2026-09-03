@@ -47,6 +47,10 @@
 /* --------------------------------------------------------------------------
    Base Typography
    -------------------------------------------------------------------------- */
+html, body, #app {
+  height: 100%;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
   font-size: 13px;
@@ -57,6 +61,8 @@ body {
   width: 100%;
   min-width: 280px;
   -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
 }
 
 h1 {
@@ -84,7 +90,14 @@ h3 {
    Views
    -------------------------------------------------------------------------- */
 .view { display: none; }
-.view.active { display: flex; flex-direction: column; gap: 12px; }
+.view.active {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
 
 /* --------------------------------------------------------------------------
    Header
@@ -583,7 +596,8 @@ h3 {
    Log Container & Entries
    -------------------------------------------------------------------------- */
 .log-container {
-  max-height: 420px;
+  flex: 1;
+  min-height: 200px;
   overflow-y: auto;
   overflow-x: auto;
   border: 1px solid var(--border);
