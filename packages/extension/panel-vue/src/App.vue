@@ -255,6 +255,7 @@ onUnmounted(() => {
     <RunView
       v-if="store.state.currentView === 'run'"
       :manual-pause-description="manualPauseDescription"
+      @continue="manualPauseDescription = null"
     />
 
     <!-- ErrorView -->

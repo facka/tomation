@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useStore } from '@/store';
+import { useRunExecution } from '@/composables/useRunExecution';
 import ControllerBar from './ControllerBar.vue';
 import LogContainer from './LogContainer.vue';
 import ContextPopup from './ContextPopup.vue';
@@ -11,7 +12,17 @@ const props = defineProps<{
   manualPauseDescription?: string | null;
 }>();
 
+const emit = defineEmits<{
+  (e: 'continue'): void;
+}>();
+
 const store = useStore();
+const { resume } = useRunExecution();
+
+function continueManualStep() {
+  resume();
+  emit('continue');
+}
 
 // --- State ---
 
@@ -134,6 +145,11 @@ function closeRun() {
     <div v-if="props.manualPauseDescription" class="manual-pause-banner">
       <span class="pause-icon"><font-awesome-icon :icon="['fas', 'pause']" /></span>
       <span class="pause-text">{{ props.manualPauseDescription }}</span>
+      <button
+        class="btn btn-sm btn-primary manual-continue-btn"
+        title="Continue the run"
+        @click="continueManualStep"
+      ><font-awesome-icon :icon="['fas', 'play']" aria-hidden="true" /> Continue</button>
     </div>
 
     <!-- Log container -->
@@ -169,5 +185,10 @@ function closeRun() {
 
 .pause-text {
   word-break: break-word;
+  flex: 1;
+}
+
+.manual-continue-btn {
+  flex-shrink: 0;
 }
 </style>
