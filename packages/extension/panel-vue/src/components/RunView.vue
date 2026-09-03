@@ -17,7 +17,7 @@ const emit = defineEmits<{
 }>();
 
 const store = useStore();
-const { resume } = useRunExecution();
+const { resume, stop } = useRunExecution();
 
 function continueManualStep() {
   resume();
@@ -106,6 +106,12 @@ function toggleContext() {
 }
 
 function closeRun() {
+  // If a run is still active (running or paused), stop the background execution
+  // and record the result as a failure with reason "manually stopped".
+  if (isRunning.value || isPaused.value) {
+    stop();
+    store.markManuallyStopped();
+  }
   store.clearRunnable();
   store.setView('home');
 }
@@ -120,9 +126,8 @@ function closeRun() {
         <span class="runnable-name">{{ displayName }}</span>
       </h2>
       <button
-        v-if="runComplete || isPaused || (!isRunning && logEntries.length > 0)"
         class="btn btn-ghost btn-sm"
-        title="Close"
+        :title="isRunning || isPaused ? 'Stop and close' : 'Close'"
         @click="closeRun"
       ><font-awesome-icon :icon="['fas', 'xmark']" /></button>
     </div>

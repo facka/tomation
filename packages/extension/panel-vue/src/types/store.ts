@@ -66,7 +66,7 @@ export interface StoreState {
   isPaused: boolean;
   runConfig: RunConfig | null;
   logEntries: LogEntry[];
-  runSummary: { total: number; passed: number; failed: number } | null;
+  runSummary: { total: number; passed: number; failed: number; stopped?: boolean; reason?: string } | null;
   contextStore: Record<string, unknown>;
   automationParams: Record<string, unknown> | null;
   resolvedTestData: Record<string, string | number> | null;

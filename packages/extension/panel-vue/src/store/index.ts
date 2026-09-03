@@ -247,10 +247,31 @@ function setStepStatus(stepIndex: number, status: StepStatus, meta?: Partial<Log
   }
 }
 
-function setRunComplete(summary: { total: number; passed: number; failed: number }): void {
+function setRunComplete(summary: { total: number; passed: number; failed: number; stopped?: boolean; reason?: string }): void {
   state.isRunning = false;
   state.isPaused = false;
   state.runSummary = summary;
+}
+
+/**
+ * Mark the current run as manually stopped. Records a failed summary with a
+ * "manually stopped" reason based on the steps executed so far.
+ */
+function markManuallyStopped(): void {
+  const entries = state.logEntries;
+  const total = entries.length;
+  const passed = entries.filter((e) => e.status === 'pass').length;
+  // Any step not passed counts as failed when the run is manually stopped.
+  const failed = Math.max(1, total - passed);
+  state.isRunning = false;
+  state.isPaused = false;
+  state.runSummary = {
+    total,
+    passed,
+    failed,
+    stopped: true,
+    reason: 'manually stopped',
+  };
 }
 
 function setPaused(paused: boolean): void {
@@ -670,6 +691,7 @@ export function useStore() {
     setStepPlan,
     setStepStatus,
     setRunComplete,
+    markManuallyStopped,
     setPaused,
     stopRun,
     updateContext,
