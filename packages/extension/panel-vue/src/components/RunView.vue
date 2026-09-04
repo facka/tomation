@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onUnmounted } from 'vue';
 import { useStore } from '@/store';
 import { useRunExecution } from '@/composables/useRunExecution';
 import ControllerBar from './ControllerBar.vue';
@@ -27,13 +27,13 @@ function continueManualStep() {
 // --- State ---
 
 const showContext = ref(false);
+const showCloseConfirm = ref(false);
 
 // --- Computed ---
 
 const runnable = computed(() => store.state.currentRunnable);
 const isRunning = computed(() => store.state.isRunning);
 const isPaused = computed(() => store.state.isPaused);
-const logEntries = computed(() => store.state.logEntries);
 const runComplete = computed(() => store.state.runSummary !== null);
 
 const displayName = computed(() => {
@@ -105,9 +105,17 @@ function toggleContext() {
   showContext.value = !showContext.value;
 }
 
-function closeRun() {
-  // If a run is still active (running or paused), stop the background execution
-  // and record the result as a failure with reason "manually stopped".
+// A run is "unfinished" when it is still executing or paused and has not yet
+// produced a summary (i.e. it has not reached the last step).
+const runUnfinished = computed(() => {
+  return (isRunning.value || isPaused.value) && store.state.runSummary === null;
+});
+
+/**
+ * Perform the actual close: if the run is still active, stop the background
+ * execution and record the result as a failure with reason "manually stopped".
+ */
+function performClose() {
   if (isRunning.value || isPaused.value) {
     stop();
     store.markManuallyStopped();
@@ -115,6 +123,46 @@ function closeRun() {
   store.clearRunnable();
   store.setView('home');
 }
+
+/**
+ * Close button handler. Confirms first when the test hasn't finished yet;
+ * otherwise closes immediately.
+ */
+function closeRun() {
+  if (runUnfinished.value) {
+    showCloseConfirm.value = true;
+    return;
+  }
+  performClose();
+}
+
+function confirmClose() {
+  showCloseConfirm.value = false;
+  performClose();
+}
+
+function cancelClose() {
+  showCloseConfirm.value = false;
+}
+
+function onConfirmKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    cancelClose();
+  }
+}
+
+// Attach the Escape listener only while the confirmation dialog is open.
+watch(showCloseConfirm, (open) => {
+  if (open) {
+    document.addEventListener('keydown', onConfirmKeydown);
+  } else {
+    document.removeEventListener('keydown', onConfirmKeydown);
+  }
+});
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', onConfirmKeydown);
+});
 </script>
 
 <template>
@@ -166,6 +214,24 @@ function closeRun() {
       @close="showContext = false"
     />
 
+    <!-- Close confirmation popup (shown when closing an unfinished run) -->
+    <template v-if="showCloseConfirm">
+      <div class="confirm-backdrop" @click="cancelClose"></div>
+      <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-close-title">
+        <p id="confirm-close-title" class="confirm-title">Stop this run?</p>
+        <p class="confirm-body">
+          The test hasn't finished yet. Closing will stop execution and mark the run
+          as failed (manually stopped).
+        </p>
+        <div class="confirm-actions">
+          <button class="btn btn-sm" @click="cancelClose">Cancel</button>
+          <button class="btn btn-sm btn-danger" @click="confirmClose">
+            <font-awesome-icon :icon="['fas', 'stop']" aria-hidden="true" /> Stop and close
+          </button>
+        </div>
+      </div>
+    </template>
+
     <!-- Run summary (after completion) -->
     <RunSummary />
   </div>
@@ -195,5 +261,51 @@ function closeRun() {
 
 .manual-continue-btn {
   flex-shrink: 0;
+}
+
+.confirm-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 199;
+}
+
+.confirm-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% - 32px);
+  max-width: 320px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: var(--shadow-md);
+  padding: 16px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.confirm-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.confirm-body {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary, var(--text-primary));
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 </style>
