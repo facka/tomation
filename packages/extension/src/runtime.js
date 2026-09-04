@@ -16,66 +16,116 @@ var TIMEOUT_5sec = 5000;
 function matchesWhere(el, where, parentNode) {
   var keys = Object.keys(where);
   for (var i = 0; i < keys.length; i++) {
-    var key = keys[i];
-    var value = where[key];
-    switch (key) {
-      case 'id':
-        if (el.id !== value) return false;
-        break;
-      case 'textIs':
-        if (el.textContent.trim() !== value) return false;
-        break;
-      case 'textContains':
-        if (el.textContent.indexOf(value) === -1) return false;
-        break;
-      case 'classIncludes':
-        if (el.className.split(' ').indexOf(value) === -1) return false;
-        break;
-      case 'placeholder':
-        if (el.getAttribute('placeholder') !== value) return false;
-        break;
-      case 'name':
-        if (el.getAttribute('name') !== value) return false;
-        break;
-      case 'type':
-        if (el.getAttribute('type') !== value) return false;
-        break;
-      case 'value':
-        if (el.value === undefined || el.value !== value) return false;
-        break;
-      case 'ariaLabel':
-        if (el.getAttribute('aria-label') !== value) return false;
-        break;
-      case 'role':
-        if (el.getAttribute('role') !== value) return false;
-        break;
-      case 'title':
-        if (el.getAttribute('title') !== value) return false;
-        break;
-      case 'hrefContains':
-        var href = el.getAttribute('href');
-        if (href === null || href.indexOf(value) === -1) return false;
-        break;
-      case 'isDisabled':
-        if (el.disabled !== true) return false;
-        break;
-      case 'dataAttr':
-        if (el.getAttribute('data-' + value.name) !== value.value) return false;
-        break;
-      case 'nthChild':
-        var pos = 1;
-        var sib = el.previousElementSibling;
-        while (sib) { pos++; sib = sib.previousElementSibling; }
-        if (pos !== value) return false;
-        break;
-      case 'closestLabel':
-        if (!matchClosestLabel(el, value, parentNode)) return false;
-        break;
-      default:
-        break;
-    }
+    if (!evaluateWhereKey(el, keys[i], where[keys[i]], parentNode).passed) return false;
   }
   return true;
+}
+
+// Sentinel for "actual value could not be observed" (Req 2.7).
+var UNAVAILABLE = { __unavailable: true };
+
+/**
+ * Evaluate a single where-key against an element, returning both the pass/fail
+ * decision (identical to matchesWhere's per-key decision) and the observed
+ * actual value for the failure-time breakdown.
+ *
+ * @param {Element} el - candidate element
+ * @param {string} key - the where-matcher key
+ * @param {*} value - the expected value from the descriptor
+ * @param {Element|null} parentNode - childOf parent if present, null otherwise
+ * @returns {{ passed: boolean, actual: * }} actual is the observed value, or the
+ *          UNAVAILABLE sentinel when it could not be read (Req 2.7).
+ */
+function evaluateWhereKey(el, key, value, parentNode) {
+  switch (key) {
+    case 'id':
+      return { passed: el.id === value, actual: el.id };
+    case 'textIs':
+      // Match uses trim(); actual reports raw untrimmed text (Req 2.5).
+      return { passed: el.textContent.trim() === value, actual: el.textContent };
+    case 'textContains':
+      return { passed: el.textContent.indexOf(value) !== -1, actual: el.textContent };
+    case 'classIncludes':
+      return { passed: el.className.split(' ').indexOf(value) !== -1, actual: el.className };
+    case 'placeholder': {
+      var placeholder = el.getAttribute('placeholder');
+      return {
+        passed: placeholder === value,
+        actual: (placeholder === null || placeholder === undefined) ? UNAVAILABLE : placeholder
+      };
+    }
+    case 'name': {
+      var name = el.getAttribute('name');
+      return {
+        passed: name === value,
+        actual: (name === null || name === undefined) ? UNAVAILABLE : name
+      };
+    }
+    case 'type': {
+      var type = el.getAttribute('type');
+      return {
+        passed: type === value,
+        actual: (type === null || type === undefined) ? UNAVAILABLE : type
+      };
+    }
+    case 'value':
+      return {
+        passed: el.value !== undefined && el.value === value,
+        actual: el.value === undefined ? UNAVAILABLE : el.value
+      };
+    case 'ariaLabel': {
+      var ariaLabel = el.getAttribute('aria-label');
+      return {
+        passed: ariaLabel === value,
+        actual: (ariaLabel === null || ariaLabel === undefined) ? UNAVAILABLE : ariaLabel
+      };
+    }
+    case 'role': {
+      var role = el.getAttribute('role');
+      return {
+        passed: role === value,
+        actual: (role === null || role === undefined) ? UNAVAILABLE : role
+      };
+    }
+    case 'title': {
+      var title = el.getAttribute('title');
+      return {
+        passed: title === value,
+        actual: (title === null || title === undefined) ? UNAVAILABLE : title
+      };
+    }
+    case 'hrefContains': {
+      var href = el.getAttribute('href');
+      return {
+        passed: href !== null && href.indexOf(value) !== -1,
+        actual: (href === null || href === undefined) ? UNAVAILABLE : href
+      };
+    }
+    case 'isDisabled':
+      return {
+        passed: el.disabled === true,
+        actual: (el.disabled === null || el.disabled === undefined) ? UNAVAILABLE : el.disabled
+      };
+    case 'dataAttr': {
+      var dataVal = el.getAttribute('data-' + value.name);
+      return {
+        passed: dataVal === value.value,
+        actual: (dataVal === null || dataVal === undefined) ? UNAVAILABLE : dataVal
+      };
+    }
+    case 'nthChild': {
+      var pos = 1;
+      var sib = el.previousElementSibling;
+      while (sib) { pos++; sib = sib.previousElementSibling; }
+      return { passed: pos === value, actual: pos };
+    }
+    case 'closestLabel':
+      // passed delegates to existing matcher; actual sub-record filled by task 3.
+      return { passed: matchClosestLabel(el, value, parentNode), actual: null };
+    default:
+      // Unknown key: matchesWhere treats it as a no-op (does not fail the match).
+      return { passed: true, actual: UNAVAILABLE };
+  }
 }
 
 /**

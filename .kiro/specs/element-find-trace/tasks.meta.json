@@ -1,0 +1,36 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Add `UNAVAILABLE` sentinel and `evaluateWhereKey(el, key, value, parentNode)` to `runtime.js`": [
+      {
+        "executionId": "949e2827-3f9b-4e0e-8eab-11ef4c945de3",
+        "chatSessionId": "sess_28edadff-55f8-4a5c-9e32-9dacff758f2d",
+        "timestamp": 1788533500554
+      },
+      {
+        "executionId": "949e2827-3f9b-4e0e-8eab-11ef4c945de3",
+        "chatSessionId": "sess_28edadff-55f8-4a5c-9e32-9dacff758f2d",
+        "timestamp": 1788533574704
+      }
+    ],
+    "1.2 Refactor `matchesWhere` to iterate keys and call `evaluateWhereKey().passed` with AND/early-exit semantics unchanged": [
+      {
+        "executionId": "949e2827-3f9b-4e0e-8eab-11ef4c945de3",
+        "chatSessionId": "sess_28edadff-55f8-4a5c-9e32-9dacff758f2d",
+        "timestamp": 1788533580511
+      },
+      {
+        "executionId": "949e2827-3f9b-4e0e-8eab-11ef4c945de3",
+        "chatSessionId": "sess_28edadff-55f8-4a5c-9e32-9dacff758f2d",
+        "timestamp": 1788533634962
+      }
+    ],
+    "1. Extract shared `evaluateWhereKey` and refactor `matchesWhere` (no semantic change)": [
+      {
+        "executionId": "949e2827-3f9b-4e0e-8eab-11ef4c945de3",
+        "chatSessionId": "sess_28edadff-55f8-4a5c-9e32-9dacff758f2d",
+        "timestamp": 1788533635158
+      }
+    ]
+  }
+}

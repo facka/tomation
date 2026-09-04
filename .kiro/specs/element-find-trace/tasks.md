@@ -21,13 +21,13 @@ No packaging/deployment tasks are included — the change integrates into the ex
 
 ## Tasks
 
-- [ ] 1. Extract shared `evaluateWhereKey` and refactor `matchesWhere` (no semantic change)
-  - [ ] 1.1 Add `UNAVAILABLE` sentinel and `evaluateWhereKey(el, key, value, parentNode)` to `runtime.js`
+- [x] 1. Extract shared `evaluateWhereKey` and refactor `matchesWhere` (no semantic change)
+  - [x] 1.1 Add `UNAVAILABLE` sentinel and `evaluateWhereKey(el, key, value, parentNode)` to `runtime.js`
     - Implement one branch per supported key (`id`, `textIs`, `textContains`, `classIncludes`, `placeholder`, `name`, `type`, `value`, `ariaLabel`, `role`, `title`, `hrefContains`, `isDisabled`, `dataAttr`, `nthChild`, `closestLabel`) reproducing today's pass test exactly and returning `{ passed, actual }`
     - Report `actual` per the design table: raw untrimmed `textContent` for `textIs`/`textContains` (whitespace preserved), attribute value for attribute keys, `UNAVAILABLE` when the observed value is `null`/`undefined`
     - For `closestLabel`, `passed` delegates to existing `matchClosestLabel`; `actual` carries the closestLabel sub-record placeholder (filled by task 3)
     - _Requirements: 2.3, 2.4, 2.5, 2.7_
-  - [ ] 1.2 Refactor `matchesWhere` to iterate keys and call `evaluateWhereKey().passed` with AND/early-exit semantics unchanged
+  - [x] 1.2 Refactor `matchesWhere` to iterate keys and call `evaluateWhereKey().passed` with AND/early-exit semantics unchanged
     - Preserve the exact observable boolean result and short-circuit behavior
     - _Requirements: 2.6_
   - [ ]* 1.3 Write unit/example tests for `evaluateWhereKey`
