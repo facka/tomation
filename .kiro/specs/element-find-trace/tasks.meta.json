@@ -200,6 +200,37 @@
         "chatSessionId": "sess_99ad7e10-cae6-4844-9a4a-08ce9a192119",
         "timestamp": 1788546759735
       }
+    ],
+    "11.1 Pass `findTrace` through the LOG → `setStepStatus` router in `meta`": [
+      {
+        "executionId": "c592cefa-9f66-4f1d-9c5f-d05073c05e54",
+        "chatSessionId": "sess_90d42588-d360-456c-a6de-fae3664a74f3",
+        "timestamp": 1788546902880
+      },
+      {
+        "executionId": "c592cefa-9f66-4f1d-9c5f-d05073c05e54",
+        "chatSessionId": "sess_90d42588-d360-456c-a6de-fae3664a74f3",
+        "timestamp": 1788546955275
+      }
+    ],
+    "11.2 Copy `meta.findTrace` onto the matching `LogEntry` in `setStepStatus`": [
+      {
+        "executionId": "c592cefa-9f66-4f1d-9c5f-d05073c05e54",
+        "chatSessionId": "sess_90d42588-d360-456c-a6de-fae3664a74f3",
+        "timestamp": 1788546906981
+      },
+      {
+        "executionId": "c592cefa-9f66-4f1d-9c5f-d05073c05e54",
+        "chatSessionId": "sess_90d42588-d360-456c-a6de-fae3664a74f3",
+        "timestamp": 1788546959314
+      }
+    ],
+    "11. Wire the trace through the panel store": [
+      {
+        "executionId": "c592cefa-9f66-4f1d-9c5f-d05073c05e54",
+        "chatSessionId": "sess_90d42588-d360-456c-a6de-fae3664a74f3",
+        "timestamp": 1788546959450
+      }
     ]
   }
 }

@@ -244,6 +244,7 @@ function setStepStatus(stepIndex: number, status: StepStatus, meta?: Partial<Log
     if (meta.resolvedContext !== undefined) entry.resolvedContext = meta.resolvedContext;
     if (meta.condition !== undefined) entry.condition = meta.condition;
     if (meta.taken !== undefined) entry.taken = meta.taken;
+    if (meta.findTrace !== undefined) entry.findTrace = meta.findTrace;
   }
 }
 

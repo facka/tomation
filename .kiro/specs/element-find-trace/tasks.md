@@ -160,11 +160,11 @@ No packaging/deployment tasks are included — the change integrates into the ex
   - [ ] 10.2 Add optional `findTrace?: FindTrace` to the store `LogEntry` type
     - _Requirements: 9.7_
 
-- [ ] 11. Wire the trace through the panel store
-  - [ ] 11.1 Pass `findTrace` through the LOG → `setStepStatus` router in `meta`
+- [x] 11. Wire the trace through the panel store
+  - [x] 11.1 Pass `findTrace` through the LOG → `setStepStatus` router in `meta`
     - Whichever code maps `LOG` → `setStepStatus` (RunView.vue/message router) forwards `findTrace` in the `meta` object
     - _Requirements: 9.5_
-  - [ ] 11.2 Copy `meta.findTrace` onto the matching `LogEntry` in `setStepStatus`
+  - [x] 11.2 Copy `meta.findTrace` onto the matching `LogEntry` in `setStepStatus`
     - `if (meta.findTrace !== undefined) entry.findTrace = meta.findTrace;`; when no matching entry exists, discard the trace, leave entries unchanged, raise no error
     - _Requirements: 9.5, 9.6_
   - [ ]* 11.3 Write property test that the trace propagates unchanged across content → background → panel
