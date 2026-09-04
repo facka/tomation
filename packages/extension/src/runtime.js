@@ -452,7 +452,31 @@ function findElement(descriptor, parentNode) {
           return;
         }
         if (Date.now() - startTime >= TIMEOUT_5sec) {
-          reject(new Error('Element not found: XPath ' + descriptor.xpath));
+          var elapsedMs = Date.now() - startTime;
+          var trace = {
+            strategy: 'xpath',
+            expression: descriptor.xpath,
+            elapsedMs: Math.max(0, Math.min(5000, elapsedMs)),
+            configuredWaitMs: TIMEOUT_5sec
+          };
+          try {
+            var snap = document.evaluate(
+              descriptor.xpath,
+              root,
+              null,
+              XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+              null
+            );
+            var len = snap.snapshotLength;
+            trace.matchedNodeCount = len;
+            trace.outcome = len === 0 ? 'none' : (len === 1 ? 'one' : 'many');
+          } catch (e) {
+            trace.outcome = 'invalid';
+            trace.invalid = true;
+          }
+          var err = new Error('Element not found: XPath ' + descriptor.xpath);
+          err.findTrace = trace;
+          reject(err);
           return;
         }
         requestAnimationFrame(poll);
@@ -468,9 +492,11 @@ function findElement(descriptor, parentNode) {
 
   return new Promise(function (resolve, reject) {
     var startTime = Date.now();
+    var maxSeenCandidates = 0;
 
     function poll() {
       var candidates = root.querySelectorAll(tag);
+      maxSeenCandidates = Math.max(maxSeenCandidates, candidates.length);
       for (var i = 0; i < candidates.length; i++) {
         if (matchesWhere(candidates[i], where, root === document ? null : root)) {
           resolve(candidates[i]);
@@ -478,7 +504,40 @@ function findElement(descriptor, parentNode) {
         }
       }
       if (Date.now() - startTime >= TIMEOUT_5sec) {
-        reject(new Error('Element not found: ' + tag + ' with conditions ' + JSON.stringify(where)));
+        // One final synchronous breakdown pass over the current snapshot (Req 8.2).
+        // Reuse the `candidates` computed at the top of this poll() invocation —
+        // do NOT issue an extra querySelectorAll.
+        var bd = buildWhereBreakdown(candidates, where, root === document ? null : root);
+        var elapsedMs = Date.now() - startTime;
+
+        // Classify absence — exactly one value (Req 3.6).
+        var absence;
+        if (bd.nearMiss && bd.nearMiss.fullMatch) {
+          absence = 'appeared-after-timeout'; // Req 3.3
+        } else if (maxSeenCandidates > 0 || bd.candidateCount > 0) {
+          absence = 'present-unmatched'; // Req 3.2
+        } else {
+          absence = 'absent-full-window'; // Req 3.1
+        }
+
+        var trace = {
+          strategy: 'tag-where',
+          tag: tag,
+          candidateCount: bd.candidateCount,
+          whereBreakdown: bd.nearMiss ? bd.nearMiss.whereBreakdown : [],
+          passedMatchers: bd.nearMiss ? bd.nearMiss.passed : [],
+          failedMatcher: bd.nearMiss ? bd.nearMiss.firstFailed : null,
+          closestLabel: bd.nearMiss ? bd.nearMiss.closestLabel : null,
+          absence: absence,
+          finalFrameCandidateCount: bd.candidateCount,
+          elapsedMs: Math.max(0, Math.min(5000, elapsedMs))
+        };
+
+        // Still reject — no retroactive success. Preserve the human-readable
+        // error string exactly, carry the trace on err.findTrace (Req 3.4, 8.4).
+        var err = new Error('Element not found: ' + tag + ' with conditions ' + JSON.stringify(where));
+        err.findTrace = trace;
+        reject(err);
         return;
       }
       requestAnimationFrame(poll);

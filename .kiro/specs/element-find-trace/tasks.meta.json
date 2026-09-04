@@ -88,6 +88,49 @@
         "chatSessionId": "sess_3940c0a0-10eb-48fd-9eba-4e4cd2024213",
         "timestamp": 1788538871462
       }
+    ],
+    "5.1 Add `maxSeenCandidates` poll-frame counter (O(1), no breakdown)": [
+      {
+        "executionId": "06c34940-14de-4464-a177-d6048066f9dd",
+        "chatSessionId": "sess_68c63ff1-35bb-4061-aa50-a5b9a837ce93",
+        "timestamp": 1788539308759
+      },
+      {
+        "executionId": "06c34940-14de-4464-a177-d6048066f9dd",
+        "chatSessionId": "sess_68c63ff1-35bb-4061-aa50-a5b9a837ce93",
+        "timestamp": 1788539359062
+      }
+    ],
+    "5.2 Implement the tag+where timeout branch trace assembly": [
+      {
+        "executionId": "06c34940-14de-4464-a177-d6048066f9dd",
+        "chatSessionId": "sess_68c63ff1-35bb-4061-aa50-a5b9a837ce93",
+        "timestamp": 1788539363672
+      },
+      {
+        "executionId": "06c34940-14de-4464-a177-d6048066f9dd",
+        "chatSessionId": "sess_68c63ff1-35bb-4061-aa50-a5b9a837ce93",
+        "timestamp": 1788539448095
+      }
+    ],
+    "5.3 Implement the xpath timeout branch trace assembly": [
+      {
+        "executionId": "06c34940-14de-4464-a177-d6048066f9dd",
+        "chatSessionId": "sess_68c63ff1-35bb-4061-aa50-a5b9a837ce93",
+        "timestamp": 1788539451762
+      },
+      {
+        "executionId": "06c34940-14de-4464-a177-d6048066f9dd",
+        "chatSessionId": "sess_68c63ff1-35bb-4061-aa50-a5b9a837ce93",
+        "timestamp": 1788539508826
+      }
+    ],
+    "5. Build the trace in the `findElement` timeout branch": [
+      {
+        "executionId": "06c34940-14de-4464-a177-d6048066f9dd",
+        "chatSessionId": "sess_68c63ff1-35bb-4061-aa50-a5b9a837ce93",
+        "timestamp": 1788539509098
+      }
     ]
   }
 }

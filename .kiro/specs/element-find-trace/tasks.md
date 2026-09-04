@@ -84,16 +84,16 @@ No packaging/deployment tasks are included — the change integrates into the ex
     - Anchor fails to resolve → `navigate.anchorResolved:false`, no `failedHopIndex`, hop records otherwise unchanged
     - _Requirements: 6.4_
 
-- [ ] 5. Build the trace in the `findElement` timeout branch
-  - [ ] 5.1 Add `maxSeenCandidates` poll-frame counter (O(1), no breakdown)
+- [x] 5. Build the trace in the `findElement` timeout branch
+  - [x] 5.1 Add `maxSeenCandidates` poll-frame counter (O(1), no breakdown)
     - Update `maxSeenCandidates = Math.max(maxSeenCandidates, candidates.length)` inside `poll()`; do not build any breakdown during polling
     - _Requirements: 8.1_
-  - [ ] 5.2 Implement the tag+where timeout branch trace assembly
+  - [x] 5.2 Implement the tag+where timeout branch trace assembly
     - Perform exactly one final synchronous pass: `candidates = root.querySelectorAll(tag)`, then `buildWhereBreakdown(...)`
     - Classify `absence`: `appeared-after-timeout` when `nearMiss.fullMatch`; else `present-unmatched` when `maxSeenCandidates > 0 || candidateCount > 0`; else `absent-full-window`
     - Assemble the tag+where trace (`strategy:'tag-where'`, `tag`, `candidateCount`, `whereBreakdown`, `passedMatchers`, `failedMatcher`, `closestLabel`, `absence`, `finalFrameCandidateCount`, `elapsedMs` clamped 0..5000) and reject with an `Error` carrying `err.findTrace`; still reject (no retroactive success)
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 8.2, 8.4_
-  - [ ] 5.3 Implement the xpath timeout branch trace assembly
+  - [x] 5.3 Implement the xpath timeout branch trace assembly
     - Wrap `document.evaluate` in try/catch; record `xpathOutcome` `none`/`one`/`many` from `snapshotLength`, `matchedNodeCount`, `expression`, `elapsedMs`, `configuredWaitMs = TIMEOUT_5sec`; on throw record `invalid:true`, `outcome:'invalid'` with the exact expression
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
   - [ ]* 5.4 Write property test that success produces no trace
