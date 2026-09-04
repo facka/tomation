@@ -31,6 +31,25 @@
         "chatSessionId": "sess_28edadff-55f8-4a5c-9e32-9dacff758f2d",
         "timestamp": 1788533635158
       }
+    ],
+    "2.1 Add `truncate256(v)` and `buildWhereBreakdown(candidates, where, parentNode)` to `runtime.js`": [
+      {
+        "executionId": "dff48f3c-5a41-48b3-9a57-5227ca39ad8e",
+        "chatSessionId": "sess_f11f8cdd-7b6a-44a1-a90a-bcca467bec58",
+        "timestamp": 1788535974749
+      },
+      {
+        "executionId": "dff48f3c-5a41-48b3-9a57-5227ca39ad8e",
+        "chatSessionId": "sess_f11f8cdd-7b6a-44a1-a90a-bcca467bec58",
+        "timestamp": 1788536054713
+      }
+    ],
+    "2. Implement failure-time `buildWhereBreakdown` and truncation helper": [
+      {
+        "executionId": "dff48f3c-5a41-48b3-9a57-5227ca39ad8e",
+        "chatSessionId": "sess_f11f8cdd-7b6a-44a1-a90a-bcca467bec58",
+        "timestamp": 1788536054830
+      }
     ]
   }
 }

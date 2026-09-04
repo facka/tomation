@@ -34,8 +34,8 @@ No packaging/deployment tasks are included — the change integrates into the ex
     - One example per supported key confirming `{ passed, actual }` agrees with `matchesWhere`'s decision and reports the right observed value, including `UNAVAILABLE` for absent attributes
     - _Requirements: 2.3, 2.4, 2.5, 2.7_
 
-- [ ] 2. Implement failure-time `buildWhereBreakdown` and truncation helper
-  - [ ] 2.1 Add `truncate256(v)` and `buildWhereBreakdown(candidates, where, parentNode)` to `runtime.js`
+- [x] 2. Implement failure-time `buildWhereBreakdown` and truncation helper
+  - [x] 2.1 Add `truncate256(v)` and `buildWhereBreakdown(candidates, where, parentNode)` to `runtime.js`
     - `candidateCount = candidates.length`; when zero, return `{ nearMiss: null, candidateCount: 0 }` (empty breakdown, no Near_Miss)
     - Iterate the single `querySelectorAll` snapshot synchronously (no await/yield), counting per-candidate passes via `evaluateWhereKey`; pick the candidate with the greatest pass count as Near_Miss, ties keep the first encountered; designate at most one
     - Build `whereBreakdown` as `{ key, expected, actual, passed }` entries (expected from descriptor, actual from `evaluateWhereKey`), each string truncated to 256 chars; expose `passed` (passed keys) and `firstFailed` on the nearMiss

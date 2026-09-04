@@ -129,6 +129,105 @@ function evaluateWhereKey(el, key, value, parentNode) {
 }
 
 /**
+ * Coerce a value to a string and truncate it to a maximum of 256 characters
+ * (Req 2.4). Returns the (possibly truncated) string.
+ *
+ * @param {*} v - the value to coerce and truncate
+ * @returns {string} the string coerced from v, sliced to at most 256 chars
+ */
+function truncate256(v) {
+  var s = String(v);
+  return s.length > 256 ? s.slice(0, 256) : s;
+}
+
+/**
+ * Failure-time single pass over a candidate snapshot. Runs ONCE after the poll
+ * window elapses (Req 8.2). Evaluates every `where` key against every candidate
+ * synchronously (no await/yield) and designates at most one Near_Miss_Candidate
+ * — the candidate satisfying the greatest number of Where_Matchers, ties keep
+ * the first encountered (Req 2.3, 8.5).
+ *
+ * @param {NodeList|Array<Element>} candidates - snapshot from root.querySelectorAll(tag)
+ * @param {object} where - the descriptor's where conditions
+ * @param {Element|null} parentNode - childOf parent if present, null otherwise
+ * @returns {{ nearMiss: object|null, candidateCount: number }}
+ */
+function buildWhereBreakdown(candidates, where, parentNode) {
+  var candidateCount = candidates.length;
+
+  // Zero candidates: empty breakdown, no Near_Miss (Req 2.2, 8.3).
+  if (candidateCount === 0) {
+    return { nearMiss: null, candidateCount: 0 };
+  }
+
+  var keys = Object.keys(where);
+  var bestEl = null;
+  var bestResults = null;
+  var bestPassCount = -1;
+
+  for (var c = 0; c < candidateCount; c++) {
+    var el = candidates[c];
+    var results = [];
+    var passCount = 0;
+    for (var k = 0; k < keys.length; k++) {
+      var result = evaluateWhereKey(el, keys[k], where[keys[k]], parentNode);
+      results.push(result);
+      if (result.passed) passCount++;
+    }
+    // Greatest pass count wins; ties keep the FIRST encountered (Req 2.3, 8.5).
+    if (passCount > bestPassCount) {
+      bestPassCount = passCount;
+      bestEl = el;
+      bestResults = results;
+    }
+  }
+
+  // Build the whereBreakdown for the Near_Miss_Candidate (Req 2.4, 2.6, 2.7).
+  var whereBreakdown = [];
+  var passed = [];
+  var firstFailed = null;
+  var fullMatch = true;
+
+  for (var j = 0; j < keys.length; j++) {
+    var key = keys[j];
+    var r = bestResults[j];
+    var entry = {
+      key: key,
+      expected: truncate256(where[key]),
+      passed: r.passed
+    };
+    if (r.actual === UNAVAILABLE) {
+      // Keep the matcher entry; record that the actual value was unavailable (Req 2.7).
+      entry.actual = null;
+      entry.actualUnavailable = true;
+    } else {
+      // Truncate observed value; text* actuals are already raw/untrimmed (Req 2.5).
+      entry.actual = truncate256(r.actual);
+    }
+    whereBreakdown.push(entry);
+
+    if (r.passed) {
+      passed.push(key);
+    } else {
+      fullMatch = false;
+      if (firstFailed === null) firstFailed = key;
+    }
+  }
+
+  var nearMiss = {
+    element: bestEl,
+    whereBreakdown: whereBreakdown,
+    passed: passed,
+    firstFailed: firstFailed,
+    // fullMatch true => matchesWhere would return true; consumers must not assume
+    // a failing entry exists (Req 3.3).
+    fullMatch: fullMatch
+  };
+
+  return { nearMiss: nearMiss, candidateCount: candidateCount };
+}
+
+/**
  * Search a subtree for an element matching the given tag and text content.
  *
  * @param {Element} root - The root element to search within
