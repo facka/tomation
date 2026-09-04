@@ -171,15 +171,15 @@ No packaging/deployment tasks are included — the change integrates into the ex
     - **Property 14: The trace propagates unchanged across content → background → panel**
     - **Validates: Requirements 9.1, 9.2, 9.3, 9.5**
 
-- [ ] 12. Render the "Why did this fail?" disclosure in `LogEntry.vue`
-  - [ ] 12.1 Add the collapsible disclosure block and register any new icon
+- [x] 12. Render the "Why did this fail?" disclosure in `LogEntry.vue`
+  - [x] 12.1 Add the collapsible disclosure block and register any new icon
     - Render the disclosure only when `status === 'fail' && entry.findTrace`; initially collapsed, with a toggle; while collapsed keep the existing error line as the only visible failure text
     - Expanded: show scope and candidate count; passed Where_Matchers (first 50 + remaining count) and the failing matcher with expected vs actual, rendering whitespace visibly for text actuals
     - Expanded: show parent resolution / scoped-to-parent, absence classification, and closestLabel / navigate / xpath details, each read defensively with optional chaining
     - A failed entry without a trace renders the error line unchanged
     - Register any new icon used by the disclosure in `packages/extension/panel-vue/src/icons.ts`
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.6, 10.7, 10.8, 10.9, 10.10_
-  - [ ] 12.2 Implement the passed-matcher display cap helper
+  - [x] 12.2 Implement the passed-matcher display cap helper
     - Return at most 50 passed matchers plus a remaining count of `max(0, length - 50)`
     - _Requirements: 10.5_
   - [ ]* 12.3 Write property test for the passed-matcher display cap

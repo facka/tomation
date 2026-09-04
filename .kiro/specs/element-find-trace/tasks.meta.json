@@ -231,6 +231,37 @@
         "chatSessionId": "sess_90d42588-d360-456c-a6de-fae3664a74f3",
         "timestamp": 1788546959450
       }
+    ],
+    "12.1 Add the collapsible disclosure block and register any new icon": [
+      {
+        "executionId": "72d9c26d-8cfc-4321-924a-05622f2f0cb0",
+        "chatSessionId": "sess_48179b2a-cb5b-46f2-821b-da1c5ec748c1",
+        "timestamp": 1788547466852
+      },
+      {
+        "executionId": "72d9c26d-8cfc-4321-924a-05622f2f0cb0",
+        "chatSessionId": "sess_48179b2a-cb5b-46f2-821b-da1c5ec748c1",
+        "timestamp": 1788547659568
+      }
+    ],
+    "12.2 Implement the passed-matcher display cap helper": [
+      {
+        "executionId": "72d9c26d-8cfc-4321-924a-05622f2f0cb0",
+        "chatSessionId": "sess_48179b2a-cb5b-46f2-821b-da1c5ec748c1",
+        "timestamp": 1788547470818
+      },
+      {
+        "executionId": "72d9c26d-8cfc-4321-924a-05622f2f0cb0",
+        "chatSessionId": "sess_48179b2a-cb5b-46f2-821b-da1c5ec748c1",
+        "timestamp": 1788547663420
+      }
+    ],
+    "12. Render the \"Why did this fail?\" disclosure in `LogEntry.vue`": [
+      {
+        "executionId": "72d9c26d-8cfc-4321-924a-05622f2f0cb0",
+        "chatSessionId": "sess_48179b2a-cb5b-46f2-821b-da1c5ec748c1",
+        "timestamp": 1788547663568
+      }
     ]
   }
 }
