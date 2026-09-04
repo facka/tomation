@@ -146,7 +146,7 @@ No packaging/deployment tasks are included — the change integrates into the ex
     - Assert failure `STEP_RESULT` includes the same `findTrace`; non-element steps omit it
     - _Requirements: 9.1, 11.1, 11.4_
 
-- [ ] 9. Propagate the trace through background `emitLog`
+- [x] 9. Propagate the trace through background `emitLog`
   - [ ] 9.1 Add optional `findTrace` parameter to `emitLog` and the call site
     - Add 5th param `findTrace`; set `logMsg.findTrace = findTrace` only when present (omit otherwise)
     - Update the call site: `emitLog(currentIndex, step, !!ok, error || undefined, result && result.findTrace)`

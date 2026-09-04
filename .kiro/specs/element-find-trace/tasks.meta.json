@@ -181,6 +181,13 @@
         "chatSessionId": "sess_5b6dc88a-96da-4e12-ae4c-ff66bb46e3b4",
         "timestamp": 1788545222864
       }
+    ],
+    "9. Propagate the trace through background `emitLog`": [
+      {
+        "executionId": "defe8dd2-e0cc-4737-9892-28f1756fa905",
+        "chatSessionId": "sess_6287e376-850c-4304-bf20-2bf31f0c14a1",
+        "timestamp": 1788546004275
+      }
     ]
   }
 }

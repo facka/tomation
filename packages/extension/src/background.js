@@ -1167,8 +1167,9 @@ function extractResolvedContext(template, contextStore) {
  * @param {object} step - The step object (with action, target, value)
  * @param {boolean} ok - Whether the step passed
  * @param {string} [error] - Error message if the step failed
+ * @param {object} [findTrace] - Structured find trace attached to element-not-found failures
  */
-function emitLog(stepIndex, step, ok, error) {
+function emitLog(stepIndex, step, ok, error, findTrace) {
   var logMsg = {
     type: 'LOG',
     stepIndex: stepIndex,
@@ -1212,6 +1213,7 @@ function emitLog(stepIndex, step, ok, error) {
   if (error) {
     logMsg.error = error;
   }
+  if (findTrace) logMsg.findTrace = findTrace;
   // Include context data for successful save steps
   if (ok && (step.action === 'saveText' || step.action === 'saveValue' ||
              step.action === 'saveAttribute' || step.action === 'saveExpression')) {
@@ -1648,7 +1650,7 @@ function runStepLoop() {
         }
 
         // Emit LOG for this step
-        emitLog(currentIndex, step, !!ok, error || undefined);
+        emitLog(currentIndex, step, !!ok, error || undefined, result && result.findTrace);
 
         if (!ok) {
           // Check if retry or skip is enabled
@@ -1897,7 +1899,7 @@ function sendUploadToRuntime(step, currentIndex, fileDataUrl, mimeType) {
     if (ok) { runState.passCount++; }
     else { runState.failCount++; }
 
-    emitLog(currentIndex, step, !!ok, error || undefined);
+    emitLog(currentIndex, step, !!ok, error || undefined, result && result.findTrace);
 
     if (!ok) {
       unlockTab();
