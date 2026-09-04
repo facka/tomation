@@ -97,10 +97,20 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
       }
       break;
 
-    case 'RUN_STOPPED':
+    case 'RUN_STOPPED': {
       manualPauseDescription.value = null;
-      store.setRunComplete({ total: msg.total, passed: msg.passed, failed: msg.failed });
+      // A stopped run is a failure. Ensure at least one failed step is recorded
+      // and surface the "manually stopped" reason.
+      const stoppedFailed = msg.failed > 0 ? msg.failed : Math.max(1, msg.total - msg.passed);
+      store.setRunComplete({
+        total: msg.total,
+        passed: msg.passed,
+        failed: stoppedFailed,
+        stopped: true,
+        reason: 'manually stopped',
+      });
       break;
+    }
 
     case 'STATE_SYNC':
       if (msg.running) {
@@ -255,6 +265,7 @@ onUnmounted(() => {
     <RunView
       v-if="store.state.currentView === 'run'"
       :manual-pause-description="manualPauseDescription"
+      @continue="manualPauseDescription = null"
     />
 
     <!-- ErrorView -->
@@ -266,5 +277,8 @@ onUnmounted(() => {
 .app {
   width: 100%;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 </style>
