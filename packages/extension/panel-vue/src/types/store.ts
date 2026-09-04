@@ -1,5 +1,6 @@
 import type { Spec, SpecEntry, Project, TestEntry, AutomationEntry } from './spec';
 import type { StepPlanEntry } from './messages';
+import type { FindTrace } from './findTrace';
 
 export type ViewName = 'home' | 'test-plan' | 'run' | 'error';
 export type RunnableType = 'test' | 'automation';
@@ -46,6 +47,7 @@ export interface LogEntry {
   // Present on conditional (if / When) rows
   condition?: StepCondition;
   taken?: boolean;
+  findTrace?: FindTrace;
 }
 
 export interface StoreState {
