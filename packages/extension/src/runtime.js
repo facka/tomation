@@ -618,6 +618,14 @@ function findElementWithParent(stepMessage) {
   var elementDescriptor = stepMessage.elementDescriptor;
   var parentDescriptor = stepMessage.parentDescriptor;
   var navigateSteps = elementDescriptor && elementDescriptor.navigate;
+  var action = stepMessage.action;
+
+  // Synthesize a trace with an empty ordered step sequence (Req 1.7) for the
+  // cases where no findElement trace was produced before failing (e.g. a
+  // navigate-hop failure after the anchor resolved).
+  function emptyTrace() {
+    return { steps: [] };
+  }
 
   // Helper to apply navigate steps after anchor is found.
   // Reaching this point means findElement resolved the anchor to exactly one
@@ -638,8 +646,39 @@ function findElementWithParent(stepMessage) {
       .then(function (element) {
         return applyNavigation(element);
       })
-      .catch(function () {
-        return { ok: false, error: 'Element not found: ' + stepMessage.target };
+      .then(function (result) {
+        // Anchor resolved but a navigate hop failed: build the cross-cutting
+        // trace here (findElement produced no trace on the success path).
+        if (result && result.ok === false) {
+          var navTrace = emptyTrace();
+          navTrace.scope = 'whole-document';               // Req 1.3
+          navTrace.action = action;                        // Req 11.3
+          navTrace.error = 'Element not found: ' + stepMessage.target; // Req 1.6
+          navTrace.navigate = {
+            anchorResolved: result.anchorResolved === true, // Req 6.3
+            failedHopIndex: result.failedHopIndex,          // zero-based (Req 6.1, 6.2)
+            failedHopType: result.failedHopType,            // Req 6.2
+            hopCount: navigateSteps ? navigateSteps.length : 0
+          };
+          return { ok: false, error: navTrace.error, findTrace: navTrace };
+        }
+        return result;
+      })
+      .catch(function (err) {
+        // findElement rejected (anchor / tag+where / xpath resolution failed).
+        var trace = (err && err.findTrace) || emptyTrace(); // Req 1.1, 1.2, 1.7
+        trace.scope = 'whole-document';                     // Req 1.3
+        trace.action = action;                              // Req 11.3
+        trace.error = 'Element not found: ' + stepMessage.target; // Req 1.6
+        // When navigate hops were declared but the anchor never resolved, record
+        // that no hops were attempted (Req 6.4).
+        if (navigateSteps && navigateSteps.length > 0 && !trace.navigate) {
+          trace.navigate = {
+            anchorResolved: false,
+            hopCount: navigateSteps.length
+          };
+        }
+        return { ok: false, error: trace.error, findTrace: trace };
       });
   }
 
@@ -667,6 +706,12 @@ function findElementWithParent(stepMessage) {
     return `${parentPath}/${tagName}[${index}]`;
   }
 
+  // Identifier used for the parent descriptor when the parent fails to resolve
+  // (Req 4.2). Mirrors the id used in the preserved human error string below.
+  var parentDescriptorId = parentDescriptor.where && parentDescriptor.where.id
+    ? parentDescriptor.where.id
+    : 'unknown';
+
   return findElement(parentDescriptor, document)
     .then(function (parentElement) {
       return findElement(elementDescriptor, parentElement)
@@ -674,14 +719,46 @@ function findElementWithParent(stepMessage) {
           return applyNavigation(element);
         })
         .catch(function (error) {
-          return { ok: false, error: 'Element with parent ' + getElementXPath(parentElement) + ' not found: ' + stepMessage.target + error.message };
+          // Parent resolved, but the child was not found within its subtree.
+          var preservedError = 'Element with parent ' + getElementXPath(parentElement) + ' not found: ' + stepMessage.target + error.message;
+          var trace = (error && error.findTrace) || emptyTrace(); // Req 1.7
+          trace.scope = 'parent-scoped';                            // Req 1.3, 4.3
+          trace.action = action;                                    // Req 11.3
+          trace.error = preservedError;                             // Req 1.6, 4.3
+
+          // Failure-only count of matching parent elements (Req 4.5). Not run
+          // during matching — only here, once, on child failure.
+          var matchCount = 0;
+          if (parentDescriptor.tag) {
+            var parentCandidates = document.querySelectorAll(parentDescriptor.tag);
+            for (var i = 0; i < parentCandidates.length; i++) {
+              if (matchesWhere(parentCandidates[i], parentDescriptor.where || {}, null)) {
+                matchCount++;
+              }
+            }
+          }
+
+          trace.parent = {
+            resolved: true,                            // Req 4.1
+            identifier: getElementXPath(parentElement), // Req 4.4
+            matchCount: matchCount,                    // Req 4.5
+            scopedToParent: true                       // Req 4.3
+          };
+          return { ok: false, error: preservedError, findTrace: trace };
         });
     })
     .catch(function () {
-      var parentId = parentDescriptor.where && parentDescriptor.where.id
-        ? parentDescriptor.where.id
-        : 'unknown';
-      return { ok: false, error: 'Parent element not found: ' + parentId };
+      // Parent element failed to resolve — no child pass occurred.
+      var preservedError = 'Parent element not found: ' + parentDescriptorId;
+      var trace = emptyTrace();               // Req 1.7 (no child pass, empty steps)
+      trace.scope = 'whole-document';         // Req 1.3 (parent search is document-wide)
+      trace.action = action;                  // Req 11.3
+      trace.error = preservedError;           // Req 1.6, 4.2
+      trace.parent = {
+        resolved: false,                      // Req 4.1
+        descriptorId: parentDescriptorId      // Req 4.2
+      };
+      return { ok: false, error: preservedError, findTrace: trace };
     });
 }
 

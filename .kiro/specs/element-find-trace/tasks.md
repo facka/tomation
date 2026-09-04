@@ -118,12 +118,12 @@ No packaging/deployment tasks are included — the change integrates into the ex
 - [ ] 6. Checkpoint - Ensure all runtime finder tests pass
   - Ensure all tests pass, ask the user if questions arise. (Developer runs tests manually.)
 
-- [ ] 7. Assemble cross-cutting trace in `findElementWithParent`
-  - [ ] 7.1 Add scope / action / navigate merge for the no-parent path
+- [x] 7. Assemble cross-cutting trace in `findElementWithParent`
+  - [x] 7.1 Add scope / action / navigate merge for the no-parent path
     - On child rejection, read `err.findTrace` (or synthesize an empty-steps trace when none exists), set `scope:'whole-document'`, `action`, and the preserved error string `'Element not found: ' + target`
     - Merge the navigate trace (`anchorResolved`, zero-based `failedHopIndex`, `failedHopType`, `hopCount`) reconciling the loop index to zero-based; return `{ ok:false, error, findTrace }`
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.6, 1.7, 6.1, 6.2, 6.3, 6.4, 11.3_
-  - [ ] 7.2 Add parent (childOf) resolution outcome assembly
+  - [x] 7.2 Add parent (childOf) resolution outcome assembly
     - Parent not resolved: `scope:'whole-document'`, `parent.resolved:false`, `parent.descriptorId` from the parent descriptor, preserved `'Parent element not found: <id>'` string, no child pass
     - Parent resolved + child missing: `scope:'parent-scoped'`, `parent.resolved:true`, `parent.identifier = getElementXPath(parentEl)`, `parent.scopedToParent:true`, and a `matchCount` via a failure-only `document.querySelectorAll(parentDescriptor.tag)` filtered by `matchesWhere`; preserve the existing parent-scoped error string
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_

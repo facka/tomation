@@ -131,6 +131,37 @@
         "chatSessionId": "sess_68c63ff1-35bb-4061-aa50-a5b9a837ce93",
         "timestamp": 1788539509098
       }
+    ],
+    "7.1 Add scope / action / navigate merge for the no-parent path": [
+      {
+        "executionId": "68b211e2-59fc-4a56-b7d4-b7c3415b8578",
+        "chatSessionId": "sess_f4178d16-7f15-4316-a362-d664bd7c2ab2",
+        "timestamp": 1788544421939
+      },
+      {
+        "executionId": "68b211e2-59fc-4a56-b7d4-b7c3415b8578",
+        "chatSessionId": "sess_f4178d16-7f15-4316-a362-d664bd7c2ab2",
+        "timestamp": 1788544501065
+      }
+    ],
+    "7.2 Add parent (childOf) resolution outcome assembly": [
+      {
+        "executionId": "68b211e2-59fc-4a56-b7d4-b7c3415b8578",
+        "chatSessionId": "sess_f4178d16-7f15-4316-a362-d664bd7c2ab2",
+        "timestamp": 1788544504787
+      },
+      {
+        "executionId": "68b211e2-59fc-4a56-b7d4-b7c3415b8578",
+        "chatSessionId": "sess_f4178d16-7f15-4316-a362-d664bd7c2ab2",
+        "timestamp": 1788544588448
+      }
+    ],
+    "7. Assemble cross-cutting trace in `findElementWithParent`": [
+      {
+        "executionId": "68b211e2-59fc-4a56-b7d4-b7c3415b8578",
+        "chatSessionId": "sess_f4178d16-7f15-4316-a362-d664bd7c2ab2",
+        "timestamp": 1788544588540
+      }
     ]
   }
 }
