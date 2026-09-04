@@ -69,6 +69,25 @@
         "chatSessionId": "sess_50902607-b4dc-492a-be49-3e46d8a57b86",
         "timestamp": 1788536924183
       }
+    ],
+    "4.1 Extend `applyNavigateSteps` failure return with machine fields while preserving the human string": [
+      {
+        "executionId": "ad12ff5e-2da5-45a4-b3a9-473466183736",
+        "chatSessionId": "sess_3940c0a0-10eb-48fd-9eba-4e4cd2024213",
+        "timestamp": 1788538793505
+      },
+      {
+        "executionId": "ad12ff5e-2da5-45a4-b3a9-473466183736",
+        "chatSessionId": "sess_3940c0a0-10eb-48fd-9eba-4e4cd2024213",
+        "timestamp": 1788538871339
+      }
+    ],
+    "4. Add navigate zero-based instrumentation to `applyNavigateSteps` and anchor resolution": [
+      {
+        "executionId": "ad12ff5e-2da5-45a4-b3a9-473466183736",
+        "chatSessionId": "sess_3940c0a0-10eb-48fd-9eba-4e4cd2024213",
+        "timestamp": 1788538871462
+      }
     ]
   }
 }

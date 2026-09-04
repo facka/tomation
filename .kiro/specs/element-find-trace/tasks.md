@@ -72,8 +72,8 @@ No packaging/deployment tasks are included — the change integrates into the ex
     - Bounded (Strategy A, Req 5.4) vs unbounded (B1/B2/B3, Req 5.5); absent expected label text (Req 5.3)
     - _Requirements: 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 4. Add navigate zero-based instrumentation to `applyNavigateSteps` and anchor resolution
-  - [ ] 4.1 Extend `applyNavigateSteps` failure return with machine fields while preserving the human string
+- [x] 4. Add navigate zero-based instrumentation to `applyNavigateSteps` and anchor resolution
+  - [x] 4.1 Extend `applyNavigateSteps` failure return with machine fields while preserving the human string
     - On hop failure return `{ ok:false, error, failedHopIndex: i /* zero-based */, failedHopType: s.step }`; keep the existing 1-based human message unchanged
     - Ensure the anchor-resolution path exposes whether the anchor resolved to exactly one element before hops ran (`anchorResolved`), attempting no hops when it did not
     - _Requirements: 6.1, 6.2, 6.3, 6.4_

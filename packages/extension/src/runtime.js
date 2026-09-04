@@ -514,7 +514,7 @@ function unhighlightElement(el) {
  *
  * @param {Element} anchor - The resolved anchor DOM element
  * @param {Array<{step: string, index?: number}>} steps - Parsed navigate steps
- * @returns {{ok: boolean, element?: Element, error?: string}}
+ * @returns {{ok: boolean, element?: Element, error?: string, failedHopIndex?: number, failedHopType?: string}}
  */
 function applyNavigateSteps(anchor, steps) {
   var current = anchor;
@@ -531,14 +531,16 @@ function applyNavigateSteps(anchor, steps) {
       case 'sibling':
         var parent = current.parentElement;
         if (!parent) {
-          return { ok: false, error: 'Navigation failed at step ' + (i + 1) + ' (sibling[' + s.index + ']): no parent element' };
+          // Human message stays 1-based; machine fields use the zero-based loop index i.
+          return { ok: false, error: 'Navigation failed at step ' + (i + 1) + ' (sibling[' + s.index + ']): no parent element', failedHopIndex: i, failedHopType: s.step };
         }
         next = parent.children[s.index - 1];
         break;
     }
     if (!next) {
       var token = s.step + (s.index !== undefined ? '[' + s.index + ']' : '');
-      return { ok: false, error: 'Navigation failed at step ' + (i + 1) + ' (' + token + '): element is null' };
+      // Human message stays 1-based; machine fields use the zero-based loop index i.
+      return { ok: false, error: 'Navigation failed at step ' + (i + 1) + ' (' + token + '): element is null', failedHopIndex: i, failedHopType: s.step };
     }
     current = next;
   }
@@ -558,10 +560,16 @@ function findElementWithParent(stepMessage) {
   var parentDescriptor = stepMessage.parentDescriptor;
   var navigateSteps = elementDescriptor && elementDescriptor.navigate;
 
-  // Helper to apply navigate steps after anchor is found
+  // Helper to apply navigate steps after anchor is found.
+  // Reaching this point means findElement resolved the anchor to exactly one
+  // element, so anchorResolved is true whenever navigate hops are attempted.
+  // (If the anchor fails to resolve, findElement rejects and this helper is
+  // never called, so no hops are attempted — the anchorResolved:false case.)
   function applyNavigation(element) {
     if (navigateSteps && navigateSteps.length > 0) {
-      return applyNavigateSteps(element, navigateSteps);
+      var navResult = applyNavigateSteps(element, navigateSteps);
+      navResult.anchorResolved = true;
+      return navResult;
     }
     return { ok: true, element: element };
   }
