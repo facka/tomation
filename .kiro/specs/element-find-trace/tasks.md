@@ -137,8 +137,8 @@ No packaging/deployment tasks are included — the change integrates into the ex
     - not-resolved (Req 4.2), resolved-child-missing (Req 4.3), multiple parent matches (Req 4.5)
     - _Requirements: 4.2, 4.3, 4.5_
 
-- [ ] 8. Forward the trace through the runtime message listener
-  - [ ] 8.1 Attach `findResult.findTrace` on failure `STEP_RESULT` for every element-dependent branch
+- [x] 8. Forward the trace through the runtime message listener
+  - [x] 8.1 Attach `findResult.findTrace` on failure `STEP_RESULT` for every element-dependent branch
     - Update the `ACTIONS_NEEDING_ELEMENT` block and the `pressKey`-with-target branch to include `findTrace: findResult.findTrace` on the `STEP_RESULT` response
     - Leave `assertNotExists` failure (element found) without a trace, and produce no trace for steps that do not require locating an element
     - _Requirements: 9.1, 11.1, 11.2, 11.4_

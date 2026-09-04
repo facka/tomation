@@ -162,6 +162,25 @@
         "chatSessionId": "sess_f4178d16-7f15-4316-a362-d664bd7c2ab2",
         "timestamp": 1788544588540
       }
+    ],
+    "8.1 Attach `findResult.findTrace` on failure `STEP_RESULT` for every element-dependent branch": [
+      {
+        "executionId": "c341b4c0-2803-4b62-a218-801bb75db674",
+        "chatSessionId": "sess_5b6dc88a-96da-4e12-ae4c-ff66bb46e3b4",
+        "timestamp": 1788545157461
+      },
+      {
+        "executionId": "c341b4c0-2803-4b62-a218-801bb75db674",
+        "chatSessionId": "sess_5b6dc88a-96da-4e12-ae4c-ff66bb46e3b4",
+        "timestamp": 1788545222715
+      }
+    ],
+    "8. Forward the trace through the runtime message listener": [
+      {
+        "executionId": "c341b4c0-2803-4b62-a218-801bb75db674",
+        "chatSessionId": "sess_5b6dc88a-96da-4e12-ae4c-ff66bb46e3b4",
+        "timestamp": 1788545222864
+      }
     ]
   }
 }

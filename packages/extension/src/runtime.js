@@ -1092,7 +1092,7 @@ api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       // Target specified — find element, highlight, press key on it
       findElementWithParent(message).then(function (findResult) {
         if (!findResult.ok) {
-          sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: false, error: findResult.error });
+          sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: false, error: findResult.error, findTrace: findResult.findTrace });
           return;
         }
         var element = findResult.element;
@@ -1120,7 +1120,7 @@ api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (ACTIONS_NEEDING_ELEMENT.indexOf(action) !== -1) {
     findElementWithParent(message).then(function (findResult) {
       if (!findResult.ok) {
-        sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: false, error: findResult.error });
+        sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: false, error: findResult.error, findTrace: findResult.findTrace });
         return;
       }
       var element = findResult.element;
