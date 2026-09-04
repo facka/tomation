@@ -50,6 +50,25 @@
         "chatSessionId": "sess_f11f8cdd-7b6a-44a1-a90a-bcca467bec58",
         "timestamp": 1788536054830
       }
+    ],
+    "3.1 Add `traceClosestLabel(el, spec, parentNode)` to `runtime.js`": [
+      {
+        "executionId": "cb120322-05df-4c81-8a0a-4a7f2a193d03",
+        "chatSessionId": "sess_50902607-b4dc-492a-be49-3e46d8a57b86",
+        "timestamp": 1788536781377
+      },
+      {
+        "executionId": "cb120322-05df-4c81-8a0a-4a7f2a193d03",
+        "chatSessionId": "sess_50902607-b4dc-492a-be49-3e46d8a57b86",
+        "timestamp": 1788536924057
+      }
+    ],
+    "3. Implement instrumented `traceClosestLabel` (failure-time only)": [
+      {
+        "executionId": "cb120322-05df-4c81-8a0a-4a7f2a193d03",
+        "chatSessionId": "sess_50902607-b4dc-492a-be49-3e46d8a57b86",
+        "timestamp": 1788536924183
+      }
     ]
   }
 }

@@ -221,8 +221,19 @@ function buildWhereBreakdown(candidates, where, parentNode) {
     firstFailed: firstFailed,
     // fullMatch true => matchesWhere would return true; consumers must not assume
     // a failing entry exists (Req 3.3).
-    fullMatch: fullMatch
+    fullMatch: fullMatch,
+    closestLabel: null
   };
+
+  // Instrument the closestLabel strategies ONLY when the Near_Miss_Candidate has
+  // a FAILING closestLabel matcher (Req 5.1). This runs only here, at failure
+  // time, mirroring matchClosestLabel without changing matching semantics.
+  if (where.closestLabel !== undefined) {
+    var clIdx = keys.indexOf('closestLabel');
+    if (clIdx !== -1 && !bestResults[clIdx].passed) {
+      nearMiss.closestLabel = traceClosestLabel(bestEl, where.closestLabel, parentNode);
+    }
+  }
 
   return { nearMiss: nearMiss, candidateCount: candidateCount };
 }
@@ -303,6 +314,108 @@ function matchClosestLabel(el, spec, parentNode) {
   }
 
   return false;
+}
+
+/**
+ * Failure-time instrumented variant of matchClosestLabel (Req 5.1-5.5). Runs
+ * ONLY during the failure pass when the Near_Miss_Candidate has a failing
+ * `closestLabel` matcher. It mirrors the strategy structure of
+ * matchClosestLabel EXACTLY (no semantic change) but, instead of early-returning
+ * a boolean, records the outcome of each strategy it attempts.
+ *
+ * Return shape:
+ * {
+ *   labelTag: string,                 // the expected label tag (Req 5.2)
+ *   labelText: string|null,           // expected label text, truncated 256; null when absent (Req 5.3)
+ *   labelTextAbsent: boolean,         // present+true when the expected label text is absent (Req 5.3)
+ *   bounded: boolean,                 // true when Strategy A ran (parent-scoped, Req 5.4)
+ *   strategies: [                     // in attempt order
+ *     { name: 'boundedSubtree'|'forAttr'|'ancestorWalk'|'ariaLabelledby',
+ *       outcome: 'matched'|'not-matched' }
+ *   ]
+ * }
+ *
+ * @param {Element} el - target element
+ * @param {{ tag: string, text: string }} spec - label specification
+ * @param {Element|null} parentNode - childOf parent if present, null otherwise
+ * @returns {object} closestLabel sub-record
+ */
+function traceClosestLabel(el, spec, parentNode) {
+  var tag = spec.tag.toUpperCase();
+  var text = spec.text;
+
+  var record = {
+    labelTag: spec.tag,
+    bounded: false,
+    strategies: []
+  };
+
+  // Record expected label text, truncated to 256 chars; flag absence (Req 5.2, 5.3).
+  if (text === undefined || text === null) {
+    record.labelText = null;
+    record.labelTextAbsent = true;
+  } else {
+    record.labelText = truncate256(text);
+  }
+
+  // Strategy A: childOf-bounded search — search within parent subtree only (Req 5.4).
+  if (parentNode) {
+    record.bounded = true;
+    record.strategies.push({
+      name: 'boundedSubtree',
+      outcome: searchSubtreeForLabel(parentNode, tag, text) ? 'matched' : 'not-matched'
+    });
+    return record;
+  }
+
+  // Strategy B: Unbounded search with max 3 ancestor levels (Req 5.5).
+
+  // B1: Explicit `for` attribute — find a matching-tag element with for=el.id.
+  var forMatched = false;
+  if (el.id) {
+    var forLabels = document.querySelectorAll(spec.tag + '[for="' + el.id + '"]');
+    for (var i = 0; i < forLabels.length; i++) {
+      if (forLabels[i].tagName === tag && forLabels[i].textContent.trim() === text) {
+        forMatched = true;
+        break;
+      }
+    }
+  }
+  record.strategies.push({ name: 'forAttr', outcome: forMatched ? 'matched' : 'not-matched' });
+
+  // B2: Walk up at most 3 ancestor levels, search descendants.
+  // Mirrors matchClosestLabel: stop at the first level where a matching-tag
+  // element is found — if its text doesn't match, the closest label is wrong.
+  var ancestorMatched = false;
+  var ancestor = el.parentElement;
+  for (var depth = 0; depth < 3 && ancestor; depth++) {
+    var candidates = ancestor.getElementsByTagName(tag);
+    if (candidates.length > 0) {
+      for (var ci = 0; ci < candidates.length; ci++) {
+        if (candidates[ci].textContent.trim() === text) {
+          ancestorMatched = true;
+          break;
+        }
+      }
+      // Tag found at this level — stop searching further regardless of text match.
+      break;
+    }
+    ancestor = ancestor.parentElement;
+  }
+  record.strategies.push({ name: 'ancestorWalk', outcome: ancestorMatched ? 'matched' : 'not-matched' });
+
+  // B3: aria-labelledby resolution.
+  var ariaMatched = false;
+  var labelledBy = el.getAttribute('aria-labelledby');
+  if (labelledBy) {
+    var refEl = document.getElementById(labelledBy);
+    if (refEl && refEl.tagName === tag && refEl.textContent.trim() === text) {
+      ariaMatched = true;
+    }
+  }
+  record.strategies.push({ name: 'ariaLabelledby', outcome: ariaMatched ? 'matched' : 'not-matched' });
+
+  return record;
 }
 
 /**

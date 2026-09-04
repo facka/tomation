@@ -58,8 +58,8 @@ No packaging/deployment tasks are included — the change integrates into the ex
     - Zero-candidate empty result and no Near_Miss; single candidate; ties resolved to first
     - _Requirements: 2.2, 8.3, 8.5_
 
-- [ ] 3. Implement instrumented `traceClosestLabel` (failure-time only)
-  - [ ] 3.1 Add `traceClosestLabel(el, spec, parentNode)` to `runtime.js`
+- [x] 3. Implement instrumented `traceClosestLabel` (failure-time only)
+  - [x] 3.1 Add `traceClosestLabel(el, spec, parentNode)` to `runtime.js`
     - Record `labelTag`, `labelText` (truncated 256; set `labelTextAbsent` when the expected label text is absent), and `bounded`
     - Parent-scoped (`parentNode` present): record `bounded:true` and a single `boundedSubtree` strategy outcome (Strategy A only)
     - Unbounded: record `forAttr` (B1), `ancestorWalk` (B2), `ariaLabelledby` (B3) outcomes, each `matched`/`not-matched`, reusing existing B1/B2/B3 logic with no semantic change
