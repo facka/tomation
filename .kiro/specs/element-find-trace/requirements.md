@@ -20,6 +20,7 @@ To keep the success path fast, the detailed per-candidate breakdown is built onc
 - **Candidate**: A DOM element returned by `root.querySelectorAll(tag)` (for the tag+where strategy) that the Tomation_Finder evaluates against the `where` conditions. Candidate count is the number of such elements found in the search scope.
 - **Where_Matcher**: A single key/value condition within a descriptor's `where` object (for example `textIs`, `classIncludes`, `closestLabel`). All Where_Matchers in a `where` object are combined as AND conditions; an element matches only when every Where_Matcher passes. Supported keys: `id`, `textIs`, `textContains`, `classIncludes`, `placeholder`, `name`, `type`, `value`, `ariaLabel`, `role`, `title`, `hrefContains`, `isDisabled`, `dataAttr`, `nthChild`, `closestLabel`.
 - **Near_Miss_Candidate**: Among all Candidates evaluated in the failing scope, the single Candidate that satisfied the greatest number of Where_Matchers before failing at least one. Represents the element that came closest to matching and is the focus of the per-matcher breakdown. When no Candidate satisfies any Where_Matcher, the Near_Miss_Candidate is undefined.
+- **Finder_Snippet**: A self-contained, copy-pasteable JavaScript expression the Run_Log_View generates from a failed step's Element_Descriptor. When pasted into the browser DevTools console on the page under test, it reproduces the Tomation_Finder's resolution for that step (a `querySelectorAll(tag)` + `where`-matcher filter for the tag+where strategy, or `document.evaluate(...)` for the XPath strategy) and logs the candidate and match counts, so the developer can observe and iterate on why nothing matched.
 
 ## Requirements
 
@@ -130,19 +131,19 @@ To keep the success path fast, the detailed per-candidate breakdown is built onc
 7. THE LogEntry record in the Panel_Store SHALL define the Find_Trace as an optional field so that entries without a trace remain unaffected.
 ### Requirement 10: Render the find trace in the side panel
 
-**User Story:** As a Tomation test developer, I want a collapsible "Why did this fail?" disclosure under the failed step, so that I can inspect the passed conditions, the failing condition, and candidate counts without leaving the run log.
+**User Story:** As a Tomation test developer, I want a collapsible "Why did this fail?" disclosure under the failed step that gives me a copy-pasteable snippet reproducing the finder, so that I can paste it into DevTools and see for myself which candidates exist and why none matched.
 
 #### Acceptance Criteria
 
 1. WHERE a failed log entry in the Run_Log_View carries a Find_Trace, THE Run_Log_View SHALL render a "Why did this fail?" disclosure beneath the step's error line, initially collapsed.
 2. WHILE the disclosure is collapsed, THE Run_Log_View SHALL keep the existing error line as the only visible failure text for the step.
-3. WHEN the developer expands the disclosure, THE Run_Log_View SHALL display the search scope and the Candidate count.
-4. WHEN the developer expands the disclosure, THE Run_Log_View SHALL display the Where_Matchers that passed and the Where_Matcher that failed with its expected and actual values.
-5. WHERE the passed Where_Matchers exceed 50 entries, THE Run_Log_View SHALL display the first 50 passed Where_Matchers and a count of the remaining passed Where_Matchers.
-6. WHEN the developer collapses an expanded disclosure, THE Run_Log_View SHALL return to displaying only the error line for the step.
-7. WHERE the Find_Trace records a parent resolution outcome, THE Run_Log_View SHALL display whether the parent resolved and whether the child search was scoped to the parent subtree.
-8. WHERE the Find_Trace records a timeout-versus-absent determination, THE Run_Log_View SHALL display whether the element was absent for the wait window or present but unmatched.
-9. WHERE the Find_Trace records a closestLabel, navigate, or XPath outcome, THE Run_Log_View SHALL display the corresponding strategy, hop, or expression detail.
+3. WHEN the developer expands the disclosure, THE Run_Log_View SHALL display a single-line diagnosis summarizing the failure, including the searched tag and the candidate count when the Find_Trace records them.
+4. WHEN the developer expands the disclosure, THE Run_Log_View SHALL display a Finder_Snippet generated from the failed step's Element_Descriptor.
+5. WHERE the Element_Descriptor uses the tag+where strategy, THE Finder_Snippet SHALL query candidates by tag and filter them by the descriptor's where conditions using predicates equivalent to the Tomation_Finder's where-matcher semantics, and SHALL log the candidate count and the number of matches.
+6. WHERE the Element_Descriptor uses the XPath strategy, THE Finder_Snippet SHALL evaluate the descriptor's XPath expression via document.evaluate and SHALL log the matched node count.
+7. WHERE the Element_Descriptor declares a childOf parent, THE Finder_Snippet SHALL indicate that the search root is the parent element and provide a resolvable reference to the parent descriptor's conditions.
+8. WHEN the Run_Log_View displays the Finder_Snippet, THE Run_Log_View SHALL provide a control to copy the Finder_Snippet to the clipboard.
+9. WHEN the developer collapses an expanded disclosure, THE Run_Log_View SHALL return to displaying only the error line for the step.
 10. WHERE a failed log entry does not carry a Find_Trace, THE Run_Log_View SHALL render the step's error line unchanged.
 ### Requirement 11: Cover element-dependent actions within scope
 

@@ -258,6 +258,8 @@ Parent identifier reuses the existing `getElementXPath` helper already defined i
 
 The preserved human error strings are exactly today's (`'Element not found: ' + target`, `'Element with parent ' + xpath + ' not found: ' + target + error.message`, `'Parent element not found: ' + parentId`) — the trace never replaces them (Req 1.6).
 
+**Navigate-then-scope for parent descriptors.** A `parentDescriptor` may itself carry a `navigate` field. When present, the child search is scoped to the parent's *navigated result*, not the raw parent anchor: after `findElement(parentDescriptor, document)` resolves the anchor, `applyNavigateSteps(parentAnchor, parentDescriptor.navigate)` is applied and the resulting element (`scopeElement`) becomes the scope root passed to the child `findElement`. The child's own `elementDescriptor.navigate` still runs on the resolved child, unchanged. When a parent navigate hop fails, the step fails as parent-not-resolved (there is no document-wide fallback): the trace records `scope:'whole-document'`, `parent.resolved:false`, and `parent.navigate = { anchorResolved:true, failedHopIndex, failedHopType, hopCount }` capturing the failing hop, with the preserved string extended to `'Parent element not found: <id> (navigate <hop error>)'`.
+
 ### 7. `runtime.js` — message listener
 
 Every branch that calls `findElementWithParent` (the `ACTIONS_NEEDING_ELEMENT` block, `assertNotExists`, and `pressKey`-with-target) forwards `findResult.findTrace` onto the failure `STEP_RESULT` (Req 9.1, 11.1):
@@ -296,6 +298,42 @@ Call site change: `emitLog(currentIndex, step, !!ok, error || undefined, result 
 - `store/index.ts` `setStepStatus`: add `if (meta.findTrace !== undefined) entry.findTrace = meta.findTrace;`. Because `setStepStatus` already creates entries on demand and no-ops safely, a LOG whose entry does not exist is created; but per Req 9.6 (discard when no entry corresponds) the caller path for LOG only updates existing planned entries. The store keeps existing entries unchanged and raises no error either way.
 - `RunView.vue`/message router: whichever code maps `LOG` → `setStepStatus` passes `findTrace` through in the `meta` object.
 - `LogEntry.vue`: new disclosure block (component 10 below).
+
+### 10. `LogEntry.vue` + `finderSnippet.ts` — disclosure rendering (snippet-centric)
+
+The "Why did this fail?" disclosure is redesigned around a **copy-pasteable DevTools snippet** rather than a flat dump of trace fields. The previous flat detail-row rendering (search-scope / passed+failing matcher / absence / parent / closestLabel / navigate / xpath rows) is **removed from the UI**. The underlying `FindTrace` data model is unchanged — the runtime still produces the same trace; the panel simply presents it differently.
+
+When a failed entry carries a `FindTrace` (`status === 'fail' && entry.findTrace`), the disclosure — still initially collapsed, toggled by the existing chevron button (Req 10.1, 10.2, 10.9) — renders two things on expand:
+
+1. **A one-line diagnosis** (Req 10.3) derived from the trace with optional chaining:
+   - tag+where `absence === 'absent-full-window'` → `No <tag> element was present during the 5s wait window.`
+   - tag+where `absence === 'present-unmatched'` → `Found N <tag> candidate(s) but none matched the conditions.` (N from `candidateCount`/`finalFrameCandidateCount`)
+   - tag+where `absence === 'appeared-after-timeout'` → `A matching <tag> appeared only after the 5s wait window.`
+   - xpath → `XPath matched <matchedNodeCount ?? 0> node(s).`
+   - parent not resolved (`parent.resolved === false`) → `The parent element could not be located.`
+   - fallback → the preserved trace `error` string.
+
+2. **A generated Finder_Snippet** (Req 10.4–10.8) inside a labeled block ("Run this in DevTools to reproduce:") with a `<pre><code>` code block and a **Copy** button (uses `navigator.clipboard.writeText`, guarded by try/catch, briefly shows a "Copied!" state via the registered `faCopy` icon).
+
+#### `buildFinderSnippet(descriptor, parentDescriptor?)` — pure string builder
+
+A new pure function in `packages/extension/panel-vue/src/logic/finderSnippet.ts`:
+
+```ts
+export function buildFinderSnippet(descriptor: PageElement, parentDescriptor?: PageElement | null): string
+```
+
+Input is the `PageElement` descriptor resolved from `pageElements[entry.target]` (and, when `descriptor.childOf` is set, the resolved parent descriptor `pageElements[descriptor.childOf]`). Output is a string of runnable JS. It **never executes** the snippet — it only builds text. All interpolated values use `JSON.stringify` so quoting/escaping is safe.
+
+Two snippet forms:
+
+- **XPath strategy** (when `descriptor.xpath` is set, Req 10.6): an IIFE that evaluates the expression via `document.evaluate(xpath, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null)`, logs `snapshotLength` matched node(s) with the matched nodes, and returns the first node (or `null`).
+
+- **tag+where strategy** (Req 10.5): an IIFE that defines a `matchers` object whose predicate bodies **mirror `runtime.js` `evaluateWhereKey` exactly** for the supported keys — `id`, `textIs` (`el.textContent.trim() === v`), `textContains` (`el.textContent.includes(v)`), `classIncludes` (`el.className.split(' ').includes(v)`), `placeholder`/`name`/`type`/`ariaLabel` (`aria-label`)/`role`/`title` (`el.getAttribute(...) === v`), `value` (`el.value === v`), `hrefContains` (`(el.getAttribute('href')||'').includes(v)`), `isDisabled` (`el.disabled === true`), `dataAttr` (`el.getAttribute('data-'+v.name) === v.value`), `nthChild` (sibling position + 1 === v). It then sets `tag`, `where`, a search `root`, collects `candidates = [...root.querySelectorAll(tag)]`, filters by `Object.entries(where).every(...)` (unknown keys pass through as no-ops, mirroring the runtime), and logs `candidates.length` candidate(s) plus `matches.length` match.
+
+  - **childOf handling** (Req 10.7): when a `parentDescriptor` is provided, the snippet emits a comment showing the parent's `tag` + `where` JSON and sets `const root = document; // childOf: <parentTag> where <parentWhereJSON> — replace with the parent element to scope the search`, giving the developer a resolvable reference to the parent conditions. Otherwise `const root = document;`. When the parent descriptor also carries a `navigate` field, the childOf comment additionally notes `navigate: <parentNavigateJSON>` so the developer knows the scope root is the parent *after* applying its navigate hops (Navigate-then-scope). The emitted snippet still uses `document` as a placeholder root — the navigate note only clarifies how the real scope root is established; the executable snippet logic is unchanged.
+
+- `closestLabel` (in `where`) and `navigate` are **not fully reproduced** in the snippet; when either is present the builder appends a `// note: closestLabel/navigate is not reproduced in this snippet` comment so the developer knows the snippet is an approximation for those modes.
 
 ## Data Models
 
@@ -511,11 +549,11 @@ Regardless of which classification is recorded, the step result is still a failu
 
 **Validates: Requirements 9.1, 9.2, 9.3, 9.5**
 
-### Property 15: Passed-matcher display cap
+### Property 15: Finder_Snippet reflects the descriptor strategy
 
-*For any* list of passed `Where_Matchers`, the display helper returns at most 50 entries plus a remaining count equal to `max(0, length - 50)`.
+*For any* Element_Descriptor, `buildFinderSnippet` returns a non-empty string that: when the descriptor has an `xpath`, embeds that exact expression (JSON-encoded) and calls `document.evaluate`; otherwise embeds the descriptor's `tag` and `where` (JSON-encoded), calls `querySelectorAll(tag)`, and filters by every `where` key. When a `parentDescriptor` is provided the snippet references the parent's conditions. The builder never evaluates the snippet.
 
-**Validates: Requirements 10.5**
+**Validates: Requirements 10.5, 10.6, 10.7**
 
 ## Error Handling
 
@@ -544,7 +582,8 @@ Regardless of which classification is recorded, the step result is still a failu
 - `traceClosestLabel`: bounded (Strategy A, Req 5.4) vs unbounded (B1/B2/B3, Req 5.5); absent label text (Req 5.3).
 - Parent branches: not-resolved (Req 4.2), resolved-child-missing (Req 4.3), multiple parent matches (Req 4.5).
 - Navigate anchor failure (Req 6.4); xpath one/many/invalid outcomes (Req 7.2, 7.3, 7.5).
-- `LogEntry.vue`: mounts for fail+trace (disclosure present, initially collapsed — Req 10.1, 10.2), expand shows scope/candidateCount/passed+failing matchers with whitespace rendered visibly (Req 10.3, 10.4), >50 passed matchers capped (Req 10.5), collapse returns to error line (Req 10.6), parent/absence/closestLabel/navigate/xpath details (Req 10.7–10.9), and fail-without-trace unchanged (Req 10.10).
+- `LogEntry.vue`: mounts for fail+trace (disclosure present, initially collapsed — Req 10.1, 10.2), expand shows the one-line diagnosis with tag/candidate count (Req 10.3) and the generated Finder_Snippet block with a copy control (Req 10.4, 10.8), collapse returns to error line (Req 10.9), and fail-without-trace unchanged (Req 10.10).
+- `buildFinderSnippet`: tag+where form emits `querySelectorAll(tag)` + a `matchers` filter mirroring `evaluateWhereKey` and logs candidate/match counts (Req 10.5); xpath form emits `document.evaluate` and logs matched node count (Req 10.6); childOf form scopes `root` to the parent and references the parent's where conditions (Req 10.7); `closestLabel`/`navigate` add the not-reproduced note.
 
 **Property tests:** implement Properties 1–15 above. Each test is tagged with a comment in the form:
 
