@@ -299,6 +299,56 @@ test('findElementWithParent: child not in parent subtree returns element not fou
   window.Date.now = originalDateNow;
 });
 
+test('findElementWithParent: navigate-then-scope — child scoped to parent navigated result', async function () {
+  // Parent anchor A resolves, but the intended child lives NOT directly under A.
+  // It lives inside a sibling container reached via A's navigate hop.
+  setupDOM('<html><body>' +
+    '<div id="parent"><button id="decoy">Decoy</button></div>' +
+    '<div id="scope"><button id="child">Go</button></div>' +
+    '</body></html>');
+  var findElementWithParent = window.eval('findElementWithParent');
+
+  var stepMessage = {
+    target: 'child',
+    action: 'click',
+    elementDescriptor: { tag: 'button', where: { id: 'child' } },
+    parentDescriptor: {
+      tag: 'div',
+      where: { id: 'parent' },
+      navigate: [{ step: 'nextSibling' }]
+    }
+  };
+
+  var result = await findElementWithParent(stepMessage);
+  assert.equal(result.ok, true);
+  assert.equal(result.element.id, 'child');
+});
+
+test('findElementWithParent: parent navigate hop returns null → parent not resolved', async function () {
+  setupDOM('<html><body>' +
+    '<div id="parent"><button id="child">Go</button></div>' +
+    '</body></html>');
+  var findElementWithParent = window.eval('findElementWithParent');
+
+  var stepMessage = {
+    target: 'child',
+    action: 'click',
+    elementDescriptor: { tag: 'button', where: { id: 'child' } },
+    parentDescriptor: {
+      tag: 'div',
+      where: { id: 'parent' },
+      navigate: [{ step: 'child', index: 99 }]
+    }
+  };
+
+  var result = await findElementWithParent(stepMessage);
+  assert.equal(result.ok, false);
+  assert.equal(result.findTrace.parent.resolved, false);
+  assert.equal(result.findTrace.parent.navigate.anchorResolved, true);
+  assert.equal(result.findTrace.parent.navigate.failedHopIndex, 0);
+  assert.equal(result.findTrace.parent.navigate.failedHopType, 'child');
+});
+
 
 // ---------------------------------------------------------------------------
 // highlightElement / unhighlightElement tests
