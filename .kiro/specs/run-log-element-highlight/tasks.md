@@ -102,8 +102,8 @@ No packaging/deployment tasks are included — the change integrates into the ex
     - Document them as a distinct content-script contract, separate from and not added to `PanelMessage` / `BackgroundMessage`
     - _Requirements: 3.4_
 
-- [ ] 5. Panel composable: `useElementHighlight.ts` (new)
-  - [ ] 5.1 Create the module-level singleton composable
+- [x] 5. Panel composable: `useElementHighlight.ts` (new)
+  - [x] 5.1 Create the module-level singleton composable
     - New file `packages/extension/panel-vue/src/composables/useElementHighlight.ts` with module-level `pendingTimer` and `activeKey` state shared across all rows
     - `queryActiveTabId()`: use `api.tabs.query({ active: true, currentWindow: true })` in callback form (matching `getActiveTabUrl`), wrapped in try/catch, resolving to `null` when there is no active tab
     - `sendToRuntime(msg)`: query the active tab, and when a tab id exists send via `api.tabs.sendMessage(tabId, msg)`; swallow every failure (no tab, rejection, throw) to `null`
