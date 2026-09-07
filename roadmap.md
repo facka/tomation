@@ -11,13 +11,13 @@
   - Support configurable selectors (id, class, data attributes, CSS, XPath)
   - Output generated code in @tomation/dsl format
 
-- [ ] VSCode extension for linting code and checking errors before running compile process
+- [x] VSCode extension for linting code and checking errors before running compile process
   - Create a VSCode extension that validates project-specific syntax and structure
   - Provide real-time error highlighting and diagnostic messages in the editor
   - Catch common mistakes early to reduce failed compile cycles
   - Include quick-fix suggestions for known error patterns
   
-- [ ] Remove old index.html and panel.js files
+- [x] Remove old index.html and panel.js files
   - Identify and remove deprecated index.html and panel.js that are no longer in use
   - Verify no remaining references or imports depend on these files
   - Update documentation to reflect the removed files
