@@ -43,6 +43,49 @@
         "chatSessionId": "sess_4f853ac2-316b-4ce0-8b79-a6c6775f0f27",
         "timestamp": 1788792745985
       }
+    ],
+    "2.1 Add the self-invoking `injectHoverStyles()` hover-style injector": [
+      {
+        "executionId": "57f0663e-2276-4d6a-af9d-73ebdf7d468f",
+        "chatSessionId": "sess_189713bf-18cc-4ab1-b25a-42447af94f37",
+        "timestamp": 1788793969099
+      },
+      {
+        "executionId": "57f0663e-2276-4d6a-af9d-73ebdf7d468f",
+        "chatSessionId": "sess_189713bf-18cc-4ab1-b25a-42447af94f37",
+        "timestamp": 1788794009030
+      }
+    ],
+    "2.2 Add the pure hover helpers `hoverSelectorFor`, `isInViewport`, `handleHoverHighlight`, `handleHoverClear`": [
+      {
+        "executionId": "57f0663e-2276-4d6a-af9d-73ebdf7d468f",
+        "chatSessionId": "sess_189713bf-18cc-4ab1-b25a-42447af94f37",
+        "timestamp": 1788794030686
+      },
+      {
+        "executionId": "57f0663e-2276-4d6a-af9d-73ebdf7d468f",
+        "chatSessionId": "sess_189713bf-18cc-4ab1-b25a-42447af94f37",
+        "timestamp": 1788794103474
+      }
+    ],
+    "2.3 Wire `HOVER_HIGHLIGHT` and `HOVER_CLEAR` into the `onMessage` listener": [
+      {
+        "executionId": "57f0663e-2276-4d6a-af9d-73ebdf7d468f",
+        "chatSessionId": "sess_189713bf-18cc-4ab1-b25a-42447af94f37",
+        "timestamp": 1788794116195
+      },
+      {
+        "executionId": "57f0663e-2276-4d6a-af9d-73ebdf7d468f",
+        "chatSessionId": "sess_189713bf-18cc-4ab1-b25a-42447af94f37",
+        "timestamp": 1788794156259
+      }
+    ],
+    "2. Runtime: hover style injection and hover message handlers": [
+      {
+        "executionId": "57f0663e-2276-4d6a-af9d-73ebdf7d468f",
+        "chatSessionId": "sess_189713bf-18cc-4ab1-b25a-42447af94f37",
+        "timestamp": 1788794156397
+      }
     ]
   }
 }

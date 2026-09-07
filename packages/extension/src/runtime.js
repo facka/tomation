@@ -8,6 +8,13 @@ var api = typeof browser !== 'undefined' ? browser : chrome;
   (document.head || document.documentElement).appendChild(style);
 })();
 
+// Inject hover-highlight CSS so data-tomation-hover elements are visible with a distinct color
+(function injectHoverStyles() {
+  var style = document.createElement('style');
+  style.textContent = '[data-tomation-hover="true"] { outline: 2px dashed #f5a623 !important; outline-offset: 2px; box-shadow: 0 0 0 4px rgba(245, 166, 35, 0.25) !important; transition: outline 0.15s ease, box-shadow 0.15s ease; }';
+  (document.head || document.documentElement).appendChild(style);
+})();
+
 var TIMEOUT_5sec = 5000;
 /**
  * Check if a single DOM element matches all conditions in the `where` object.
@@ -683,6 +690,72 @@ function unhighlightElement(el) {
 }
 
 /**
+ * Build a `[tomation-key="…"]` attribute selector for the given key.
+ * Uses CSS.escape when available; otherwise falls back to escaping the
+ * characters that could break a double-quoted attribute selector (" and \)
+ * so the resulting selector is always valid.
+ *
+ * @param {string} key
+ * @returns {string}
+ */
+function hoverSelectorFor(key) {
+  var esc = (window.CSS && CSS.escape) ? CSS.escape(key) : key.replace(/["\\]/g, '\\$&');
+  return '[tomation-key="' + esc + '"]';
+}
+
+/**
+ * Return true when the element is fully within the viewport.
+ * Reads getBoundingClientRect and window dimensions defensively, falling
+ * back to documentElement client dimensions.
+ *
+ * @param {Element} el
+ * @returns {boolean}
+ */
+function isInViewport(el) {
+  var r = el.getBoundingClientRect();
+  var vh = window.innerHeight || document.documentElement.clientHeight;
+  var vw = window.innerWidth || document.documentElement.clientWidth;
+  return r.top >= 0 && r.left >= 0 && r.bottom <= vh && r.right <= vw;
+}
+
+/**
+ * Highlight all elements tagged with the given element key for panel hover.
+ * On zero matches, touches nothing and reports found: 0. Otherwise sets
+ * data-tomation-hover="true" on every match and scrolls the first match into
+ * view only when it is off-screen.
+ *
+ * @param {string} key - the element key to hover-highlight
+ * @returns {{type: string, found: number}}
+ */
+function handleHoverHighlight(key) {
+  var matches = document.querySelectorAll(hoverSelectorFor(key));
+  if (matches.length === 0) {
+    return { type: 'HOVER_RESULT', found: 0 };
+  }
+  for (var i = 0; i < matches.length; i++) {
+    matches[i].setAttribute('data-tomation-hover', 'true');
+  }
+  if (!isInViewport(matches[0])) {
+    matches[0].scrollIntoView({ block: 'nearest' });
+  }
+  return { type: 'HOVER_RESULT', found: matches.length };
+}
+
+/**
+ * Clear hover highlighting from every element that has it, leaving zero
+ * data-tomation-hover elements. Does not touch data-tomation-active.
+ *
+ * @returns {{ok: boolean}}
+ */
+function handleHoverClear() {
+  var hovered = document.querySelectorAll('[data-tomation-hover]');
+  for (var i = 0; i < hovered.length; i++) {
+    hovered[i].removeAttribute('data-tomation-hover');
+  }
+  return { ok: true };
+}
+
+/**
  * Apply a sequence of navigation steps starting from an anchor element.
  * Traverses the DOM synchronously following each step in order.
  *
@@ -1207,6 +1280,14 @@ function deriveKeyCode(key) {
 var ACTIONS_NEEDING_ELEMENT = ['click', 'type', 'typePassword', 'select', 'assertExists', 'assertHasText', 'waitFor', 'upload', 'saveText', 'saveAttribute', 'saveValue'];
 
 api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+  if (message.type === 'HOVER_HIGHLIGHT') {
+    sendResponse(handleHoverHighlight(message.key));
+    return;
+  }
+  if (message.type === 'HOVER_CLEAR') {
+    sendResponse(handleHoverClear());
+    return;
+  }
   if (message.type !== 'EXECUTE_STEP') {
     return;
   }

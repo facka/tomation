@@ -52,19 +52,19 @@ No packaging/deployment tasks are included — the change integrates into the ex
     - A descriptor that cannot resolve leaves no `tomation-key` on any element; developer runs the test manually
     - _Requirements: 1.3_
 
-- [ ] 2. Runtime: hover style injection and hover message handlers
-  - [ ] 2.1 Add the self-invoking `injectHoverStyles()` hover-style injector
+- [x] 2. Runtime: hover style injection and hover message handlers
+  - [x] 2.1 Add the self-invoking `injectHoverStyles()` hover-style injector
     - Add a second self-invoking style injector alongside `injectHighlightStyles()`, targeting `[data-tomation-hover="true"]` with a distinct color (dashed amber outline + amber box-shadow) so it differs from the action highlight's indigo in at least one outline/box-shadow color, and both remain individually observable when applied to the same element
     - Append to `document.head || document.documentElement`; do not modify the existing action-highlight style block
     - _Requirements: 2.4, 7.1, 7.2_
-  - [ ] 2.2 Add the pure hover helpers `hoverSelectorFor`, `isInViewport`, `handleHoverHighlight`, `handleHoverClear`
+  - [x] 2.2 Add the pure hover helpers `hoverSelectorFor`, `isInViewport`, `handleHoverHighlight`, `handleHoverClear`
     - `hoverSelectorFor(key)`: build `[tomation-key="…"]` using `CSS.escape` when available, with a minimal `"`/`\` fallback, so quotes/backslashes cannot break the selector
     - `isInViewport(el)`: read `getBoundingClientRect` and `window.innerHeight/innerWidth` defensively
     - `handleHoverHighlight(key)`: `querySelectorAll(hoverSelectorFor(key))`; on zero matches return `{ type: 'HOVER_RESULT', found: 0 }` and touch nothing; otherwise set `data-tomation-hover="true"` on all matches, `scrollIntoView({ block: 'nearest' })` the first match only when it is off-screen, and return `{ type: 'HOVER_RESULT', found: matches.length }`
     - `handleHoverClear()`: remove `data-tomation-hover` from every `[data-tomation-hover]` element (leaving zero) without touching `data-tomation-active`; return `{ ok: true }`
     - Export the new pure functions for testing wherever `runtime.js` already exports functions for tests
     - _Requirements: 3.2, 3.4, 3.5, 3.6, 3.7, 3.8, 4.2, 4.4, 6.3, 6.4, 7.3, 7.4_
-  - [ ] 2.3 Wire `HOVER_HIGHLIGHT` and `HOVER_CLEAR` into the `onMessage` listener
+  - [x] 2.3 Wire `HOVER_HIGHLIGHT` and `HOVER_CLEAR` into the `onMessage` listener
     - Handle `message.type === 'HOVER_HIGHLIGHT'` by `sendResponse(handleHoverHighlight(message.key))` and returning synchronously; handle `message.type === 'HOVER_CLEAR'` by `sendResponse(handleHoverClear())` and returning synchronously
     - Place both branches before the `EXECUTE_STEP` early-return guard so they never interfere with the asynchronous execute-step path (which returns `true`)
     - A request delivered to a tab with no runtime is simply never received, so no attribute is applied and the DOM is unchanged
