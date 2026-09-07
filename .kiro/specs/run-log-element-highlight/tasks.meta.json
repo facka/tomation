@@ -124,6 +124,37 @@
         "chatSessionId": "sess_931d09e8-4c02-4117-839b-e3f2978cc8a7",
         "timestamp": 1788795099431
       }
+    ],
+    "6.1 Add hover state, predicates, and handlers to `LogEntry.vue`": [
+      {
+        "executionId": "9ce9ef28-9ba5-459e-83dc-354a4c2cf185",
+        "chatSessionId": "sess_d1d9f2ee-b88e-434c-9630-37373d97cc5b",
+        "timestamp": 1788796374222
+      },
+      {
+        "executionId": "9ce9ef28-9ba5-459e-83dc-354a4c2cf185",
+        "chatSessionId": "sess_d1d9f2ee-b88e-434c-9630-37373d97cc5b",
+        "timestamp": 1788796480225
+      }
+    ],
+    "6.2 Wire the template handlers and inline Element_Removed_Message": [
+      {
+        "executionId": "9ce9ef28-9ba5-459e-83dc-354a4c2cf185",
+        "chatSessionId": "sess_d1d9f2ee-b88e-434c-9630-37373d97cc5b",
+        "timestamp": 1788796375218
+      },
+      {
+        "executionId": "9ce9ef28-9ba5-459e-83dc-354a4c2cf185",
+        "chatSessionId": "sess_d1d9f2ee-b88e-434c-9630-37373d97cc5b",
+        "timestamp": 1788796480489
+      }
+    ],
+    "6. Panel component: `LogEntry.vue` hover handlers and inline message": [
+      {
+        "executionId": "9ce9ef28-9ba5-459e-83dc-354a4c2cf185",
+        "chatSessionId": "sess_d1d9f2ee-b88e-434c-9630-37373d97cc5b",
+        "timestamp": 1788796480605
+      }
     ]
   }
 }

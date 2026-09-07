@@ -121,8 +121,8 @@ No packaging/deployment tasks are included — the change integrates into the ex
     - Developer runs the tests manually
     - _Requirements: 3.1, 4.1, 5.1_
 
-- [ ] 6. Panel component: `LogEntry.vue` hover handlers and inline message
-  - [ ] 6.1 Add hover state, predicates, and handlers to `LogEntry.vue`
+- [x] 6. Panel component: `LogEntry.vue` hover handlers and inline message
+  - [x] 6.1 Add hover state, predicates, and handlers to `LogEntry.vue`
     - Use `useElementHighlight`, a local `showRemovedMessage` ref, and a `hovering` flag
     - `elementKey` computed: the row's non-empty `target` or `null` (Req 3.3)
     - `ELEMENT_RESOLVING_ACTIONS` set mirroring the runtime element-dependent actions plus `presskey`; `stepResolvedElement(entry)` returns true only when `target` is non-empty, the lowercased action is in the set and is not `assertnotexists`, and `status === 'pass'`
@@ -130,7 +130,7 @@ No packaging/deployment tasks are included — the change integrates into the ex
     - `onPointerLeave`: set `hovering = false`, hide the message, and call `clear()`
     - `onBeforeUnmount`: when still hovering, clear the outstanding hover before the row is removed
     - _Requirements: 3.3, 3.9, 4.1, 4.5, 6.5, 8.1, 8.2, 8.3, 8.4_
-  - [ ] 6.2 Wire the template handlers and inline Element_Removed_Message
+  - [x] 6.2 Wire the template handlers and inline Element_Removed_Message
     - Attach `@pointerenter="onPointerEnter"` and `@pointerleave="onPointerLeave"` to the root `.log-entry` element
     - Render the inline Element_Removed_Message beneath the row (guarded by `showRemovedMessage`), associated with the specific row rather than as a global notification; register any new icon used in `packages/extension/panel-vue/src/icons.ts`
     - _Requirements: 8.4, 8.5_
