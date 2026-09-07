@@ -7,17 +7,18 @@ export interface WhereBreakdownEntry {
   passed: boolean;
 }
 
-export interface ClosestLabelStrategyOutcome {
-  name: 'boundedSubtree' | 'forAttr' | 'ancestorWalk' | 'ariaLabelledby';
-  outcome: 'matched' | 'not-matched';
-}
-
 export interface ClosestLabelTrace {
-  labelTag: string;
+  labelTag: string;            // spec.tag (Req 5.2)
   labelText: string | null;    // truncated 256; null when absent (Req 5.3)
   labelTextAbsent?: boolean;
-  bounded: boolean;            // true = search bounded to parent subtree (Req 5.4)
-  strategies: ClosestLabelStrategyOutcome[];
+  bounded: boolean;            // true = distance candidates bounded to parent subtree (Req 5.4)
+  method: 'explicit-for' | 'explicit-aria' | 'closest-distance' | 'no-candidates'; // (Req 5.1)
+  candidateCount: number;      // spec.tag candidates considered in scope (Req 5.8)
+  chosen: {                    // the label the matcher actually evaluated (Req 5.8)
+    text: string | null;       // trimmed + truncated 256; null when none
+    distance: number | null;   // DOM-tree distance; null for explicit associations or none
+  } | null;                    // null when no-candidates and no explicit target
+  matched: boolean;            // whether the matcher passed (Req 5.6)
 }
 
 export interface NavigateTrace {

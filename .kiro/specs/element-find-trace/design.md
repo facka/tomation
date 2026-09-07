@@ -128,24 +128,34 @@ Truncation helper: `truncate256(v)` coerces to string and slices to 256 chars, r
 
 ### 3. `runtime.js` — instrumented `matchClosestLabel` (new failure-time variant)
 
-`matchClosestLabel` is left intact for the matching path. A parallel `traceClosestLabel(el, spec, parentNode)` runs **only** during the failure pass when the Near_Miss_Candidate has a failing `closestLabel` matcher (Req 5.1). It mirrors the existing strategy structure and records outcomes:
+`matchClosestLabel` selects the label it evaluates by a **DOM-tree distance** metric, with explicit associations taking precedence. The algorithm is:
+
+1. **Explicit association wins.** If `el.id` is set and one or more `<spec.tag for="el.id">` labels exist, the association is authoritative: the matcher passes iff any such label's trimmed `textContent === spec.text`; if a `for=` label exists but no text matches, the matcher fails **without** falling back to distance. Otherwise, if `el` has `aria-labelledby` and the referenced element exists with `tagName === spec.tag.toUpperCase()`, that association is authoritative: pass iff its trimmed `textContent === spec.text` (a tag/text mismatch fails).
+2. **Closest-by-distance.** Only when neither an explicit `for=` label nor an aria-labelledby target exists, collect candidate labels matching `spec.tag` within scope — the `parentNode` subtree when childOf-bounded, otherwise the **whole document** (no ancestor cap; this replaces the old 3-ancestor heuristic). If there are zero candidates, the matcher fails. Compute the DOM-tree distance from `el` to each candidate via the shared helper `domTreeDistance(a, b)` — it finds the nearest common ancestor (the first element in `a`'s ancestor chain that `contains(b)`, where `contains` includes self) and returns hops-from-`a` + hops-from-`b` (Infinity if none). Pick the single minimum-distance candidate; on a tie, the candidate earliest in document order wins (kept unless the new one is `DOCUMENT_POSITION_PRECEDING` the current best). The matcher passes iff that single closest label's trimmed `textContent === spec.text`. A non-closest label matching the text must **not** cause a pass.
+
+A parallel `traceClosestLabel(el, spec, parentNode)` runs **only** during the failure pass when the Near_Miss_Candidate has a failing `closestLabel` matcher (Req 5.1). It mirrors `matchClosestLabel`'s decision exactly (same explicit-wins-then-distance logic, same `domTreeDistance` helper) but, instead of returning a boolean, records which method decided, the candidate count in scope, and the chosen label's text and distance:
 
 ```js
 function traceClosestLabel(el, spec, parentNode) {
   // returns:
   // {
-  //   labelTag, labelText (truncated 256; or absent flag, Req 5.3),
-  //   bounded: boolean,                 // Strategy A ran (parent-scoped, Req 5.4)
-  //   strategies: [                     // in attempt order
-  //     { name: 'boundedSubtree'|'forAttr'|'ancestorWalk'|'ariaLabelledby',
-  //       outcome: 'matched'|'not-matched' }
-  //   ]
+  //   labelTag,                         // spec.tag (Req 5.2)
+  //   labelText (truncated 256; or labelTextAbsent flag, Req 5.3),
+  //   bounded: boolean,                 // parentNode provided (childOf-bounded, Req 5.4)
+  //   method: 'explicit-for'|'explicit-aria'|'closest-distance'|'no-candidates', // (Req 5.1)
+  //   candidateCount: number,           // spec.tag candidates in scope (Req 5.8)
+  //   chosen: {                         // the label the matcher actually evaluated (Req 5.8)
+  //     text: string|null,              // trimmed + truncated 256; null when none
+  //     distance: number|null,          // DOM-tree distance; null for explicit/none
+  //   } | null,                         // null when no-candidates and no explicit target
+  //   matched: boolean                  // whether the matcher passed (Req 5.6)
   // }
 }
 ```
 
-- Parent-scoped (`parentNode` present): records `bounded: true` and a single `boundedSubtree` strategy outcome (Req 5.4). Strategy A only.
-- Unbounded: records outcomes for `forAttr` (B1), `ancestorWalk` (B2), `ariaLabelledby` (B3), each `matched`/`not-matched` (Req 5.5). It reuses the existing B1/B2/B3 logic exactly (no semantic change), simply capturing per-strategy results instead of early-returning a boolean.
+- Parent-scoped (`parentNode` present): records `bounded: true` and confines the distance candidates to the parent subtree (Req 5.4).
+- Explicit association: records `method: 'explicit-for'` or `'explicit-aria'`, `chosen.distance: null`, and `chosen.text` = the associated label's trimmed text (Req 5.1, 5.7).
+- Distance path: records `method: 'closest-distance'`, `candidateCount`, and the chosen label's `chosen.text` + `chosen.distance` (Req 5.5, 5.8); when scope has no candidates it records `method: 'no-candidates'`, `candidateCount: 0`, `chosen: null` (Req 5.8).
 
 ### 4. `runtime.js` — navigate instrumentation
 
@@ -349,17 +359,18 @@ export interface WhereBreakdownEntry {
   passed: boolean;
 }
 
-export interface ClosestLabelStrategyOutcome {
-  name: 'boundedSubtree' | 'forAttr' | 'ancestorWalk' | 'ariaLabelledby';
-  outcome: 'matched' | 'not-matched';
-}
-
 export interface ClosestLabelTrace {
-  labelTag: string;
-  labelText: string | null;    // truncated 256; null when absent (Req 5.3)
+  labelTag: string;                // spec.tag (Req 5.2)
+  labelText: string | null;        // truncated 256; null when absent (Req 5.3)
   labelTextAbsent?: boolean;
-  bounded: boolean;            // true = search bounded to parent subtree (Req 5.4)
-  strategies: ClosestLabelStrategyOutcome[];
+  bounded: boolean;                // true = distance candidates bounded to parent subtree (Req 5.4)
+  method: 'explicit-for' | 'explicit-aria' | 'closest-distance' | 'no-candidates'; // (Req 5.1)
+  candidateCount: number;          // spec.tag candidates considered in scope (Req 5.8)
+  chosen: {                        // the label the matcher actually evaluated (Req 5.8)
+    text: string | null;           // trimmed + truncated 256; null when none
+    distance: number | null;       // DOM-tree distance; null for explicit associations or none
+  } | null;                        // null when no-candidates and no explicit target
+  matched: boolean;                // whether the matcher passed (Req 5.6)
 }
 
 export interface NavigateTrace {
@@ -519,11 +530,11 @@ Regardless of which classification is recorded, the step result is still a failu
 
 **Validates: Requirements 1.3, 4.1, 4.4**
 
-### Property 10: closestLabel strategy outcomes are recorded when it is the failing matcher
+### Property 10: closestLabel chooses by distance with explicit-association precedence
 
-*For any* Near_Miss_Candidate whose failing matcher is `closestLabel`, `findTrace.closestLabel.strategies` is non-empty and every recorded strategy outcome is `matched` or `not-matched`.
+*For any* target element whose single closest candidate label (by DOM-tree distance, document-order tiebreak) has text that differs from the expected label text, the `closestLabel` matcher fails even when a farther candidate label matches the expected text; and *for any* target with an explicit `for=`/`aria-labelledby` association, the matcher's result is decided by that associated label's text regardless of DOM-tree distance. When the matcher fails, `findTrace.closestLabel.method` is one of `explicit-for`, `explicit-aria`, `closest-distance`, or `no-candidates`, and `findTrace.closestLabel.matched` is `false`.
 
-**Validates: Requirements 5.1**
+**Validates: Requirements 5.1, 5.6, 5.7**
 
 ### Property 11: Navigate records the first failing hop by type and zero-based index
 
@@ -579,7 +590,7 @@ Regardless of which classification is recorded, the step result is still a failu
 **Unit / example tests:**
 - `evaluateWhereKey`: one example per supported key confirming `{ passed, actual }` matches `matchesWhere`'s decision and reports the right observed value, including `UNAVAILABLE` for absent attributes (Req 2.7).
 - `buildWhereBreakdown`: zero-candidate empty result (Req 2.2, 8.3); single candidate; ties resolved to first.
-- `traceClosestLabel`: bounded (Strategy A, Req 5.4) vs unbounded (B1/B2/B3, Req 5.5); absent label text (Req 5.3).
+- `traceClosestLabel`: bounded distance scope (Req 5.4) vs unbounded whole-document distance (Req 5.5); explicit-for/explicit-aria precedence (Req 5.1, 5.7); no-candidates (Req 5.8); absent label text (Req 5.3); records method + candidateCount + chosen{text,distance} (Req 5.8).
 - Parent branches: not-resolved (Req 4.2), resolved-child-missing (Req 4.3), multiple parent matches (Req 4.5).
 - Navigate anchor failure (Req 6.4); xpath one/many/invalid outcomes (Req 7.2, 7.3, 7.5).
 - `LogEntry.vue`: mounts for fail+trace (disclosure present, initially collapsed — Req 10.1, 10.2), expand shows the one-line diagnosis with tag/candidate count (Req 10.3) and the generated Finder_Snippet block with a copy control (Req 10.4, 10.8), collapse returns to error line (Req 10.9), and fail-without-trace unchanged (Req 10.10).

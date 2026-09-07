@@ -257,7 +257,67 @@ function searchSubtreeForLabel(root, tag, text) {
 }
 
 /**
- * Determine if a label element matching the spec exists near the target element.
+ * Compute the DOM-tree distance between two attached elements.
+ *
+ * Distance = (hops from `a` up to the nearest common ancestor) +
+ *            (hops from `b` up to the nearest common ancestor).
+ * The nearest common ancestor (NCA) is the first element in `a`'s ancestor
+ * chain (a, a.parentElement, ...) that is an ancestor-or-self of `b`
+ * (`ancestor.contains(b)` — `contains` includes self). If no common ancestor
+ * is found (should not happen for attached nodes), returns Infinity so the
+ * candidate loses any minimum comparison.
+ *
+ * @param {Element} a
+ * @param {Element} b
+ * @returns {number}
+ */
+function domTreeDistance(a, b) {
+  var aHops = 0;
+  var ancestor = a;
+  while (ancestor) {
+    if (ancestor.contains(b)) {
+      // ancestor is the NCA; count hops from b up to ancestor.
+      var bHops = 0;
+      var node = b;
+      while (node && node !== ancestor) {
+        bHops++;
+        node = node.parentElement;
+      }
+      return aHops + bHops;
+    }
+    aHops++;
+    ancestor = ancestor.parentElement;
+  }
+  return Infinity;
+}
+
+/**
+ * Collect candidate label elements matching the spec tag within the search
+ * scope: the parent subtree when childOf-bounded, otherwise the whole document.
+ *
+ * @param {{ tag: string }} spec - label specification (raw tag used as today)
+ * @param {Element|null} parentNode - childOf parent if present, null otherwise
+ * @returns {HTMLCollection|NodeList} live/static collection of candidates
+ */
+function collectLabelCandidates(spec, parentNode) {
+  var root = parentNode || document;
+  return root.getElementsByTagName(spec.tag);
+}
+
+/**
+ * Determine if the label element closest to the target (by DOM-tree distance)
+ * matches the spec. Explicit associations take precedence over distance.
+ *
+ * Algorithm:
+ *  1. Explicit association wins:
+ *     - If `el.id` is set and a `<spec.tag for="el.id">` exists, the association
+ *       is authoritative: pass iff ANY such label's trimmed textContent === text.
+ *       A `for=` label that mismatches text returns false (no distance fallback).
+ *     - Else if `el` has `aria-labelledby` and the referenced element exists with
+ *       matching tag, that association is authoritative: pass iff its trimmed
+ *       textContent === text; a tag/text mismatch returns false.
+ *  2. Otherwise pick the single closest candidate by DOM-tree distance (document
+ *     order tiebreak) within scope; pass iff its trimmed textContent === text.
  *
  * @param {Element} el - target element
  * @param {{ tag: string, text: string }} spec - label specification
@@ -268,71 +328,82 @@ function matchClosestLabel(el, spec, parentNode) {
   var tag = spec.tag.toUpperCase();
   var text = spec.text;
 
-  // Strategy A: childOf-bounded search — search within parent subtree only
-  if (parentNode) {
-    return searchSubtreeForLabel(parentNode, tag, text);
-  }
-
-  // Strategy B: Unbounded search with max 3 ancestor levels
-
-  // B1: Explicit `for` attribute — find a matching-tag element with for=el.id
+  // 1. Explicit association wins — `for=` attribute.
   if (el.id) {
     var forLabels = document.querySelectorAll(spec.tag + '[for="' + el.id + '"]');
-    for (var i = 0; i < forLabels.length; i++) {
-      if (forLabels[i].tagName === tag && forLabels[i].textContent.trim() === text) {
-        return true;
-      }
-    }
-  }
-
-  // B2: Walk up at most 3 ancestor levels, search descendants
-  // Stop at the first level where a matching-tag element is found — if its text
-  // doesn't match, the closest label is wrong (don't keep searching higher)
-  var ancestor = el.parentElement;
-  for (var depth = 0; depth < 3 && ancestor; depth++) {
-    var candidates = ancestor.getElementsByTagName(tag);
-    if (candidates.length > 0) {
-      // Found element(s) with matching tag at this level — check text
-      for (var ci = 0; ci < candidates.length; ci++) {
-        if (candidates[ci].textContent.trim() === text) {
+    if (forLabels.length > 0) {
+      for (var i = 0; i < forLabels.length; i++) {
+        if (forLabels[i].tagName === tag && forLabels[i].textContent.trim() === text) {
           return true;
         }
       }
-      // Tag found but text didn't match — stop searching further
+      // A `for=` association exists but no matching text — authoritative, fail.
       return false;
     }
-    ancestor = ancestor.parentElement;
   }
 
-  // B3: aria-labelledby resolution
+  // 1b. Explicit association wins — aria-labelledby.
   var labelledBy = el.getAttribute('aria-labelledby');
   if (labelledBy) {
     var refEl = document.getElementById(labelledBy);
-    if (refEl && refEl.tagName === tag && refEl.textContent.trim() === text) {
-      return true;
+    if (refEl && refEl.tagName === tag) {
+      // Referenced element exists with matching tag — authoritative.
+      return refEl.textContent.trim() === text;
     }
   }
 
-  return false;
+  // 2. Closest-by-distance within scope.
+  var candidates = collectLabelCandidates(spec, parentNode);
+  if (candidates.length === 0) {
+    return false;
+  }
+
+  var best = null;
+  var bestDistance = Infinity;
+  for (var ci = 0; ci < candidates.length; ci++) {
+    var cand = candidates[ci];
+    var dist = domTreeDistance(el, cand);
+    if (dist < bestDistance) {
+      bestDistance = dist;
+      best = cand;
+    } else if (dist === bestDistance && best) {
+      // Tiebreak: earliest document order wins — keep current best unless the
+      // candidate precedes it in the document.
+      var rel = best.compareDocumentPosition(cand);
+      if (rel & 2 /* DOCUMENT_POSITION_PRECEDING */) {
+        best = cand;
+      }
+    }
+  }
+
+  if (!best) {
+    return false;
+  }
+
+  return best.textContent.trim() === text;
 }
 
 /**
  * Failure-time instrumented variant of matchClosestLabel (Req 5.1-5.5). Runs
  * ONLY during the failure pass when the Near_Miss_Candidate has a failing
- * `closestLabel` matcher. It mirrors the strategy structure of
- * matchClosestLabel EXACTLY (no semantic change) but, instead of early-returning
- * a boolean, records the outcome of each strategy it attempts.
+ * `closestLabel` matcher. It mirrors matchClosestLabel's decision EXACTLY
+ * (explicit-wins-then-distance) but, instead of returning a boolean, records
+ * WHICH method decided, the candidate count, and the chosen label's text and
+ * DOM-tree distance.
  *
  * Return shape:
  * {
- *   labelTag: string,                 // the expected label tag (Req 5.2)
- *   labelText: string|null,           // expected label text, truncated 256; null when absent (Req 5.3)
- *   labelTextAbsent: boolean,         // present+true when the expected label text is absent (Req 5.3)
- *   bounded: boolean,                 // true when Strategy A ran (parent-scoped, Req 5.4)
- *   strategies: [                     // in attempt order
- *     { name: 'boundedSubtree'|'forAttr'|'ancestorWalk'|'ariaLabelledby',
- *       outcome: 'matched'|'not-matched' }
- *   ]
+ *   labelTag: string,              // spec.tag (Req 5.2)
+ *   labelText: string|null,        // expected text, truncated 256; null when absent (Req 5.3)
+ *   labelTextAbsent: boolean,      // present+true when spec.text is undefined/null (Req 5.3)
+ *   bounded: boolean,              // true when parentNode provided (childOf-bounded, Req 5.4)
+ *   method: 'explicit-for'|'explicit-aria'|'closest-distance'|'no-candidates',
+ *   candidateCount: number,        // number of spec.tag candidates in scope
+ *   chosen: {                      // the label the matcher actually evaluated
+ *     text: string|null,           // trimmed + truncated 256; null when none
+ *     distance: number|null,       // DOM-tree distance; null for explicit/none
+ *   } | null,                      // null when no-candidates and no explicit target
+ *   matched: boolean               // whether the matcher passed
  * }
  *
  * @param {Element} el - target element
@@ -346,8 +417,11 @@ function traceClosestLabel(el, spec, parentNode) {
 
   var record = {
     labelTag: spec.tag,
-    bounded: false,
-    strategies: []
+    bounded: !!parentNode,
+    method: null,
+    candidateCount: 0,
+    chosen: null,
+    matched: false
   };
 
   // Record expected label text, truncated to 256 chars; flag absence (Req 5.2, 5.3).
@@ -358,62 +432,87 @@ function traceClosestLabel(el, spec, parentNode) {
     record.labelText = truncate256(text);
   }
 
-  // Strategy A: childOf-bounded search — search within parent subtree only (Req 5.4).
-  if (parentNode) {
-    record.bounded = true;
-    record.strategies.push({
-      name: 'boundedSubtree',
-      outcome: searchSubtreeForLabel(parentNode, tag, text) ? 'matched' : 'not-matched'
-    });
-    return record;
-  }
-
-  // Strategy B: Unbounded search with max 3 ancestor levels (Req 5.5).
-
-  // B1: Explicit `for` attribute — find a matching-tag element with for=el.id.
-  var forMatched = false;
+  // 1. Explicit association wins — `for=` attribute.
   if (el.id) {
     var forLabels = document.querySelectorAll(spec.tag + '[for="' + el.id + '"]');
-    for (var i = 0; i < forLabels.length; i++) {
-      if (forLabels[i].tagName === tag && forLabels[i].textContent.trim() === text) {
-        forMatched = true;
-        break;
-      }
-    }
-  }
-  record.strategies.push({ name: 'forAttr', outcome: forMatched ? 'matched' : 'not-matched' });
-
-  // B2: Walk up at most 3 ancestor levels, search descendants.
-  // Mirrors matchClosestLabel: stop at the first level where a matching-tag
-  // element is found — if its text doesn't match, the closest label is wrong.
-  var ancestorMatched = false;
-  var ancestor = el.parentElement;
-  for (var depth = 0; depth < 3 && ancestor; depth++) {
-    var candidates = ancestor.getElementsByTagName(tag);
-    if (candidates.length > 0) {
-      for (var ci = 0; ci < candidates.length; ci++) {
-        if (candidates[ci].textContent.trim() === text) {
-          ancestorMatched = true;
-          break;
+    if (forLabels.length > 0) {
+      record.method = 'explicit-for';
+      var forMatched = false;
+      var forChosen = null;
+      for (var i = 0; i < forLabels.length; i++) {
+        if (forLabels[i].tagName === tag) {
+          if (forChosen === null) {
+            forChosen = forLabels[i];
+          }
+          if (forLabels[i].textContent.trim() === text) {
+            forMatched = true;
+            forChosen = forLabels[i];
+            break;
+          }
         }
       }
-      // Tag found at this level — stop searching further regardless of text match.
-      break;
+      record.chosen = {
+        text: forChosen ? truncate256(forChosen.textContent.trim()) : null,
+        distance: null
+      };
+      record.matched = forMatched;
+      return record;
     }
-    ancestor = ancestor.parentElement;
   }
-  record.strategies.push({ name: 'ancestorWalk', outcome: ancestorMatched ? 'matched' : 'not-matched' });
 
-  // B3: aria-labelledby resolution.
-  var ariaMatched = false;
+  // 1b. Explicit association wins — aria-labelledby.
   var labelledBy = el.getAttribute('aria-labelledby');
   if (labelledBy) {
     var refEl = document.getElementById(labelledBy);
-    if (refEl && refEl.tagName === tag && refEl.textContent.trim() === text) {
-      ariaMatched = true;
+    if (refEl && refEl.tagName === tag) {
+      record.method = 'explicit-aria';
+      record.chosen = {
+        text: truncate256(refEl.textContent.trim()),
+        distance: null
+      };
+      record.matched = refEl.textContent.trim() === text;
+      return record;
     }
   }
-  record.strategies.push({ name: 'ariaLabelledby', outcome: ariaMatched ? 'matched' : 'not-matched' });
+
+  // 2. Closest-by-distance within scope.
+  var candidates = collectLabelCandidates(spec, parentNode);
+  record.candidateCount = candidates.length;
+
+  if (candidates.length === 0) {
+    record.method = 'no-candidates';
+    record.chosen = null;
+    record.matched = false;
+    return record;
+  }
+
+  record.method = 'closest-distance';
+  var best = null;
+  var bestDistance = Infinity;
+  for (var ci = 0; ci < candidates.length; ci++) {
+    var cand = candidates[ci];
+    var dist = domTreeDistance(el, cand);
+    if (dist < bestDistance) {
+      bestDistance = dist;
+      best = cand;
+    } else if (dist === bestDistance && best) {
+      var rel = best.compareDocumentPosition(cand);
+      if (rel & 2 /* DOCUMENT_POSITION_PRECEDING */) {
+        best = cand;
+      }
+    }
+  }
+
+  if (best) {
+    record.chosen = {
+      text: truncate256(best.textContent.trim()),
+      distance: bestDistance
+    };
+    record.matched = best.textContent.trim() === text;
+  } else {
+    record.chosen = null;
+    record.matched = false;
+  }
 
   return record;
 }

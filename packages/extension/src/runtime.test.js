@@ -877,3 +877,209 @@ test('message listener: unknown action returns error via sendResponse', async fu
   assert.equal(response.ok, false);
   assert.equal(response.error, 'Unknown action: fancyAction');
 });
+
+// ---------------------------------------------------------------------------
+// matchClosestLabel tests — DOM-tree distance semantics (Requirement 5)
+// ---------------------------------------------------------------------------
+
+test('matchClosestLabel: closer label with wrong text fails even if a farther label matches', function () {
+  // Target input's CLOSEST label (sibling in same div) has the WRONG text.
+  // A farther label (in an outer div) has the RIGHT text. Closest wins → fail.
+  setupDOM(
+    '<html><body>' +
+      '<div id="outer">' +
+        '<label>Correct Label</label>' +
+        '<div id="inner">' +
+          '<label>Wrong Label</label>' +
+          '<input id="field" />' +
+        '</div>' +
+      '</div>' +
+    '</body></html>'
+  );
+  var el = window.document.getElementById('field');
+  var matchClosestLabel = window.eval('matchClosestLabel');
+
+  var result = matchClosestLabel(el, { tag: 'label', text: 'Correct Label' }, null);
+  assert.equal(result, false);
+});
+
+test('matchClosestLabel: closest label with right text passes', function () {
+  setupDOM(
+    '<html><body>' +
+      '<div id="outer">' +
+        '<label>Wrong Label</label>' +
+        '<div id="inner">' +
+          '<label>Right Label</label>' +
+          '<input id="field" />' +
+        '</div>' +
+      '</div>' +
+    '</body></html>'
+  );
+  var el = window.document.getElementById('field');
+  var matchClosestLabel = window.eval('matchClosestLabel');
+
+  var result = matchClosestLabel(el, { tag: 'label', text: 'Right Label' }, null);
+  assert.equal(result, true);
+});
+
+test('matchClosestLabel: explicit for= association wins over a closer-by-distance label', function () {
+  // A closer label (sibling) has different text; but a `for=` label elsewhere
+  // matches the expected text. Explicit association wins → pass.
+  setupDOM(
+    '<html><body>' +
+      '<label for="field">Explicit Label</label>' +
+      '<div id="inner">' +
+        '<label>Closer Label</label>' +
+        '<input id="field" />' +
+      '</div>' +
+    '</body></html>'
+  );
+  var el = window.document.getElementById('field');
+  var matchClosestLabel = window.eval('matchClosestLabel');
+
+  var result = matchClosestLabel(el, { tag: 'label', text: 'Explicit Label' }, null);
+  assert.equal(result, true);
+});
+
+test('matchClosestLabel: for= association is authoritative — mismatched text fails without distance fallback', function () {
+  // `for=` label exists but its text mismatches; a closer sibling label matches
+  // the expected text. Because the explicit association is authoritative, fail.
+  setupDOM(
+    '<html><body>' +
+      '<label for="field">Explicit Wrong</label>' +
+      '<div id="inner">' +
+        '<label>Expected Text</label>' +
+        '<input id="field" />' +
+      '</div>' +
+    '</body></html>'
+  );
+  var el = window.document.getElementById('field');
+  var matchClosestLabel = window.eval('matchClosestLabel');
+
+  var result = matchClosestLabel(el, { tag: 'label', text: 'Expected Text' }, null);
+  assert.equal(result, false);
+});
+
+test('matchClosestLabel: childOf-bounded restricts candidates to parentNode subtree', function () {
+  // The matching label lives OUTSIDE the parent subtree. With childOf-bounding,
+  // it is not a candidate, so the matcher fails.
+  setupDOM(
+    '<html><body>' +
+      '<label>Target Label</label>' +
+      '<div id="parent">' +
+        '<label>Inside Label</label>' +
+        '<input id="field" />' +
+      '</div>' +
+    '</body></html>'
+  );
+  var el = window.document.getElementById('field');
+  var parent = window.document.getElementById('parent');
+  var matchClosestLabel = window.eval('matchClosestLabel');
+
+  // 'Target Label' is outside the parent subtree → not a candidate → fail.
+  assert.equal(matchClosestLabel(el, { tag: 'label', text: 'Target Label' }, parent), false);
+  // 'Inside Label' is within the parent subtree → candidate → pass.
+  assert.equal(matchClosestLabel(el, { tag: 'label', text: 'Inside Label' }, parent), true);
+});
+
+test('matchClosestLabel: tiebreak picks the earliest-in-document label when distances are equal', function () {
+  // Two labels are siblings of the input at equal DOM-tree distance. The one
+  // earliest in document order is chosen. Only its text can cause a pass.
+  setupDOM(
+    '<html><body>' +
+      '<div id="row">' +
+        '<label>First Label</label>' +
+        '<label>Second Label</label>' +
+        '<input id="field" />' +
+      '</div>' +
+    '</body></html>'
+  );
+  var el = window.document.getElementById('field');
+  var matchClosestLabel = window.eval('matchClosestLabel');
+
+  // The earliest (First Label) is chosen → matching its text passes.
+  assert.equal(matchClosestLabel(el, { tag: 'label', text: 'First Label' }, null), true);
+  // The later (Second Label), though equally distant, is NOT chosen → fail.
+  assert.equal(matchClosestLabel(el, { tag: 'label', text: 'Second Label' }, null), false);
+});
+
+test('matchClosestLabel: returns false when no candidate labels exist in scope', function () {
+  setupDOM('<html><body><input id="field" /></body></html>');
+  var el = window.document.getElementById('field');
+  var matchClosestLabel = window.eval('matchClosestLabel');
+
+  assert.equal(matchClosestLabel(el, { tag: 'label', text: 'Anything' }, null), false);
+});
+
+// ---------------------------------------------------------------------------
+// traceClosestLabel tests — new decision record shape (Requirement 5)
+// ---------------------------------------------------------------------------
+
+test('traceClosestLabel: records closest-distance method with chosen text and distance', function () {
+  setupDOM(
+    '<html><body>' +
+      '<div id="outer">' +
+        '<label>Correct Label</label>' +
+        '<div id="inner">' +
+          '<label>Wrong Label</label>' +
+          '<input id="field" />' +
+        '</div>' +
+      '</div>' +
+    '</body></html>'
+  );
+  var el = window.document.getElementById('field');
+  var traceClosestLabel = window.eval('traceClosestLabel');
+
+  var rec = traceClosestLabel(el, { tag: 'label', text: 'Correct Label' }, null);
+  assert.equal(rec.method, 'closest-distance');
+  assert.equal(rec.labelTag, 'label');
+  assert.equal(rec.labelText, 'Correct Label');
+  assert.equal(rec.bounded, false);
+  assert.equal(rec.candidateCount, 2);
+  assert.equal(rec.matched, false);
+  assert.equal(rec.chosen.text, 'Wrong Label');
+  assert.equal(typeof rec.chosen.distance, 'number');
+});
+
+test('traceClosestLabel: records explicit-for method with null distance', function () {
+  setupDOM(
+    '<html><body>' +
+      '<label for="field">Explicit Label</label>' +
+      '<div id="inner"><label>Closer Label</label><input id="field" /></div>' +
+    '</body></html>'
+  );
+  var el = window.document.getElementById('field');
+  var traceClosestLabel = window.eval('traceClosestLabel');
+
+  var rec = traceClosestLabel(el, { tag: 'label', text: 'Explicit Label' }, null);
+  assert.equal(rec.method, 'explicit-for');
+  assert.equal(rec.matched, true);
+  assert.equal(rec.chosen.text, 'Explicit Label');
+  assert.equal(rec.chosen.distance, null);
+});
+
+test('traceClosestLabel: records no-candidates when scope has no matching-tag labels', function () {
+  setupDOM('<html><body><input id="field" /></body></html>');
+  var el = window.document.getElementById('field');
+  var traceClosestLabel = window.eval('traceClosestLabel');
+
+  var rec = traceClosestLabel(el, { tag: 'label', text: 'Anything' }, null);
+  assert.equal(rec.method, 'no-candidates');
+  assert.equal(rec.candidateCount, 0);
+  assert.equal(rec.chosen, null);
+  assert.equal(rec.matched, false);
+});
+
+test('traceClosestLabel: bounded flag true and text absence flagged when spec.text is null', function () {
+  setupDOM(
+    '<html><body><div id="parent"><label>X</label><input id="field" /></div></body></html>'
+  );
+  var el = window.document.getElementById('field');
+  var parent = window.document.getElementById('parent');
+  var traceClosestLabel = window.eval('traceClosestLabel');
+
+  var rec = traceClosestLabel(el, { tag: 'label', text: null }, parent);
+  assert.equal(rec.bounded, true);
+  assert.equal(rec.labelText, null);
+  assert.equal(rec.labelTextAbsent, true);
+});

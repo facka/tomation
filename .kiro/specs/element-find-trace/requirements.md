@@ -73,17 +73,20 @@ To keep the success path fast, the detailed per-candidate breakdown is built onc
 3. WHEN the parent element is resolved but the child is not found within the parent subtree, THE Tomation_Finder SHALL record in the Find_Trace that the parent resolved and that the child search was scoped to the parent subtree.
 4. WHEN the parent element is resolved, THE Tomation_Finder SHALL record in the Find_Trace a non-empty identifier for the resolved parent element sufficient to distinguish it from other elements on the page.
 5. IF the Parent_Descriptor matches more than one element, THEN THE Tomation_Finder SHALL record in the Find_Trace the count of matched parent elements and SHALL identify the parent element used to scope the child search.
-### Requirement 5: Record closestLabel strategy outcome
+### Requirement 5: Record closestLabel decision outcome
 
-**User Story:** As a Tomation test developer, I want the trace to show which closestLabel strategy ran and failed, so that I can understand why a label-based match did not resolve.
+**User Story:** As a Tomation test developer, I want the trace to show how the closestLabel matcher chose the label it evaluated and why the label text did not match, so that I can understand why a label-based match did not resolve.
 
 #### Acceptance Criteria
 
-1. WHERE a Where_Matcher of type `closestLabel` is evaluated on the Near_Miss_Candidate and fails, THE Tomation_Finder SHALL record in the Find_Trace the name of each closestLabel strategy that was attempted and, for each, its outcome as either matched or not-matched.
+1. WHERE a Where_Matcher of type `closestLabel` is evaluated on the Near_Miss_Candidate and fails, THE Tomation_Finder SHALL determine the label it evaluates by first preferring an explicit `for`-attribute association, then an `aria-labelledby` association, and only otherwise selecting the candidate label closest to the target element by DOM-tree distance, and SHALL record in the Find_Trace which of these methods decided the match.
 2. THE Tomation_Finder SHALL record in the Find_Trace the label tag and the label text expected by the `closestLabel` Where_Matcher, truncating recorded label text to a maximum of 256 characters.
 3. IF the `closestLabel` Where_Matcher has no expected label text, THEN THE Tomation_Finder SHALL record in the Find_Trace an indication that the expected label text was absent.
-4. WHEN the `closestLabel` evaluation runs inside a parent-scoped subtree, THE Tomation_Finder SHALL record in the Find_Trace that the label search was bounded to the parent subtree.
-5. WHEN the `closestLabel` evaluation runs unbounded, THE Tomation_Finder SHALL record in the Find_Trace, for the `for`-attribute strategy, the ancestor-walk strategy, and the `aria-labelledby` strategy, each strategy's outcome as either matched or not-matched.
+4. WHEN the `closestLabel` evaluation runs inside a parent-scoped subtree, THE Tomation_Finder SHALL confine the DOM-tree-distance candidate labels to that parent subtree and SHALL record in the Find_Trace that the label search was bounded to the parent subtree.
+5. WHEN the `closestLabel` evaluation selects a label by DOM-tree distance, THE Tomation_Finder SHALL consider candidate labels across the whole document when the search is unbounded, SHALL choose the single candidate with the minimum DOM-tree distance to the target element, and SHALL break ties by selecting the candidate that appears earliest in document order.
+6. WHEN the `closestLabel` matcher is evaluated, THE Tomation_Finder SHALL pass only if the trimmed text content of the chosen label — whether chosen by explicit association or by DOM-tree distance — equals the expected label text, such that a non-chosen label matching the expected text does not cause the matcher to pass.
+7. WHEN an explicit `for`-attribute or `aria-labelledby` association exists for the target element, THE Tomation_Finder SHALL treat that association as authoritative and SHALL fail the matcher without falling back to DOM-tree distance when the associated label's text does not equal the expected label text.
+8. WHERE the `closestLabel` matcher fails, THE Tomation_Finder SHALL record in the Find_Trace the number of candidate labels considered in scope and, for the label it evaluated, that label's trimmed text (truncated to a maximum of 256 characters) and, when the label was chosen by DOM-tree distance, its DOM-tree distance to the target element.
 ### Requirement 6: Record navigate hop outcome
 
 **User Story:** As a Tomation test developer, I want the trace to show which navigate hop failed, so that I can fix the DOM traversal that broke.
