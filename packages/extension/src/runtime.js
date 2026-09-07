@@ -647,6 +647,22 @@ function findElement(descriptor, parentNode) {
 }
 
 /**
+ * Tag a resolved element with its element key so the panel can find it later
+ * for hover highlighting. Idempotent: setAttribute overwrites any prior value,
+ * leaving exactly one tomation-key attribute (Req 1.4). Independent of the
+ * data-tomation-active Action_Highlight (Req 2.3). Not removed on step
+ * completion (Req 1.6). No-ops for empty/missing keys (Req 1.2).
+ *
+ * @param {Element} el
+ * @param {string} key - the step's raw Element_Key (message.target)
+ */
+function tagElementKey(el, key) {
+  if (typeof key === 'string' && key.length > 0) {
+    el.setAttribute('tomation-key', key);
+  }
+}
+
+/**
  * Highlight an element by adding the data-tomation-active attribute.
  * Called before executing each step's action.
  *
@@ -1208,6 +1224,9 @@ api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (action === 'assertNotExists') {
     findElementWithParent(message).then(function (findResult) {
       var element = findResult.ok ? findResult.element : null;
+      if (findResult.ok) {
+        tagElementKey(element, message.target);
+      }
       return executeAction(message, element);
     }).then(function (result) {
       sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: result.ok, error: result.error });
@@ -1227,6 +1246,7 @@ api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
           return;
         }
         var element = findResult.element;
+        tagElementKey(element, message.target);
         highlightElement(element);
         return new Promise(function (resolve) { setTimeout(resolve, 400); }).then(function () {
           return handlePressKey(element, message.key, message.options);
@@ -1255,6 +1275,7 @@ api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
         return;
       }
       var element = findResult.element;
+      tagElementKey(element, message.target);
       highlightElement(element);
       // Brief delay so user can see the highlighted element before action executes
       return new Promise(function (resolve) {

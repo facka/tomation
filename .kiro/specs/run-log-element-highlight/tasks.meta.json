@@ -1,0 +1,48 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Add the `tagElementKey(el, key)` helper to `runtime.js`": [
+      {
+        "executionId": "f10c62d7-b855-47c0-b6a3-e5bfaf27247e",
+        "chatSessionId": "sess_4f853ac2-316b-4ce0-8b79-a6c6775f0f27",
+        "timestamp": 1788792569728
+      },
+      {
+        "executionId": "f10c62d7-b855-47c0-b6a3-e5bfaf27247e",
+        "chatSessionId": "sess_4f853ac2-316b-4ce0-8b79-a6c6775f0f27",
+        "timestamp": 1788792629547
+      }
+    ],
+    "1.2 Call `tagElementKey` before `highlightElement` at every element-resolving branch of the `EXECUTE_STEP` listener": [
+      {
+        "executionId": "f10c62d7-b855-47c0-b6a3-e5bfaf27247e",
+        "chatSessionId": "sess_4f853ac2-316b-4ce0-8b79-a6c6775f0f27",
+        "timestamp": 1788792633467
+      },
+      {
+        "executionId": "f10c62d7-b855-47c0-b6a3-e5bfaf27247e",
+        "chatSessionId": "sess_4f853ac2-316b-4ce0-8b79-a6c6775f0f27",
+        "timestamp": 1788792701411
+      }
+    ],
+    "1.3 Confirm `unhighlightElement` persists the tag on step completion": [
+      {
+        "executionId": "f10c62d7-b855-47c0-b6a3-e5bfaf27247e",
+        "chatSessionId": "sess_4f853ac2-316b-4ce0-8b79-a6c6775f0f27",
+        "timestamp": 1788792705341
+      },
+      {
+        "executionId": "f10c62d7-b855-47c0-b6a3-e5bfaf27247e",
+        "chatSessionId": "sess_4f853ac2-316b-4ce0-8b79-a6c6775f0f27",
+        "timestamp": 1788792745842
+      }
+    ],
+    "1. Runtime: tag resolved elements with the element key": [
+      {
+        "executionId": "f10c62d7-b855-47c0-b6a3-e5bfaf27247e",
+        "chatSessionId": "sess_4f853ac2-316b-4ce0-8b79-a6c6775f0f27",
+        "timestamp": 1788792745985
+      }
+    ]
+  }
+}

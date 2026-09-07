@@ -22,18 +22,18 @@ No packaging/deployment tasks are included — the change integrates into the ex
 
 ## Tasks
 
-- [ ] 1. Runtime: tag resolved elements with the element key
-  - [ ] 1.1 Add the `tagElementKey(el, key)` helper to `runtime.js`
+- [x] 1. Runtime: tag resolved elements with the element key
+  - [x] 1.1 Add the `tagElementKey(el, key)` helper to `runtime.js`
     - Define `tagElementKey(el, key)` next to `highlightElement`; when `key` is a non-empty string, call `el.setAttribute('tomation-key', key)` with the raw key value; no-op otherwise
     - `setAttribute` is idempotent, so re-resolving leaves exactly one `tomation-key` with the current key; the helper must not touch `data-tomation-active`
     - _Requirements: 1.1, 1.2, 1.4_
-  - [ ] 1.2 Call `tagElementKey` before `highlightElement` at every element-resolving branch of the `EXECUTE_STEP` listener
+  - [x] 1.2 Call `tagElementKey` before `highlightElement` at every element-resolving branch of the `EXECUTE_STEP` listener
     - In the generic `ACTIONS_NEEDING_ELEMENT` branch, call `tagElementKey(element, message.target)` immediately before `highlightElement(element)`
     - In the `pressKey`-with-`target` branch, call `tagElementKey(element, message.target)` before its `highlightElement(element)`
     - In `assertNotExists`, call `tagElementKey` only when `findResult.ok` is true (an element was actually resolved); do not tag on the passing "not found" path
     - Do not tag on a failed find (`findResult.ok` false), and leave existing `tomation-key` values elsewhere on the page unchanged
     - _Requirements: 1.1, 1.3, 1.5, 2.1_
-  - [ ] 1.3 Confirm `unhighlightElement` persists the tag on step completion
+  - [x] 1.3 Confirm `unhighlightElement` persists the tag on step completion
     - Verify/keep `unhighlightElement` removing only `data-tomation-active` and never `tomation-key`, so the tag persists after the step and after the run
     - Verify/keep `highlightElement` / `unhighlightElement` unchanged in their action-highlight behavior
     - _Requirements: 1.6, 2.2, 2.3, 2.5_
