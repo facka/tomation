@@ -58,3 +58,28 @@ export interface StepPlanEntry {
   condition?: StepCondition;
   taken?: boolean;
 }
+// --- Content-script hover contract (panel → content script, via api.tabs.sendMessage) ---
+// These are a distinct content-script contract and are intentionally NOT part of
+// PanelMessage / BackgroundMessage (which cover the panel↔background channel).
+
+// Messages sent FROM panel TO the content script
+export interface HoverHighlightMessage {
+  type: 'HOVER_HIGHLIGHT';
+  key: string;
+}
+
+export interface HoverClearMessage {
+  type: 'HOVER_CLEAR';
+}
+
+export type ContentScriptHoverMessage = HoverHighlightMessage | HoverClearMessage;
+
+// Responses returned by the content script
+export interface HoverResult {
+  type: 'HOVER_RESULT';
+  found: number;
+}
+
+export interface HoverClearResult {
+  ok: true;
+}

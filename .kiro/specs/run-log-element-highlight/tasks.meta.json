@@ -86,6 +86,25 @@
         "chatSessionId": "sess_189713bf-18cc-4ab1-b25a-42447af94f37",
         "timestamp": 1788794156397
       }
+    ],
+    "4.1 Add the hover message contract types to `messages.ts`": [
+      {
+        "executionId": "3845fb57-c89c-4a42-8b31-b58fb008a722",
+        "chatSessionId": "sess_76fc0ce6-baf0-4eda-93ff-7d15b1f61392",
+        "timestamp": 1788794256608
+      },
+      {
+        "executionId": "3845fb57-c89c-4a42-8b31-b58fb008a722",
+        "chatSessionId": "sess_76fc0ce6-baf0-4eda-93ff-7d15b1f61392",
+        "timestamp": 1788794292843
+      }
+    ],
+    "4. Panel types: content-script hover message contract (`messages.ts`)": [
+      {
+        "executionId": "3845fb57-c89c-4a42-8b31-b58fb008a722",
+        "chatSessionId": "sess_76fc0ce6-baf0-4eda-93ff-7d15b1f61392",
+        "timestamp": 1788794292971
+      }
     ]
   }
 }

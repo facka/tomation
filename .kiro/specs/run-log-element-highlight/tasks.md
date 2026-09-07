@@ -96,8 +96,8 @@ No packaging/deployment tasks are included — the change integrates into the ex
 - [ ] 3. Checkpoint - Ensure all runtime tests pass
   - Ensure all tests pass, ask the user if questions arise. (Developer runs tests manually; do not run `node --test` or `node -c`.)
 
-- [ ] 4. Panel types: content-script hover message contract (`messages.ts`)
-  - [ ] 4.1 Add the hover message contract types to `messages.ts`
+- [x] 4. Panel types: content-script hover message contract (`messages.ts`)
+  - [x] 4.1 Add the hover message contract types to `messages.ts`
     - Add `HoverHighlightMessage` (`{ type: 'HOVER_HIGHLIGHT'; key: string }`), `HoverClearMessage` (`{ type: 'HOVER_CLEAR' }`), the `ContentScriptHoverMessage` union, `HoverResult` (`{ type: 'HOVER_RESULT'; found: number }`), and `HoverClearResult` (`{ ok: true }`)
     - Document them as a distinct content-script contract, separate from and not added to `PanelMessage` / `BackgroundMessage`
     - _Requirements: 3.4_
