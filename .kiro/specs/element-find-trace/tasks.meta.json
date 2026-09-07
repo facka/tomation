@@ -1,0 +1,267 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Add `UNAVAILABLE` sentinel and `evaluateWhereKey(el, key, value, parentNode)` to `runtime.js`": [
+      {
+        "executionId": "949e2827-3f9b-4e0e-8eab-11ef4c945de3",
+        "chatSessionId": "sess_28edadff-55f8-4a5c-9e32-9dacff758f2d",
+        "timestamp": 1788533500554
+      },
+      {
+        "executionId": "949e2827-3f9b-4e0e-8eab-11ef4c945de3",
+        "chatSessionId": "sess_28edadff-55f8-4a5c-9e32-9dacff758f2d",
+        "timestamp": 1788533574704
+      }
+    ],
+    "1.2 Refactor `matchesWhere` to iterate keys and call `evaluateWhereKey().passed` with AND/early-exit semantics unchanged": [
+      {
+        "executionId": "949e2827-3f9b-4e0e-8eab-11ef4c945de3",
+        "chatSessionId": "sess_28edadff-55f8-4a5c-9e32-9dacff758f2d",
+        "timestamp": 1788533580511
+      },
+      {
+        "executionId": "949e2827-3f9b-4e0e-8eab-11ef4c945de3",
+        "chatSessionId": "sess_28edadff-55f8-4a5c-9e32-9dacff758f2d",
+        "timestamp": 1788533634962
+      }
+    ],
+    "1. Extract shared `evaluateWhereKey` and refactor `matchesWhere` (no semantic change)": [
+      {
+        "executionId": "949e2827-3f9b-4e0e-8eab-11ef4c945de3",
+        "chatSessionId": "sess_28edadff-55f8-4a5c-9e32-9dacff758f2d",
+        "timestamp": 1788533635158
+      }
+    ],
+    "2.1 Add `truncate256(v)` and `buildWhereBreakdown(candidates, where, parentNode)` to `runtime.js`": [
+      {
+        "executionId": "dff48f3c-5a41-48b3-9a57-5227ca39ad8e",
+        "chatSessionId": "sess_f11f8cdd-7b6a-44a1-a90a-bcca467bec58",
+        "timestamp": 1788535974749
+      },
+      {
+        "executionId": "dff48f3c-5a41-48b3-9a57-5227ca39ad8e",
+        "chatSessionId": "sess_f11f8cdd-7b6a-44a1-a90a-bcca467bec58",
+        "timestamp": 1788536054713
+      }
+    ],
+    "2. Implement failure-time `buildWhereBreakdown` and truncation helper": [
+      {
+        "executionId": "dff48f3c-5a41-48b3-9a57-5227ca39ad8e",
+        "chatSessionId": "sess_f11f8cdd-7b6a-44a1-a90a-bcca467bec58",
+        "timestamp": 1788536054830
+      }
+    ],
+    "3.1 Add `traceClosestLabel(el, spec, parentNode)` to `runtime.js`": [
+      {
+        "executionId": "cb120322-05df-4c81-8a0a-4a7f2a193d03",
+        "chatSessionId": "sess_50902607-b4dc-492a-be49-3e46d8a57b86",
+        "timestamp": 1788536781377
+      },
+      {
+        "executionId": "cb120322-05df-4c81-8a0a-4a7f2a193d03",
+        "chatSessionId": "sess_50902607-b4dc-492a-be49-3e46d8a57b86",
+        "timestamp": 1788536924057
+      }
+    ],
+    "3. Implement instrumented `traceClosestLabel` (failure-time only)": [
+      {
+        "executionId": "cb120322-05df-4c81-8a0a-4a7f2a193d03",
+        "chatSessionId": "sess_50902607-b4dc-492a-be49-3e46d8a57b86",
+        "timestamp": 1788536924183
+      }
+    ],
+    "4.1 Extend `applyNavigateSteps` failure return with machine fields while preserving the human string": [
+      {
+        "executionId": "ad12ff5e-2da5-45a4-b3a9-473466183736",
+        "chatSessionId": "sess_3940c0a0-10eb-48fd-9eba-4e4cd2024213",
+        "timestamp": 1788538793505
+      },
+      {
+        "executionId": "ad12ff5e-2da5-45a4-b3a9-473466183736",
+        "chatSessionId": "sess_3940c0a0-10eb-48fd-9eba-4e4cd2024213",
+        "timestamp": 1788538871339
+      }
+    ],
+    "4. Add navigate zero-based instrumentation to `applyNavigateSteps` and anchor resolution": [
+      {
+        "executionId": "ad12ff5e-2da5-45a4-b3a9-473466183736",
+        "chatSessionId": "sess_3940c0a0-10eb-48fd-9eba-4e4cd2024213",
+        "timestamp": 1788538871462
+      }
+    ],
+    "5.1 Add `maxSeenCandidates` poll-frame counter (O(1), no breakdown)": [
+      {
+        "executionId": "06c34940-14de-4464-a177-d6048066f9dd",
+        "chatSessionId": "sess_68c63ff1-35bb-4061-aa50-a5b9a837ce93",
+        "timestamp": 1788539308759
+      },
+      {
+        "executionId": "06c34940-14de-4464-a177-d6048066f9dd",
+        "chatSessionId": "sess_68c63ff1-35bb-4061-aa50-a5b9a837ce93",
+        "timestamp": 1788539359062
+      }
+    ],
+    "5.2 Implement the tag+where timeout branch trace assembly": [
+      {
+        "executionId": "06c34940-14de-4464-a177-d6048066f9dd",
+        "chatSessionId": "sess_68c63ff1-35bb-4061-aa50-a5b9a837ce93",
+        "timestamp": 1788539363672
+      },
+      {
+        "executionId": "06c34940-14de-4464-a177-d6048066f9dd",
+        "chatSessionId": "sess_68c63ff1-35bb-4061-aa50-a5b9a837ce93",
+        "timestamp": 1788539448095
+      }
+    ],
+    "5.3 Implement the xpath timeout branch trace assembly": [
+      {
+        "executionId": "06c34940-14de-4464-a177-d6048066f9dd",
+        "chatSessionId": "sess_68c63ff1-35bb-4061-aa50-a5b9a837ce93",
+        "timestamp": 1788539451762
+      },
+      {
+        "executionId": "06c34940-14de-4464-a177-d6048066f9dd",
+        "chatSessionId": "sess_68c63ff1-35bb-4061-aa50-a5b9a837ce93",
+        "timestamp": 1788539508826
+      }
+    ],
+    "5. Build the trace in the `findElement` timeout branch": [
+      {
+        "executionId": "06c34940-14de-4464-a177-d6048066f9dd",
+        "chatSessionId": "sess_68c63ff1-35bb-4061-aa50-a5b9a837ce93",
+        "timestamp": 1788539509098
+      }
+    ],
+    "7.1 Add scope / action / navigate merge for the no-parent path": [
+      {
+        "executionId": "68b211e2-59fc-4a56-b7d4-b7c3415b8578",
+        "chatSessionId": "sess_f4178d16-7f15-4316-a362-d664bd7c2ab2",
+        "timestamp": 1788544421939
+      },
+      {
+        "executionId": "68b211e2-59fc-4a56-b7d4-b7c3415b8578",
+        "chatSessionId": "sess_f4178d16-7f15-4316-a362-d664bd7c2ab2",
+        "timestamp": 1788544501065
+      }
+    ],
+    "7.2 Add parent (childOf) resolution outcome assembly": [
+      {
+        "executionId": "68b211e2-59fc-4a56-b7d4-b7c3415b8578",
+        "chatSessionId": "sess_f4178d16-7f15-4316-a362-d664bd7c2ab2",
+        "timestamp": 1788544504787
+      },
+      {
+        "executionId": "68b211e2-59fc-4a56-b7d4-b7c3415b8578",
+        "chatSessionId": "sess_f4178d16-7f15-4316-a362-d664bd7c2ab2",
+        "timestamp": 1788544588448
+      }
+    ],
+    "7. Assemble cross-cutting trace in `findElementWithParent`": [
+      {
+        "executionId": "68b211e2-59fc-4a56-b7d4-b7c3415b8578",
+        "chatSessionId": "sess_f4178d16-7f15-4316-a362-d664bd7c2ab2",
+        "timestamp": 1788544588540
+      }
+    ],
+    "8.1 Attach `findResult.findTrace` on failure `STEP_RESULT` for every element-dependent branch": [
+      {
+        "executionId": "c341b4c0-2803-4b62-a218-801bb75db674",
+        "chatSessionId": "sess_5b6dc88a-96da-4e12-ae4c-ff66bb46e3b4",
+        "timestamp": 1788545157461
+      },
+      {
+        "executionId": "c341b4c0-2803-4b62-a218-801bb75db674",
+        "chatSessionId": "sess_5b6dc88a-96da-4e12-ae4c-ff66bb46e3b4",
+        "timestamp": 1788545222715
+      }
+    ],
+    "8. Forward the trace through the runtime message listener": [
+      {
+        "executionId": "c341b4c0-2803-4b62-a218-801bb75db674",
+        "chatSessionId": "sess_5b6dc88a-96da-4e12-ae4c-ff66bb46e3b4",
+        "timestamp": 1788545222864
+      }
+    ],
+    "9. Propagate the trace through background `emitLog`": [
+      {
+        "executionId": "defe8dd2-e0cc-4737-9892-28f1756fa905",
+        "chatSessionId": "sess_6287e376-850c-4304-bf20-2bf31f0c14a1",
+        "timestamp": 1788546004275
+      }
+    ],
+    "10. Add panel TypeScript types": [
+      {
+        "executionId": "ee51a95e-5603-4797-8f09-627cb5dcadde",
+        "chatSessionId": "sess_99ad7e10-cae6-4844-9a4a-08ce9a192119",
+        "timestamp": 1788546605713
+      },
+      {
+        "executionId": "ee51a95e-5603-4797-8f09-627cb5dcadde",
+        "chatSessionId": "sess_99ad7e10-cae6-4844-9a4a-08ce9a192119",
+        "timestamp": 1788546759735
+      }
+    ],
+    "11.1 Pass `findTrace` through the LOG → `setStepStatus` router in `meta`": [
+      {
+        "executionId": "c592cefa-9f66-4f1d-9c5f-d05073c05e54",
+        "chatSessionId": "sess_90d42588-d360-456c-a6de-fae3664a74f3",
+        "timestamp": 1788546902880
+      },
+      {
+        "executionId": "c592cefa-9f66-4f1d-9c5f-d05073c05e54",
+        "chatSessionId": "sess_90d42588-d360-456c-a6de-fae3664a74f3",
+        "timestamp": 1788546955275
+      }
+    ],
+    "11.2 Copy `meta.findTrace` onto the matching `LogEntry` in `setStepStatus`": [
+      {
+        "executionId": "c592cefa-9f66-4f1d-9c5f-d05073c05e54",
+        "chatSessionId": "sess_90d42588-d360-456c-a6de-fae3664a74f3",
+        "timestamp": 1788546906981
+      },
+      {
+        "executionId": "c592cefa-9f66-4f1d-9c5f-d05073c05e54",
+        "chatSessionId": "sess_90d42588-d360-456c-a6de-fae3664a74f3",
+        "timestamp": 1788546959314
+      }
+    ],
+    "11. Wire the trace through the panel store": [
+      {
+        "executionId": "c592cefa-9f66-4f1d-9c5f-d05073c05e54",
+        "chatSessionId": "sess_90d42588-d360-456c-a6de-fae3664a74f3",
+        "timestamp": 1788546959450
+      }
+    ],
+    "12.1 Add the collapsible disclosure block and register any new icon": [
+      {
+        "executionId": "72d9c26d-8cfc-4321-924a-05622f2f0cb0",
+        "chatSessionId": "sess_48179b2a-cb5b-46f2-821b-da1c5ec748c1",
+        "timestamp": 1788547466852
+      },
+      {
+        "executionId": "72d9c26d-8cfc-4321-924a-05622f2f0cb0",
+        "chatSessionId": "sess_48179b2a-cb5b-46f2-821b-da1c5ec748c1",
+        "timestamp": 1788547659568
+      }
+    ],
+    "12.2 Implement the passed-matcher display cap helper": [
+      {
+        "executionId": "72d9c26d-8cfc-4321-924a-05622f2f0cb0",
+        "chatSessionId": "sess_48179b2a-cb5b-46f2-821b-da1c5ec748c1",
+        "timestamp": 1788547470818
+      },
+      {
+        "executionId": "72d9c26d-8cfc-4321-924a-05622f2f0cb0",
+        "chatSessionId": "sess_48179b2a-cb5b-46f2-821b-da1c5ec748c1",
+        "timestamp": 1788547663420
+      }
+    ],
+    "12. Render the \"Why did this fail?\" disclosure in `LogEntry.vue`": [
+      {
+        "executionId": "72d9c26d-8cfc-4321-924a-05622f2f0cb0",
+        "chatSessionId": "sess_48179b2a-cb5b-46f2-821b-da1c5ec748c1",
+        "timestamp": 1788547663568
+      }
+    ]
+  }
+}

@@ -21,6 +21,8 @@ import {
   faCopy,
   faDownload,
   faTrash,
+  faChevronRight,
+  faChevronDown,
 } from '@fortawesome/free-solid-svg-icons';
 
 // Regular icons
@@ -47,4 +49,6 @@ library.add(
   faCopy,
   faDownload,
   faTrash,
+  faChevronRight,
+  faChevronDown,
 );

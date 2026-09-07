@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import type { LogEntry } from '@/types/store';
 import type { PageElement } from '@/types/spec';
 import { resolveTargetLabel, getAssertSuffix, describeCondition } from '@/logic/stepLabel';
+import { buildFinderSnippet } from '@/logic/finderSnippet';
 
 const props = defineProps<{
   entry: LogEntry;
@@ -141,6 +142,77 @@ const attemptBadgeClass = computed(() => {
   if (!props.entry.retryAttempt) return '';
   return props.entry.status === 'pass' ? 'pass' : 'fail';
 });
+
+// --- Find-trace disclosure ("Why did this fail?") ---
+
+// Render the disclosure only for failed entries that carry a trace (Req 10.1, 10.10).
+const hasFindTrace = computed(() => {
+  return props.entry.status === 'fail' && !!props.entry.findTrace;
+});
+
+// Local, initially-collapsed toggle state (Req 10.1).
+const traceExpanded = ref(false);
+
+function toggleTrace() {
+  traceExpanded.value = !traceExpanded.value;
+}
+
+const trace = computed(() => props.entry.findTrace ?? null);
+
+// One-line diagnosis derived from the trace (Req 10.3). All fields read defensively.
+const diagnosis = computed(() => {
+  const t = trace.value;
+  if (!t) return '';
+
+  // Parent could not be located.
+  if (t.parent && t.parent.resolved === false) {
+    return 'The parent element could not be located.';
+  }
+
+  // XPath strategy.
+  if (t.xpath) {
+    const n = t.xpath.matchedNodeCount ?? 0;
+    return 'XPath matched ' + n + ' node(s).';
+  }
+
+  const tag = t.tag ?? 'element';
+
+  switch (t.absence) {
+    case 'absent-full-window':
+      return 'No <' + tag + '> element was present during the 5s wait window.';
+    case 'present-unmatched': {
+      const n = t.candidateCount ?? t.finalFrameCandidateCount ?? 0;
+      return 'Found ' + n + ' <' + tag + '> candidate(s) but none matched the conditions.';
+    }
+    case 'appeared-after-timeout':
+      return 'A matching <' + tag + '> appeared only after the 5s wait window.';
+    default:
+      // Fall back to the preserved human-readable error string.
+      return t.error ?? '';
+  }
+});
+
+// Generated Finder_Snippet from the failed step's descriptor (Req 10.4-10.7).
+const finderSnippet = computed(() => {
+  const target = props.entry.target ?? '';
+  const descriptor = props.pageElements?.[target];
+  if (!descriptor) return '';
+  const parent = descriptor.childOf ? props.pageElements?.[descriptor.childOf] : null;
+  return buildFinderSnippet(descriptor, parent);
+});
+
+// Copy-to-clipboard state (Req 10.8). Briefly toggles a "Copied!" label.
+const copyState = ref(false);
+
+async function copySnippet() {
+  try {
+    await navigator.clipboard.writeText(finderSnippet.value);
+    copyState.value = true;
+    setTimeout(() => { copyState.value = false; }, 1500);
+  } catch {
+    // Clipboard unavailable — silently ignore.
+  }
+}
 </script>
 
 <template>
@@ -227,6 +299,37 @@ const attemptBadgeClass = computed(() => {
     </template>
   </div>
 
+  <!-- "Why did this fail?" find-trace disclosure (Req 10). Rendered beneath the
+       error line only for failed entries that carry a trace. Initially collapsed. -->
+  <div v-if="hasFindTrace" class="find-trace">
+    <button
+      type="button"
+      class="find-trace-toggle"
+      :aria-expanded="traceExpanded"
+      @click="toggleTrace"
+    >
+      <font-awesome-icon :icon="['fas', traceExpanded ? 'chevron-down' : 'chevron-right']" />
+      <span>Why did this fail?</span>
+    </button>
+
+    <div v-if="traceExpanded" class="find-trace-body">
+      <!-- One-line diagnosis (Req 10.3) -->
+      <div v-if="diagnosis" class="ft-diagnosis">{{ diagnosis }}</div>
+
+      <!-- Copy-pasteable DevTools finder snippet (Req 10.4-10.8) -->
+      <div v-if="finderSnippet" class="ft-snippet">
+        <div class="ft-snippet-head">
+          <span class="ft-snippet-label">Run this in DevTools to reproduce:</span>
+          <button type="button" class="copy-btn" @click="copySnippet">
+            <font-awesome-icon :icon="['fas', 'copy']" />
+            <span>{{ copyState ? 'Copied!' : 'Copy' }}</span>
+          </button>
+        </div>
+        <pre class="ft-snippet-code"><code>{{ finderSnippet }}</code></pre>
+      </div>
+    </div>
+  </div>
+
   <!-- Retry / Skip action buttons (shown inline after the failed entry in debug mode) -->
   <div v-if="showRetrySkip" class="log-entry action-buttons">
     <button class="btn btn-primary" @click="emit('retry', entry.stepIndex)">Try Again</button>
@@ -265,5 +368,92 @@ const attemptBadgeClass = computed(() => {
 
 .condition-outcome.not-taken {
   color: var(--text-muted, #888);
+}
+
+/* --- "Why did this fail?" find-trace disclosure --- */
+.find-trace {
+  padding: 2px 0 4px 24px;
+}
+
+.find-trace-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  cursor: pointer;
+  color: var(--text-muted, #888);
+  font-size: 10px;
+  font-family: inherit;
+}
+
+.find-trace-toggle:hover {
+  color: var(--text-secondary, #aaa);
+}
+
+.find-trace-body {
+  margin-top: 2px;
+  padding: 4px 8px;
+  border-left: 2px solid var(--error, #ef4444);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ft-diagnosis {
+  font-size: 11px;
+  color: var(--text-secondary, #aaa);
+}
+
+.ft-snippet {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ft-snippet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ft-snippet-label {
+  font-size: 10px;
+  color: var(--text-muted, #888);
+}
+
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 1px solid var(--border, #444);
+  border-radius: 3px;
+  padding: 1px 6px;
+  cursor: pointer;
+  color: var(--text-secondary, #aaa);
+  font-size: 10px;
+  font-family: inherit;
+}
+
+.copy-btn:hover {
+  color: var(--text-primary, #ddd);
+  border-color: var(--text-muted, #888);
+}
+
+.ft-snippet-code {
+  margin: 0;
+  padding: 6px 8px;
+  background: var(--bg-secondary, rgba(0, 0, 0, 0.25));
+  border: 1px solid var(--border, #444);
+  border-radius: 4px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--text-secondary, #aaa);
+  white-space: pre;
+  overflow-x: auto;
 }
 </style>

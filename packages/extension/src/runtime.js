@@ -16,66 +16,226 @@ var TIMEOUT_5sec = 5000;
 function matchesWhere(el, where, parentNode) {
   var keys = Object.keys(where);
   for (var i = 0; i < keys.length; i++) {
-    var key = keys[i];
-    var value = where[key];
-    switch (key) {
-      case 'id':
-        if (el.id !== value) return false;
-        break;
-      case 'textIs':
-        if (el.textContent.trim() !== value) return false;
-        break;
-      case 'textContains':
-        if (el.textContent.indexOf(value) === -1) return false;
-        break;
-      case 'classIncludes':
-        if (el.className.split(' ').indexOf(value) === -1) return false;
-        break;
-      case 'placeholder':
-        if (el.getAttribute('placeholder') !== value) return false;
-        break;
-      case 'name':
-        if (el.getAttribute('name') !== value) return false;
-        break;
-      case 'type':
-        if (el.getAttribute('type') !== value) return false;
-        break;
-      case 'value':
-        if (el.value === undefined || el.value !== value) return false;
-        break;
-      case 'ariaLabel':
-        if (el.getAttribute('aria-label') !== value) return false;
-        break;
-      case 'role':
-        if (el.getAttribute('role') !== value) return false;
-        break;
-      case 'title':
-        if (el.getAttribute('title') !== value) return false;
-        break;
-      case 'hrefContains':
-        var href = el.getAttribute('href');
-        if (href === null || href.indexOf(value) === -1) return false;
-        break;
-      case 'isDisabled':
-        if (el.disabled !== true) return false;
-        break;
-      case 'dataAttr':
-        if (el.getAttribute('data-' + value.name) !== value.value) return false;
-        break;
-      case 'nthChild':
-        var pos = 1;
-        var sib = el.previousElementSibling;
-        while (sib) { pos++; sib = sib.previousElementSibling; }
-        if (pos !== value) return false;
-        break;
-      case 'closestLabel':
-        if (!matchClosestLabel(el, value, parentNode)) return false;
-        break;
-      default:
-        break;
-    }
+    if (!evaluateWhereKey(el, keys[i], where[keys[i]], parentNode).passed) return false;
   }
   return true;
+}
+
+// Sentinel for "actual value could not be observed" (Req 2.7).
+var UNAVAILABLE = { __unavailable: true };
+
+/**
+ * Evaluate a single where-key against an element, returning both the pass/fail
+ * decision (identical to matchesWhere's per-key decision) and the observed
+ * actual value for the failure-time breakdown.
+ *
+ * @param {Element} el - candidate element
+ * @param {string} key - the where-matcher key
+ * @param {*} value - the expected value from the descriptor
+ * @param {Element|null} parentNode - childOf parent if present, null otherwise
+ * @returns {{ passed: boolean, actual: * }} actual is the observed value, or the
+ *          UNAVAILABLE sentinel when it could not be read (Req 2.7).
+ */
+function evaluateWhereKey(el, key, value, parentNode) {
+  switch (key) {
+    case 'id':
+      return { passed: el.id === value, actual: el.id };
+    case 'textIs':
+      // Match uses trim(); actual reports raw untrimmed text (Req 2.5).
+      return { passed: el.textContent.trim() === value, actual: el.textContent };
+    case 'textContains':
+      return { passed: el.textContent.indexOf(value) !== -1, actual: el.textContent };
+    case 'classIncludes':
+      return { passed: el.className.split(' ').indexOf(value) !== -1, actual: el.className };
+    case 'placeholder': {
+      var placeholder = el.getAttribute('placeholder');
+      return {
+        passed: placeholder === value,
+        actual: (placeholder === null || placeholder === undefined) ? UNAVAILABLE : placeholder
+      };
+    }
+    case 'name': {
+      var name = el.getAttribute('name');
+      return {
+        passed: name === value,
+        actual: (name === null || name === undefined) ? UNAVAILABLE : name
+      };
+    }
+    case 'type': {
+      var type = el.getAttribute('type');
+      return {
+        passed: type === value,
+        actual: (type === null || type === undefined) ? UNAVAILABLE : type
+      };
+    }
+    case 'value':
+      return {
+        passed: el.value !== undefined && el.value === value,
+        actual: el.value === undefined ? UNAVAILABLE : el.value
+      };
+    case 'ariaLabel': {
+      var ariaLabel = el.getAttribute('aria-label');
+      return {
+        passed: ariaLabel === value,
+        actual: (ariaLabel === null || ariaLabel === undefined) ? UNAVAILABLE : ariaLabel
+      };
+    }
+    case 'role': {
+      var role = el.getAttribute('role');
+      return {
+        passed: role === value,
+        actual: (role === null || role === undefined) ? UNAVAILABLE : role
+      };
+    }
+    case 'title': {
+      var title = el.getAttribute('title');
+      return {
+        passed: title === value,
+        actual: (title === null || title === undefined) ? UNAVAILABLE : title
+      };
+    }
+    case 'hrefContains': {
+      var href = el.getAttribute('href');
+      return {
+        passed: href !== null && href.indexOf(value) !== -1,
+        actual: (href === null || href === undefined) ? UNAVAILABLE : href
+      };
+    }
+    case 'isDisabled':
+      return {
+        passed: el.disabled === true,
+        actual: (el.disabled === null || el.disabled === undefined) ? UNAVAILABLE : el.disabled
+      };
+    case 'dataAttr': {
+      var dataVal = el.getAttribute('data-' + value.name);
+      return {
+        passed: dataVal === value.value,
+        actual: (dataVal === null || dataVal === undefined) ? UNAVAILABLE : dataVal
+      };
+    }
+    case 'nthChild': {
+      var pos = 1;
+      var sib = el.previousElementSibling;
+      while (sib) { pos++; sib = sib.previousElementSibling; }
+      return { passed: pos === value, actual: pos };
+    }
+    case 'closestLabel':
+      // passed delegates to existing matcher; actual sub-record filled by task 3.
+      return { passed: matchClosestLabel(el, value, parentNode), actual: null };
+    default:
+      // Unknown key: matchesWhere treats it as a no-op (does not fail the match).
+      return { passed: true, actual: UNAVAILABLE };
+  }
+}
+
+/**
+ * Coerce a value to a string and truncate it to a maximum of 256 characters
+ * (Req 2.4). Returns the (possibly truncated) string.
+ *
+ * @param {*} v - the value to coerce and truncate
+ * @returns {string} the string coerced from v, sliced to at most 256 chars
+ */
+function truncate256(v) {
+  var s = String(v);
+  return s.length > 256 ? s.slice(0, 256) : s;
+}
+
+/**
+ * Failure-time single pass over a candidate snapshot. Runs ONCE after the poll
+ * window elapses (Req 8.2). Evaluates every `where` key against every candidate
+ * synchronously (no await/yield) and designates at most one Near_Miss_Candidate
+ * — the candidate satisfying the greatest number of Where_Matchers, ties keep
+ * the first encountered (Req 2.3, 8.5).
+ *
+ * @param {NodeList|Array<Element>} candidates - snapshot from root.querySelectorAll(tag)
+ * @param {object} where - the descriptor's where conditions
+ * @param {Element|null} parentNode - childOf parent if present, null otherwise
+ * @returns {{ nearMiss: object|null, candidateCount: number }}
+ */
+function buildWhereBreakdown(candidates, where, parentNode) {
+  var candidateCount = candidates.length;
+
+  // Zero candidates: empty breakdown, no Near_Miss (Req 2.2, 8.3).
+  if (candidateCount === 0) {
+    return { nearMiss: null, candidateCount: 0 };
+  }
+
+  var keys = Object.keys(where);
+  var bestEl = null;
+  var bestResults = null;
+  var bestPassCount = -1;
+
+  for (var c = 0; c < candidateCount; c++) {
+    var el = candidates[c];
+    var results = [];
+    var passCount = 0;
+    for (var k = 0; k < keys.length; k++) {
+      var result = evaluateWhereKey(el, keys[k], where[keys[k]], parentNode);
+      results.push(result);
+      if (result.passed) passCount++;
+    }
+    // Greatest pass count wins; ties keep the FIRST encountered (Req 2.3, 8.5).
+    if (passCount > bestPassCount) {
+      bestPassCount = passCount;
+      bestEl = el;
+      bestResults = results;
+    }
+  }
+
+  // Build the whereBreakdown for the Near_Miss_Candidate (Req 2.4, 2.6, 2.7).
+  var whereBreakdown = [];
+  var passed = [];
+  var firstFailed = null;
+  var fullMatch = true;
+
+  for (var j = 0; j < keys.length; j++) {
+    var key = keys[j];
+    var r = bestResults[j];
+    var entry = {
+      key: key,
+      expected: truncate256(where[key]),
+      passed: r.passed
+    };
+    if (r.actual === UNAVAILABLE) {
+      // Keep the matcher entry; record that the actual value was unavailable (Req 2.7).
+      entry.actual = null;
+      entry.actualUnavailable = true;
+    } else {
+      // Truncate observed value; text* actuals are already raw/untrimmed (Req 2.5).
+      entry.actual = truncate256(r.actual);
+    }
+    whereBreakdown.push(entry);
+
+    if (r.passed) {
+      passed.push(key);
+    } else {
+      fullMatch = false;
+      if (firstFailed === null) firstFailed = key;
+    }
+  }
+
+  var nearMiss = {
+    element: bestEl,
+    whereBreakdown: whereBreakdown,
+    passed: passed,
+    firstFailed: firstFailed,
+    // fullMatch true => matchesWhere would return true; consumers must not assume
+    // a failing entry exists (Req 3.3).
+    fullMatch: fullMatch,
+    closestLabel: null
+  };
+
+  // Instrument the closestLabel strategies ONLY when the Near_Miss_Candidate has
+  // a FAILING closestLabel matcher (Req 5.1). This runs only here, at failure
+  // time, mirroring matchClosestLabel without changing matching semantics.
+  if (where.closestLabel !== undefined) {
+    var clIdx = keys.indexOf('closestLabel');
+    if (clIdx !== -1 && !bestResults[clIdx].passed) {
+      nearMiss.closestLabel = traceClosestLabel(bestEl, where.closestLabel, parentNode);
+    }
+  }
+
+  return { nearMiss: nearMiss, candidateCount: candidateCount };
 }
 
 /**
@@ -97,7 +257,67 @@ function searchSubtreeForLabel(root, tag, text) {
 }
 
 /**
- * Determine if a label element matching the spec exists near the target element.
+ * Compute the DOM-tree distance between two attached elements.
+ *
+ * Distance = (hops from `a` up to the nearest common ancestor) +
+ *            (hops from `b` up to the nearest common ancestor).
+ * The nearest common ancestor (NCA) is the first element in `a`'s ancestor
+ * chain (a, a.parentElement, ...) that is an ancestor-or-self of `b`
+ * (`ancestor.contains(b)` — `contains` includes self). If no common ancestor
+ * is found (should not happen for attached nodes), returns Infinity so the
+ * candidate loses any minimum comparison.
+ *
+ * @param {Element} a
+ * @param {Element} b
+ * @returns {number}
+ */
+function domTreeDistance(a, b) {
+  var aHops = 0;
+  var ancestor = a;
+  while (ancestor) {
+    if (ancestor.contains(b)) {
+      // ancestor is the NCA; count hops from b up to ancestor.
+      var bHops = 0;
+      var node = b;
+      while (node && node !== ancestor) {
+        bHops++;
+        node = node.parentElement;
+      }
+      return aHops + bHops;
+    }
+    aHops++;
+    ancestor = ancestor.parentElement;
+  }
+  return Infinity;
+}
+
+/**
+ * Collect candidate label elements matching the spec tag within the search
+ * scope: the parent subtree when childOf-bounded, otherwise the whole document.
+ *
+ * @param {{ tag: string }} spec - label specification (raw tag used as today)
+ * @param {Element|null} parentNode - childOf parent if present, null otherwise
+ * @returns {HTMLCollection|NodeList} live/static collection of candidates
+ */
+function collectLabelCandidates(spec, parentNode) {
+  var root = parentNode || document;
+  return root.getElementsByTagName(spec.tag);
+}
+
+/**
+ * Determine if the label element closest to the target (by DOM-tree distance)
+ * matches the spec. Explicit associations take precedence over distance.
+ *
+ * Algorithm:
+ *  1. Explicit association wins:
+ *     - If `el.id` is set and a `<spec.tag for="el.id">` exists, the association
+ *       is authoritative: pass iff ANY such label's trimmed textContent === text.
+ *       A `for=` label that mismatches text returns false (no distance fallback).
+ *     - Else if `el` has `aria-labelledby` and the referenced element exists with
+ *       matching tag, that association is authoritative: pass iff its trimmed
+ *       textContent === text; a tag/text mismatch returns false.
+ *  2. Otherwise pick the single closest candidate by DOM-tree distance (document
+ *     order tiebreak) within scope; pass iff its trimmed textContent === text.
  *
  * @param {Element} el - target element
  * @param {{ tag: string, text: string }} spec - label specification
@@ -108,52 +328,193 @@ function matchClosestLabel(el, spec, parentNode) {
   var tag = spec.tag.toUpperCase();
   var text = spec.text;
 
-  // Strategy A: childOf-bounded search — search within parent subtree only
-  if (parentNode) {
-    return searchSubtreeForLabel(parentNode, tag, text);
-  }
-
-  // Strategy B: Unbounded search with max 3 ancestor levels
-
-  // B1: Explicit `for` attribute — find a matching-tag element with for=el.id
+  // 1. Explicit association wins — `for=` attribute.
   if (el.id) {
     var forLabels = document.querySelectorAll(spec.tag + '[for="' + el.id + '"]');
-    for (var i = 0; i < forLabels.length; i++) {
-      if (forLabels[i].tagName === tag && forLabels[i].textContent.trim() === text) {
-        return true;
-      }
-    }
-  }
-
-  // B2: Walk up at most 3 ancestor levels, search descendants
-  // Stop at the first level where a matching-tag element is found — if its text
-  // doesn't match, the closest label is wrong (don't keep searching higher)
-  var ancestor = el.parentElement;
-  for (var depth = 0; depth < 3 && ancestor; depth++) {
-    var candidates = ancestor.getElementsByTagName(tag);
-    if (candidates.length > 0) {
-      // Found element(s) with matching tag at this level — check text
-      for (var ci = 0; ci < candidates.length; ci++) {
-        if (candidates[ci].textContent.trim() === text) {
+    if (forLabels.length > 0) {
+      for (var i = 0; i < forLabels.length; i++) {
+        if (forLabels[i].tagName === tag && forLabels[i].textContent.trim() === text) {
           return true;
         }
       }
-      // Tag found but text didn't match — stop searching further
+      // A `for=` association exists but no matching text — authoritative, fail.
       return false;
     }
-    ancestor = ancestor.parentElement;
   }
 
-  // B3: aria-labelledby resolution
+  // 1b. Explicit association wins — aria-labelledby.
   var labelledBy = el.getAttribute('aria-labelledby');
   if (labelledBy) {
     var refEl = document.getElementById(labelledBy);
-    if (refEl && refEl.tagName === tag && refEl.textContent.trim() === text) {
-      return true;
+    if (refEl && refEl.tagName === tag) {
+      // Referenced element exists with matching tag — authoritative.
+      return refEl.textContent.trim() === text;
     }
   }
 
-  return false;
+  // 2. Closest-by-distance within scope.
+  var candidates = collectLabelCandidates(spec, parentNode);
+  if (candidates.length === 0) {
+    return false;
+  }
+
+  var best = null;
+  var bestDistance = Infinity;
+  for (var ci = 0; ci < candidates.length; ci++) {
+    var cand = candidates[ci];
+    var dist = domTreeDistance(el, cand);
+    if (dist < bestDistance) {
+      bestDistance = dist;
+      best = cand;
+    } else if (dist === bestDistance && best) {
+      // Tiebreak: earliest document order wins — keep current best unless the
+      // candidate precedes it in the document.
+      var rel = best.compareDocumentPosition(cand);
+      if (rel & 2 /* DOCUMENT_POSITION_PRECEDING */) {
+        best = cand;
+      }
+    }
+  }
+
+  if (!best) {
+    return false;
+  }
+
+  return best.textContent.trim() === text;
+}
+
+/**
+ * Failure-time instrumented variant of matchClosestLabel (Req 5.1-5.5). Runs
+ * ONLY during the failure pass when the Near_Miss_Candidate has a failing
+ * `closestLabel` matcher. It mirrors matchClosestLabel's decision EXACTLY
+ * (explicit-wins-then-distance) but, instead of returning a boolean, records
+ * WHICH method decided, the candidate count, and the chosen label's text and
+ * DOM-tree distance.
+ *
+ * Return shape:
+ * {
+ *   labelTag: string,              // spec.tag (Req 5.2)
+ *   labelText: string|null,        // expected text, truncated 256; null when absent (Req 5.3)
+ *   labelTextAbsent: boolean,      // present+true when spec.text is undefined/null (Req 5.3)
+ *   bounded: boolean,              // true when parentNode provided (childOf-bounded, Req 5.4)
+ *   method: 'explicit-for'|'explicit-aria'|'closest-distance'|'no-candidates',
+ *   candidateCount: number,        // number of spec.tag candidates in scope
+ *   chosen: {                      // the label the matcher actually evaluated
+ *     text: string|null,           // trimmed + truncated 256; null when none
+ *     distance: number|null,       // DOM-tree distance; null for explicit/none
+ *   } | null,                      // null when no-candidates and no explicit target
+ *   matched: boolean               // whether the matcher passed
+ * }
+ *
+ * @param {Element} el - target element
+ * @param {{ tag: string, text: string }} spec - label specification
+ * @param {Element|null} parentNode - childOf parent if present, null otherwise
+ * @returns {object} closestLabel sub-record
+ */
+function traceClosestLabel(el, spec, parentNode) {
+  var tag = spec.tag.toUpperCase();
+  var text = spec.text;
+
+  var record = {
+    labelTag: spec.tag,
+    bounded: !!parentNode,
+    method: null,
+    candidateCount: 0,
+    chosen: null,
+    matched: false
+  };
+
+  // Record expected label text, truncated to 256 chars; flag absence (Req 5.2, 5.3).
+  if (text === undefined || text === null) {
+    record.labelText = null;
+    record.labelTextAbsent = true;
+  } else {
+    record.labelText = truncate256(text);
+  }
+
+  // 1. Explicit association wins — `for=` attribute.
+  if (el.id) {
+    var forLabels = document.querySelectorAll(spec.tag + '[for="' + el.id + '"]');
+    if (forLabels.length > 0) {
+      record.method = 'explicit-for';
+      var forMatched = false;
+      var forChosen = null;
+      for (var i = 0; i < forLabels.length; i++) {
+        if (forLabels[i].tagName === tag) {
+          if (forChosen === null) {
+            forChosen = forLabels[i];
+          }
+          if (forLabels[i].textContent.trim() === text) {
+            forMatched = true;
+            forChosen = forLabels[i];
+            break;
+          }
+        }
+      }
+      record.chosen = {
+        text: forChosen ? truncate256(forChosen.textContent.trim()) : null,
+        distance: null
+      };
+      record.matched = forMatched;
+      return record;
+    }
+  }
+
+  // 1b. Explicit association wins — aria-labelledby.
+  var labelledBy = el.getAttribute('aria-labelledby');
+  if (labelledBy) {
+    var refEl = document.getElementById(labelledBy);
+    if (refEl && refEl.tagName === tag) {
+      record.method = 'explicit-aria';
+      record.chosen = {
+        text: truncate256(refEl.textContent.trim()),
+        distance: null
+      };
+      record.matched = refEl.textContent.trim() === text;
+      return record;
+    }
+  }
+
+  // 2. Closest-by-distance within scope.
+  var candidates = collectLabelCandidates(spec, parentNode);
+  record.candidateCount = candidates.length;
+
+  if (candidates.length === 0) {
+    record.method = 'no-candidates';
+    record.chosen = null;
+    record.matched = false;
+    return record;
+  }
+
+  record.method = 'closest-distance';
+  var best = null;
+  var bestDistance = Infinity;
+  for (var ci = 0; ci < candidates.length; ci++) {
+    var cand = candidates[ci];
+    var dist = domTreeDistance(el, cand);
+    if (dist < bestDistance) {
+      bestDistance = dist;
+      best = cand;
+    } else if (dist === bestDistance && best) {
+      var rel = best.compareDocumentPosition(cand);
+      if (rel & 2 /* DOCUMENT_POSITION_PRECEDING */) {
+        best = cand;
+      }
+    }
+  }
+
+  if (best) {
+    record.chosen = {
+      text: truncate256(best.textContent.trim()),
+      distance: bestDistance
+    };
+    record.matched = best.textContent.trim() === text;
+  } else {
+    record.chosen = null;
+    record.matched = false;
+  }
+
+  return record;
 }
 
 /**
@@ -190,7 +551,31 @@ function findElement(descriptor, parentNode) {
           return;
         }
         if (Date.now() - startTime >= TIMEOUT_5sec) {
-          reject(new Error('Element not found: XPath ' + descriptor.xpath));
+          var elapsedMs = Date.now() - startTime;
+          var trace = {
+            strategy: 'xpath',
+            expression: descriptor.xpath,
+            elapsedMs: Math.max(0, Math.min(5000, elapsedMs)),
+            configuredWaitMs: TIMEOUT_5sec
+          };
+          try {
+            var snap = document.evaluate(
+              descriptor.xpath,
+              root,
+              null,
+              XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+              null
+            );
+            var len = snap.snapshotLength;
+            trace.matchedNodeCount = len;
+            trace.outcome = len === 0 ? 'none' : (len === 1 ? 'one' : 'many');
+          } catch (e) {
+            trace.outcome = 'invalid';
+            trace.invalid = true;
+          }
+          var err = new Error('Element not found: XPath ' + descriptor.xpath);
+          err.findTrace = trace;
+          reject(err);
           return;
         }
         requestAnimationFrame(poll);
@@ -206,9 +591,11 @@ function findElement(descriptor, parentNode) {
 
   return new Promise(function (resolve, reject) {
     var startTime = Date.now();
+    var maxSeenCandidates = 0;
 
     function poll() {
       var candidates = root.querySelectorAll(tag);
+      maxSeenCandidates = Math.max(maxSeenCandidates, candidates.length);
       for (var i = 0; i < candidates.length; i++) {
         if (matchesWhere(candidates[i], where, root === document ? null : root)) {
           resolve(candidates[i]);
@@ -216,7 +603,40 @@ function findElement(descriptor, parentNode) {
         }
       }
       if (Date.now() - startTime >= TIMEOUT_5sec) {
-        reject(new Error('Element not found: ' + tag + ' with conditions ' + JSON.stringify(where)));
+        // One final synchronous breakdown pass over the current snapshot (Req 8.2).
+        // Reuse the `candidates` computed at the top of this poll() invocation —
+        // do NOT issue an extra querySelectorAll.
+        var bd = buildWhereBreakdown(candidates, where, root === document ? null : root);
+        var elapsedMs = Date.now() - startTime;
+
+        // Classify absence — exactly one value (Req 3.6).
+        var absence;
+        if (bd.nearMiss && bd.nearMiss.fullMatch) {
+          absence = 'appeared-after-timeout'; // Req 3.3
+        } else if (maxSeenCandidates > 0 || bd.candidateCount > 0) {
+          absence = 'present-unmatched'; // Req 3.2
+        } else {
+          absence = 'absent-full-window'; // Req 3.1
+        }
+
+        var trace = {
+          strategy: 'tag-where',
+          tag: tag,
+          candidateCount: bd.candidateCount,
+          whereBreakdown: bd.nearMiss ? bd.nearMiss.whereBreakdown : [],
+          passedMatchers: bd.nearMiss ? bd.nearMiss.passed : [],
+          failedMatcher: bd.nearMiss ? bd.nearMiss.firstFailed : null,
+          closestLabel: bd.nearMiss ? bd.nearMiss.closestLabel : null,
+          absence: absence,
+          finalFrameCandidateCount: bd.candidateCount,
+          elapsedMs: Math.max(0, Math.min(5000, elapsedMs))
+        };
+
+        // Still reject — no retroactive success. Preserve the human-readable
+        // error string exactly, carry the trace on err.findTrace (Req 3.4, 8.4).
+        var err = new Error('Element not found: ' + tag + ' with conditions ' + JSON.stringify(where));
+        err.findTrace = trace;
+        reject(err);
         return;
       }
       requestAnimationFrame(poll);
@@ -252,7 +672,7 @@ function unhighlightElement(el) {
  *
  * @param {Element} anchor - The resolved anchor DOM element
  * @param {Array<{step: string, index?: number}>} steps - Parsed navigate steps
- * @returns {{ok: boolean, element?: Element, error?: string}}
+ * @returns {{ok: boolean, element?: Element, error?: string, failedHopIndex?: number, failedHopType?: string}}
  */
 function applyNavigateSteps(anchor, steps) {
   var current = anchor;
@@ -269,14 +689,16 @@ function applyNavigateSteps(anchor, steps) {
       case 'sibling':
         var parent = current.parentElement;
         if (!parent) {
-          return { ok: false, error: 'Navigation failed at step ' + (i + 1) + ' (sibling[' + s.index + ']): no parent element' };
+          // Human message stays 1-based; machine fields use the zero-based loop index i.
+          return { ok: false, error: 'Navigation failed at step ' + (i + 1) + ' (sibling[' + s.index + ']): no parent element', failedHopIndex: i, failedHopType: s.step };
         }
         next = parent.children[s.index - 1];
         break;
     }
     if (!next) {
       var token = s.step + (s.index !== undefined ? '[' + s.index + ']' : '');
-      return { ok: false, error: 'Navigation failed at step ' + (i + 1) + ' (' + token + '): element is null' };
+      // Human message stays 1-based; machine fields use the zero-based loop index i.
+      return { ok: false, error: 'Navigation failed at step ' + (i + 1) + ' (' + token + '): element is null', failedHopIndex: i, failedHopType: s.step };
     }
     current = next;
   }
@@ -295,11 +717,25 @@ function findElementWithParent(stepMessage) {
   var elementDescriptor = stepMessage.elementDescriptor;
   var parentDescriptor = stepMessage.parentDescriptor;
   var navigateSteps = elementDescriptor && elementDescriptor.navigate;
+  var action = stepMessage.action;
 
-  // Helper to apply navigate steps after anchor is found
+  // Synthesize a trace with an empty ordered step sequence (Req 1.7) for the
+  // cases where no findElement trace was produced before failing (e.g. a
+  // navigate-hop failure after the anchor resolved).
+  function emptyTrace() {
+    return { steps: [] };
+  }
+
+  // Helper to apply navigate steps after anchor is found.
+  // Reaching this point means findElement resolved the anchor to exactly one
+  // element, so anchorResolved is true whenever navigate hops are attempted.
+  // (If the anchor fails to resolve, findElement rejects and this helper is
+  // never called, so no hops are attempted — the anchorResolved:false case.)
   function applyNavigation(element) {
     if (navigateSteps && navigateSteps.length > 0) {
-      return applyNavigateSteps(element, navigateSteps);
+      var navResult = applyNavigateSteps(element, navigateSteps);
+      navResult.anchorResolved = true;
+      return navResult;
     }
     return { ok: true, element: element };
   }
@@ -309,8 +745,39 @@ function findElementWithParent(stepMessage) {
       .then(function (element) {
         return applyNavigation(element);
       })
-      .catch(function () {
-        return { ok: false, error: 'Element not found: ' + stepMessage.target };
+      .then(function (result) {
+        // Anchor resolved but a navigate hop failed: build the cross-cutting
+        // trace here (findElement produced no trace on the success path).
+        if (result && result.ok === false) {
+          var navTrace = emptyTrace();
+          navTrace.scope = 'whole-document';               // Req 1.3
+          navTrace.action = action;                        // Req 11.3
+          navTrace.error = 'Element not found: ' + stepMessage.target; // Req 1.6
+          navTrace.navigate = {
+            anchorResolved: result.anchorResolved === true, // Req 6.3
+            failedHopIndex: result.failedHopIndex,          // zero-based (Req 6.1, 6.2)
+            failedHopType: result.failedHopType,            // Req 6.2
+            hopCount: navigateSteps ? navigateSteps.length : 0
+          };
+          return { ok: false, error: navTrace.error, findTrace: navTrace };
+        }
+        return result;
+      })
+      .catch(function (err) {
+        // findElement rejected (anchor / tag+where / xpath resolution failed).
+        var trace = (err && err.findTrace) || emptyTrace(); // Req 1.1, 1.2, 1.7
+        trace.scope = 'whole-document';                     // Req 1.3
+        trace.action = action;                              // Req 11.3
+        trace.error = 'Element not found: ' + stepMessage.target; // Req 1.6
+        // When navigate hops were declared but the anchor never resolved, record
+        // that no hops were attempted (Req 6.4).
+        if (navigateSteps && navigateSteps.length > 0 && !trace.navigate) {
+          trace.navigate = {
+            anchorResolved: false,
+            hopCount: navigateSteps.length
+          };
+        }
+        return { ok: false, error: trace.error, findTrace: trace };
       });
   }
 
@@ -338,21 +805,91 @@ function findElementWithParent(stepMessage) {
     return `${parentPath}/${tagName}[${index}]`;
   }
 
+  // Identifier used for the parent descriptor when the parent fails to resolve
+  // (Req 4.2). Mirrors the id used in the preserved human error string below.
+  var parentDescriptorId = parentDescriptor.where && parentDescriptor.where.id
+    ? parentDescriptor.where.id
+    : 'unknown';
+
   return findElement(parentDescriptor, document)
-    .then(function (parentElement) {
-      return findElement(elementDescriptor, parentElement)
+    .then(function (parentAnchor) {
+      // Navigate-then-scope: parent descriptors may carry their own navigate
+      // hops. When present, apply them to the parent anchor and scope the
+      // child search to the navigated result rather than the raw anchor.
+      var parentNavSteps = parentDescriptor.navigate;
+      var scopeElement = parentAnchor;
+      if (parentNavSteps && parentNavSteps.length > 0) {
+        var navResult = applyNavigateSteps(parentAnchor, parentNavSteps);
+        if (navResult.ok === false) {
+          // A parent navigate hop failed: the step fails at the parent-
+          // resolution stage. There is no document-wide fallback.
+          var preservedNavError = 'Parent element not found: ' + parentDescriptorId + ' (navigate ' + navResult.error + ')';
+          var navTrace = emptyTrace();
+          navTrace.scope = 'whole-document';
+          navTrace.action = action;
+          navTrace.error = preservedNavError;
+          navTrace.parent = {
+            resolved: false,                            // Req 4.1, 4.2
+            descriptorId: parentDescriptorId,
+            navigate: {
+              anchorResolved: true,                     // parent anchor resolved
+              failedHopIndex: navResult.failedHopIndex, // zero-based
+              failedHopType: navResult.failedHopType,
+              hopCount: parentNavSteps.length
+            }
+          };
+          return { ok: false, error: preservedNavError, findTrace: navTrace };
+        }
+        scopeElement = navResult.element;
+      }
+
+      return findElement(elementDescriptor, scopeElement)
         .then(function (element) {
           return applyNavigation(element);
         })
         .catch(function (error) {
-          return { ok: false, error: 'Element with parent ' + getElementXPath(parentElement) + ' not found: ' + stepMessage.target + error.message };
+          // Parent resolved (and navigated), but the child was not found
+          // within the scope element's subtree.
+          var preservedError = 'Element with parent ' + getElementXPath(scopeElement) + ' not found: ' + stepMessage.target + error.message;
+          var trace = (error && error.findTrace) || emptyTrace(); // Req 1.7
+          trace.scope = 'parent-scoped';                            // Req 1.3, 4.3
+          trace.action = action;                                    // Req 11.3
+          trace.error = preservedError;                             // Req 1.6, 4.3
+
+          // Failure-only count of matching parent elements (Req 4.5). Not run
+          // during matching — only here, once, on child failure. Counts anchor
+          // matches by parentDescriptor.tag/where across the document.
+          var matchCount = 0;
+          if (parentDescriptor.tag) {
+            var parentCandidates = document.querySelectorAll(parentDescriptor.tag);
+            for (var i = 0; i < parentCandidates.length; i++) {
+              if (matchesWhere(parentCandidates[i], parentDescriptor.where || {}, null)) {
+                matchCount++;
+              }
+            }
+          }
+
+          trace.parent = {
+            resolved: true,                            // Req 4.1
+            identifier: getElementXPath(scopeElement), // Req 4.4
+            matchCount: matchCount,                    // Req 4.5
+            scopedToParent: true                       // Req 4.3
+          };
+          return { ok: false, error: preservedError, findTrace: trace };
         });
     })
     .catch(function () {
-      var parentId = parentDescriptor.where && parentDescriptor.where.id
-        ? parentDescriptor.where.id
-        : 'unknown';
-      return { ok: false, error: 'Parent element not found: ' + parentId };
+      // Parent element failed to resolve — no child pass occurred.
+      var preservedError = 'Parent element not found: ' + parentDescriptorId;
+      var trace = emptyTrace();               // Req 1.7 (no child pass, empty steps)
+      trace.scope = 'whole-document';         // Req 1.3 (parent search is document-wide)
+      trace.action = action;                  // Req 11.3
+      trace.error = preservedError;           // Req 1.6, 4.2
+      trace.parent = {
+        resolved: false,                      // Req 4.1
+        descriptorId: parentDescriptorId      // Req 4.2
+      };
+      return { ok: false, error: preservedError, findTrace: trace };
     });
 }
 
@@ -686,7 +1223,7 @@ api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       // Target specified — find element, highlight, press key on it
       findElementWithParent(message).then(function (findResult) {
         if (!findResult.ok) {
-          sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: false, error: findResult.error });
+          sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: false, error: findResult.error, findTrace: findResult.findTrace });
           return;
         }
         var element = findResult.element;
@@ -714,7 +1251,7 @@ api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (ACTIONS_NEEDING_ELEMENT.indexOf(action) !== -1) {
     findElementWithParent(message).then(function (findResult) {
       if (!findResult.ok) {
-        sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: false, error: findResult.error });
+        sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: false, error: findResult.error, findTrace: findResult.findTrace });
         return;
       }
       var element = findResult.element;

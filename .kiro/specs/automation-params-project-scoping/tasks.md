@@ -6,7 +6,7 @@ Fix automation params and favourites storage to be project-scoped instead of usi
 
 ## Tasks
 
-- [~] 1. Write bug condition exploration test
+- [x] 1. Write bug condition exploration test
   - **Property 1: Bug Condition** - Cross-Project Param Collision and Orphaned Keys
   - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
   - **DO NOT attempt to fix the test or the code when it fails**
@@ -24,7 +24,7 @@ Fix automation params and favourites storage to be project-scoped instead of usi
   - Mark task complete when test is written, run, and failure is documented
   - _Requirements: 1.1, 1.3, 1.4, 1.5_
 
-- [~] 2. Write preservation property tests (BEFORE implementing fix)
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
   - **Property 2: Preservation** - Non-Param Storage Operations Unchanged
   - **IMPORTANT**: Follow observation-first methodology
   - Observe on UNFIXED code: `addSpec(hostname, filename, spec)` adds spec to project.specs
@@ -136,7 +136,7 @@ Fix automation params and favourites storage to be project-scoped instead of usi
     - Confirm all tests still pass after fix (no regressions)
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-- [~] 4. Checkpoint - Ensure all tests pass
+- [x] 4. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

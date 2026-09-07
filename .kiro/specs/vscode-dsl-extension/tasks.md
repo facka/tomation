@@ -31,16 +31,16 @@ All parsing/validation runs in the LSP server process. The mapper, position clas
     - _Requirements: 1.4, 2.1, 2.3, 3.1, 3.2, 3.4, 3.5, 6.6, 7.6_
 
 - [x] 2. Utilities: DSL file detection, settings, and scheduler
-  - [~] 2.1 Implement `src/server/util/dslFile.ts`
+  - [x] 2.1 Implement `src/server/util/dslFile.ts`
     - `isDslFile(uri)` matches `*.pom.ts`, `*.test.ts`, `*.automation.ts`, `*.data.ts`; `fileKind(uri)` returns the kind
     - _Requirements: 2.1, 2.2, 2.3_
 
-  - [~] 2.2 Implement `src/server/util/settings.ts`
+  - [x] 2.2 Implement `src/server/util/settings.ts`
     - Typed settings snapshot under the `tomation` key with defaults: `validation.enabled=true`, `validation.projectScope=true`, `validation.debounceInterval=300`, `validation.runOn="type"`, `completion.enabled=true`, `hover.enabled=true`
     - Provide a change-detection helper that reports whether a value actually changed
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.8_
 
-  - [~] 2.3 Implement `src/server/util/debounce.ts` scheduler
+  - [x] 2.3 Implement `src/server/util/debounce.ts` scheduler
     - `scheduleFile(uri, run)` and `scheduleProject(folder, run)` with per-key debounce (default 300 ms) and `CancellationTokenSource`; a newer schedule for the same key cancels the prior one
     - Coalesce project validation per workspace folder; avoid redundant re-runs
     - _Requirements: 3.3, 11.2, 11.3, 11.4, 11.5_
@@ -88,7 +88,7 @@ All parsing/validation runs in the LSP server process. The mapper, position clas
     - _Requirements: 6.2, 6.3, 14.3_
 
 - [x] 6. Project Symbol Index
-  - [~] 6.1 Implement `src/server/index/projectIndex.ts`
+  - [x] 6.1 Implement `src/server/index/projectIndex.ts`
     - Build per-folder `ElementSymbol`/`TaskSymbol` maps by parsing DSL files (reuse the engine adapter): capture `variableName`, resolved `namespacedKey` (via `deriveNamespace` + `__`), `tag`, `label`, `whereSummary`, `filePath`, `line`, plus `paramNames` for tasks
     - Resolve cross-file references using `resolveSpecifier` over each file's `imports[]` so keys match compiled output
     - Maintain a `byFile` map for incremental add/update/remove on change/save/delete, driven through the debounce scheduler
@@ -128,17 +128,17 @@ All parsing/validation runs in the LSP server process. The mapper, position clas
     - _Requirements: 8.1, 8.4, 8.8, 8.9, 9.2, 9.4, 10.1, 10.4, 14.3_
 
 - [x] 8. Settings behavior, commands, and feedback
-  - [~] 8.1 Wire settings into runtime behavior
+  - [x] 8.1 Wire settings into runtime behavior
     - Apply `validation.enabled` (clear + stop when off), `validation.projectScope`, `debounceInterval`, `runOn` (skip on-type when `"save"`), `completion.enabled`, `hover.enabled`
     - On config change, act only when a value actually changed; no reload prompt when nothing changed; attempt reload prompt only for settings that cannot hot-apply
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.8_
 
-  - [~] 8.2 Implement commands and engine-load feedback
+  - [x] 8.2 Implement commands and engine-load feedback
     - Contribute and register `tomation.validateActiveFile`, `tomation.validateWorkspace`, `tomation.clearDiagnostics` (client forwards to server)
     - When the compiler engine fails to load, surface one clear actionable error, never silently fail, and keep non-engine functionality available; log lifecycle/errors to the output channel
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5_
 
-- [~] 9. Packaging, docs, and end-to-end verification
+- [x] 9. Packaging, docs, and end-to-end verification
   - [x] 9.1 Finalize build, packaging, and README
     - Package-level `build` (esbuild), `watch`, `test`, and `package` (`vsce package` → `.vsix`) scripts; ensure bundling produces a standalone artifact
     - README documenting supported file types, settings, commands, and the minimum VS Code version

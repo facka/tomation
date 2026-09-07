@@ -417,7 +417,7 @@ h3 {
   border-radius: var(--radius-md);
   background: var(--bg-surface);
   box-shadow: var(--shadow-sm);
-  overflow: hidden;
+  overflow: auto;
 }
 
 .step-checklist li {

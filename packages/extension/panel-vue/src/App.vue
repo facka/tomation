@@ -45,6 +45,7 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
         taken: msg.taken,
         taskDepth: msg.taskDepth,
         taskPath: msg.taskPath,
+        findTrace: msg.findTrace,
       });
       if (msg.contextKey !== undefined) {
         store.updateContext(msg.contextKey, msg.savedValue);
