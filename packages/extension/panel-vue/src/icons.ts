@@ -25,6 +25,8 @@ import {
   faChevronDown,
   faCrosshairs,
   faArrowUp,
+  faEllipsisVertical,
+  faPlug,
 } from '@fortawesome/free-solid-svg-icons';
 
 // Regular icons
@@ -55,4 +57,6 @@ library.add(
   faChevronDown,
   faCrosshairs,
   faArrowUp,
+  faEllipsisVertical,
+  faPlug,
 );

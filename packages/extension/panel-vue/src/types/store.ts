@@ -78,6 +78,13 @@ export interface StoreState {
   playgroundPromptDismissed: boolean;
   lastKnownTabUrl: string | null;
   errorMessage: string | null;
+
+  // Live reload (connects to the `tomation watch` dev server)
+  liveReload: {
+    active: boolean;
+    port: number | null;
+    error: string | null;
+  };
 }
 
 export interface StoreActions {
