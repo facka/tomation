@@ -13,7 +13,7 @@ import type { PageElement } from '@/types/spec';
  *
  * The matcher predicates mirror `runtime.js` `evaluateWhereKey` for the supported keys:
  * id, textIs, textContains, classIncludes, placeholder, name, type, value, ariaLabel,
- * role, title, hrefContains, isDisabled, dataAttr, nthChild. `closestLabel`/`navigate`
+ * role, title, hrefContains, isDisabled, dataAttr, isNthElement. `closestLabel`/`navigate`
  * are not fully reproduced (a note is appended when present).
  *
  * @param descriptor - the element descriptor resolved from pageElements[entry.target]
@@ -61,7 +61,7 @@ export function buildFinderSnippet(
   lines.push('    hrefContains: (el, v) => (el.getAttribute(\'href\') || \'\').includes(v),');
   lines.push('    isDisabled: (el, v) => el.disabled === true,');
   lines.push('    dataAttr: (el, v) => el.getAttribute(\'data-\' + v.name) === v.value,');
-  lines.push('    nthChild: (el, v) => { let p = 1, s = el.previousElementSibling; while (s) { p++; s = s.previousElementSibling; } return p === v; },');
+  lines.push('    isNthElement: () => true,'); // list-positional: selection applied in the matching loop below, not per-element
   lines.push('  };');
   lines.push('  const tag = ' + tag + ';');
   lines.push('  const where = ' + where + ';');
@@ -86,8 +86,13 @@ export function buildFinderSnippet(
 
   lines.push('  const candidates = [...root.querySelectorAll(tag)];');
   lines.push('  const matches = candidates.filter(el => Object.entries(where).every(([k, v]) => matchers[k] ? matchers[k](el, v) : true));');
+  // isNthElement is list-positional: select the n-th passing candidate (1-based) by
+  // tracking a running match index, rather than counting DOM siblings per element.
+  lines.push('  const nthTarget = where.isNthElement ?? null;');
+  lines.push('  const selected = nthTarget === null ? matches : (matches[nthTarget - 1] ? [matches[nthTarget - 1]] : []);');
   lines.push('  console.log(candidates.length + \' <\' + tag + \'> candidate(s), \' + matches.length + \' match\', matches);');
-  lines.push('  return matches;');
+  lines.push('  if (nthTarget !== null) console.log(\'isNthElement(\' + nthTarget + \') selects\', selected);');
+  lines.push('  return selected;');
   lines.push('})();');
 
   // Note when the descriptor uses modes the snippet does not fully reproduce.

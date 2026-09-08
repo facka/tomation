@@ -48,7 +48,7 @@ user-facing documentation. Execute one task at a time and wait for confirmation 
     `passed` to `filteredCount >= n`.
   - _Requirements: 5.1, 5.2_
 
-- [ ] 6. Finder snippet: rename key and apply list-position selection
+- [x] 6. Finder snippet: rename key and apply list-position selection
   - In `packages/extension/panel-vue/src/logic/finderSnippet.ts`, replace the `nthChild` per-element
     predicate with an `isNthElement` no-op predicate, and adjust the emitted matching loop to track
     a running match index and return the n-th matching element when `isNthElement` is present.
