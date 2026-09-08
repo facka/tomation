@@ -87,7 +87,7 @@ user-facing documentation. Execute one task at a time and wait for confirmation 
   - Do not execute tests; the user will run them.
   - _Requirements: 9.1, 9.2, 9.3_
 
-- [ ] 11. Final sweep: confirm no residual references
+- [x] 11. Final sweep: confirm no residual references
   - Search shipped code, type declarations, generated snippets, the VS Code extension, user-facing
     docs, and examples for `nthChild` and confirm zero matches (historical `.kiro/specs/` documents
     excluded).
