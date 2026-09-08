@@ -16,6 +16,7 @@
 
 var fs = require('fs');
 var path = require('path');
+var http = require('http');
 var compilerVersion = require('../package.json').version || 'unknown';
 
 var resolve = require('../src/resolver').resolve;
@@ -44,7 +45,8 @@ var USAGE = [
   '  watch     Run compile, then watch all discovered source files; re-run full pipeline on any change',
   '',
   'Options:',
-  '  --verbose  Print detailed step-by-step progress and context data for debugging',
+  '  --verbose    Print detailed step-by-step progress and context data for debugging',
+  '  --port <n>   Port for the watch command\'s live-reload dev server (default: 4756)',
 ].join('\n');
 
 // ---------------------------------------------------------------------------
@@ -615,13 +617,15 @@ function runCheck(cwd, options) {
 // ---------------------------------------------------------------------------
 
 function runWatch(cwd, options) {
+  var liveReloadServer = startLiveReloadServer(options.port);
+
   // Initial compile
   var result = runPipeline(cwd, options);
   if (!result.ok) {
     console.error(result.error);
     // Don't exit — keep watching so the user can fix the error
     console.log('[watch] Initial build failed. Watching for changes...');
-    watchFiles(cwd, []);
+    watchFiles(cwd, [], liveReloadServer);
     return;
   }
 
@@ -631,13 +635,59 @@ function runWatch(cwd, options) {
   if (!emitResult.ok) {
     console.error(emitResult.error);
     console.log('[watch] Initial build failed. Watching for changes...');
-    watchFiles(cwd, result.files);
+    watchFiles(cwd, result.files, liveReloadServer);
     return;
   }
 
+  liveReloadServer.update(result.spec);
   console.log('✓ ' + outputFilename + ' written to ' + emitResult.outputPath);
   console.log('[watch] Watching ' + result.files.length + ' files...');
-  watchFiles(cwd, result.files);
+  watchFiles(cwd, result.files, liveReloadServer);
+}
+
+/**
+ * Start a local HTTP dev server that serves the most recently compiled spec
+ * as JSON at GET /spec, so the extension panel can poll for live-reload.
+ * Bumps a version counter on every update so pollers can detect changes.
+ *
+ * @param {number} port
+ * @returns {{ update: (spec: object) => void }}
+ */
+function startLiveReloadServer(port) {
+  var current = { version: 0, spec: null };
+
+  var server = http.createServer(function (req, res) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    if (req.method === 'GET' && req.url === '/spec') {
+      if (!current.spec) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'No spec compiled yet' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ version: current.version, spec: current.spec }));
+      return;
+    }
+
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Not found' }));
+  });
+
+  server.on('error', function (err) {
+    console.error('[watch] Live reload server error: ' + err.message);
+  });
+
+  server.listen(port, function () {
+    console.log('[watch] Live reload server listening on http://localhost:' + port + '/spec');
+  });
+
+  return {
+    update: function (spec) {
+      current.version += 1;
+      current.spec = spec;
+    },
+  };
 }
 
 /**
@@ -647,7 +697,7 @@ function runWatch(cwd, options) {
  * @param {string} cwd
  * @param {string[]} files
  */
-function watchFiles(cwd, files) {
+function watchFiles(cwd, files, liveReloadServer) {
   var debounceTimer = null;
   var watchers = [];
 
@@ -684,6 +734,9 @@ function watchFiles(cwd, files) {
         return;
       }
 
+      if (liveReloadServer) {
+        liveReloadServer.update(pipelineResult.spec);
+      }
       console.log('[watch] Rebuild complete → ' + emitResult.outputPath);
       startWatchers(pipelineResult.files);
     }, 100);
@@ -718,7 +771,9 @@ function watchFiles(cwd, files) {
 var subcommand = process.argv[2];
 var cwd = process.cwd();
 var verbose = process.argv.includes('--verbose');
-var options = { verbose: verbose };
+var portFlagIndex = process.argv.indexOf('--port');
+var parsedPort = portFlagIndex !== -1 ? parseInt(process.argv[portFlagIndex + 1], 10) : NaN;
+var options = { verbose: verbose, port: Number.isFinite(parsedPort) && parsedPort > 0 ? parsedPort : 4756 };
 
 // Always print compiler version so logs clearly identify the running build.
 console.error('[tomation] compiler v' + compilerVersion);

@@ -75,6 +75,8 @@ const state = reactive<StoreState>({
   playgroundPromptDismissed: false,
   lastKnownTabUrl: null,
   errorMessage: null,
+
+  liveReload: { active: false, port: null, error: null },
 });
 
 // --- Getters ---
@@ -158,6 +160,77 @@ async function loadSpec(hostname: string, filename: string, spec: Spec): Promise
 
   // Load favourites from project
   state.favourites = project.favourites ?? {};
+}
+
+/**
+ * Remove a spec from the current project. If it was the active spec,
+ * falls back to another loaded spec (or back to the home/landing view).
+ */
+async function removeSpec(hostname: string, filename: string): Promise<void> {
+  const project = await getProject(hostname);
+  if (!project) return;
+
+  project.specs = project.specs.filter((s) => s.filename !== filename);
+  project.lastUsed = new Date().toISOString();
+  await saveProject(hostname, project);
+
+  state.currentProject = project;
+
+  if (state.currentSpec?.filename === filename) {
+    disableLiveReload();
+    state.currentSpec = project.specs[0] ?? null;
+    if (!state.currentSpec) {
+      state.currentView = 'home';
+    }
+  }
+}
+
+let liveReloadTimer: ReturnType<typeof setInterval> | null = null;
+let liveReloadVersion: number | null = null;
+
+/**
+ * Poll the `tomation watch` dev server for spec changes and hot-swap the
+ * current spec in place whenever the server reports a new version.
+ */
+function enableLiveReload(port: number, intervalMs = 1500): void {
+  disableLiveReload();
+  state.liveReload = { active: true, port, error: null };
+  liveReloadVersion = null;
+
+  const poll = async () => {
+    try {
+      const res = await fetch(`http://localhost:${port}/spec`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as { version: number; spec: Spec };
+      state.liveReload.error = null;
+
+      if (liveReloadVersion === null) {
+        liveReloadVersion = data.version;
+        return;
+      }
+
+      if (data.version !== liveReloadVersion) {
+        liveReloadVersion = data.version;
+        if (state.currentHostname && state.currentSpec) {
+          await loadSpec(state.currentHostname, state.currentSpec.filename, data.spec);
+        }
+      }
+    } catch (err) {
+      state.liveReload.error = err instanceof Error ? err.message : 'Connection failed';
+    }
+  };
+
+  poll();
+  liveReloadTimer = setInterval(poll, intervalMs);
+}
+
+function disableLiveReload(): void {
+  if (liveReloadTimer) {
+    clearInterval(liveReloadTimer);
+    liveReloadTimer = null;
+  }
+  liveReloadVersion = null;
+  state.liveReload = { active: false, port: null, error: null };
 }
 
 function setProject(project: Project | null): void {
@@ -683,6 +756,9 @@ export function useStore() {
     // Actions
     setView,
     loadSpec,
+    removeSpec,
+    enableLiveReload,
+    disableLiveReload,
     setProject,
     setHostname,
     selectRunnable,
