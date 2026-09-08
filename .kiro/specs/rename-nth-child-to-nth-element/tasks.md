@@ -24,7 +24,7 @@ user-facing documentation. Execute one task at a time and wait for confirmation 
     `isNthElement`.
   - _Requirements: 3.1, 3.2, 3.3_
 
-- [ ] 3. Runtime: change matcher to no-op and add list-position selection
+- [x] 3. Runtime: change matcher to no-op and add list-position selection
   - In `packages/extension/src/runtime.js` `evaluateWhereKey`, replace the `nthChild` case (the
     `previousElementSibling` counter) with an `isNthElement` case that returns
     `{ passed: true, actual: UNAVAILABLE }` (no-op).

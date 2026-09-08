@@ -30,6 +30,16 @@
         "executionId": "2187530b-5aed-472f-8879-112a415e9234",
         "chatSessionId": "sess_a9d427b9-9309-4324-83af-00fdfa81d2ef",
         "timestamp": 1788874182432
+      },
+      {
+        "executionId": "832ea585-d842-435b-ba59-374e94fc4756",
+        "chatSessionId": "sess_7c3de1ae-65ce-45b8-bfe8-12b1adfb68b8",
+        "timestamp": 1788875468580
+      },
+      {
+        "executionId": "832ea585-d842-435b-ba59-374e94fc4756",
+        "chatSessionId": "sess_7c3de1ae-65ce-45b8-bfe8-12b1adfb68b8",
+        "timestamp": 1788875547446
       }
     ],
     "4. Runtime: highlight query + any-match collection position selection": [

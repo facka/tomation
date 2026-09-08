@@ -120,12 +120,12 @@ function evaluateWhereKey(el, key, value, parentNode) {
         actual: (dataVal === null || dataVal === undefined) ? UNAVAILABLE : dataVal
       };
     }
-    case 'nthChild': {
-      var pos = 1;
-      var sib = el.previousElementSibling;
-      while (sib) { pos++; sib = sib.previousElementSibling; }
-      return { passed: pos === value, actual: pos };
-    }
+    case 'isNthElement':
+      // Position among the filtered candidate list is resolved by the iterating
+      // loop, not per-element (Req 4.3). A single element cannot know its index
+      // into the Filtered_List, so treat this as a non-failing no-op here and let
+      // the finder loop count passing candidates and pick the n-th (Req 4.4).
+      return { passed: true, actual: UNAVAILABLE };
     case 'closestLabel':
       // passed delegates to existing matcher; actual sub-record filled by task 3.
       return { passed: matchClosestLabel(el, value, parentNode), actual: null };
@@ -599,14 +599,27 @@ function findElement(descriptor, parentNode) {
   return new Promise(function (resolve, reject) {
     var startTime = Date.now();
     var maxSeenCandidates = 0;
+    // Position among the Filtered_List, 1-based (Req 4.1). null => first-match
+    // default behavior (Req 4.5).
+    var nthTarget = (where && typeof where.isNthElement === 'number')
+      ? where.isNthElement
+      : null;
 
     function poll() {
       var candidates = root.querySelectorAll(tag);
       maxSeenCandidates = Math.max(maxSeenCandidates, candidates.length);
+      // Running 1-based count of candidates passing the other where conditions
+      // (isNthElement is a no-op in matchesWhere, so this counts the Filtered_List).
+      var matchIndex = 0;
       for (var i = 0; i < candidates.length; i++) {
         if (matchesWhere(candidates[i], where, root === document ? null : root)) {
-          resolve(candidates[i]);
-          return;
+          matchIndex++;
+          // Resolve the first passing candidate when no position is requested,
+          // or the candidate whose running count equals the requested index.
+          if (nthTarget === null || matchIndex === nthTarget) {
+            resolve(candidates[i]);
+            return;
+          }
         }
       }
       if (Date.now() - startTime >= TIMEOUT_5sec) {
