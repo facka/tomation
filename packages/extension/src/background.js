@@ -698,6 +698,12 @@ function buildStepMessage(step, pageElements, params) {
         var parentDescriptor = findParentDescriptor(descriptor.childOf, pageElements);
         if (parentDescriptor) {
           msg.parentDescriptor = parentDescriptor;
+          // Attach the parent's element key so the runtime can tag the resolved
+          // parent element with tomation-key for precise hover highlighting.
+          var parentKey = findParentKey(descriptor.childOf, pageElements);
+          if (parentKey) {
+            msg.parentKey = parentKey;
+          }
         }
       }
     }
@@ -726,6 +732,29 @@ function findParentDescriptor(childOfRef, pageElements) {
     var entry = pageElements[keys[i]];
     if (entry.where && entry.where.id === childOfRef) {
       return entry;
+    }
+  }
+  return null;
+}
+
+/**
+ * Resolve the pageElements KEY of the parent referenced by a childOf value.
+ * Mirrors findParentDescriptor's resolution order: a direct key reference
+ * resolves to itself; otherwise the key of the entry whose where.id matches.
+ *
+ * @param {string} childOfRef - The id value or element key referenced by childOf
+ * @param {object} pageElements - The spec's pageElements map
+ * @returns {string|null} - The parent's element key, or null if not found
+ */
+function findParentKey(childOfRef, pageElements) {
+  if (pageElements[childOfRef]) {
+    return childOfRef;
+  }
+  var keys = Object.keys(pageElements);
+  for (var i = 0; i < keys.length; i++) {
+    var entry = pageElements[keys[i]];
+    if (entry.where && entry.where.id === childOfRef) {
+      return keys[i];
     }
   }
   return null;
@@ -2878,6 +2907,7 @@ if (typeof module !== 'undefined' && module.exports) {
     expandTaskStep: expandTaskStep,
     buildStepMessage: buildStepMessage,
     findParentDescriptor: findParentDescriptor,
+    findParentKey: findParentKey,
     safeSendMessage: safeSendMessage,
     SPEED_DELAYS: SPEED_DELAYS,
     applySpeedDelay: applySpeedDelay,

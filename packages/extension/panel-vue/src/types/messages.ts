@@ -68,11 +68,34 @@ export interface HoverHighlightMessage {
   key: string;
 }
 
+// Highlight by XPath expression — used by the find-trace disclosure to
+// highlight a resolved parent element when the child could not be found.
+export interface HoverHighlightXPathMessage {
+  type: 'HOVER_HIGHLIGHT_XPATH';
+  xpath: string;
+}
+
+// Highlight by a spec element descriptor (tag+where or xpath). Used by the
+// ElementInfoCard to highlight any spec-defined element — including a childOf
+// parent that was never tagged — using the finder's matching semantics.
+export interface HoverHighlightDescriptorMessage {
+  type: 'HOVER_HIGHLIGHT_DESCRIPTOR';
+  descriptor: {
+    tag?: string;
+    where?: Record<string, string>;
+    xpath?: string;
+  };
+}
+
 export interface HoverClearMessage {
   type: 'HOVER_CLEAR';
 }
 
-export type ContentScriptHoverMessage = HoverHighlightMessage | HoverClearMessage;
+export type ContentScriptHoverMessage =
+  | HoverHighlightMessage
+  | HoverHighlightXPathMessage
+  | HoverHighlightDescriptorMessage
+  | HoverClearMessage;
 
 // Responses returned by the content script
 export interface HoverResult {

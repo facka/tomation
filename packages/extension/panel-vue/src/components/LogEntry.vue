@@ -5,6 +5,7 @@ import type { PageElement } from '@/types/spec';
 import { resolveTargetLabel, getAssertSuffix, describeCondition } from '@/logic/stepLabel';
 import { buildFinderSnippet } from '@/logic/finderSnippet';
 import { useElementHighlight } from '@/composables/useElementHighlight';
+import ElementInfoCard from '@/components/ElementInfoCard.vue';
 
 const props = defineProps<{
   entry: LogEntry;
@@ -17,6 +18,25 @@ const emit = defineEmits<{
   (e: 'retry', stepIndex: number): void;
   (e: 'skip', stepIndex: number): void;
 }>();
+
+// Inline "element removed" disclosure state, scoped to this row. Set when
+// hovering the element badge finds the resolved element gone (Req 8.1-8.5), and
+// surfaced inside the ElementInfoCard as a removed notice.
+const showRemovedMessage = ref(false);
+
+// The element key whose ElementInfoCard is currently open, or null when closed.
+// Opened by clicking an element badge; shows the element's metadata and its
+// childOf parent chain, each parent hoverable to highlight it on the page.
+const openCardKey = ref<string | null>(null);
+
+function toggleCard(key: string | undefined) {
+  if (!key) return;
+  openCardKey.value = openCardKey.value === key ? null : key;
+}
+
+function closeCard() {
+  openCardKey.value = null;
+}
 
 // --- Computed ---
 
@@ -48,27 +68,6 @@ const actionLabel = computed(() => {
 const targetLabel = computed(() => {
   if (!props.entry.target) return '';
   return resolveTargetLabel(props.entry.target, props.pageElements);
-});
-
-const targetTooltip = computed(() => {
-  const target = props.entry.target;
-  if (!target || !props.pageElements || !props.pageElements[target]) return target || '';
-  const el = props.pageElements[target];
-  const lines: string[] = [];
-  lines.push('Key: ' + target);
-  lines.push('Tag: ' + (el.tag || '*'));
-  if (el.xpath) {
-    lines.push('XPath: ' + el.xpath);
-  } else if (el.where && Object.keys(el.where).length > 0) {
-    const matchers = Object.keys(el.where)
-      .map((k) => k + '=' + JSON.stringify(el.where![k]))
-      .join(', ');
-    lines.push('Where: ' + matchers);
-  }
-  if (el.childOf) {
-    lines.push('Child of: ' + el.childOf);
-  }
-  return lines.join('\n');
 });
 
 const valueDisplay = computed(() => {
@@ -160,6 +159,19 @@ function toggleTrace() {
 
 const trace = computed(() => props.entry.findTrace ?? null);
 
+// True when a childOf step failed because the child was not found *inside* a
+// parent that WAS located. In that case the trace body offers a shortcut that
+// opens the ElementInfoCard on the failing element, whose childOf chain surfaces
+// the parents so the user can confirm/inspect which parent the finder scoped to.
+const parentWasResolved = computed(() => {
+  const t = trace.value;
+  return !!(t && t.parent && t.parent.resolved === true);
+});
+
+// Count of parent elements the finder matched (Req 4.5), shown alongside the
+// shortcut so the user knows whether the scope was ambiguous.
+const parentMatchCount = computed(() => trace.value?.parent?.matchCount ?? null);
+
 // One-line diagnosis derived from the trace (Req 10.3). All fields read defensively.
 const diagnosis = computed(() => {
   const t = trace.value;
@@ -218,9 +230,6 @@ async function copySnippet() {
 // --- Element hover highlighting (Req 3, 4, 8) ---
 
 const { highlight, clear } = useElementHighlight();
-
-// Inline "element removed" disclosure state, scoped to this row (Req 8.1-8.5).
-const showRemovedMessage = ref(false);
 
 // Plain (non-reactive) guard tracking whether the pointer is currently over this
 // row. Used to ignore late highlight results after the pointer has left.
@@ -317,11 +326,21 @@ onBeforeUnmount(() => {
     <template v-else-if="isAssert">
       <span class="step-action">Assert that</span>
 
-      <span
-        v-if="entry.target"
-        class="element-badge"
-        :title="targetTooltip"
-      >{{ targetLabel }}</span>
+      <span v-if="entry.target" class="element-badge-wrap">
+        <button
+          type="button"
+          class="element-badge element-badge-btn"
+          :aria-expanded="openCardKey === entry.target"
+          @click.stop="toggleCard(entry.target)"
+        >{{ targetLabel }}</button>
+        <ElementInfoCard
+          v-if="openCardKey === entry.target"
+          :element-key="entry.target"
+          :page-elements="pageElements"
+          :removed="showRemovedMessage"
+          @close="closeCard"
+        />
+      </span>
 
       <span class="step-preposition">{{ assertSuffix }}</span>
 
@@ -344,9 +363,22 @@ onBeforeUnmount(() => {
 
       <span
         v-if="entry.target && entry.action !== 'navigate'"
-        class="element-badge"
-        :title="targetTooltip"
-      >{{ targetLabel }}</span>
+        class="element-badge-wrap"
+      >
+        <button
+          type="button"
+          class="element-badge element-badge-btn"
+          :aria-expanded="openCardKey === entry.target"
+          @click.stop="toggleCard(entry.target)"
+        >{{ targetLabel }}</button>
+        <ElementInfoCard
+          v-if="openCardKey === entry.target"
+          :element-key="entry.target"
+          :page-elements="pageElements"
+          :removed="showRemovedMessage"
+          @close="closeCard"
+        />
+      </span>
 
       <span
         v-if="valueDisplay && !hasTargetPreposition"
@@ -381,13 +413,6 @@ onBeforeUnmount(() => {
     </template>
   </div>
 
-  <!-- Inline "element removed" disclosure (Req 8.4, 8.5). Scoped to this row and
-       shown only while hovering when the element could not be found on the page
-       but was resolved during the run. -->
-  <div v-if="showRemovedMessage" class="element-removed-msg">
-    <font-awesome-icon :icon="['fas', 'triangle-exclamation']" />
-    <span>This element is no longer in the page — it may have been removed by a later navigation or DOM change.</span>
-  </div>
 
   <!-- "Why did this fail?" find-trace disclosure (Req 10). Rendered beneath the
        error line only for failed entries that carry a trace. Initially collapsed. -->
@@ -405,6 +430,30 @@ onBeforeUnmount(() => {
     <div v-if="traceExpanded" class="find-trace-body">
       <!-- One-line diagnosis (Req 10.3) -->
       <div v-if="diagnosis" class="ft-diagnosis">{{ diagnosis }}</div>
+
+      <!-- Parent-inspection shortcut. Shown when the child was not found but its
+           parent WAS resolved. Opens the ElementInfoCard on the failing element,
+           whose childOf chain lets the user inspect and highlight each parent so
+           they can confirm the finder scoped to the intended element. -->
+      <div v-if="parentWasResolved && entry.target" class="ft-parent-wrap">
+        <button
+          type="button"
+          class="ft-parent-btn"
+          :aria-expanded="openCardKey === entry.target"
+          @click.stop="toggleCard(entry.target)"
+        >
+          <font-awesome-icon :icon="['fas', 'crosshairs']" />
+          <span>
+            Inspect element &amp; parent chain<span v-if="parentMatchCount && parentMatchCount > 1"> ({{ parentMatchCount }} parents matched)</span>
+          </span>
+        </button>
+        <ElementInfoCard
+          v-if="openCardKey === entry.target"
+          :element-key="entry.target"
+          :page-elements="pageElements"
+          @close="closeCard"
+        />
+      </div>
 
       <!-- Copy-pasteable DevTools finder snippet (Req 10.4-10.8) -->
       <div v-if="finderSnippet" class="ft-snippet">
@@ -438,16 +487,6 @@ onBeforeUnmount(() => {
   font-size: 10px;
   font-style: italic;
   margin-left: 4px;
-}
-
-.element-removed-msg {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 2px 8px 4px 24px;
-  color: var(--text-muted, #888);
-  font-size: 10px;
-  line-height: 1.4;
 }
 
 .condition-expr {
@@ -504,6 +543,47 @@ onBeforeUnmount(() => {
 .ft-diagnosis {
   font-size: 11px;
   color: var(--text-secondary, #aaa);
+}
+
+.ft-parent-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.ft-parent-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border: 1px dashed var(--border, #444);
+  border-radius: 4px;
+  cursor: pointer;
+  background: none;
+  font-family: inherit;
+  font-size: 10px;
+  color: var(--text-muted, #888);
+}
+
+.ft-parent-btn:hover {
+  color: #f5a623;
+  border-color: #f5a623;
+}
+
+/* Element badge trigger for the ElementInfoCard popover. */
+.element-badge-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.element-badge-btn {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.element-badge-btn:hover {
+  filter: brightness(1.15);
 }
 
 .ft-snippet {

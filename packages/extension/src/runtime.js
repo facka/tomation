@@ -742,6 +742,112 @@ function handleHoverHighlight(key) {
 }
 
 /**
+ * Highlight all elements matched by the given XPath expression for panel hover.
+ * Used by the find-trace disclosure to highlight a resolved parent element when
+ * the child could not be found. On zero matches (or an invalid expression),
+ * touches nothing and reports found: 0. Otherwise sets data-tomation-hover="true"
+ * on every matched element node and scrolls the first match into view only when
+ * it is off-screen.
+ *
+ * @param {string} xpath - the XPath expression to resolve and hover-highlight
+ * @returns {{type: string, found: number}}
+ */
+function handleHoverHighlightXPath(xpath) {
+  var els = [];
+  try {
+    var result = document.evaluate(
+      xpath,
+      document,
+      null,
+      XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+      null
+    );
+    for (var i = 0; i < result.snapshotLength; i++) {
+      var node = result.snapshotItem(i);
+      // Only element nodes can carry an attribute / be scrolled into view.
+      if (node && node.nodeType === 1) {
+        els.push(node);
+      }
+    }
+  } catch (e) {
+    return { type: 'HOVER_RESULT', found: 0 };
+  }
+  if (els.length === 0) {
+    return { type: 'HOVER_RESULT', found: 0 };
+  }
+  for (var j = 0; j < els.length; j++) {
+    els[j].setAttribute('data-tomation-hover', 'true');
+  }
+  if (!isInViewport(els[0])) {
+    els[0].scrollIntoView({ block: 'nearest' });
+  }
+  return { type: 'HOVER_RESULT', found: els.length };
+}
+
+/**
+ * Highlight all elements matching a spec element descriptor (tag+where or
+ * xpath) for panel hover. Used by the ElementInfoCard so the panel can
+ * highlight any spec-defined element — including a childOf parent that was
+ * never tagged with tomation-key — using the same matching semantics as the
+ * finder (matchesWhere / document.evaluate). This is an instantaneous query,
+ * not a polling wait: it reports whatever matches the current DOM.
+ *
+ * On zero matches (or an invalid/empty descriptor), touches nothing and
+ * reports found: 0. Otherwise sets data-tomation-hover="true" on every match
+ * and scrolls the first match into view only when it is off-screen.
+ *
+ * @param {{tag?: string, where?: object, xpath?: string}} descriptor
+ * @returns {{type: string, found: number}}
+ */
+function handleHoverHighlightDescriptor(descriptor) {
+  var els = [];
+  if (!descriptor) {
+    return { type: 'HOVER_RESULT', found: 0 };
+  }
+
+  if (descriptor.xpath) {
+    try {
+      var result = document.evaluate(
+        descriptor.xpath,
+        document,
+        null,
+        XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+        null
+      );
+      for (var i = 0; i < result.snapshotLength; i++) {
+        var node = result.snapshotItem(i);
+        if (node && node.nodeType === 1) {
+          els.push(node);
+        }
+      }
+    } catch (e) {
+      return { type: 'HOVER_RESULT', found: 0 };
+    }
+  } else if (descriptor.tag) {
+    var candidates = document.querySelectorAll(descriptor.tag);
+    var where = descriptor.where || {};
+    for (var k = 0; k < candidates.length; k++) {
+      if (matchesWhere(candidates[k], where, null)) {
+        els.push(candidates[k]);
+      }
+    }
+  } else {
+    return { type: 'HOVER_RESULT', found: 0 };
+  }
+
+  if (els.length === 0) {
+    return { type: 'HOVER_RESULT', found: 0 };
+  }
+  for (var j = 0; j < els.length; j++) {
+    els[j].setAttribute('data-tomation-hover', 'true');
+  }
+  if (!isInViewport(els[0])) {
+    els[0].scrollIntoView({ block: 'nearest' });
+  }
+  return { type: 'HOVER_RESULT', found: els.length };
+}
+
+/**
  * Clear hover highlighting from every element that has it, leaving zero
  * data-tomation-hover elements. Does not touch data-tomation-active.
  *
@@ -931,6 +1037,13 @@ function findElementWithParent(stepMessage) {
         }
         scopeElement = navResult.element;
       }
+
+      // Tag the resolved parent (the element the child search is scoped to) with
+      // its own element key so the panel can hover-highlight the exact parent
+      // instance the finder used — not every element matching the parent
+      // descriptor. Runs whether the child later succeeds or fails. No-ops when
+      // the parent key is unknown (Req: parent tomation-key for precise hover).
+      tagElementKey(scopeElement, stepMessage.parentKey);
 
       return findElement(elementDescriptor, scopeElement)
         .then(function (element) {
@@ -1282,6 +1395,14 @@ var ACTIONS_NEEDING_ELEMENT = ['click', 'type', 'typePassword', 'select', 'asser
 api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.type === 'HOVER_HIGHLIGHT') {
     sendResponse(handleHoverHighlight(message.key));
+    return;
+  }
+  if (message.type === 'HOVER_HIGHLIGHT_XPATH') {
+    sendResponse(handleHoverHighlightXPath(message.xpath));
+    return;
+  }
+  if (message.type === 'HOVER_HIGHLIGHT_DESCRIPTOR') {
+    sendResponse(handleHoverHighlightDescriptor(message.descriptor));
     return;
   }
   if (message.type === 'HOVER_CLEAR') {
