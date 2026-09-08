@@ -73,11 +73,11 @@ user-facing documentation. Execute one task at a time and wait for confirmation 
   - `packages/dsl/README.md`: if it references the matcher, update it to `isNthElement`.
   - _Requirements: 8.1, 8.2, 8.3, 8.4_
 
-- [ ] 9. Examples: update any POM/test sources using the matcher
+- [x] 9. Examples: update any POM/test sources using the matcher
   - Search `examples/` for `nthChild` usages and update to `isNthElement`.
   - _Requirements: 8.5_
 
-- [ ] 10. Tests: update names and add new-semantics coverage
+- [x] 10. Tests: update names and add new-semantics coverage
   - Update DSL, compiler, runtime, integration, and property tests referencing `nthChild` to use
     `isNthElement`.
   - Add/adjust runtime tests: `isNthElement(n)` selects the n-th element of the filtered list;

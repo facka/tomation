@@ -1083,3 +1083,141 @@ test('traceClosestLabel: bounded flag true and text absence flagged when spec.te
   assert.equal(rec.labelText, null);
   assert.equal(rec.labelTextAbsent, true);
 });
+
+// ---------------------------------------------------------------------------
+// isNthElement matcher — list-position selection semantics
+// Requirements: 4.1, 4.2, 4.3, 4.5, 5.1, 5.2
+// ---------------------------------------------------------------------------
+
+test('matchesWhere: isNthElement is a non-failing no-op per element', function () {
+  // A single element cannot know its position in the Filtered_List, so the
+  // per-element predicate must never reject on isNthElement alone (Req 4.3).
+  setupDOM('<html><body><li id="a">A</li><li id="b">B</li></body></html>');
+  var matchesWhere = window.eval('matchesWhere');
+
+  var a = window.document.getElementById('a');
+  var b = window.document.getElementById('b');
+  assert.equal(matchesWhere(a, { isNthElement: 2 }), true);
+  assert.equal(matchesWhere(b, { isNthElement: 2 }), true);
+});
+
+test('matchesWhere: does not count DOM siblings for isNthElement', function () {
+  // Req 4.4: no previousElementSibling counting. Every candidate passes the
+  // per-element check regardless of its sibling position.
+  setupDOM('<html><body><ul><li id="one">1</li><li id="two">2</li><li id="three">3</li></ul></body></html>');
+  var matchesWhere = window.eval('matchesWhere');
+
+  assert.equal(matchesWhere(window.document.getElementById('one'), { isNthElement: 3 }), true);
+  assert.equal(matchesWhere(window.document.getElementById('three'), { isNthElement: 1 }), true);
+});
+
+test('findElement: isNthElement(n) selects the n-th matching element in document order', async function () {
+  setupDOM('<html><body><ul>' +
+    '<li id="i1">First</li>' +
+    '<li id="i2">Second</li>' +
+    '<li id="i3">Third</li>' +
+    '<li id="i4">Fourth</li>' +
+    '</ul></body></html>');
+  var findElement = window.eval('findElement');
+
+  var second = await findElement({ tag: 'li', where: { isNthElement: 2 } });
+  assert.equal(second.id, 'i2');
+  assert.equal(second.textContent, 'Second');
+
+  var third = await findElement({ tag: 'li', where: { isNthElement: 3 } });
+  assert.equal(third.id, 'i3');
+});
+
+test('findElement: isNthElement(1) selects the first matching element', async function () {
+  // Req 4.5: n === 1 with a non-empty Filtered_List selects the first match,
+  // equivalent to default first-match behavior.
+  setupDOM('<html><body><ul><li id="i1">First</li><li id="i2">Second</li></ul></body></html>');
+  var findElement = window.eval('findElement');
+
+  var el = await findElement({ tag: 'li', where: { isNthElement: 1 } });
+  assert.equal(el.id, 'i1');
+});
+
+test('findElement: isNthElement counts only elements passing the other where conditions', async function () {
+  // Req 4.1: the position is over the Filtered_List — candidates that also pass
+  // every OTHER where key, in document order. Here only .todo items count, so
+  // isNthElement(2) selects the SECOND .todo item, skipping the non-todo <li>.
+  setupDOM('<html><body><ul>' +
+    '<li id="skip1" class="header">Header</li>' +
+    '<li id="t1" class="todo">Todo One</li>' +
+    '<li id="skip2" class="header">Divider</li>' +
+    '<li id="t2" class="todo">Todo Two</li>' +
+    '<li id="t3" class="todo">Todo Three</li>' +
+    '</ul></body></html>');
+  var findElement = window.eval('findElement');
+
+  var el = await findElement({ tag: 'li', where: { classIncludes: 'todo', isNthElement: 2 } });
+  assert.equal(el.id, 't2');
+  assert.equal(el.textContent, 'Todo Two');
+});
+
+test('findElement: out-of-range isNthElement yields no match (rejects after timeout)', async function () {
+  setupDOM('<html><body><ul><li class="todo">One</li><li class="todo">Two</li></ul></body></html>');
+
+  // Fast-forward the polling clock so the finder times out promptly.
+  var callCount = 0;
+  var originalDateNow = window.Date.now;
+  window.Date.now = function () {
+    callCount++;
+    if (callCount <= 1) return 0;
+    return 6000;
+  };
+
+  var findElement = window.eval('findElement');
+
+  // Only 2 matching candidates but index 3 requested → no match.
+  await assert.rejects(
+    findElement({ tag: 'li', where: { classIncludes: 'todo', isNthElement: 3 } }),
+    function (err) {
+      return /Element not found: li/.test(err.message);
+    }
+  );
+
+  window.Date.now = originalDateNow;
+});
+
+test('buildWhereBreakdown: isNthElement reports the filtered count as actual, expected n, passed when filteredCount >= n', function () {
+  // Req 5.1, 5.2: out-of-range index. Two candidates pass the other condition,
+  // but index 3 was requested. The breakdown reports actual = filtered count (2),
+  // expected = requested index (3), and passed = false.
+  setupDOM('<html><body><ul>' +
+    '<li class="todo">One</li>' +
+    '<li class="todo">Two</li>' +
+    '<li class="other">Nope</li>' +
+    '</ul></body></html>');
+  var buildWhereBreakdown = window.eval('buildWhereBreakdown');
+  var candidates = window.document.querySelectorAll('li');
+
+  var bd = buildWhereBreakdown(candidates, { classIncludes: 'todo', isNthElement: 3 }, null);
+  var entry = bd.nearMiss.whereBreakdown.find(function (e) { return e.key === 'isNthElement'; });
+
+  assert.ok(entry, 'breakdown should include an isNthElement entry');
+  assert.equal(entry.expected, 3);
+  assert.equal(entry.actual, 2, 'actual should be the Filtered_List size (candidates passing other conditions)');
+  assert.equal(entry.passed, false);
+});
+
+test('buildWhereBreakdown: isNthElement passes when filtered count reaches the requested index', function () {
+  // Req 5.2: in-range index. Three candidates pass the other condition and
+  // index 3 was requested → passed = true, actual = 3.
+  setupDOM('<html><body><ul>' +
+    '<li class="todo">One</li>' +
+    '<li class="todo">Two</li>' +
+    '<li class="todo">Three</li>' +
+    '</ul></body></html>');
+  var buildWhereBreakdown = window.eval('buildWhereBreakdown');
+  var candidates = window.document.querySelectorAll('li');
+
+  var bd = buildWhereBreakdown(candidates, { classIncludes: 'todo', isNthElement: 3 }, null);
+  var entry = bd.nearMiss.whereBreakdown.find(function (e) { return e.key === 'isNthElement'; });
+
+  assert.ok(entry, 'breakdown should include an isNthElement entry');
+  assert.equal(entry.expected, 3);
+  assert.equal(entry.actual, 3);
+  assert.equal(entry.passed, true);
+});

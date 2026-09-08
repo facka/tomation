@@ -132,6 +132,16 @@
         "executionId": "2187530b-5aed-472f-8879-112a415e9234",
         "chatSessionId": "sess_a9d427b9-9309-4324-83af-00fdfa81d2ef",
         "timestamp": 1788874183197
+      },
+      {
+        "executionId": "0bdff1b8-542a-4f66-977d-05e897e50c95",
+        "chatSessionId": "sess_66f896ff-81d5-4d70-b8a0-3c0ff2060643",
+        "timestamp": 1788877788726
+      },
+      {
+        "executionId": "0bdff1b8-542a-4f66-977d-05e897e50c95",
+        "chatSessionId": "sess_66f896ff-81d5-4d70-b8a0-3c0ff2060643",
+        "timestamp": 1788877822174
       }
     ],
     "10. Tests: update names and add new-semantics coverage": [
@@ -139,6 +149,16 @@
         "executionId": "2187530b-5aed-472f-8879-112a415e9234",
         "chatSessionId": "sess_a9d427b9-9309-4324-83af-00fdfa81d2ef",
         "timestamp": 1788874183303
+      },
+      {
+        "executionId": "63608d27-7713-47ac-9422-3ff027b2db04",
+        "chatSessionId": "sess_f0806469-e5fe-4009-9541-e81c800d068d",
+        "timestamp": 1788877933530
+      },
+      {
+        "executionId": "63608d27-7713-47ac-9422-3ff027b2db04",
+        "chatSessionId": "sess_f0806469-e5fe-4009-9541-e81c800d068d",
+        "timestamp": 1788878199255
       }
     ],
     "11. Final sweep: confirm no residual references": [

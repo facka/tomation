@@ -19,6 +19,7 @@ const {
   nameIs,
   typeIs,
   idIs,
+  isNthElement,
   Task,
   Test,
   Click,
@@ -187,6 +188,10 @@ describe('Matcher factories', () => {
 
   test('idIs returns { id }', () => {
     assert.deepEqual(idIs('submit-btn'), { id: 'submit-btn' });
+  });
+
+  test('isNthElement returns { isNthElement }', () => {
+    assert.deepEqual(isNthElement(3), { isNthElement: 3 });
   });
 });
 

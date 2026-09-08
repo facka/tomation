@@ -13,7 +13,7 @@
  * - titleIs (1-arg string)
  * - hrefContains (1-arg string)
  * - isDisabled (0-arg boolean)
- * - nthChild (1-arg numeric)
+ * - isNthElement (1-arg numeric)
  * - closestLabelIs (2-arg string)
  *
  * Also confirms no regressions for existing matchers (idIs, classIncludes, innerTextIs).
@@ -35,7 +35,7 @@ const dialog = is.DIV.where(roleIs('dialog')).as('Dialog');
 const link = is.A.where(titleIs('Submit form')).as('Title Link');
 const navLink = is.A.where(hrefContains('/login')).as('Login Link');
 const disabledBtn = is.BUTTON.where(isDisabled()).as('Disabled Button');
-const thirdItem = is.LI.where(nthChild(3)).as('Third Item');
+const thirdItem = is.LI.where(isNthElement(3)).as('Third Item');
 const emailInput = is.INPUT.where(closestLabelIs('LABEL', 'Email')).as('Email Input');
 const loginBtn = is.BUTTON.where(idIs('login-btn')).as('Login Button');
 const todoItem = is.LI.where(classIncludes('todo-item')).as('Todo Item');
@@ -110,12 +110,28 @@ test('integration: isDisabled produces { isDisabled: true }', () => {
   assert.deepEqual(el.where, { isDisabled: true });
 });
 
-test('integration: nthChild produces { nthChild: 3 }', () => {
+test('integration: isNthElement produces { isNthElement: 3 }', () => {
   const result = parseSource(fixtureSource, 'fixture.pom.js');
   const el = result.elements.find(e => e.label === 'Third Item');
 
   assert.ok(el, 'element should exist');
-  assert.deepEqual(el.where, { nthChild: 3 });
+  assert.deepEqual(el.where, { isNthElement: 3 });
+});
+
+test('integration: isNthElement with a non-integer argument warns and produces an empty descriptor', () => {
+  const src = `
+const bad = is.LI.where(isNthElement(2.5)).as('Bad Nth');
+`;
+  const result = parseSource(src, 'fixture.pom.js');
+  const el = result.elements.find(e => e.label === 'Bad Nth');
+
+  assert.ok(el, 'element should exist');
+  assert.deepEqual(el.where, {}, 'non-integer argument yields an empty descriptor');
+  assert.ok(result.warnings.length >= 1, 'should emit at least one warning');
+  assert.ok(
+    result.warnings.some(w => /isNthElement/.test(w.message) && /positive integer/.test(w.message)),
+    'warning should mention isNthElement requires a positive integer argument'
+  );
 });
 
 test('integration: closestLabelIs produces { closestLabel: { tag: "LABEL", text: "Email" } }', () => {
