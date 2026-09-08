@@ -20,7 +20,7 @@ export interface WhereDescriptor {
   title?: string;
   hrefContains?: string;
   isDisabled?: boolean;
-  nthChild?: number;
+  isNthElement?: number;
   closestLabel?: { tag: string; text: string };
 }
 
@@ -42,7 +42,7 @@ export type WhereMatcher =
   | { title: string }
   | { hrefContains: string }
   | { isDisabled: true }
-  | { nthChild: number }
+  | { isNthElement: number }
   | { closestLabel: { tag: string; text: string } };
 
 // --- Element Descriptors ---
@@ -125,7 +125,7 @@ export declare function roleIs(val: string): { role: string };
 export declare function titleIs(val: string): { title: string };
 export declare function hrefContains(val: string): { hrefContains: string };
 export declare function isDisabled(): { isDisabled: true };
-export declare function nthChild(n: number): { nthChild: number };
+export declare function isNthElement(n: number): { isNthElement: number };
 export declare function closestLabelIs(tag: string, text: string): { closestLabel: { tag: string; text: string } };
 
 // --- XPath Element Constructor ---

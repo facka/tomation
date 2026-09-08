@@ -129,8 +129,8 @@ function isDisabled() {
   return { isDisabled: true };
 }
 
-function nthChild(n) {
-  return { nthChild: n };
+function isNthElement(n) {
+  return { isNthElement: n };
 }
 
 function dataAttr(name, val) {
@@ -486,7 +486,7 @@ module.exports = {
   titleIs: titleIs,
   hrefContains: hrefContains,
   isDisabled: isDisabled,
-  nthChild: nthChild,
+  isNthElement: isNthElement,
   dataAttr: dataAttr,
   closestLabelIs: closestLabelIs,
   // Task, Test, and Automation
