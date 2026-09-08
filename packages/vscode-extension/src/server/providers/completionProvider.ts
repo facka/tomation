@@ -126,7 +126,7 @@ const WHERE_MATCHERS: ReadonlyArray<{ name: string; snippet: string }> = [
   { name: 'titleIs', snippet: "titleIs('${1:title}')" },
   { name: 'hrefContains', snippet: "hrefContains('${1:href}')" },
   { name: 'isDisabled', snippet: 'isDisabled()' },
-  { name: 'nthChild', snippet: 'nthChild(${1:n})' },
+  { name: 'isNthElement', snippet: 'isNthElement(${1:n})' },
   { name: 'closestLabelIs', snippet: "closestLabelIs('${1:tag}', '${2:text}')" },
 ];
 

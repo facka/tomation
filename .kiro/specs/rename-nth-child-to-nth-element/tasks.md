@@ -55,7 +55,7 @@ user-facing documentation. Execute one task at a time and wait for confirmation 
   - Update the comment/matcher-key list in the file header to reference `isNthElement`.
   - _Requirements: 6.1, 6.2_
 
-- [ ] 7. VS Code extension: completion + hover docs
+- [x] 7. VS Code extension: completion + hover docs
   - In `packages/vscode-extension/src/server/providers/completionProvider.ts`, replace the
     `nthChild` entry with `{ name: 'isNthElement', snippet: 'isNthElement(${1:n})' }`.
   - In `packages/vscode-extension/src/server/providers/docs.ts`, replace the `nthChild` doc entry
