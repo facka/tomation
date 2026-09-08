@@ -36,7 +36,7 @@ user-facing documentation. Execute one task at a time and wait for confirmation 
     matcher.
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 4. Runtime: highlight query + any-match collection position selection
+- [x] 4. Runtime: highlight query + any-match collection position selection
   - In the highlight query path (~line 830), when `where.isNthElement` is present, select only the
     n-th element among those passing `matchesWhere` (or none if out of range), so highlight matches
     the finder's choice.

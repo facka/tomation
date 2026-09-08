@@ -839,9 +839,26 @@ function handleHoverHighlightDescriptor(descriptor) {
   } else if (descriptor.tag) {
     var candidates = document.querySelectorAll(descriptor.tag);
     var where = descriptor.where || {};
+    // Position among the Filtered_List, 1-based (Req 4.1). null => collect every
+    // passing candidate (no position requested).
+    var nthTarget = (typeof where.isNthElement === 'number')
+      ? where.isNthElement
+      : null;
+    // Running 1-based count of candidates passing the other where conditions
+    // (isNthElement is a no-op in matchesWhere, so this counts the Filtered_List).
+    // Mirrors the finder poll loop so highlight matches the finder's choice.
+    var matchIndex = 0;
     for (var k = 0; k < candidates.length; k++) {
       if (matchesWhere(candidates[k], where, null)) {
-        els.push(candidates[k]);
+        matchIndex++;
+        if (nthTarget === null) {
+          els.push(candidates[k]);
+        } else if (matchIndex === nthTarget) {
+          // Collect ONLY the n-th passing element (Req 4.1); if the
+          // Filtered_List has fewer than n members, none matches (Req 4.2).
+          els.push(candidates[k]);
+          break;
+        }
       }
     }
   } else {
