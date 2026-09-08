@@ -1,0 +1,160 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Add the `tagElementKey(el, key)` helper to `runtime.js`": [
+      {
+        "executionId": "f10c62d7-b855-47c0-b6a3-e5bfaf27247e",
+        "chatSessionId": "sess_4f853ac2-316b-4ce0-8b79-a6c6775f0f27",
+        "timestamp": 1788792569728
+      },
+      {
+        "executionId": "f10c62d7-b855-47c0-b6a3-e5bfaf27247e",
+        "chatSessionId": "sess_4f853ac2-316b-4ce0-8b79-a6c6775f0f27",
+        "timestamp": 1788792629547
+      }
+    ],
+    "1.2 Call `tagElementKey` before `highlightElement` at every element-resolving branch of the `EXECUTE_STEP` listener": [
+      {
+        "executionId": "f10c62d7-b855-47c0-b6a3-e5bfaf27247e",
+        "chatSessionId": "sess_4f853ac2-316b-4ce0-8b79-a6c6775f0f27",
+        "timestamp": 1788792633467
+      },
+      {
+        "executionId": "f10c62d7-b855-47c0-b6a3-e5bfaf27247e",
+        "chatSessionId": "sess_4f853ac2-316b-4ce0-8b79-a6c6775f0f27",
+        "timestamp": 1788792701411
+      }
+    ],
+    "1.3 Confirm `unhighlightElement` persists the tag on step completion": [
+      {
+        "executionId": "f10c62d7-b855-47c0-b6a3-e5bfaf27247e",
+        "chatSessionId": "sess_4f853ac2-316b-4ce0-8b79-a6c6775f0f27",
+        "timestamp": 1788792705341
+      },
+      {
+        "executionId": "f10c62d7-b855-47c0-b6a3-e5bfaf27247e",
+        "chatSessionId": "sess_4f853ac2-316b-4ce0-8b79-a6c6775f0f27",
+        "timestamp": 1788792745842
+      }
+    ],
+    "1. Runtime: tag resolved elements with the element key": [
+      {
+        "executionId": "f10c62d7-b855-47c0-b6a3-e5bfaf27247e",
+        "chatSessionId": "sess_4f853ac2-316b-4ce0-8b79-a6c6775f0f27",
+        "timestamp": 1788792745985
+      }
+    ],
+    "2.1 Add the self-invoking `injectHoverStyles()` hover-style injector": [
+      {
+        "executionId": "57f0663e-2276-4d6a-af9d-73ebdf7d468f",
+        "chatSessionId": "sess_189713bf-18cc-4ab1-b25a-42447af94f37",
+        "timestamp": 1788793969099
+      },
+      {
+        "executionId": "57f0663e-2276-4d6a-af9d-73ebdf7d468f",
+        "chatSessionId": "sess_189713bf-18cc-4ab1-b25a-42447af94f37",
+        "timestamp": 1788794009030
+      }
+    ],
+    "2.2 Add the pure hover helpers `hoverSelectorFor`, `isInViewport`, `handleHoverHighlight`, `handleHoverClear`": [
+      {
+        "executionId": "57f0663e-2276-4d6a-af9d-73ebdf7d468f",
+        "chatSessionId": "sess_189713bf-18cc-4ab1-b25a-42447af94f37",
+        "timestamp": 1788794030686
+      },
+      {
+        "executionId": "57f0663e-2276-4d6a-af9d-73ebdf7d468f",
+        "chatSessionId": "sess_189713bf-18cc-4ab1-b25a-42447af94f37",
+        "timestamp": 1788794103474
+      }
+    ],
+    "2.3 Wire `HOVER_HIGHLIGHT` and `HOVER_CLEAR` into the `onMessage` listener": [
+      {
+        "executionId": "57f0663e-2276-4d6a-af9d-73ebdf7d468f",
+        "chatSessionId": "sess_189713bf-18cc-4ab1-b25a-42447af94f37",
+        "timestamp": 1788794116195
+      },
+      {
+        "executionId": "57f0663e-2276-4d6a-af9d-73ebdf7d468f",
+        "chatSessionId": "sess_189713bf-18cc-4ab1-b25a-42447af94f37",
+        "timestamp": 1788794156259
+      }
+    ],
+    "2. Runtime: hover style injection and hover message handlers": [
+      {
+        "executionId": "57f0663e-2276-4d6a-af9d-73ebdf7d468f",
+        "chatSessionId": "sess_189713bf-18cc-4ab1-b25a-42447af94f37",
+        "timestamp": 1788794156397
+      }
+    ],
+    "4.1 Add the hover message contract types to `messages.ts`": [
+      {
+        "executionId": "3845fb57-c89c-4a42-8b31-b58fb008a722",
+        "chatSessionId": "sess_76fc0ce6-baf0-4eda-93ff-7d15b1f61392",
+        "timestamp": 1788794256608
+      },
+      {
+        "executionId": "3845fb57-c89c-4a42-8b31-b58fb008a722",
+        "chatSessionId": "sess_76fc0ce6-baf0-4eda-93ff-7d15b1f61392",
+        "timestamp": 1788794292843
+      }
+    ],
+    "4. Panel types: content-script hover message contract (`messages.ts`)": [
+      {
+        "executionId": "3845fb57-c89c-4a42-8b31-b58fb008a722",
+        "chatSessionId": "sess_76fc0ce6-baf0-4eda-93ff-7d15b1f61392",
+        "timestamp": 1788794292971
+      }
+    ],
+    "5.1 Create the module-level singleton composable": [
+      {
+        "executionId": "a20341c4-936e-4c21-b28e-6593e502c262",
+        "chatSessionId": "sess_931d09e8-4c02-4117-839b-e3f2978cc8a7",
+        "timestamp": 1788795028170
+      },
+      {
+        "executionId": "a20341c4-936e-4c21-b28e-6593e502c262",
+        "chatSessionId": "sess_931d09e8-4c02-4117-839b-e3f2978cc8a7",
+        "timestamp": 1788795099214
+      }
+    ],
+    "5. Panel composable: `useElementHighlight.ts` (new)": [
+      {
+        "executionId": "a20341c4-936e-4c21-b28e-6593e502c262",
+        "chatSessionId": "sess_931d09e8-4c02-4117-839b-e3f2978cc8a7",
+        "timestamp": 1788795099431
+      }
+    ],
+    "6.1 Add hover state, predicates, and handlers to `LogEntry.vue`": [
+      {
+        "executionId": "9ce9ef28-9ba5-459e-83dc-354a4c2cf185",
+        "chatSessionId": "sess_d1d9f2ee-b88e-434c-9630-37373d97cc5b",
+        "timestamp": 1788796374222
+      },
+      {
+        "executionId": "9ce9ef28-9ba5-459e-83dc-354a4c2cf185",
+        "chatSessionId": "sess_d1d9f2ee-b88e-434c-9630-37373d97cc5b",
+        "timestamp": 1788796480225
+      }
+    ],
+    "6.2 Wire the template handlers and inline Element_Removed_Message": [
+      {
+        "executionId": "9ce9ef28-9ba5-459e-83dc-354a4c2cf185",
+        "chatSessionId": "sess_d1d9f2ee-b88e-434c-9630-37373d97cc5b",
+        "timestamp": 1788796375218
+      },
+      {
+        "executionId": "9ce9ef28-9ba5-459e-83dc-354a4c2cf185",
+        "chatSessionId": "sess_d1d9f2ee-b88e-434c-9630-37373d97cc5b",
+        "timestamp": 1788796480489
+      }
+    ],
+    "6. Panel component: `LogEntry.vue` hover handlers and inline message": [
+      {
+        "executionId": "9ce9ef28-9ba5-459e-83dc-354a4c2cf185",
+        "chatSessionId": "sess_d1d9f2ee-b88e-434c-9630-37373d97cc5b",
+        "timestamp": 1788796480605
+      }
+    ]
+  }
+}

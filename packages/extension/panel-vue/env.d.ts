@@ -8,6 +8,7 @@ declare module '*.vue' {
 
 // Minimal chrome extension API types for panel usage
 interface ChromeTab {
+  id?: number;
   url?: string;
 }
 
@@ -26,6 +27,7 @@ interface ChromeEvent<T extends (...args: any[]) => void> {
 
 interface ChromeTabs {
   query(queryInfo: { active?: boolean; currentWindow?: boolean }, callback: (tabs: ChromeTab[]) => void): void;
+  sendMessage<T = unknown>(tabId: number, message: unknown): Promise<T>;
   create(createProperties: { url: string }): void;
   onActivated?: ChromeEvent<(...args: any[]) => void>;
   onUpdated?: ChromeEvent<(...args: any[]) => void>;

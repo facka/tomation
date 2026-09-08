@@ -23,6 +23,8 @@ import {
   faTrash,
   faChevronRight,
   faChevronDown,
+  faCrosshairs,
+  faArrowUp,
 } from '@fortawesome/free-solid-svg-icons';
 
 // Regular icons
@@ -51,4 +53,6 @@ library.add(
   faTrash,
   faChevronRight,
   faChevronDown,
+  faCrosshairs,
+  faArrowUp,
 );

@@ -8,6 +8,13 @@ var api = typeof browser !== 'undefined' ? browser : chrome;
   (document.head || document.documentElement).appendChild(style);
 })();
 
+// Inject hover-highlight CSS so data-tomation-hover elements are visible with a distinct color
+(function injectHoverStyles() {
+  var style = document.createElement('style');
+  style.textContent = '[data-tomation-hover="true"] { outline: 2px dashed #f5a623 !important; outline-offset: 2px; box-shadow: 0 0 0 4px rgba(245, 166, 35, 0.25) !important; transition: outline 0.15s ease, box-shadow 0.15s ease; }';
+  (document.head || document.documentElement).appendChild(style);
+})();
+
 var TIMEOUT_5sec = 5000;
 /**
  * Check if a single DOM element matches all conditions in the `where` object.
@@ -113,12 +120,12 @@ function evaluateWhereKey(el, key, value, parentNode) {
         actual: (dataVal === null || dataVal === undefined) ? UNAVAILABLE : dataVal
       };
     }
-    case 'nthChild': {
-      var pos = 1;
-      var sib = el.previousElementSibling;
-      while (sib) { pos++; sib = sib.previousElementSibling; }
-      return { passed: pos === value, actual: pos };
-    }
+    case 'isNthElement':
+      // Position among the filtered candidate list is resolved by the iterating
+      // loop, not per-element (Req 4.3). A single element cannot know its index
+      // into the Filtered_List, so treat this as a non-failing no-op here and let
+      // the finder loop count passing candidates and pick the n-th (Req 4.4).
+      return { passed: true, actual: UNAVAILABLE };
     case 'closestLabel':
       // passed delegates to existing matcher; actual sub-record filled by task 3.
       return { passed: matchClosestLabel(el, value, parentNode), actual: null };
@@ -165,6 +172,20 @@ function buildWhereBreakdown(candidates, where, parentNode) {
   var bestResults = null;
   var bestPassCount = -1;
 
+  // Filtered_List size: candidates passing the OTHER where conditions
+  // (isNthElement is a no-op in matchesWhere, so this counts how many candidates
+  // passed everything except the requested list position). Used to report
+  // isNthElement's observed value so the author sees whether the requested index
+  // was out of range (Req 5.2).
+  var filteredCount = 0;
+  if (where.isNthElement !== undefined) {
+    for (var fc = 0; fc < candidateCount; fc++) {
+      if (matchesWhere(candidates[fc], where, parentNode)) {
+        filteredCount++;
+      }
+    }
+  }
+
   for (var c = 0; c < candidateCount; c++) {
     var el = candidates[c];
     var results = [];
@@ -196,7 +217,18 @@ function buildWhereBreakdown(candidates, where, parentNode) {
       expected: truncate256(where[key]),
       passed: r.passed
     };
-    if (r.actual === UNAVAILABLE) {
+    if (key === 'isNthElement') {
+      // isNthElement is resolved by the iterating loop, not per-element, so
+      // evaluateWhereKey reports it as a no-op (passed/UNAVAILABLE). Special-case
+      // it here: report the requested position as expected, the Filtered_List
+      // size as actual, and mark it passed only when the list holds at least n
+      // candidates (Req 5.1, 5.2).
+      var n = where[key];
+      entry.expected = truncate256(n);
+      entry.actual = truncate256(filteredCount);
+      entry.passed = filteredCount >= n;
+      r = { passed: entry.passed, actual: filteredCount };
+    } else if (r.actual === UNAVAILABLE) {
       // Keep the matcher entry; record that the actual value was unavailable (Req 2.7).
       entry.actual = null;
       entry.actualUnavailable = true;
@@ -592,14 +624,27 @@ function findElement(descriptor, parentNode) {
   return new Promise(function (resolve, reject) {
     var startTime = Date.now();
     var maxSeenCandidates = 0;
+    // Position among the Filtered_List, 1-based (Req 4.1). null => first-match
+    // default behavior (Req 4.5).
+    var nthTarget = (where && typeof where.isNthElement === 'number')
+      ? where.isNthElement
+      : null;
 
     function poll() {
       var candidates = root.querySelectorAll(tag);
       maxSeenCandidates = Math.max(maxSeenCandidates, candidates.length);
+      // Running 1-based count of candidates passing the other where conditions
+      // (isNthElement is a no-op in matchesWhere, so this counts the Filtered_List).
+      var matchIndex = 0;
       for (var i = 0; i < candidates.length; i++) {
         if (matchesWhere(candidates[i], where, root === document ? null : root)) {
-          resolve(candidates[i]);
-          return;
+          matchIndex++;
+          // Resolve the first passing candidate when no position is requested,
+          // or the candidate whose running count equals the requested index.
+          if (nthTarget === null || matchIndex === nthTarget) {
+            resolve(candidates[i]);
+            return;
+          }
         }
       }
       if (Date.now() - startTime >= TIMEOUT_5sec) {
@@ -647,6 +692,22 @@ function findElement(descriptor, parentNode) {
 }
 
 /**
+ * Tag a resolved element with its element key so the panel can find it later
+ * for hover highlighting. Idempotent: setAttribute overwrites any prior value,
+ * leaving exactly one tomation-key attribute (Req 1.4). Independent of the
+ * data-tomation-active Action_Highlight (Req 2.3). Not removed on step
+ * completion (Req 1.6). No-ops for empty/missing keys (Req 1.2).
+ *
+ * @param {Element} el
+ * @param {string} key - the step's raw Element_Key (message.target)
+ */
+function tagElementKey(el, key) {
+  if (typeof key === 'string' && key.length > 0) {
+    el.setAttribute('tomation-key', key);
+  }
+}
+
+/**
  * Highlight an element by adding the data-tomation-active attribute.
  * Called before executing each step's action.
  *
@@ -664,6 +725,195 @@ function highlightElement(el) {
  */
 function unhighlightElement(el) {
   el.removeAttribute('data-tomation-active');
+}
+
+/**
+ * Build a `[tomation-key="…"]` attribute selector for the given key.
+ * Uses CSS.escape when available; otherwise falls back to escaping the
+ * characters that could break a double-quoted attribute selector (" and \)
+ * so the resulting selector is always valid.
+ *
+ * @param {string} key
+ * @returns {string}
+ */
+function hoverSelectorFor(key) {
+  var esc = (window.CSS && CSS.escape) ? CSS.escape(key) : key.replace(/["\\]/g, '\\$&');
+  return '[tomation-key="' + esc + '"]';
+}
+
+/**
+ * Return true when the element is fully within the viewport.
+ * Reads getBoundingClientRect and window dimensions defensively, falling
+ * back to documentElement client dimensions.
+ *
+ * @param {Element} el
+ * @returns {boolean}
+ */
+function isInViewport(el) {
+  var r = el.getBoundingClientRect();
+  var vh = window.innerHeight || document.documentElement.clientHeight;
+  var vw = window.innerWidth || document.documentElement.clientWidth;
+  return r.top >= 0 && r.left >= 0 && r.bottom <= vh && r.right <= vw;
+}
+
+/**
+ * Highlight all elements tagged with the given element key for panel hover.
+ * On zero matches, touches nothing and reports found: 0. Otherwise sets
+ * data-tomation-hover="true" on every match and scrolls the first match into
+ * view only when it is off-screen.
+ *
+ * @param {string} key - the element key to hover-highlight
+ * @returns {{type: string, found: number}}
+ */
+function handleHoverHighlight(key) {
+  var matches = document.querySelectorAll(hoverSelectorFor(key));
+  if (matches.length === 0) {
+    return { type: 'HOVER_RESULT', found: 0 };
+  }
+  for (var i = 0; i < matches.length; i++) {
+    matches[i].setAttribute('data-tomation-hover', 'true');
+  }
+  if (!isInViewport(matches[0])) {
+    matches[0].scrollIntoView({ block: 'nearest' });
+  }
+  return { type: 'HOVER_RESULT', found: matches.length };
+}
+
+/**
+ * Highlight all elements matched by the given XPath expression for panel hover.
+ * Used by the find-trace disclosure to highlight a resolved parent element when
+ * the child could not be found. On zero matches (or an invalid expression),
+ * touches nothing and reports found: 0. Otherwise sets data-tomation-hover="true"
+ * on every matched element node and scrolls the first match into view only when
+ * it is off-screen.
+ *
+ * @param {string} xpath - the XPath expression to resolve and hover-highlight
+ * @returns {{type: string, found: number}}
+ */
+function handleHoverHighlightXPath(xpath) {
+  var els = [];
+  try {
+    var result = document.evaluate(
+      xpath,
+      document,
+      null,
+      XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+      null
+    );
+    for (var i = 0; i < result.snapshotLength; i++) {
+      var node = result.snapshotItem(i);
+      // Only element nodes can carry an attribute / be scrolled into view.
+      if (node && node.nodeType === 1) {
+        els.push(node);
+      }
+    }
+  } catch (e) {
+    return { type: 'HOVER_RESULT', found: 0 };
+  }
+  if (els.length === 0) {
+    return { type: 'HOVER_RESULT', found: 0 };
+  }
+  for (var j = 0; j < els.length; j++) {
+    els[j].setAttribute('data-tomation-hover', 'true');
+  }
+  if (!isInViewport(els[0])) {
+    els[0].scrollIntoView({ block: 'nearest' });
+  }
+  return { type: 'HOVER_RESULT', found: els.length };
+}
+
+/**
+ * Highlight all elements matching a spec element descriptor (tag+where or
+ * xpath) for panel hover. Used by the ElementInfoCard so the panel can
+ * highlight any spec-defined element — including a childOf parent that was
+ * never tagged with tomation-key — using the same matching semantics as the
+ * finder (matchesWhere / document.evaluate). This is an instantaneous query,
+ * not a polling wait: it reports whatever matches the current DOM.
+ *
+ * On zero matches (or an invalid/empty descriptor), touches nothing and
+ * reports found: 0. Otherwise sets data-tomation-hover="true" on every match
+ * and scrolls the first match into view only when it is off-screen.
+ *
+ * @param {{tag?: string, where?: object, xpath?: string}} descriptor
+ * @returns {{type: string, found: number}}
+ */
+function handleHoverHighlightDescriptor(descriptor) {
+  var els = [];
+  if (!descriptor) {
+    return { type: 'HOVER_RESULT', found: 0 };
+  }
+
+  if (descriptor.xpath) {
+    try {
+      var result = document.evaluate(
+        descriptor.xpath,
+        document,
+        null,
+        XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+        null
+      );
+      for (var i = 0; i < result.snapshotLength; i++) {
+        var node = result.snapshotItem(i);
+        if (node && node.nodeType === 1) {
+          els.push(node);
+        }
+      }
+    } catch (e) {
+      return { type: 'HOVER_RESULT', found: 0 };
+    }
+  } else if (descriptor.tag) {
+    var candidates = document.querySelectorAll(descriptor.tag);
+    var where = descriptor.where || {};
+    // Position among the Filtered_List, 1-based (Req 4.1). null => collect every
+    // passing candidate (no position requested).
+    var nthTarget = (typeof where.isNthElement === 'number')
+      ? where.isNthElement
+      : null;
+    // Running 1-based count of candidates passing the other where conditions
+    // (isNthElement is a no-op in matchesWhere, so this counts the Filtered_List).
+    // Mirrors the finder poll loop so highlight matches the finder's choice.
+    var matchIndex = 0;
+    for (var k = 0; k < candidates.length; k++) {
+      if (matchesWhere(candidates[k], where, null)) {
+        matchIndex++;
+        if (nthTarget === null) {
+          els.push(candidates[k]);
+        } else if (matchIndex === nthTarget) {
+          // Collect ONLY the n-th passing element (Req 4.1); if the
+          // Filtered_List has fewer than n members, none matches (Req 4.2).
+          els.push(candidates[k]);
+          break;
+        }
+      }
+    }
+  } else {
+    return { type: 'HOVER_RESULT', found: 0 };
+  }
+
+  if (els.length === 0) {
+    return { type: 'HOVER_RESULT', found: 0 };
+  }
+  for (var j = 0; j < els.length; j++) {
+    els[j].setAttribute('data-tomation-hover', 'true');
+  }
+  if (!isInViewport(els[0])) {
+    els[0].scrollIntoView({ block: 'nearest' });
+  }
+  return { type: 'HOVER_RESULT', found: els.length };
+}
+
+/**
+ * Clear hover highlighting from every element that has it, leaving zero
+ * data-tomation-hover elements. Does not touch data-tomation-active.
+ *
+ * @returns {{ok: boolean}}
+ */
+function handleHoverClear() {
+  var hovered = document.querySelectorAll('[data-tomation-hover]');
+  for (var i = 0; i < hovered.length; i++) {
+    hovered[i].removeAttribute('data-tomation-hover');
+  }
+  return { ok: true };
 }
 
 /**
@@ -842,6 +1092,13 @@ function findElementWithParent(stepMessage) {
         }
         scopeElement = navResult.element;
       }
+
+      // Tag the resolved parent (the element the child search is scoped to) with
+      // its own element key so the panel can hover-highlight the exact parent
+      // instance the finder used — not every element matching the parent
+      // descriptor. Runs whether the child later succeeds or fails. No-ops when
+      // the parent key is unknown (Req: parent tomation-key for precise hover).
+      tagElementKey(scopeElement, stepMessage.parentKey);
 
       return findElement(elementDescriptor, scopeElement)
         .then(function (element) {
@@ -1191,6 +1448,22 @@ function deriveKeyCode(key) {
 var ACTIONS_NEEDING_ELEMENT = ['click', 'type', 'typePassword', 'select', 'assertExists', 'assertHasText', 'waitFor', 'upload', 'saveText', 'saveAttribute', 'saveValue'];
 
 api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+  if (message.type === 'HOVER_HIGHLIGHT') {
+    sendResponse(handleHoverHighlight(message.key));
+    return;
+  }
+  if (message.type === 'HOVER_HIGHLIGHT_XPATH') {
+    sendResponse(handleHoverHighlightXPath(message.xpath));
+    return;
+  }
+  if (message.type === 'HOVER_HIGHLIGHT_DESCRIPTOR') {
+    sendResponse(handleHoverHighlightDescriptor(message.descriptor));
+    return;
+  }
+  if (message.type === 'HOVER_CLEAR') {
+    sendResponse(handleHoverClear());
+    return;
+  }
   if (message.type !== 'EXECUTE_STEP') {
     return;
   }
@@ -1208,6 +1481,9 @@ api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (action === 'assertNotExists') {
     findElementWithParent(message).then(function (findResult) {
       var element = findResult.ok ? findResult.element : null;
+      if (findResult.ok) {
+        tagElementKey(element, message.target);
+      }
       return executeAction(message, element);
     }).then(function (result) {
       sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: result.ok, error: result.error });
@@ -1227,6 +1503,7 @@ api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
           return;
         }
         var element = findResult.element;
+        tagElementKey(element, message.target);
         highlightElement(element);
         return new Promise(function (resolve) { setTimeout(resolve, 400); }).then(function () {
           return handlePressKey(element, message.key, message.options);
@@ -1255,6 +1532,7 @@ api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
         return;
       }
       var element = findResult.element;
+      tagElementKey(element, message.target);
       highlightElement(element);
       // Brief delay so user can see the highlighted element before action executes
       return new Promise(function (resolve) {

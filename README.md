@@ -172,7 +172,7 @@ The `.where()` method accepts a matcher factory that describes how to find the e
 | `titleIs(value)` | `title` attribute | `is.A.where(titleIs('Submit form'))` |
 | `hrefContains(value)` | Substring of `href` attribute | `is.A.where(hrefContains('/login'))` |
 | `isDisabled()` | Element is disabled | `is.BUTTON.where(isDisabled())` |
-| `nthChild(n)` | Nth child position (1-based) | `is.LI.where(nthChild(3))` |
+| `isNthElement(n)` | N-th matching element (1-based) | `is.LI.where(isNthElement(3))` |
 | `dataAttr(name, value)` | `data-*` attribute | `is.DIV.where(dataAttr('testid', 'submit'))` |
 | `closestLabelIs(tag, text)` | Nearby label element | `is.INPUT.where(closestLabelIs('LABEL', 'Email'))` |
 

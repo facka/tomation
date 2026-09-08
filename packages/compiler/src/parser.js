@@ -584,18 +584,18 @@ function extractMatcherCall(callNode, warnings, filePath, constBindings) {
     return { isDisabled: true };
   }
 
-  // Numeric-arg: nthChild
-  if (calleeName === 'nthChild') {
+  // Numeric-arg: isNthElement
+  if (calleeName === 'isNthElement') {
     const n = extractNumber(args[0]);
     if (n === null || !Number.isInteger(n) || n < 1) {
       warnings.push({
-        message: `'nthChild' requires a positive integer argument at ${filePath}:${line}`,
+        message: `'isNthElement' requires a positive integer argument at ${filePath}:${line}`,
         filePath,
         line,
       });
       return {};
     }
-    return { nthChild: n };
+    return { isNthElement: n };
   }
 
   // 2-arg string: dataAttr

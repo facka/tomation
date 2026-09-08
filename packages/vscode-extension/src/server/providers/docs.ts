@@ -226,9 +226,9 @@ export const DSL_DOCS: Readonly<Record<string, DslDoc>> = Object.freeze({
     description: 'Match an element that is disabled.',
     signature: 'isDisabled()',
   },
-  nthChild: {
-    description: 'Match an element by its 1-based position among its siblings.',
-    signature: 'nthChild(n)',
+  isNthElement: {
+    description: 'Match the n-th element (1-based) among the elements matching the tag and other filters.',
+    signature: 'isNthElement(n)',
   },
   closestLabelIs: {
     description: 'Match an element by the text of its closest ancestor label of the given tag.',

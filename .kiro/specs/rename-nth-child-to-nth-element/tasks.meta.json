@@ -1,0 +1,182 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. DSL package: rename factory and types": [
+      {
+        "executionId": "2187530b-5aed-472f-8879-112a415e9234",
+        "chatSessionId": "sess_a9d427b9-9309-4324-83af-00fdfa81d2ef",
+        "timestamp": 1788874182218
+      },
+      {
+        "executionId": "2187530b-5aed-472f-8879-112a415e9234",
+        "chatSessionId": "sess_a9d427b9-9309-4324-83af-00fdfa81d2ef",
+        "timestamp": 1788874192519
+      },
+      {
+        "executionId": "2187530b-5aed-472f-8879-112a415e9234",
+        "chatSessionId": "sess_a9d427b9-9309-4324-83af-00fdfa81d2ef",
+        "timestamp": 1788874241283
+      }
+    ],
+    "2. Compiler: rename matcher extraction": [
+      {
+        "executionId": "2187530b-5aed-472f-8879-112a415e9234",
+        "chatSessionId": "sess_a9d427b9-9309-4324-83af-00fdfa81d2ef",
+        "timestamp": 1788874182315
+      }
+    ],
+    "3. Runtime: change matcher to no-op and add list-position selection": [
+      {
+        "executionId": "2187530b-5aed-472f-8879-112a415e9234",
+        "chatSessionId": "sess_a9d427b9-9309-4324-83af-00fdfa81d2ef",
+        "timestamp": 1788874182432
+      },
+      {
+        "executionId": "832ea585-d842-435b-ba59-374e94fc4756",
+        "chatSessionId": "sess_7c3de1ae-65ce-45b8-bfe8-12b1adfb68b8",
+        "timestamp": 1788875468580
+      },
+      {
+        "executionId": "832ea585-d842-435b-ba59-374e94fc4756",
+        "chatSessionId": "sess_7c3de1ae-65ce-45b8-bfe8-12b1adfb68b8",
+        "timestamp": 1788875547446
+      }
+    ],
+    "4. Runtime: highlight query + any-match collection position selection": [
+      {
+        "executionId": "2187530b-5aed-472f-8879-112a415e9234",
+        "chatSessionId": "sess_a9d427b9-9309-4324-83af-00fdfa81d2ef",
+        "timestamp": 1788874182629
+      },
+      {
+        "executionId": "139e8e00-12ab-43f6-8fa1-6edb51e776fa",
+        "chatSessionId": "sess_23a286cb-94c0-43ba-8a4d-1d91051c1aa8",
+        "timestamp": 1788875730181
+      },
+      {
+        "executionId": "139e8e00-12ab-43f6-8fa1-6edb51e776fa",
+        "chatSessionId": "sess_23a286cb-94c0-43ba-8a4d-1d91051c1aa8",
+        "timestamp": 1788875797991
+      }
+    ],
+    "5. Runtime: failure breakdown reporting": [
+      {
+        "executionId": "2187530b-5aed-472f-8879-112a415e9234",
+        "chatSessionId": "sess_a9d427b9-9309-4324-83af-00fdfa81d2ef",
+        "timestamp": 1788874182745
+      },
+      {
+        "executionId": "f3792eda-63f5-466d-8c13-2c085a1ce229",
+        "chatSessionId": "sess_b09a5a01-1dfb-4985-8f33-ee948c967759",
+        "timestamp": 1788875942999
+      },
+      {
+        "executionId": "f3792eda-63f5-466d-8c13-2c085a1ce229",
+        "chatSessionId": "sess_b09a5a01-1dfb-4985-8f33-ee948c967759",
+        "timestamp": 1788876029046
+      }
+    ],
+    "6. Finder snippet: rename key and apply list-position selection": [
+      {
+        "executionId": "2187530b-5aed-472f-8879-112a415e9234",
+        "chatSessionId": "sess_a9d427b9-9309-4324-83af-00fdfa81d2ef",
+        "timestamp": 1788874182835
+      },
+      {
+        "executionId": "a2885a38-819d-4840-985d-1fb653cc1bca",
+        "chatSessionId": "sess_d5efe8e5-8eb5-4ea5-9436-c9ce3facfd96",
+        "timestamp": 1788876883517
+      },
+      {
+        "executionId": "a2885a38-819d-4840-985d-1fb653cc1bca",
+        "chatSessionId": "sess_d5efe8e5-8eb5-4ea5-9436-c9ce3facfd96",
+        "timestamp": 1788876943909
+      }
+    ],
+    "7. VS Code extension: completion + hover docs": [
+      {
+        "executionId": "2187530b-5aed-472f-8879-112a415e9234",
+        "chatSessionId": "sess_a9d427b9-9309-4324-83af-00fdfa81d2ef",
+        "timestamp": 1788874182933
+      },
+      {
+        "executionId": "1035b3a1-2ad1-4d38-914d-c2f9d48830b4",
+        "chatSessionId": "sess_8c1f19b5-626b-4283-99bc-397f0c5dee6e",
+        "timestamp": 1788877517954
+      },
+      {
+        "executionId": "1035b3a1-2ad1-4d38-914d-c2f9d48830b4",
+        "chatSessionId": "sess_8c1f19b5-626b-4283-99bc-397f0c5dee6e",
+        "timestamp": 1788877560180
+      }
+    ],
+    "8. Documentation: README, docs page, tomation-ai.md, DSL README": [
+      {
+        "executionId": "2187530b-5aed-472f-8879-112a415e9234",
+        "chatSessionId": "sess_a9d427b9-9309-4324-83af-00fdfa81d2ef",
+        "timestamp": 1788874183081
+      },
+      {
+        "executionId": "2bae466d-82d7-41ba-bf0c-2825764d7917",
+        "chatSessionId": "sess_b2536bb5-efda-4ab4-81ec-c6c078552eef",
+        "timestamp": 1788877607049
+      },
+      {
+        "executionId": "2bae466d-82d7-41ba-bf0c-2825764d7917",
+        "chatSessionId": "sess_b2536bb5-efda-4ab4-81ec-c6c078552eef",
+        "timestamp": 1788877669505
+      }
+    ],
+    "9. Examples: update any POM/test sources using the matcher": [
+      {
+        "executionId": "2187530b-5aed-472f-8879-112a415e9234",
+        "chatSessionId": "sess_a9d427b9-9309-4324-83af-00fdfa81d2ef",
+        "timestamp": 1788874183197
+      },
+      {
+        "executionId": "0bdff1b8-542a-4f66-977d-05e897e50c95",
+        "chatSessionId": "sess_66f896ff-81d5-4d70-b8a0-3c0ff2060643",
+        "timestamp": 1788877788726
+      },
+      {
+        "executionId": "0bdff1b8-542a-4f66-977d-05e897e50c95",
+        "chatSessionId": "sess_66f896ff-81d5-4d70-b8a0-3c0ff2060643",
+        "timestamp": 1788877822174
+      }
+    ],
+    "10. Tests: update names and add new-semantics coverage": [
+      {
+        "executionId": "2187530b-5aed-472f-8879-112a415e9234",
+        "chatSessionId": "sess_a9d427b9-9309-4324-83af-00fdfa81d2ef",
+        "timestamp": 1788874183303
+      },
+      {
+        "executionId": "63608d27-7713-47ac-9422-3ff027b2db04",
+        "chatSessionId": "sess_f0806469-e5fe-4009-9541-e81c800d068d",
+        "timestamp": 1788877933530
+      },
+      {
+        "executionId": "63608d27-7713-47ac-9422-3ff027b2db04",
+        "chatSessionId": "sess_f0806469-e5fe-4009-9541-e81c800d068d",
+        "timestamp": 1788878199255
+      }
+    ],
+    "11. Final sweep: confirm no residual references": [
+      {
+        "executionId": "2187530b-5aed-472f-8879-112a415e9234",
+        "chatSessionId": "sess_a9d427b9-9309-4324-83af-00fdfa81d2ef",
+        "timestamp": 1788874183417
+      },
+      {
+        "executionId": "7ae60541-7938-4c31-be71-5b0c821835d7",
+        "chatSessionId": "sess_e3c33683-3848-47b3-8160-eb12a6290761",
+        "timestamp": 1788878253211
+      },
+      {
+        "executionId": "7ae60541-7938-4c31-be71-5b0c821835d7",
+        "chatSessionId": "sess_e3c33683-3848-47b3-8160-eb12a6290761",
+        "timestamp": 1788878452282
+      }
+    ]
+  }
+}

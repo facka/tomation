@@ -58,3 +58,51 @@ export interface StepPlanEntry {
   condition?: StepCondition;
   taken?: boolean;
 }
+// --- Content-script hover contract (panel → content script, via api.tabs.sendMessage) ---
+// These are a distinct content-script contract and are intentionally NOT part of
+// PanelMessage / BackgroundMessage (which cover the panel↔background channel).
+
+// Messages sent FROM panel TO the content script
+export interface HoverHighlightMessage {
+  type: 'HOVER_HIGHLIGHT';
+  key: string;
+}
+
+// Highlight by XPath expression — used by the find-trace disclosure to
+// highlight a resolved parent element when the child could not be found.
+export interface HoverHighlightXPathMessage {
+  type: 'HOVER_HIGHLIGHT_XPATH';
+  xpath: string;
+}
+
+// Highlight by a spec element descriptor (tag+where or xpath). Used by the
+// ElementInfoCard to highlight any spec-defined element — including a childOf
+// parent that was never tagged — using the finder's matching semantics.
+export interface HoverHighlightDescriptorMessage {
+  type: 'HOVER_HIGHLIGHT_DESCRIPTOR';
+  descriptor: {
+    tag?: string;
+    where?: Record<string, string>;
+    xpath?: string;
+  };
+}
+
+export interface HoverClearMessage {
+  type: 'HOVER_CLEAR';
+}
+
+export type ContentScriptHoverMessage =
+  | HoverHighlightMessage
+  | HoverHighlightXPathMessage
+  | HoverHighlightDescriptorMessage
+  | HoverClearMessage;
+
+// Responses returned by the content script
+export interface HoverResult {
+  type: 'HOVER_RESULT';
+  found: number;
+}
+
+export interface HoverClearResult {
+  ok: true;
+}

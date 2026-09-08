@@ -356,3 +356,85 @@ test('Property 2.5/2.6: highlight is idempotent and unhighlight always cleans up
 // ---------------------------------------------------------------------------
 
 // No additional helpers needed
+
+// ---------------------------------------------------------------------------
+// isNthElement list-position selection
+// Feature: rename-nth-child-to-nth-element, Requirements 4.1, 4.2
+// ---------------------------------------------------------------------------
+
+test('Property: isNthElement(k) resolves the k-th element of the manually filtered list for any k in [1, matchCount]', async function () {
+  // Validates: Requirements 4.1
+  await fc.assert(
+    fc.asyncProperty(
+      // A sequence of list items. `true` => a matching (.todo) item, `false` =>
+      // a non-matching item that must be skipped by the filtered semantics.
+      fc.array(fc.boolean(), { minLength: 1, maxLength: 12 }),
+      async function (flags) {
+        // Build the DOM. Each <li> gets a stable index id so we can assert the
+        // resolved element by identity. Matching items carry class "todo".
+        const items = flags.map(function (isMatch, i) {
+          const cls = isMatch ? 'todo' : 'other';
+          return '<li id="li-' + i + '" class="' + cls + '">item ' + i + '</li>';
+        }).join('');
+        const html = '<html><body><ul>' + items + '</ul></body></html>';
+
+        // The manually filtered list, in document order: ids of matching items.
+        const filteredIds = [];
+        flags.forEach(function (isMatch, i) {
+          if (isMatch) filteredIds.push('li-' + i);
+        });
+
+        const matchCount = filteredIds.length;
+        if (matchCount === 0) return; // nothing to select; out-of-range covered elsewhere
+
+        const win = createWindow(html);
+        const findElement = win.eval('findElement');
+
+        for (let k = 1; k <= matchCount; k++) {
+          const el = await findElement({ tag: 'li', where: { classIncludes: 'todo', isNthElement: k } });
+          assert.equal(el.id, filteredIds[k - 1],
+            'isNthElement(' + k + ') should resolve the ' + k + '-th filtered element');
+        }
+      }
+    ),
+    { numRuns: 50 }
+  );
+});
+
+test('Property: out-of-range isNthElement (k > matchCount) yields no match', async function () {
+  // Validates: Requirements 4.2
+  await fc.assert(
+    fc.asyncProperty(
+      fc.array(fc.boolean(), { minLength: 1, maxLength: 10 }),
+      fc.integer({ min: 1, max: 5 }),
+      async function (flags, over) {
+        const items = flags.map(function (isMatch, i) {
+          const cls = isMatch ? 'todo' : 'other';
+          return '<li id="li-' + i + '" class="' + cls + '">item ' + i + '</li>';
+        }).join('');
+        const html = '<html><body><ul>' + items + '</ul></body></html>';
+
+        const matchCount = flags.filter(Boolean).length;
+        const k = matchCount + over; // strictly greater than the filtered count
+
+        const win = createWindow(html);
+
+        // Fast-forward the polling clock so the finder times out promptly.
+        let callCount = 0;
+        win.Date.now = function () {
+          callCount++;
+          if (callCount <= 1) return 0;
+          return 6000;
+        };
+
+        const findElement = win.eval('findElement');
+
+        await assert.rejects(
+          findElement({ tag: 'li', where: { classIncludes: 'todo', isNthElement: k } }),
+          function (err) { return /Element not found: li/.test(err.message); }
+        );
+      }
+    ),
+    { numRuns: 50 }
+  );
+});
