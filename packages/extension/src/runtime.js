@@ -172,6 +172,20 @@ function buildWhereBreakdown(candidates, where, parentNode) {
   var bestResults = null;
   var bestPassCount = -1;
 
+  // Filtered_List size: candidates passing the OTHER where conditions
+  // (isNthElement is a no-op in matchesWhere, so this counts how many candidates
+  // passed everything except the requested list position). Used to report
+  // isNthElement's observed value so the author sees whether the requested index
+  // was out of range (Req 5.2).
+  var filteredCount = 0;
+  if (where.isNthElement !== undefined) {
+    for (var fc = 0; fc < candidateCount; fc++) {
+      if (matchesWhere(candidates[fc], where, parentNode)) {
+        filteredCount++;
+      }
+    }
+  }
+
   for (var c = 0; c < candidateCount; c++) {
     var el = candidates[c];
     var results = [];
@@ -203,7 +217,18 @@ function buildWhereBreakdown(candidates, where, parentNode) {
       expected: truncate256(where[key]),
       passed: r.passed
     };
-    if (r.actual === UNAVAILABLE) {
+    if (key === 'isNthElement') {
+      // isNthElement is resolved by the iterating loop, not per-element, so
+      // evaluateWhereKey reports it as a no-op (passed/UNAVAILABLE). Special-case
+      // it here: report the requested position as expected, the Filtered_List
+      // size as actual, and mark it passed only when the list holds at least n
+      // candidates (Req 5.1, 5.2).
+      var n = where[key];
+      entry.expected = truncate256(n);
+      entry.actual = truncate256(filteredCount);
+      entry.passed = filteredCount >= n;
+      r = { passed: entry.passed, actual: filteredCount };
+    } else if (r.actual === UNAVAILABLE) {
       // Keep the matcher entry; record that the actual value was unavailable (Req 2.7).
       entry.actual = null;
       entry.actualUnavailable = true;

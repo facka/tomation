@@ -42,7 +42,7 @@ user-facing documentation. Execute one task at a time and wait for confirmation 
     the finder's choice.
   - _Requirements: 4.1, 4.2_
 
-- [ ] 5. Runtime: failure breakdown reporting
+- [x] 5. Runtime: failure breakdown reporting
   - In `buildWhereBreakdown`, special-case the `isNthElement` entry: set `expected` to `n`, set
     `actual` to the count of candidates passing the other conditions (Filtered_List size), and set
     `passed` to `filteredCount >= n`.
