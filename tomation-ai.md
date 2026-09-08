@@ -6,7 +6,7 @@ Library summary:
 - XPath elements: `Element(xpath).as('Label')` or `is.ELEMENT(xpath).as('Label')`
 - Elements can be scoped with `.childOf(parentElement)`
 - Elements support relative DOM navigation with `.navigate(path)`
-- Matcher factories: `innerTextIs`, `innerTextContains`, `classIncludes`, `placeholderIs`, `nameIs`, `typeIs`, `idIs`, `valueIs`, `ariaLabel`, `roleIs`, `titleIs`, `hrefContains`, `isDisabled`, `nthChild`, `dataAttr`, `closestLabelIs`
+- Matcher factories: `innerTextIs`, `innerTextContains`, `classIncludes`, `placeholderIs`, `nameIs`, `typeIs`, `idIs`, `valueIs`, `ariaLabel`, `roleIs`, `titleIs`, `hrefContains`, `isDisabled`, `isNthElement`, `dataAttr`, `closestLabelIs`
 - Actions: `Click`, `Type`, `TypePassword`, `Select`, `AssertExists`, `AssertNotExists`, `AssertHasText`, `Navigate`, `Wait`, `WaitFor`, `WaitForGone`, `Manual`, `Upload`, `PressKey`, `Press`
 - Save actions: `SaveText`, `SaveAttribute`, `SaveValue`, `Save`
 - Press key shortcuts: `PressUp`, `PressDown`, `PressLeft`, `PressRight`, `PressTab`, `PressEnter`, `PressEsc`, `PressSpace`
@@ -21,7 +21,7 @@ Library summary:
 - Template strings with `${}` are evaluated at runtime for dynamic values
 - Context values are referenced with `{{ctx.keyName}}` syntax in any step that accepts a string
 
-Key APIs: Task(fn).as('label'), Test, Automation, Click, Type, TypePassword, Select, Upload, Press, PressKey, PressUp, PressDown, PressLeft, PressRight, PressTab, PressEnter, PressEsc, PressSpace, SaveText, SaveAttribute, SaveValue, Save, Navigate, Wait, WaitFor, WaitForGone, Manual, AssertExists, AssertNotExists, AssertHasText, is, Element, innerTextIs, innerTextContains, idIs, classIncludes, placeholderIs, nameIs, typeIs, valueIs, ariaLabel, roleIs, titleIs, hrefContains, isDisabled, nthChild, dataAttr, closestLabelIs, today, tomorrow, yesterday, nextWeek, lastWeek, nextMonth, lastMonth, firstDateOfMonth, lastDateOfMonth, Data, Fake
+Key APIs: Task(fn).as('label'), Test, Automation, Click, Type, TypePassword, Select, Upload, Press, PressKey, PressUp, PressDown, PressLeft, PressRight, PressTab, PressEnter, PressEsc, PressSpace, SaveText, SaveAttribute, SaveValue, Save, Navigate, Wait, WaitFor, WaitForGone, Manual, AssertExists, AssertNotExists, AssertHasText, is, Element, innerTextIs, innerTextContains, idIs, classIncludes, placeholderIs, nameIs, typeIs, valueIs, ariaLabel, roleIs, titleIs, hrefContains, isDisabled, isNthElement, dataAttr, closestLabelIs, today, tomorrow, yesterday, nextWeek, lastWeek, nextMonth, lastMonth, firstDateOfMonth, lastDateOfMonth, Data, Fake
 
 Rules:
 - **CRITICAL: Only use functions exported by `@tomationjs/dsl`**. The DSL is NOT general-purpose TypeScript — it is a structured DSL that compiles to JSON. Arbitrary TypeScript/JavaScript code (loops, conditionals, console.log, fetch, DOM manipulation, async/await, try/catch, etc.) will be silently ignored after compilation. Only DSL-provided functions (actions, assertions, element builders, tasks, tests, automations) produce executable steps.
@@ -57,7 +57,7 @@ Rules:
 | `titleIs` | `titleIs(value: string)` | `title` attribute |
 | `hrefContains` | `hrefContains(value: string)` | Substring match on `href` attribute |
 | `isDisabled` | `isDisabled()` | Element with `disabled` property === true |
-| `nthChild` | `nthChild(n: number)` | Nth child position (1-based, like CSS `:nth-child`) |
+| `isNthElement` | `isNthElement(n: number)` | N-th matching element (1-based) |
 | `dataAttr` | `dataAttr(name: string, value: string)` | `data-*` attribute (name is suffix only, e.g. `'testid'` not `'data-testid'`) |
 | `closestLabelIs` | `closestLabelIs(tag: string, text: string)` | Nearby label element by tag and text content |
 

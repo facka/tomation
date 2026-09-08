@@ -63,7 +63,7 @@ user-facing documentation. Execute one task at a time and wait for confirmation 
     matched elements).
   - _Requirements: 7.1, 7.2_
 
-- [ ] 8. Documentation: README, docs page, tomation-ai.md, DSL README
+- [x] 8. Documentation: README, docs page, tomation-ai.md, DSL README
   - `README.md`: update the matcher table row to `isNthElement(n)` with an accurate description and
     `is.LI.where(isNthElement(3))` example.
   - `examples/playground/docs.html`: update the matcher table `<tr>` to `isNthElement(n)` with an
