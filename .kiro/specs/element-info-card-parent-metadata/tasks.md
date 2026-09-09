@@ -29,8 +29,8 @@ and Vue component tests + `fast-check` for the panel. Each property test carries
     - Document it as the primary card-match target, with `descriptorId` retained for back-compat
     - _Requirements: 7.2, 7.4_
 
-- [ ] 2. Compile the ancestor `parentChain` in `background.js` (Req 3)
-  - [ ] 2.1 Implement `buildParentChain` and emit `parentChain` from `buildStepMessage`
+- [x] 2. Compile the ancestor `parentChain` in `background.js` (Req 3)
+  - [x] 2.1 Implement `buildParentChain` and emit `parentChain` from `buildStepMessage`
     - Add a `buildParentChain(childOfRef, pageElements)` helper that walks the `childOf` chain up `pageElements`, collecting `{ key, descriptor }` per ancestor, stopping on a missing ancestor or a cycle (a key already seen), then reverses to root → immediate-parent order
     - In `buildStepMessage`, when `descriptor.childOf` resolves, set `msg.parentChain` (when non-empty) and keep `msg.parentDescriptor`/`msg.parentKey` as back-compat aliases equal to the last (immediate) chain entry
     - Reuse existing `findParentKey` / `findParentDescriptor` helpers
@@ -41,8 +41,8 @@ and Vue component tests + `fast-check` for the panel. Each property test carries
     - Assert a cycle or a missing ancestor terminates the walk with a finite chain
     - _Requirements: 3.1, 3.2, 6.4_
 
-- [ ] 3. Resolve and tag every ancestor in `runtime.js` (Req 3, Req 6)
-  - [ ] 3.1 Refactor `findElementWithParent` to `resolveParentChain`
+- [x] 3. Resolve and tag every ancestor in `runtime.js` (Req 3, Req 6)
+  - [x] 3.1 Refactor `findElementWithParent` to `resolveParentChain`
     - When `stepMessage.parentChain` is present (length ≥ 1), resolve the chain iteratively root → immediate parent: for each ancestor call `findElement(ancestor.descriptor, scope)`, apply the ancestor's `navigate` hops (Navigate-then-scope), `tagElementKey(resolved, ancestor.key)`, then use the resolved element as the scope for the next level
     - Resolve the child with `findElement(elementDescriptor, finalScope)`
     - Fall back to the existing single-`parentDescriptor` path when `parentChain` is absent
@@ -73,8 +73,8 @@ and Vue component tests + `fast-check` for the panel. Each property test carries
     - Example tests: a `childOf` parent scopes the child search (6.5); a parent carrying `navigate` uses the navigated element as the child search root (6.6); Action_Highlight set/remove around a step is unchanged (6.1); retain existing 5s-timeout example tests unchanged (6.3)
     - _Requirements: 6.1, 6.3, 6.5, 6.6_
 
-- [ ] 4. Hidden-ancestor detection in `runtime.js` (Req 5)
-  - [ ] 4.1 Implement `detectHiddenAncestor(el)` and wire the flag into hover handlers
+- [x] 4. Hidden-ancestor detection in `runtime.js` (Req 5)
+  - [x] 4.1 Implement `detectHiddenAncestor(el)` and wire the flag into hover handlers
     - Add a read-only `detectHiddenAncestor(el)` walking ancestors for `display:none`, `visibility:hidden`/`collapse`, `opacity:0`, zero-size, and `overflow` clipping, plus the `offsetParent === null` (non-`fixed`) not-rendered case, using only `getComputedStyle` and `getBoundingClientRect` (never writes styles/attributes)
     - Add `hiddenByAncestor: detectHiddenAncestor(matches[0])` to the non-empty returns of `handleHoverHighlight`, `handleHoverHighlightXPath`, and `handleHoverHighlightDescriptor`; keep zero-match returns at `found: 0` with the flag omitted/false; leave `handleHoverClear` unchanged
     - Keep runtime code ES5-style

@@ -693,17 +693,17 @@ function buildStepMessage(step, pageElements, params) {
     if (descriptor) {
       msg.elementDescriptor = descriptor;
 
-      // If the descriptor has a childOf field, resolve the parent element descriptor
+      // If the descriptor has a childOf field, resolve the full ancestor chain
+      // so the runtime can scope and tag every resolved ancestor (Req 3.1, 3.2).
       if (descriptor.childOf) {
-        var parentDescriptor = findParentDescriptor(descriptor.childOf, pageElements);
-        if (parentDescriptor) {
-          msg.parentDescriptor = parentDescriptor;
-          // Attach the parent's element key so the runtime can tag the resolved
-          // parent element with tomation-key for precise hover highlighting.
-          var parentKey = findParentKey(descriptor.childOf, pageElements);
-          if (parentKey) {
-            msg.parentKey = parentKey;
-          }
+        var parentChain = buildParentChain(descriptor.childOf, pageElements);
+        if (parentChain.length > 0) {
+          msg.parentChain = parentChain;
+          // Back-compat aliases: the immediate parent = last entry of the chain,
+          // preserved for the find-trace parent-resolution path and older consumers.
+          var immediate = parentChain[parentChain.length - 1];
+          msg.parentDescriptor = immediate.descriptor;
+          msg.parentKey = immediate.key;
         }
       }
     }
@@ -758,6 +758,32 @@ function findParentKey(childOfRef, pageElements) {
     }
   }
   return null;
+}
+
+/**
+ * Resolve the full ancestor chain referenced by a childOf value, ordered
+ * root -> immediate parent. Reuses findParentKey / findParentDescriptor for
+ * each hop; stops on a missing ancestor (no key or no descriptor) or a cycle
+ * (a key already seen), so the result is always finite.
+ *
+ * @param {string} childOfRef - The id value or element key referenced by childOf
+ * @param {object} pageElements - The spec's pageElements map
+ * @returns {Array<{key: string, descriptor: object}>} - Ancestors ordered root -> immediate parent
+ */
+function buildParentChain(childOfRef, pageElements) {
+  var chain = [];              // { key, descriptor }, immediate parent first
+  var seen = {};
+  var ref = childOfRef;
+  while (ref) {
+    var key = findParentKey(ref, pageElements);
+    var descriptor = findParentDescriptor(ref, pageElements);
+    if (!key || !descriptor || seen[key]) break;   // missing ancestor or cycle
+    seen[key] = true;
+    chain.push({ key: key, descriptor: descriptor });
+    ref = descriptor.childOf;                        // advance up the chain
+  }
+  chain.reverse();            // root -> immediate parent for outermost-first scoping
+  return chain;
 }
 
 // ---------------------------------------------------------------------------
@@ -2908,6 +2934,7 @@ if (typeof module !== 'undefined' && module.exports) {
     buildStepMessage: buildStepMessage,
     findParentDescriptor: findParentDescriptor,
     findParentKey: findParentKey,
+    buildParentChain: buildParentChain,
     safeSendMessage: safeSendMessage,
     SPEED_DELAYS: SPEED_DELAYS,
     applySpeedDelay: applySpeedDelay,

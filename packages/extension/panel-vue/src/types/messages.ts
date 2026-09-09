@@ -101,6 +101,8 @@ export type ContentScriptHoverMessage =
 export interface HoverResult {
   type: 'HOVER_RESULT';
   found: number;
+  // additive; true when a Hidden_Ancestor hides the first match
+  hiddenByAncestor?: boolean;
 }
 
 export interface HoverClearResult {

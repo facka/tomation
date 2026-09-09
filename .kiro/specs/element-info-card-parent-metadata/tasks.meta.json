@@ -1,0 +1,93 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Add `hiddenByAncestor?: boolean` to `HoverResult` in `messages.ts`": [
+      {
+        "executionId": "a1911174-7be6-4a6c-9572-006a7c6beb74",
+        "chatSessionId": "sess_538652f8-f6e8-4c88-b800-49122aa74371",
+        "timestamp": 1788922746762
+      },
+      {
+        "executionId": "a1911174-7be6-4a6c-9572-006a7c6beb74",
+        "chatSessionId": "sess_538652f8-f6e8-4c88-b800-49122aa74371",
+        "timestamp": 1788922798400
+      }
+    ],
+    "1.2 Add optional `key?: string` to `ParentTrace` in `findTrace.ts`": [
+      {
+        "executionId": "a1911174-7be6-4a6c-9572-006a7c6beb74",
+        "chatSessionId": "sess_538652f8-f6e8-4c88-b800-49122aa74371",
+        "timestamp": 1788922747837
+      },
+      {
+        "executionId": "a1911174-7be6-4a6c-9572-006a7c6beb74",
+        "chatSessionId": "sess_538652f8-f6e8-4c88-b800-49122aa74371",
+        "timestamp": 1788922799513
+      }
+    ],
+    "1. Extend shared message/trace contracts (additive)": [
+      {
+        "executionId": "a1911174-7be6-4a6c-9572-006a7c6beb74",
+        "chatSessionId": "sess_538652f8-f6e8-4c88-b800-49122aa74371",
+        "timestamp": 1788922799620
+      }
+    ],
+    "2.1 Implement `buildParentChain` and emit `parentChain` from `buildStepMessage`": [
+      {
+        "executionId": "0c050993-cf1b-45ed-bcd4-2543f0242b92",
+        "chatSessionId": "sess_108944bb-c0c6-461f-905b-3749f11efcd7",
+        "timestamp": 1788922940443
+      },
+      {
+        "executionId": "0c050993-cf1b-45ed-bcd4-2543f0242b92",
+        "chatSessionId": "sess_108944bb-c0c6-461f-905b-3749f11efcd7",
+        "timestamp": 1788923038772
+      }
+    ],
+    "2. Compile the ancestor `parentChain` in `background.js` (Req 3)": [
+      {
+        "executionId": "0c050993-cf1b-45ed-bcd4-2543f0242b92",
+        "chatSessionId": "sess_108944bb-c0c6-461f-905b-3749f11efcd7",
+        "timestamp": 1788923038948
+      }
+    ],
+    "3.1 Refactor `findElementWithParent` to `resolveParentChain`": [
+      {
+        "executionId": "4df18744-a994-4f1b-96df-d47b001f7bed",
+        "chatSessionId": "sess_8a8afa7b-48ec-4a51-b12b-ea988e250162",
+        "timestamp": 1788923180935
+      },
+      {
+        "executionId": "4df18744-a994-4f1b-96df-d47b001f7bed",
+        "chatSessionId": "sess_8a8afa7b-48ec-4a51-b12b-ea988e250162",
+        "timestamp": 1788923344851
+      }
+    ],
+    "3. Resolve and tag every ancestor in `runtime.js` (Req 3, Req 6)": [
+      {
+        "executionId": "4df18744-a994-4f1b-96df-d47b001f7bed",
+        "chatSessionId": "sess_8a8afa7b-48ec-4a51-b12b-ea988e250162",
+        "timestamp": 1788923344962
+      }
+    ],
+    "4.1 Implement `detectHiddenAncestor(el)` and wire the flag into hover handlers": [
+      {
+        "executionId": "819383e9-60b8-44bc-ba39-9146ce693c07",
+        "chatSessionId": "sess_773aef66-f727-4b45-bc92-20fc3b218b6e",
+        "timestamp": 1788923484734
+      },
+      {
+        "executionId": "819383e9-60b8-44bc-ba39-9146ce693c07",
+        "chatSessionId": "sess_773aef66-f727-4b45-bc92-20fc3b218b6e",
+        "timestamp": 1788923620661
+      }
+    ],
+    "4. Hidden-ancestor detection in `runtime.js` (Req 5)": [
+      {
+        "executionId": "819383e9-60b8-44bc-ba39-9146ce693c07",
+        "chatSessionId": "sess_773aef66-f727-4b45-bc92-20fc3b218b6e",
+        "timestamp": 1788923620760
+      }
+    ]
+  }
+}

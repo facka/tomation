@@ -757,13 +757,64 @@ function isInViewport(el) {
 }
 
 /**
+ * Walk from `el` up through its ancestors, returning true when an ancestor
+ * prevents `el` from being rendered/visible: display:none, visibility:hidden
+ * (or collapse), opacity:0, zero-size, or overflow-clipped out of the
+ * ancestor's box. Also returns true for the not-rendered case where the
+ * element has no offsetParent and is not position:fixed.
+ *
+ * Read-only / observational only: uses getComputedStyle and
+ * getBoundingClientRect exclusively and NEVER writes styles or attributes
+ * (Req 5.4).
+ *
+ * @param {Element} el - the matched element to inspect
+ * @returns {boolean}
+ */
+function detectHiddenAncestor(el) {
+  if (!el || el.nodeType !== 1) {
+    return false;
+  }
+  var node = el.parentElement;
+  while (node && node.nodeType === 1) {
+    var cs = window.getComputedStyle(node);
+    if (cs.display === 'none') {
+      return true;
+    }
+    if (cs.visibility === 'hidden' || cs.visibility === 'collapse') {
+      return true;
+    }
+    if (parseFloat(cs.opacity) === 0) {
+      return true;
+    }
+    var r = node.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) {
+      return true;
+    }
+    // Clipping container: element rect entirely outside a hidden-overflow box.
+    if (cs.overflow === 'hidden' || cs.overflowX === 'hidden' || cs.overflowY === 'hidden') {
+      var er = el.getBoundingClientRect();
+      if (er.bottom <= r.top || er.top >= r.bottom || er.right <= r.left || er.left >= r.right) {
+        return true;
+      }
+    }
+    node = node.parentElement;
+  }
+  // offsetParent === null (and not position:fixed) indicates the element is
+  // not rendered.
+  if (el.offsetParent === null && window.getComputedStyle(el).position !== 'fixed') {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Highlight all elements tagged with the given element key for panel hover.
  * On zero matches, touches nothing and reports found: 0. Otherwise sets
  * data-tomation-hover="true" on every match and scrolls the first match into
  * view only when it is off-screen.
  *
  * @param {string} key - the element key to hover-highlight
- * @returns {{type: string, found: number}}
+ * @returns {{type: string, found: number, hiddenByAncestor: boolean}}
  */
 function handleHoverHighlight(key) {
   var matches = document.querySelectorAll(hoverSelectorFor(key));
@@ -776,7 +827,7 @@ function handleHoverHighlight(key) {
   if (!isInViewport(matches[0])) {
     matches[0].scrollIntoView({ block: 'nearest' });
   }
-  return { type: 'HOVER_RESULT', found: matches.length };
+  return { type: 'HOVER_RESULT', found: matches.length, hiddenByAncestor: detectHiddenAncestor(matches[0]) };
 }
 
 /**
@@ -788,7 +839,7 @@ function handleHoverHighlight(key) {
  * it is off-screen.
  *
  * @param {string} xpath - the XPath expression to resolve and hover-highlight
- * @returns {{type: string, found: number}}
+ * @returns {{type: string, found: number, hiddenByAncestor: boolean}}
  */
 function handleHoverHighlightXPath(xpath) {
   var els = [];
@@ -819,7 +870,7 @@ function handleHoverHighlightXPath(xpath) {
   if (!isInViewport(els[0])) {
     els[0].scrollIntoView({ block: 'nearest' });
   }
-  return { type: 'HOVER_RESULT', found: els.length };
+  return { type: 'HOVER_RESULT', found: els.length, hiddenByAncestor: detectHiddenAncestor(els[0]) };
 }
 
 /**
@@ -835,7 +886,7 @@ function handleHoverHighlightXPath(xpath) {
  * and scrolls the first match into view only when it is off-screen.
  *
  * @param {{tag?: string, where?: object, xpath?: string}} descriptor
- * @returns {{type: string, found: number}}
+ * @returns {{type: string, found: number, hiddenByAncestor: boolean}}
  */
 function handleHoverHighlightDescriptor(descriptor) {
   var els = [];
@@ -899,7 +950,7 @@ function handleHoverHighlightDescriptor(descriptor) {
   if (!isInViewport(els[0])) {
     els[0].scrollIntoView({ block: 'nearest' });
   }
-  return { type: 'HOVER_RESULT', found: els.length };
+  return { type: 'HOVER_RESULT', found: els.length, hiddenByAncestor: detectHiddenAncestor(els[0]) };
 }
 
 /**
@@ -990,7 +1041,7 @@ function findElementWithParent(stepMessage) {
     return { ok: true, element: element };
   }
 
-  if (!parentDescriptor) {
+  if (!parentDescriptor && !(stepMessage.parentChain && stepMessage.parentChain.length >= 1)) {
     return findElement(elementDescriptor, document)
       .then(function (element) {
         return applyNavigation(element);
@@ -1053,6 +1104,153 @@ function findElementWithParent(stepMessage) {
     const tagName = element.nodeName.toLowerCase();
     const parentPath = getElementXPath(element.parentElement);
     return `${parentPath}/${tagName}[${index}]`;
+  }
+
+  // --------------------------------------------------------------------------
+  // parentChain path (Req 3): resolve and tag EVERY ancestor.
+  //
+  // When the compiled step carries an ordered `parentChain` (root → immediate
+  // parent), resolve the chain iteratively, scoping each ancestor to the
+  // previous ancestor's subtree, and tag each resolved ancestor with its own
+  // Element_Key. The child is then searched inside the innermost resolved
+  // ancestor. When `parentChain` is absent, we fall through to the existing
+  // single-`parentDescriptor` path below (older compiled specs), unchanged.
+  // --------------------------------------------------------------------------
+  var parentChain = stepMessage.parentChain;
+  if (parentChain && parentChain.length >= 1) {
+    // Derive the failed-ancestor identifier the same way the single-parent
+    // path does (Req 4.2 back-compat), from the failed ancestor's descriptor.
+    function ancestorDescriptorId(ancestorDescriptor) {
+      return ancestorDescriptor && ancestorDescriptor.where && ancestorDescriptor.where.id
+        ? ancestorDescriptor.where.id
+        : 'unknown';
+    }
+
+    // Build the parent-resolution FAILURE outcome for a given ancestor.
+    // Records BOTH descriptorId (back-compat) AND key (the failed ancestor's
+    // raw Element_Key — additive field for card matching per Req 7). `navResult`
+    // is supplied when a navigate hop failed after the anchor resolved.
+    function parentChainFailure(ancestor, navResult) {
+      var ancestorId = ancestorDescriptorId(ancestor.descriptor);
+      var preservedError = 'Parent element not found: ' + ancestorId;
+      var trace = emptyTrace();
+      trace.scope = 'whole-document';
+      trace.action = action;
+      trace.error = preservedError;
+      var parentOutcome = {
+        resolved: false,                 // Req 4.1, 4.2
+        descriptorId: ancestorId,        // back-compat
+        key: ancestor.key                // additive: failed ancestor's Element_Key (Req 7)
+      };
+      if (navResult) {
+        // Preserve the navigate-failure error string shape used by the
+        // single-parent path.
+        preservedError = 'Parent element not found: ' + ancestorId + ' (navigate ' + navResult.error + ')';
+        trace.error = preservedError;
+        parentOutcome.navigate = {
+          anchorResolved: true,                     // parent anchor resolved
+          failedHopIndex: navResult.failedHopIndex, // zero-based
+          failedHopType: navResult.failedHopType,
+          hopCount: (ancestor.descriptor && ancestor.descriptor.navigate)
+            ? ancestor.descriptor.navigate.length
+            : 0
+        };
+      }
+      trace.parent = parentOutcome;
+      return { ok: false, error: preservedError, findTrace: trace };
+    }
+
+    // Resolve the ancestor chain root → immediate parent, scoping each level to
+    // the previous and tagging each resolved ancestor with its own key.
+    // Returns { ok:true, scope } on success, or a failure result (from
+    // parentChainFailure) that short-circuits the remaining ancestors.
+    var chainPromise = Promise.resolve({ ok: true, scope: document });
+    parentChain.forEach(function (ancestor) {
+      chainPromise = chainPromise.then(function (state) {
+        if (!state.ok) return state; // short-circuit on an earlier failure
+        return findElement(ancestor.descriptor, state.scope)
+          .then(function (anchor) {
+            // Navigate-then-scope preserved per ancestor (Req 6.6).
+            var navSteps = ancestor.descriptor && ancestor.descriptor.navigate;
+            var scopeEl = anchor;
+            if (navSteps && navSteps.length > 0) {
+              var nav = applyNavigateSteps(anchor, navSteps);
+              if (nav.ok === false) {
+                return parentChainFailure(ancestor, nav); // Req 3.4
+              }
+              scopeEl = nav.element;
+            }
+            // Tag this resolved ancestor with its own key (Req 3.1–3.3, 3.8).
+            // No-ops on empty/missing key; overwrites → exactly one tomation-key.
+            tagElementKey(scopeEl, ancestor.key);
+            return { ok: true, scope: scopeEl }; // scope next level inward (Req 6.5)
+          })
+          .catch(function () {
+            return parentChainFailure(ancestor); // Req 3.4
+          });
+      });
+    });
+
+    // The immediate (last) chain entry drives the child-not-found parent
+    // find-trace, preserving element-find-trace behavior.
+    var immediate = parentChain[parentChain.length - 1];
+    var immediateDescriptor = immediate.descriptor;
+
+    return chainPromise.then(function (state) {
+      // A parent-resolution failure short-circuited the chain: return it as-is.
+      if (!state.ok) return state;
+
+      var finalScope = state.scope;
+      return findElement(elementDescriptor, finalScope)
+        .then(function (element) {
+          return applyNavigation(element);
+        })
+        .then(function (result) {
+          // Child resolved but a navigate hop failed.
+          if (result && result.ok === false) {
+            var navTrace = emptyTrace();
+            navTrace.scope = 'parent-scoped';
+            navTrace.action = action;
+            navTrace.error = 'Element not found: ' + stepMessage.target;
+            navTrace.navigate = {
+              anchorResolved: result.anchorResolved === true,
+              failedHopIndex: result.failedHopIndex,
+              failedHopType: result.failedHopType,
+              hopCount: navigateSteps ? navigateSteps.length : 0
+            };
+            return { ok: false, error: navTrace.error, findTrace: navTrace };
+          }
+          return result;
+        })
+        .catch(function (error) {
+          // Innermost parent resolved, but the child was not found within the
+          // final scope element's subtree. Base identifier/matchCount on the
+          // immediate (last) parentChain entry's descriptor and finalScope.
+          var preservedError = 'Element with parent ' + getElementXPath(finalScope) + ' not found: ' + stepMessage.target + error.message;
+          var trace = (error && error.findTrace) || emptyTrace();
+          trace.scope = 'parent-scoped';
+          trace.action = action;
+          trace.error = preservedError;
+
+          var matchCount = 0;
+          if (immediateDescriptor && immediateDescriptor.tag) {
+            var parentCandidates = document.querySelectorAll(immediateDescriptor.tag);
+            for (var i = 0; i < parentCandidates.length; i++) {
+              if (matchesWhere(parentCandidates[i], immediateDescriptor.where || {}, null)) {
+                matchCount++;
+              }
+            }
+          }
+
+          trace.parent = {
+            resolved: true,                        // Req 4.1
+            identifier: getElementXPath(finalScope), // Req 4.4
+            matchCount: matchCount,                // Req 4.5
+            scopedToParent: true                   // Req 4.3
+          };
+          return { ok: false, error: preservedError, findTrace: trace };
+        });
+    });
   }
 
   // Identifier used for the parent descriptor when the parent fails to resolve

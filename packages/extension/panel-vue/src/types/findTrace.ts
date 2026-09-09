@@ -30,10 +30,11 @@ export interface NavigateTrace {
 
 export interface ParentTrace {
   resolved: boolean;               // Req 4.1
-  descriptorId?: string;           // identifier from the parent descriptor when not resolved (Req 4.2)
+  descriptorId?: string;           // identifier from the parent descriptor when not resolved; retained for back-compat card matching (Req 4.2, 7.4)
   identifier?: string;             // getElementXPath of resolved parent (Req 4.4)
   matchCount?: number;             // number of parent matches (Req 4.5)
   scopedToParent?: boolean;        // child search was scoped to parent subtree (Req 4.3)
+  key?: string;                    // failed ancestor's raw Element_Key; primary card-match target, falls back to descriptorId (Req 7.2, 7.4)
 }
 
 export interface XPathTrace {
