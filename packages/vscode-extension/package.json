@@ -6,6 +6,11 @@
   "publisher": "tomationjs",
   "private": true,
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/facka/tomation.git",
+    "directory": "packages/vscode-extension"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
