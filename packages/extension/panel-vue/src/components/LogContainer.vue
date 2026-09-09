@@ -154,23 +154,105 @@ watch(
   () => logEntries.value.map((e) => e.status),
   () => {
     nextTick(() => {
+      console.log('[autoscroll] watcher fired; containerRef present:', !!containerRef.value);
       if (!containerRef.value) return;
-      // Find the last entry that is not 'queued' (most recently updated)
+      const container = containerRef.value;
       const entries = logEntries.value;
-      let lastActiveIndex = -1;
+      console.log(
+        '[autoscroll] entries.length:',
+        entries.length,
+        'statuses:',
+        entries.map((e) => e.status),
+      );
+
+      // Determine the currently-executing step to track: the last
+      // 'in-progress' entry if one exists, otherwise the most recently
+      // updated non-'queued' entry, otherwise NONE (-1 when all 'queued').
+      let currentIndex = -1;
       for (let i = entries.length - 1; i >= 0; i--) {
-        if (entries[i].status !== 'queued') {
-          lastActiveIndex = i;
+        if (entries[i].status === 'in-progress') {
+          currentIndex = i;
           break;
         }
       }
-      if (lastActiveIndex === -1) return;
+      if (currentIndex === -1) {
+        for (let i = entries.length - 1; i >= 0; i--) {
+          if (entries[i].status !== 'queued') {
+            currentIndex = i;
+            break;
+          }
+        }
+      }
+      if (currentIndex >= 0) {
+        console.log(
+          '[autoscroll] currentIndex:',
+          currentIndex,
+          'stepIndex:',
+          entries[currentIndex].stepIndex,
+          'status:',
+          entries[currentIndex].status,
+        );
+      } else {
+        console.log('[autoscroll] currentIndex:', currentIndex);
+      }
+      // No target: all entries are 'queued' — perform no scroll.
+      if (currentIndex === -1) {
+        console.log('[autoscroll] no target (all queued), skipping scroll');
+        return;
+      }
 
-      // Find the corresponding DOM element and scroll it into view
-      const entryKey = 'entry-' + entries[lastActiveIndex].stepIndex;
-      const el = containerRef.value.querySelector('[data-key="' + entryKey + '"]');
-      if (el) {
-        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      // Find the corresponding DOM element via existing keying.
+      const entryKey = 'entry-' + entries[currentIndex].stepIndex;
+      const el = container.querySelector<HTMLElement>('[data-key="' + entryKey + '"]');
+      console.log('[autoscroll] entryKey:', entryKey, 'el found:', !!el);
+      if (!el) {
+        console.log('[autoscroll] target row not found in DOM');
+        return;
+      }
+
+      // Bring the target row fully into the visible area using explicit
+      // container scrollTop math. No-op when the row is already fully visible.
+      const rowTop = el.offsetTop;
+      const rowBottom = rowTop + el.offsetHeight;
+      const viewTop = container.scrollTop;
+      const viewBottom = viewTop + container.clientHeight;
+      console.log(
+        '[autoscroll] geometry rowTop:',
+        rowTop,
+        'rowBottom:',
+        rowBottom,
+        'viewTop:',
+        viewTop,
+        'viewBottom:',
+        viewBottom,
+        'el.offsetHeight:',
+        el.offsetHeight,
+        'container.clientHeight:',
+        container.clientHeight,
+        'container.scrollTop:',
+        container.scrollTop,
+      );
+
+      let top: number | null = null;
+      if (rowTop < viewTop) {
+        // Row is above the top edge — align its top with the container top.
+        top = rowTop;
+      } else if (rowBottom > viewBottom) {
+        // Row is below the bottom edge — align its bottom with the container bottom.
+        top = rowBottom - container.clientHeight;
+      }
+
+      if (top === null) {
+        console.log('[autoscroll] already fully visible, no scroll; top:', top);
+      } else if (rowTop < viewTop) {
+        console.log('[autoscroll] row above top edge; top:', top);
+      } else {
+        console.log('[autoscroll] row below bottom edge; top:', top);
+      }
+
+      if (top !== null) {
+        console.log('[autoscroll] scrolling to top=' + top);
+        container.scrollTo({ top, behavior: 'smooth' });
       }
     });
   },

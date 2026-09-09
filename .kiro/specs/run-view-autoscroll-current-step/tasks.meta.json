@@ -1,0 +1,72 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Write bug condition exploration test (BEFORE implementing the fix)": [
+      {
+        "executionId": "2f323586-23cc-48e6-99fc-a965f0137365",
+        "chatSessionId": "sess_82873797-a5c8-40e1-ad10-f3a1b63afdbf",
+        "timestamp": 1788966057785
+      },
+      {
+        "executionId": "2f323586-23cc-48e6-99fc-a965f0137365",
+        "chatSessionId": "sess_82873797-a5c8-40e1-ad10-f3a1b63afdbf",
+        "timestamp": 1788967302795
+      }
+    ],
+    "2. Write preservation property tests (BEFORE implementing the fix)": [
+      {
+        "executionId": "ec6e354d-edf6-4fbc-ab2c-33c6a60e962c",
+        "chatSessionId": "sess_78fbbb48-c743-4b59-8773-df56e12abe65",
+        "timestamp": 1788967350855
+      },
+      {
+        "executionId": "ec6e354d-edf6-4fbc-ab2c-33c6a60e962c",
+        "chatSessionId": "sess_78fbbb48-c743-4b59-8773-df56e12abe65",
+        "timestamp": 1788967516052
+      }
+    ],
+    "3.1 Implement the fix in `LogContainer.vue`": [
+      {
+        "executionId": "d229db81-0217-495b-b70e-5b53abd553f3",
+        "chatSessionId": "sess_61fdc008-934a-4bf4-b98b-5b4008b7e097",
+        "timestamp": 1788967744279
+      },
+      {
+        "executionId": "d229db81-0217-495b-b70e-5b53abd553f3",
+        "chatSessionId": "sess_61fdc008-934a-4bf4-b98b-5b4008b7e097",
+        "timestamp": 1788967807620
+      }
+    ],
+    "3.2 Verify the bug condition exploration test now passes": [
+      {
+        "executionId": "d229db81-0217-495b-b70e-5b53abd553f3",
+        "chatSessionId": "sess_61fdc008-934a-4bf4-b98b-5b4008b7e097",
+        "timestamp": 1788967817215
+      },
+      {
+        "executionId": "d229db81-0217-495b-b70e-5b53abd553f3",
+        "chatSessionId": "sess_61fdc008-934a-4bf4-b98b-5b4008b7e097",
+        "timestamp": 1788969046554
+      }
+    ],
+    "3.3 Verify the preservation tests still pass": [
+      {
+        "executionId": "d229db81-0217-495b-b70e-5b53abd553f3",
+        "chatSessionId": "sess_61fdc008-934a-4bf4-b98b-5b4008b7e097",
+        "timestamp": 1788969050521
+      },
+      {
+        "executionId": "d229db81-0217-495b-b70e-5b53abd553f3",
+        "chatSessionId": "sess_61fdc008-934a-4bf4-b98b-5b4008b7e097",
+        "timestamp": 1788969273671
+      }
+    ],
+    "3. Fix the auto-scroll watcher to track the current step and bring it fully into view": [
+      {
+        "executionId": "d229db81-0217-495b-b70e-5b53abd553f3",
+        "chatSessionId": "sess_61fdc008-934a-4bf4-b98b-5b4008b7e097",
+        "timestamp": 1788969273775
+      }
+    ]
+  }
+}

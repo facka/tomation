@@ -12,6 +12,7 @@ const props = defineProps<{
   pageElements?: Record<string, PageElement>;
   debugMode?: boolean;
   awaitingAction?: boolean;
+  dataKey?: string;
 }>();
 
 const emit = defineEmits<{
@@ -292,6 +293,7 @@ onBeforeUnmount(() => {
     class="log-entry"
     :class="statusClass"
     :style="indentStyle"
+    :data-key="dataKey"
     @pointerenter="onPointerEnter"
     @pointerleave="onPointerLeave"
   >
