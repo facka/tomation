@@ -1472,14 +1472,37 @@ function handleAssertNotExists(element) {
 }
 
 /**
- * Handle assertHasText — check if element's textContent contains the value.
+ * Normalize an element's visible text for containment matching.
+ *
+ * Uses innerText (which reflects rendered, visible text) when available and
+ * falls back to textContent. All runs of whitespace — spaces, tabs, newlines,
+ * and non-breaking spaces introduced by indented or multi-element markup — are
+ * collapsed to a single space, and outer whitespace is trimmed. This lets an
+ * assertion match visible text regardless of how the HTML is laid out.
+ *
+ * @param {Element} element
+ * @returns {string}
+ */
+function getCleanText(element) {
+  var rawText = element.innerText || element.textContent || '';
+  return rawText.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Handle assertHasText — check if the element's normalized visible text
+ * contains the (normalized) expected value.
  */
 function handleAssertHasText(element, value) {
-  var text = element.textContent || '';
-  if (text.indexOf(value) !== -1) {
+  var actual = getCleanText(element);
+  var expected = String(value).replace(/\s+/g, ' ').trim();
+
+  if (actual.indexOf(expected) !== -1) {
     return Promise.resolve({ ok: true });
   }
-  return Promise.resolve({ ok: false, error: 'Element text does not contain: ' + value });
+  return Promise.resolve({
+    ok: false,
+    error: 'Element text does not contain: "' + expected + '" (actual: "' + actual + '")'
+  });
 }
 
 /**
