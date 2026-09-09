@@ -1186,10 +1186,47 @@ function sendStepToRuntime(step, stepIndex) {
   }
 
   return api.tabs.sendMessage(runState.lockedTabId, msg).catch(function (error) {
-    if (error && error.message && error.message.indexOf('Could not establish connection') !== -1) {
+    var errMsg = (error && error.message) || '';
+    if (errMsg.indexOf('Could not establish connection') !== -1) {
       return { ok: false, error: 'Content script not available on this tab. Reload the page and try again.' };
     }
+    if (errMsg.indexOf('message channel closed') !== -1) {
+      // The content script on the locked tab was torn down before it could
+      // call sendResponse — typically because the step itself opened a new
+      // tab (target="_blank", window.open) or navigated the page away.
+      // Give chrome.tabs.onCreated a moment to fire and register a pending
+      // tab switch before deciding whether this was expected or a real failure.
+      return waitForPendingTabSwitch().then(function (switched) {
+        if (switched) {
+          return { ok: true };
+        }
+        return { ok: false, error: 'Page navigated away or closed before the step could confirm its result.' };
+      });
+    }
     throw error;
+  });
+}
+
+/**
+ * Poll briefly for the tab tracker to register a pending tab switch.
+ * Used after a "message channel closed" error to distinguish a step that
+ * opened a new tab (expected) from an unexpected navigation/close.
+ *
+ * @returns {Promise<boolean>} resolves true if a pending tab switch appeared
+ */
+function waitForPendingTabSwitch() {
+  var attemptsLeft = 5; // ~250ms total
+  return new Promise(function (resolve) {
+    (function poll() {
+      if (runState.pendingTabSwitch) {
+        return resolve(true);
+      }
+      if (attemptsLeft <= 0) {
+        return resolve(false);
+      }
+      attemptsLeft--;
+      setTimeout(poll, 50);
+    })();
   });
 }
 
