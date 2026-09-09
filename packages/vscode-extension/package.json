@@ -2,7 +2,7 @@
   "name": "tomation-vscode-extension",
   "displayName": "Tomation DSL",
   "description": "Live diagnostics and DSL-aware authoring assistance (completions, hover, go-to-definition) for Tomation DSL files.",
-  "version": "1.5.2",
+  "version": "2.0.0",
   "publisher": "tomationjs",
   "private": true,
   "license": "MIT",
