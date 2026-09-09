@@ -159,19 +159,6 @@ function toggleTrace() {
 
 const trace = computed(() => props.entry.findTrace ?? null);
 
-// True when a childOf step failed because the child was not found *inside* a
-// parent that WAS located. In that case the trace body offers a shortcut that
-// opens the ElementInfoCard on the failing element, whose childOf chain surfaces
-// the parents so the user can confirm/inspect which parent the finder scoped to.
-const parentWasResolved = computed(() => {
-  const t = trace.value;
-  return !!(t && t.parent && t.parent.resolved === true);
-});
-
-// Count of parent elements the finder matched (Req 4.5), shown alongside the
-// shortcut so the user knows whether the scope was ambiguous.
-const parentMatchCount = computed(() => trace.value?.parent?.matchCount ?? null);
-
 // One-line diagnosis derived from the trace (Req 10.3). All fields read defensively.
 const diagnosis = computed(() => {
   const t = trace.value;
@@ -430,30 +417,6 @@ onBeforeUnmount(() => {
     <div v-if="traceExpanded" class="find-trace-body">
       <!-- One-line diagnosis (Req 10.3) -->
       <div v-if="diagnosis" class="ft-diagnosis">{{ diagnosis }}</div>
-
-      <!-- Parent-inspection shortcut. Shown when the child was not found but its
-           parent WAS resolved. Opens the ElementInfoCard on the failing element,
-           whose childOf chain lets the user inspect and highlight each parent so
-           they can confirm the finder scoped to the intended element. -->
-      <div v-if="parentWasResolved && entry.target" class="ft-parent-wrap">
-        <button
-          type="button"
-          class="ft-parent-btn"
-          :aria-expanded="openCardKey === entry.target"
-          @click.stop="toggleCard(entry.target)"
-        >
-          <font-awesome-icon :icon="['fas', 'crosshairs']" />
-          <span>
-            Inspect element &amp; parent chain<span v-if="parentMatchCount && parentMatchCount > 1"> ({{ parentMatchCount }} parents matched)</span>
-          </span>
-        </button>
-        <ElementInfoCard
-          v-if="openCardKey === entry.target"
-          :element-key="entry.target"
-          :page-elements="pageElements"
-          @close="closeCard"
-        />
-      </div>
 
       <!-- Copy-pasteable DevTools finder snippet (Req 10.4-10.8) -->
       <div v-if="finderSnippet" class="ft-snippet">
