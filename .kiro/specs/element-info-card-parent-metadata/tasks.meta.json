@@ -88,6 +88,116 @@
         "chatSessionId": "sess_773aef66-f727-4b45-bc92-20fc3b218b6e",
         "timestamp": 1788923620760
       }
+    ],
+    "6.1 Change the composable to resolve to `HighlightOutcome | null` and update callers": [
+      {
+        "executionId": "63192390-0853-4eba-afcf-5717f90d2532",
+        "chatSessionId": "sess_029ef85f-524e-42ce-b26d-980e8a525eb8",
+        "timestamp": 1788923953403
+      },
+      {
+        "executionId": "63192390-0853-4eba-afcf-5717f90d2532",
+        "chatSessionId": "sess_029ef85f-524e-42ce-b26d-980e8a525eb8",
+        "timestamp": 1788924094200
+      }
+    ],
+    "6. Return a `HighlightOutcome` from `useElementHighlight.ts` (Req 4, Req 5)": [
+      {
+        "executionId": "63192390-0853-4eba-afcf-5717f90d2532",
+        "chatSessionId": "sess_029ef85f-524e-42ce-b26d-980e8a525eb8",
+        "timestamp": 1788924094306
+      }
+    ],
+    "7. Shared `ChainNodeMeta.vue` metadata component (Req 1.4, 1.9)": [
+      {
+        "executionId": "5344e38c-f2b7-4b0d-baad-6fe105d7a514",
+        "chatSessionId": "sess_15b6b20b-919e-4d6b-a039-e824ac3b21cb",
+        "timestamp": 1788924226588
+      },
+      {
+        "executionId": "5344e38c-f2b7-4b0d-baad-6fe105d7a514",
+        "chatSessionId": "sess_15b6b20b-919e-4d6b-a039-e824ac3b21cb",
+        "timestamp": 1788924285851
+      }
+    ],
+    "8.1 Add props, expansion state, and refactor the self region to `ChainNodeMeta`": [
+      {
+        "executionId": "2c01b96d-f83e-4e92-8d68-513db05dcb02",
+        "chatSessionId": "sess_2c1905f4-12ef-4ead-b743-bbebb62fc151",
+        "timestamp": 1788925032052
+      },
+      {
+        "executionId": "2c01b96d-f83e-4e92-8d68-513db05dcb02",
+        "chatSessionId": "sess_2c1905f4-12ef-4ead-b743-bbebb62fc151",
+        "timestamp": 1788925769339
+      }
+    ],
+    "8.2 Render expandable parent rows with orthogonal hover/click": [
+      {
+        "executionId": "2c01b96d-f83e-4e92-8d68-513db05dcb02",
+        "chatSessionId": "sess_2c1905f4-12ef-4ead-b743-bbebb62fc151",
+        "timestamp": 1788925033388
+      },
+      {
+        "executionId": "2c01b96d-f83e-4e92-8d68-513db05dcb02",
+        "chatSessionId": "sess_2c1905f4-12ef-4ead-b743-bbebb62fc151",
+        "timestamp": 1788925770754
+      }
+    ],
+    "8.3 Per-node removed and hidden-ancestor notices": [
+      {
+        "executionId": "2c01b96d-f83e-4e92-8d68-513db05dcb02",
+        "chatSessionId": "sess_2c1905f4-12ef-4ead-b743-bbebb62fc151",
+        "timestamp": 1788925034338
+      },
+      {
+        "executionId": "2c01b96d-f83e-4e92-8d68-513db05dcb02",
+        "chatSessionId": "sess_2c1905f4-12ef-4ead-b743-bbebb62fc151",
+        "timestamp": 1788925772127
+      }
+    ],
+    "8.4 Parent-not-found indicator via `failedParentKey`": [
+      {
+        "executionId": "2c01b96d-f83e-4e92-8d68-513db05dcb02",
+        "chatSessionId": "sess_2c1905f4-12ef-4ead-b743-bbebb62fc151",
+        "timestamp": 1788925035789
+      },
+      {
+        "executionId": "2c01b96d-f83e-4e92-8d68-513db05dcb02",
+        "chatSessionId": "sess_2c1905f4-12ef-4ead-b743-bbebb62fc151",
+        "timestamp": 1788925773544
+      }
+    ],
+    "8.5 Add CSS for the new row states": [
+      {
+        "executionId": "2c01b96d-f83e-4e92-8d68-513db05dcb02",
+        "chatSessionId": "sess_2c1905f4-12ef-4ead-b743-bbebb62fc151",
+        "timestamp": 1788925036857
+      },
+      {
+        "executionId": "2c01b96d-f83e-4e92-8d68-513db05dcb02",
+        "chatSessionId": "sess_2c1905f4-12ef-4ead-b743-bbebb62fc151",
+        "timestamp": 1788925774360
+      }
+    ],
+    "8. Refactor `ElementInfoCard.vue` — expandable rows, notices, indicator": [
+      {
+        "executionId": "2c01b96d-f83e-4e92-8d68-513db05dcb02",
+        "chatSessionId": "sess_2c1905f4-12ef-4ead-b743-bbebb62fc151",
+        "timestamp": 1788925774554
+      }
+    ],
+    "9. Wire `LogEntry.vue` to supply `parentResolution` (Req 4, Req 7)": [
+      {
+        "executionId": "58b25a50-eab2-47d3-968c-e0aa833ab897",
+        "chatSessionId": "sess_6da7682c-df87-401b-bdd3-d6d474ae1178",
+        "timestamp": 1788925825706
+      },
+      {
+        "executionId": "58b25a50-eab2-47d3-968c-e0aa833ab897",
+        "chatSessionId": "sess_6da7682c-df87-401b-bdd3-d6d474ae1178",
+        "timestamp": 1788925897372
+      }
     ]
   }
 }

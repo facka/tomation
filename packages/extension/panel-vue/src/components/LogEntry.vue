@@ -265,9 +265,9 @@ async function onPointerEnter() {
   if (!key) return; // No target — nothing to highlight (Req 3.3).
   hovering = true;
   showRemovedMessage.value = false;
-  const found = await highlight(key);
+  const outcome = await highlight(key);
   if (!hovering) return; // Pointer already left — ignore this late result.
-  if (found === 0 && stepResolvedElement(props.entry)) {
+  if (outcome?.found === 0 && stepResolvedElement(props.entry)) {
     showRemovedMessage.value = true; // Element resolved during the run but is gone now (Req 8.1-8.3).
   }
 }
@@ -325,6 +325,7 @@ onBeforeUnmount(() => {
           :element-key="entry.target"
           :page-elements="pageElements"
           :removed="showRemovedMessage"
+          :parent-resolution="entry.findTrace?.parent"
           @close="closeCard"
         />
       </span>
@@ -363,6 +364,7 @@ onBeforeUnmount(() => {
           :element-key="entry.target"
           :page-elements="pageElements"
           :removed="showRemovedMessage"
+          :parent-resolution="entry.findTrace?.parent"
           @close="closeCard"
         />
       </span>

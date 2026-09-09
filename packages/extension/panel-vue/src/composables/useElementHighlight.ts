@@ -9,6 +9,17 @@ import type {
 
 const DEBOUNCE_MS = 100;
 
+/**
+ * Result of a delivered hover-highlight request. Carries both the matched
+ * element `found` count (for the removed notice) and the runtime-reported
+ * `hiddenByAncestor` flag (for the hidden-ancestor notice).
+ * _Requirements: 4.1, 4.3, 5.2, 6.4_
+ */
+export interface HighlightOutcome {
+  found: number;
+  hiddenByAncestor: boolean;
+}
+
 // Module-level singleton state shared across every LogEntry row that uses this
 // composable. Only one element key may be hover-active (or pending) at a time.
 let pendingTimer: ReturnType<typeof setTimeout> | null = null;
@@ -74,10 +85,10 @@ export function useElementHighlight() {
    * Highlight the element(s) tagged with `key` after a 100ms debounce. Any
    * pending debounce is cancelled first; when a different key was already active
    * it is cleared before the next highlight starts. Resolves to the runtime's
-   * `found` count, or `null` when the request could not be delivered.
+   * `HighlightOutcome`, or `null` when the request could not be delivered.
    * _Requirements: 3.1, 4.3, 5.1, 3.10_
    */
-  function highlight(key: string): Promise<number | null> {
+  function highlight(key: string): Promise<HighlightOutcome | null> {
     return debouncedHighlight('key:' + key, { type: 'HOVER_HIGHLIGHT', key });
   }
 
@@ -86,10 +97,10 @@ export function useElementHighlight() {
    * debounce. Used by the find-trace disclosure to highlight a resolved parent
    * element when the child could not be found. Shares the same single-active
    * bookkeeping as `highlight`, so a parent hover clears any active element
-   * hover first and vice versa. Resolves to the runtime's `found` count, or
-   * `null` when the request could not be delivered.
+   * hover first and vice versa. Resolves to the runtime's `HighlightOutcome`,
+   * or `null` when the request could not be delivered.
    */
-  function highlightXPath(xpath: string): Promise<number | null> {
+  function highlightXPath(xpath: string): Promise<HighlightOutcome | null> {
     return debouncedHighlight('xpath:' + xpath, { type: 'HOVER_HIGHLIGHT_XPATH', xpath });
   }
 
@@ -99,11 +110,11 @@ export function useElementHighlight() {
    * spec-defined element — including a childOf parent that was never tagged —
    * via the finder's matching semantics. Shares the same single-active
    * bookkeeping as `highlight`/`highlightXPath`. Resolves to the runtime's
-   * `found` count, or `null` when the request could not be delivered.
+   * `HighlightOutcome`, or `null` when the request could not be delivered.
    */
   function highlightDescriptor(
     descriptor: HoverHighlightDescriptorMessage['descriptor'],
-  ): Promise<number | null> {
+  ): Promise<HighlightOutcome | null> {
     return debouncedHighlight('descriptor:' + JSON.stringify(descriptor), {
       type: 'HOVER_HIGHLIGHT_DESCRIPTOR',
       descriptor,
@@ -121,17 +132,17 @@ export function useElementHighlight() {
    * finds nothing and we fall back to descriptor matching, which highlights every
    * element currently matching the descriptor.
    *
-   * Resolves to the number of elements highlighted by whichever path succeeded,
-   * or `null` when neither request could be delivered.
+   * Resolves to the `HighlightOutcome` of whichever path succeeded, or `null`
+   * when neither request could be delivered.
    */
   async function highlightNode(
     key: string,
     descriptor: HoverHighlightDescriptorMessage['descriptor'] | null,
-  ): Promise<number | null> {
+  ): Promise<HighlightOutcome | null> {
     const byKey = await highlight(key);
     // A positive count means the tagged instance was found — prefer it.
     // A null means the request could not be delivered; still try the descriptor.
-    if (byKey && byKey > 0) return byKey;
+    if (byKey && byKey.found > 0) return byKey;
     if (!descriptor) return byKey;
     return highlightDescriptor(descriptor);
   }
@@ -147,7 +158,7 @@ export function useElementHighlight() {
       | HoverHighlightMessage
       | HoverHighlightXPathMessage
       | HoverHighlightDescriptorMessage,
-  ): Promise<number | null> {
+  ): Promise<HighlightOutcome | null> {
     if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; }
     const hadPrior = activeKey !== null && activeKey !== token;
     return new Promise((resolve) => {
@@ -156,7 +167,7 @@ export function useElementHighlight() {
           pendingTimer = null;
           activeKey = token;
           const res = await sendToRuntime<HoverResult>(msg);
-          resolve(res ? res.found : null);
+          resolve(res ? { found: res.found, hiddenByAncestor: res.hiddenByAncestor === true } : null);
         }, DEBOUNCE_MS);
       };
       if (hadPrior) { void clearNow().then(start); } else { start(); }

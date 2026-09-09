@@ -91,8 +91,8 @@ and Vue component tests + `fast-check` for the panel. Each property test carries
 - [ ] 5. Checkpoint — runtime & compiler layer
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. Return a `HighlightOutcome` from `useElementHighlight.ts` (Req 4, Req 5)
-  - [ ] 6.1 Change the composable to resolve to `HighlightOutcome | null` and update callers
+- [x] 6. Return a `HighlightOutcome` from `useElementHighlight.ts` (Req 4, Req 5)
+  - [x] 6.1 Change the composable to resolve to `HighlightOutcome | null` and update callers
     - Add `export interface HighlightOutcome { found: number; hiddenByAncestor: boolean }`
     - Change `highlight` / `highlightXPath` / `highlightDescriptor` / `highlightNode` to resolve to `HighlightOutcome | null` (`null` = undelivered request, Req 2.9)
     - `debouncedHighlight` maps the raw `HoverResult` to `res ? { found: res.found, hiddenByAncestor: res.hiddenByAncestor === true } : null`; `highlightNode`'s key-then-descriptor fallback now compares `outcome.found > 0`; keep the single-active-key `clearNow`-before-`start` handoff unchanged
@@ -103,7 +103,7 @@ and Vue component tests + `fast-check` for the panel. Each property test carries
     - Drive a sequence of distinct chain-row hovers through `useElementHighlight`, record ordered sent messages, assert each `HOVER_CLEAR` for the prior row precedes the next `HOVER_HIGHLIGHT`
     - _Requirements: 2.7_
 
-- [ ] 7. Shared `ChainNodeMeta.vue` metadata component (Req 1.4, 1.9)
+- [x] 7. Shared `ChainNodeMeta.vue` metadata component (Req 1.4, 1.9)
   - [ ] 7.1 Extract the metadata block into `ChainNodeMeta.vue`
     - Create `packages/extension/panel-vue/src/components/ChainNodeMeta.vue` with a `node: ElementChainNode` prop, rendering Tag (when `descriptor.tag`), Key (always), XPath (when `descriptor.xpath`) else Where lines (when `descriptor.where`), and Navigate (when `descriptor.navigate`)
     - Move `whereLines()` into this component (or a shared util it imports) so self and parents use one code path
@@ -113,26 +113,26 @@ and Vue component tests + `fast-check` for the panel. Each property test carries
     - `fast-check` over generated `PageElement` descriptors; render `ChainNodeMeta` and assert the rendered field set equals the descriptor's present-field set, identically for self and parent nodes
     - _Requirements: 1.4, 1.9_
 
-- [ ] 8. Refactor `ElementInfoCard.vue` — expandable rows, notices, indicator
-  - [ ] 8.1 Add props, expansion state, and refactor the self region to `ChainNodeMeta`
+- [x] 8. Refactor `ElementInfoCard.vue` — expandable rows, notices, indicator
+  - [x] 8.1 Add props, expansion state, and refactor the self region to `ChainNodeMeta`
     - Add additive props `parentResolution?: ParentTrace` (from `entry.findTrace.parent`); keep `elementKey`, `pageElements`, `removed` (now the self-node fallback)
     - Add `expandedKeys = reactive(new Set<string>())` with `toggleExpand(key)` flipping only that key; render the self region via `<ChainNodeMeta :node="self" />`
     - _Requirements: 1.7, 1.9_
-  - [ ] 8.2 Render expandable parent rows with orthogonal hover/click
+  - [x] 8.2 Render expandable parent rows with orthogonal hover/click
     - Render one row per ancestor in Element_Chain order (immediate parent first); collapsed row shows label + tag chip + expand affordance (`aria-expanded`), no-descriptor rows show "not defined in spec" with the toggle `disabled` and no metadata
     - `@click.stop` toggles expansion (only when `parent.descriptor`); mount `<ChainNodeMeta>` only when expanded and descriptor present; keep the card the single open popup (open no second popup)
     - Wire `@pointerenter="onNodeEnter(parent)"` / `@pointerleave="onNodeLeave"` independently of click; `onNodeEnter` skips nodes with neither key nor descriptor (Req 2.5), sets `hoverState.key`, awaits `highlightNode`, and guards against a late result after leave; `onNodeLeave` calls `clear()` and resets `hoverState`
     - _Requirements: 1.1, 1.2, 1.3, 1.5, 1.6, 1.7, 1.8, 2.1, 2.2, 2.5, 2.6, 2.8_
-  - [ ] 8.3 Per-node removed and hidden-ancestor notices
+  - [x] 8.3 Per-node removed and hidden-ancestor notices
     - Add `hoverState = reactive({ key, found, hidden })`; `isHoveredRemoved(node)` = `hoverState.key === node.key && hoverState.found === 0 && nodeResolvedDuringRun(node)`; `isHoveredHidden(node)` = `hoverState.key === node.key && hoverState.hidden`
     - `nodeResolvedDuringRun`: self uses `props.removed`; a parent counts as resolved-during-run when it is not `failedParentKey` and has a descriptor (keeps the removed notice off the failed row)
     - Render the removed notice and the hidden-ancestor notice per row, shown only while that node is hovered; clear both on leave
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 5.3, 5.5, 5.6_
-  - [ ] 8.4 Parent-not-found indicator via `failedParentKey`
+  - [x] 8.4 Parent-not-found indicator via `failedParentKey`
     - Add `failedParentKey` computed derived purely from `props.parentResolution`: `null` when absent/resolved; else match the chain node by the failed ancestor's key (`p.key ?? p.descriptorId`, secondary defensive match on `descriptor.where.id`); mark exactly that row and no other (no DOM resolution)
     - Apply an `eic-not-found` state on the matched row, allow expansion when it has a descriptor (Req 7.5), and keep it visually distinct from collapsed/expanded and from the removed notice
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
-  - [ ] 8.5 Add CSS for the new row states
+  - [x] 8.5 Add CSS for the new row states
     - Add styles for the expand chevron/`aria-expanded` affordance, the disabled no-descriptor row, the parent-not-found indicator, and the hidden-ancestor notice, ensuring the not-found and removed states are visually distinct (Req 7.6)
     - _Requirements: 1.2, 5.3, 7.1, 7.6_
   - [ ]* 8.6 Write Property 7 test — removed notice iff resolved during run and no match remains
@@ -154,13 +154,13 @@ and Vue component tests + `fast-check` for the panel. Each property test carries
     - Indicator: marked failed row distinct from collapsed/expanded and from removed notice (7.1, 7.6); resolved/absent marks nothing (7.3); marking uses props only (7.4); marked row with descriptor still expandable (7.5)
     - _Requirements: 1.1, 1.2, 1.3, 1.5, 1.6, 1.8, 1.9, 2.1, 2.2, 2.5, 2.6, 2.8, 2.9, 4.1, 4.3, 4.4, 5.3, 5.5, 5.6, 7.1, 7.3, 7.4, 7.5, 7.6_
 
-- [ ] 9. Wire `LogEntry.vue` to supply `parentResolution` (Req 4, Req 7)
+- [x] 9. Wire `LogEntry.vue` to supply `parentResolution` (Req 4, Req 7)
   - [ ] 9.1 Pass `parentResolution` and update the removed-notice read
     - Add `:parent-resolution="entry.findTrace?.parent"` to both `<ElementInfoCard>` usages
     - Update `showRemovedMessage` logic to read the new outcome object (`outcome?.found === 0`); no other change
     - _Requirements: 4.1, 7.1, 7.2, 7.4_
 
-- [ ] 10. Final checkpoint — ensure all tests pass
+- [x] 10. Final checkpoint — ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

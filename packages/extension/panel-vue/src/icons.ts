@@ -27,6 +27,7 @@ import {
   faArrowUp,
   faEllipsisVertical,
   faPlug,
+  faEyeSlash,
 } from '@fortawesome/free-solid-svg-icons';
 
 // Regular icons
@@ -59,4 +60,5 @@ library.add(
   faArrowUp,
   faEllipsisVertical,
   faPlug,
+  faEyeSlash,
 );
