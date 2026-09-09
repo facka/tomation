@@ -46,6 +46,7 @@ PACKAGES=(
   "$ROOT_DIR/packages/dsl/package.json"
   "$ROOT_DIR/packages/compiler/package.json"
   "$ROOT_DIR/packages/extension/package.json"
+  "$ROOT_DIR/packages/vscode-extension/package.json"
 )
 
 # --- Check for in-progress release (resume support) ---
@@ -85,7 +86,7 @@ else
   echo "1. Bumping versions..."
   for PKG in "${PACKAGES[@]}"; do
     if [ -f "$PKG" ]; then
-      sed -i '' "s/\"version\": *\"$CURRENT_VERSION\"/\"version\": \"$NEW_VERSION\"/" "$PKG"
+      sed -i '' "1,/\"version\":/ s/\"version\": *\"[0-9][^\"]*\"/\"version\": \"$NEW_VERSION\"/" "$PKG"
       RELATIVE=$(echo "$PKG" | sed "s|$ROOT_DIR/||")
       echo "   ✓ $RELATIVE"
     else
