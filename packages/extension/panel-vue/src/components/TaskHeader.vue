@@ -31,42 +31,36 @@ const displayLabel = computed(() => {
   return props.name.replace(/__/g, '.').replace(/\//g, ' > ');
 });
 
-const paramsDisplay = computed(() => {
-  if (!props.params || typeof props.params !== 'object') return null;
-  const keys = Object.keys(props.params);
-  if (keys.length === 0) return null;
+const sensitiveKeys = /password|secret|token|key|auth/i;
 
-  const sensitiveKeys = /password|secret|token|key|auth/i;
+function maskValue(key: string, val: unknown): string {
+  if (sensitiveKeys.test(key)) return '****';
+  return String(val);
+}
 
-  function maskValue(key: string, val: unknown): string {
-    if (sensitiveKeys.test(key)) return '****';
-    const str = String(val);
-    if (typeof val === 'string' && str.length > 30) return str.slice(0, 27) + '...';
-    return str;
-  }
-
-  if (keys.length <= 2) {
-    const parts = keys.map((k) => k + ': "' + maskValue(k, props.params![k]) + '"');
-    return { type: 'inline' as const, text: '{ ' + parts.join(', ') + ' }' };
-  }
-
-  const tooltipParts = keys.map((k) => k + ': ' + maskValue(k, props.params![k]));
-  return { type: 'badge' as const, text: '(' + keys.length + ' params)', tooltip: tooltipParts.join('\n') };
+const paramsEntries = computed(() => {
+  if (!props.params || typeof props.params !== 'object') return [];
+  return Object.keys(props.params).map((key) => ({
+    key,
+    value: maskValue(key, props.params![key]),
+  }));
 });
 </script>
 
 <template>
   <div class="log-entry task-header" :class="statusClass" :style="indentStyle">
-    <span class="step-action">Task</span>
     {{ displayLabel }}
-    <span
-      v-if="paramsDisplay?.type === 'inline'"
-      class="step-params"
-    >{{ paramsDisplay.text }}</span>
-    <span
-      v-else-if="paramsDisplay?.type === 'badge'"
-      class="step-params-badge"
-      :title="paramsDisplay.tooltip"
-    >{{ paramsDisplay.text }}</span>
+    <div v-if="paramsEntries.length" class="params-row">
+      <div class="params-table-wrap">
+        <table class="params-table">
+          <tbody>
+            <tr v-for="p in paramsEntries" :key="p.key">
+              <td class="param-key">{{ p.key }}</td>
+              <td class="param-val">{{ p.value }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </template>

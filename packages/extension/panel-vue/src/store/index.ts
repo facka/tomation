@@ -290,6 +290,7 @@ function setStepPlan(steps: StepPlanEntry[]): void {
     taskDepth: step.taskDepth,
     condition: step.condition,
     taken: step.taken,
+    ms: step.ms,
   }));
 }
 
@@ -318,6 +319,7 @@ function setStepStatus(stepIndex: number, status: StepStatus, meta?: Partial<Log
     if (meta.condition !== undefined) entry.condition = meta.condition;
     if (meta.taken !== undefined) entry.taken = meta.taken;
     if (meta.findTrace !== undefined) entry.findTrace = meta.findTrace;
+    if (meta.ms !== undefined) entry.ms = meta.ms;
   }
 }
 

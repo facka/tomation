@@ -424,13 +424,18 @@ h3 {
   padding: 8px 12px;
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
   font-size: 13px;
 }
 
 .step-checklist li:last-child { border-bottom: none; }
 .step-checklist li.indented { padding-left: 32px; }
+
+.step-checklist .checklist-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
 .step-checklist li label {
   flex: 1;
@@ -447,6 +452,10 @@ h3 {
   height: 15px;
   accent-color: var(--accent);
   flex-shrink: 0;
+}
+
+.step-checklist li .params-row {
+  padding: 4px 0 0 23px;
 }
 
 /* --------------------------------------------------------------------------
@@ -614,6 +623,7 @@ h3 {
   line-height: 1.5;
   white-space: nowrap;
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 4px;
 }
@@ -765,7 +775,7 @@ h3 {
   border-radius: 4px;
   font-size: 11px;
   cursor: help;
-  border-bottom: 1px dotted var(--accent-text);
+  border: 1px solid var(--accent-text);
   transition: background 0.1s;
 }
 
@@ -778,7 +788,6 @@ h3 {
 
 .step-preposition {
   color: var(--text-muted);
-  font-size: 11px;
 }
 
 .condition-expr {
@@ -807,6 +816,51 @@ h3 {
 .step-params-badge:hover {
   background: var(--bg-hover);
   color: var(--text-secondary);
+}
+
+/* Task/step params rendered as a borderless key:value table, one row per param,
+   shown as its own row beneath the step/task header (not inline). */
+.params-row {
+  padding: 2px 12px 6px;
+}
+
+/* Nested inside the task-header's flex row: force a new line and pick up the
+   header's status-colored background instead of the page background. */
+.log-entry.task-header .params-row {
+  flex: 1 1 100%;
+  padding: 2px 0 0;
+  background: inherit;
+}
+
+.params-table-wrap {
+  max-height: 72px;
+  overflow-y: auto;
+}
+
+.params-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.params-table td {
+  border: none;
+  padding: 2px 8px 2px 0;
+  vertical-align: top;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.params-table .param-key {
+  color: var(--text-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+  width: 1%;
+}
+
+.params-table .param-val {
+  color: var(--text-muted);
 }
 
 /* --------------------------------------------------------------------------

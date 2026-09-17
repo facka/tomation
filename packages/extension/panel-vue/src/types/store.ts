@@ -48,6 +48,8 @@ export interface LogEntry {
   condition?: StepCondition;
   taken?: boolean;
   findTrace?: FindTrace;
+  // Present on wait steps: the configured wait duration in milliseconds
+  ms?: number;
 }
 
 export interface StoreState {

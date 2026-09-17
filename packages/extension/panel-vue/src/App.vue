@@ -30,6 +30,7 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
         value: msg.value,
         taskDepth: msg.taskDepth,
         taskPath: msg.taskPath,
+        ms: msg.ms,
       });
       break;
 
@@ -46,6 +47,7 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
         taskDepth: msg.taskDepth,
         taskPath: msg.taskPath,
         findTrace: msg.findTrace,
+        ms: msg.ms,
       });
       if (msg.contextKey !== undefined) {
         store.updateContext(msg.contextKey, msg.savedValue);

@@ -239,27 +239,13 @@ function getAssertStepSuffix(step: Step): string {
   return getAssertSuffix(step.action.toLowerCase()) || '';
 }
 
-function getParamsDisplay(params: Record<string, unknown> | undefined): { type: 'inline' | 'badge'; text: string; tooltip?: string } | null {
-  if (!params || typeof params !== 'object') return null;
-  const keys = Object.keys(params);
-  if (keys.length === 0) return null;
-
+function getParamsEntries(params: Record<string, unknown> | undefined): Array<{ key: string; value: string }> {
+  if (!params || typeof params !== 'object') return [];
   const sensitiveKeys = /password|secret|token|key|auth/i;
-
-  function maskValue(key: string, val: unknown): string {
-    if (sensitiveKeys.test(key)) return '****';
-    const str = String(val);
-    if (typeof val === 'string' && str.length > 30) return str.slice(0, 27) + '...';
-    return str;
-  }
-
-  if (keys.length <= 2) {
-    const parts = keys.map((k) => k + ': "' + maskValue(k, params[k]) + '"');
-    return { type: 'inline', text: '{ ' + parts.join(', ') + ' }' };
-  }
-
-  const tooltipParts = keys.map((k) => k + ': ' + maskValue(k, params[k]));
-  return { type: 'badge', text: '(' + keys.length + ' params)', tooltip: tooltipParts.join('\n') };
+  return Object.keys(params).map((key) => ({
+    key,
+    value: sensitiveKeys.test(key) ? '****' : String(params[key]),
+  }));
 }
 
 function capitalize(str: string): string {
@@ -275,83 +261,75 @@ function capitalize(str: string): string {
       :key="index"
       :style="item.depth > 0 ? { paddingLeft: (item.depth * 16 + 12) + 'px' } : undefined"
     >
-      <input
-        type="checkbox"
-        :checked="checkedState[index]"
-        @change="checkedState[index] = ($event.target as HTMLInputElement).checked; onCheckboxChange(index)"
-      />
-      <label>
-        <!-- Task header -->
-        <template v-if="item.isTask">
-          <span class="step-action">Task</span>
-          {{ item.taskLabel }}
-          <template v-if="item.step.params">
-            <span
-              v-if="getParamsDisplay(item.step.params)?.type === 'inline'"
-              class="step-params"
-            >{{ getParamsDisplay(item.step.params)!.text }}</span>
-            <span
-              v-else-if="getParamsDisplay(item.step.params)?.type === 'badge'"
-              class="step-params-badge"
-              :title="getParamsDisplay(item.step.params)!.tooltip"
-            >{{ getParamsDisplay(item.step.params)!.text }}</span>
+      <div class="checklist-row">
+        <input
+          type="checkbox"
+          :checked="checkedState[index]"
+          @change="checkedState[index] = ($event.target as HTMLInputElement).checked; onCheckboxChange(index)"
+        />
+        <label>
+          <!-- Task header -->
+          <template v-if="item.isTask">
+            {{ item.taskLabel }}
           </template>
-        </template>
 
-        <!-- Conditional (if / When) header -->
-        <template v-else-if="item.isCondition">
-          <span class="step-action">If</span>
-          <span class="condition-expr">{{ item.conditionLabel }}</span>
-        </template>
-
-        <!-- Assert step (sentence format) -->
-        <template v-else-if="isAssertStep(item.step)">
-          <span class="step-action">Assert that</span>
-          <span
-            v-if="item.step.target"
-            class="element-badge"
-            :title="getElementTooltip(item.step.target)"
-          >{{ getTargetLabel(item.step) }}</span>
-          <span class="step-preposition">{{ getAssertStepSuffix(item.step) }}</span>
-          <span
-            v-if="getValueDisplay(item.step)"
-            class="step-value"
-          >{{ getValueDisplay(item.step) }}</span>
-        </template>
-
-        <!-- Regular step -->
-        <template v-else>
-          <span class="step-action">{{ getActionLabel(item.step) }}</span>
-          <span
-            v-if="getValueDisplay(item.step) && hasTargetPreposition(item.step)"
-            class="step-value"
-          >{{ getValueDisplay(item.step) }}</span>
-          <span
-            v-if="item.step.target && getPreposition(item.step)"
-            class="step-preposition"
-          >{{ getPreposition(item.step) }}</span>
-          <span
-            v-if="item.step.target"
-            class="element-badge"
-            :title="getElementTooltip(item.step.target)"
-          >{{ getTargetLabel(item.step) }}</span>
-          <span
-            v-if="getValueDisplay(item.step) && !hasTargetPreposition(item.step)"
-            class="step-value"
-          >{{ getValueDisplay(item.step) }}</span>
-          <template v-if="item.step.params && !item.isTask">
-            <span
-              v-if="getParamsDisplay(item.step.params)?.type === 'inline'"
-              class="step-params"
-            >{{ getParamsDisplay(item.step.params)!.text }}</span>
-            <span
-              v-else-if="getParamsDisplay(item.step.params)?.type === 'badge'"
-              class="step-params-badge"
-              :title="getParamsDisplay(item.step.params)!.tooltip"
-            >{{ getParamsDisplay(item.step.params)!.text }}</span>
+          <!-- Conditional (if / When) header -->
+          <template v-else-if="item.isCondition">
+            <span class="step-action">If</span>
+            <span class="condition-expr">{{ item.conditionLabel }}</span>
           </template>
-        </template>
-      </label>
+
+          <!-- Assert step (sentence format) -->
+          <template v-else-if="isAssertStep(item.step)">
+            <span class="step-action">Assert that</span>
+            <span
+              v-if="item.step.target"
+              class="element-badge"
+              :title="getElementTooltip(item.step.target)"
+            >{{ getTargetLabel(item.step) }}</span>
+            <span class="step-preposition">{{ getAssertStepSuffix(item.step) }}</span>
+            <span
+              v-if="getValueDisplay(item.step)"
+              class="step-value"
+            >{{ getValueDisplay(item.step) }}</span>
+          </template>
+
+          <!-- Regular step -->
+          <template v-else>
+            <span class="step-action">{{ getActionLabel(item.step) }}</span>
+            <span
+              v-if="getValueDisplay(item.step) && hasTargetPreposition(item.step)"
+              class="step-value"
+            >{{ getValueDisplay(item.step) }}</span>
+            <span
+              v-if="item.step.target && getPreposition(item.step)"
+              class="step-preposition"
+            >{{ getPreposition(item.step) }}</span>
+            <span
+              v-if="item.step.target"
+              class="element-badge"
+              :title="getElementTooltip(item.step.target)"
+            >{{ getTargetLabel(item.step) }}</span>
+            <span
+              v-if="getValueDisplay(item.step) && !hasTargetPreposition(item.step)"
+              class="step-value"
+            >{{ getValueDisplay(item.step) }}</span>
+          </template>
+        </label>
+      </div>
+
+      <div v-if="getParamsEntries(item.step.params).length" class="params-row">
+        <div class="params-table-wrap">
+          <table class="params-table">
+            <tbody>
+              <tr v-for="p in getParamsEntries(item.step.params)" :key="p.key">
+                <td class="param-key">{{ p.key }}</td>
+                <td class="param-val">{{ p.value }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </li>
   </ul>
 </template>

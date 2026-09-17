@@ -75,7 +75,7 @@ const valueDisplay = computed(() => {
   const entry = props.entry;
   if (entry.action === 'typePassword') return '****';
   if (entry.action === 'navigate' && !entry.value) return entry.target || '';
-  if (entry.action === 'wait' && !entry.value) return '';
+  if (entry.action === 'wait' && !entry.value) return entry.ms != null ? entry.ms + 'ms' : '';
   if (entry.action === 'manual' && !entry.value) return '';
   if (entry.value) {
     let displayValue = entry.value;
@@ -396,42 +396,42 @@ onBeforeUnmount(() => {
       <span v-if="entry.retryAttempt" class="attempt-badge" :class="attemptBadgeClass">
         Attempt {{ entry.retryAttempt }}
       </span>
-      <span v-if="entry.error" class="error-text"> {{ entry.error }}</span>
+      <span v-if="entry.error" class="error-text">{{ entry.error }}</span>
     </template>
 
     <template v-if="entry.status === 'skipped'">
       <span class="skipped-badge"> <font-awesome-icon :icon="['fas', 'ban']" /> Skipped</span>
     </template>
-  </div>
 
+    <!-- "Why did this fail?" find-trace disclosure (Req 10). Rendered inside this
+         step's own container, alongside the error line, only for failed entries
+         that carry a trace. Initially collapsed. -->
+    <div v-if="hasFindTrace" class="find-trace">
+      <button
+        type="button"
+        class="find-trace-toggle"
+        :aria-expanded="traceExpanded"
+        @click="toggleTrace"
+      >
+        <font-awesome-icon :icon="['fas', traceExpanded ? 'chevron-down' : 'chevron-right']" />
+        <span>Why did this fail?</span>
+      </button>
 
-  <!-- "Why did this fail?" find-trace disclosure (Req 10). Rendered beneath the
-       error line only for failed entries that carry a trace. Initially collapsed. -->
-  <div v-if="hasFindTrace" class="find-trace">
-    <button
-      type="button"
-      class="find-trace-toggle"
-      :aria-expanded="traceExpanded"
-      @click="toggleTrace"
-    >
-      <font-awesome-icon :icon="['fas', traceExpanded ? 'chevron-down' : 'chevron-right']" />
-      <span>Why did this fail?</span>
-    </button>
+      <div v-if="traceExpanded" class="find-trace-body">
+        <!-- One-line diagnosis (Req 10.3) -->
+        <div v-if="diagnosis" class="ft-diagnosis">{{ diagnosis }}</div>
 
-    <div v-if="traceExpanded" class="find-trace-body">
-      <!-- One-line diagnosis (Req 10.3) -->
-      <div v-if="diagnosis" class="ft-diagnosis">{{ diagnosis }}</div>
-
-      <!-- Copy-pasteable DevTools finder snippet (Req 10.4-10.8) -->
-      <div v-if="finderSnippet" class="ft-snippet">
-        <div class="ft-snippet-head">
-          <span class="ft-snippet-label">Run this in DevTools to reproduce:</span>
-          <button type="button" class="copy-btn" @click="copySnippet">
-            <font-awesome-icon :icon="['fas', 'copy']" />
-            <span>{{ copyState ? 'Copied!' : 'Copy' }}</span>
-          </button>
+        <!-- Copy-pasteable DevTools finder snippet (Req 10.4-10.8) -->
+        <div v-if="finderSnippet" class="ft-snippet">
+          <div class="ft-snippet-head">
+            <span class="ft-snippet-label">Run this in DevTools to reproduce:</span>
+            <button type="button" class="copy-btn" @click="copySnippet">
+              <font-awesome-icon :icon="['fas', 'copy']" />
+              <span>{{ copyState ? 'Copied!' : 'Copy' }}</span>
+            </button>
+          </div>
+          <pre class="ft-snippet-code"><code>{{ finderSnippet }}</code></pre>
         </div>
-        <pre class="ft-snippet-code"><code>{{ finderSnippet }}</code></pre>
       </div>
     </div>
   </div>
@@ -450,7 +450,7 @@ onBeforeUnmount(() => {
   white-space: normal;
   overflow-wrap: anywhere;
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 1 1 100%;
 }
 
 .ctx-source {
@@ -482,6 +482,7 @@ onBeforeUnmount(() => {
 
 /* --- "Why did this fail?" find-trace disclosure --- */
 .find-trace {
+  flex: 1 1 100%;
   padding: 2px 0 4px 24px;
 }
 
