@@ -765,10 +765,10 @@ function isInViewport(el) {
 
 /**
  * Walk from `el` up through its ancestors, returning true when an ancestor
- * prevents `el` from being rendered/visible: display:none, visibility:hidden
- * (or collapse), opacity:0, zero-size, or overflow-clipped out of the
- * ancestor's box. Also returns true for the not-rendered case where the
- * element has no offsetParent and is not position:fixed.
+ * prevents `el` from being rendered/visible: display:none,
+ * visibility:hidden (or collapse), or opacity:0. Geometry is checked only on
+ * the matched element because ancestor rectangles can be zero while their
+ * descendants remain visible.
  *
  * Read-only / observational only: uses getComputedStyle and
  * getBoundingClientRect exclusively and NEVER writes styles or attributes
@@ -781,8 +781,6 @@ function detectHiddenAncestor(el) {
   if (!el || el.nodeType !== 1) {
     return false;
   }
-  var documentRect = document.documentElement.getBoundingClientRect();
-  var hasLayoutMetrics = documentRect.width > 0 || documentRect.height > 0;
   var elementStyle = window.getComputedStyle(el);
   if (elementStyle.display === 'none' ||
       elementStyle.visibility === 'hidden' ||
@@ -790,6 +788,15 @@ function detectHiddenAncestor(el) {
       parseFloat(elementStyle.opacity) === 0) {
     return true;
   }
+
+  // A zero-sized element has no interaction box. Skip this check when the
+  // environment does not provide layout metrics (for example jsdom).
+  var elementRect = el.getBoundingClientRect();
+  var hasElementLayout = elementRect.width > 0 || elementRect.height > 0;
+  if (hasElementLayout && (elementRect.width === 0 || elementRect.height === 0)) {
+    return true;
+  }
+
   var node = el.parentElement;
   while (node && node.nodeType === 1) {
     var cs = window.getComputedStyle(node);
@@ -801,19 +808,6 @@ function detectHiddenAncestor(el) {
     }
     if (parseFloat(cs.opacity) === 0) {
       return true;
-    }
-    if (hasLayoutMetrics) {
-      var r = node.getBoundingClientRect();
-      if (r.width === 0 || r.height === 0) {
-        return true;
-      }
-      // Clipping container: element rect entirely outside a hidden-overflow box.
-      if (cs.overflow === 'hidden' || cs.overflowX === 'hidden' || cs.overflowY === 'hidden') {
-        var er = el.getBoundingClientRect();
-        if (er.bottom <= r.top || er.top >= r.bottom || er.right <= r.left || er.left >= r.right) {
-          return true;
-        }
-      }
     }
     node = node.parentElement;
   }

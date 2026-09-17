@@ -217,6 +217,24 @@ test('findElement: XPath skips hidden matching elements when visibility is requi
   assert.equal(el.textContent, 'Visible');
 });
 
+test('findElementWithParent: visible descendant is not rejected by zero-size ancestor', async function () {
+  setupDOM('<html><body><div id="positioning-context"><button class="target">Visible</button></div></body></html>');
+  var ancestor = window.document.getElementById('positioning-context');
+  var documentElement = window.document.documentElement;
+  ancestor.getBoundingClientRect = function () { return { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 }; };
+  documentElement.getBoundingClientRect = function () { return { width: 100, height: 100, top: 0, left: 0, right: 100, bottom: 100 }; };
+  var findElementWithParent = window.eval('findElementWithParent');
+
+  var result = await findElementWithParent({
+    action: 'click',
+    target: 'target',
+    elementDescriptor: { tag: 'button', where: { classIncludes: 'target' } }
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.element.textContent, 'Visible');
+});
+
 test('findElement: rejects after timeout if element not found', async function () {
   setupDOM('<html><body></body></html>');
 
