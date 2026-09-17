@@ -1,0 +1,24 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Add `extractParamPath(node, trackedParams)` to `packages/compiler/src/parser.js`": [
+      {
+        "executionId": "965468bb-31e0-4e23-9b27-84ff8fae0a63",
+        "chatSessionId": "sess_d59db3bd-b53a-4cac-970b-096bfc8d0009",
+        "timestamp": 1789671152843
+      },
+      {
+        "executionId": "965468bb-31e0-4e23-9b27-84ff8fae0a63",
+        "chatSessionId": "sess_d59db3bd-b53a-4cac-970b-096bfc8d0009",
+        "timestamp": 1789671249220
+      }
+    ],
+    "1. Implement `extractParamPath` pure LHS helper in parser.js": [
+      {
+        "executionId": "965468bb-31e0-4e23-9b27-84ff8fae0a63",
+        "chatSessionId": "sess_d59db3bd-b53a-4cac-970b-096bfc8d0009",
+        "timestamp": 1789671249462
+      }
+    ]
+  }
+}

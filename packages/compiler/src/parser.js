@@ -1706,6 +1706,101 @@ function extractTaskInvocationParams(objNode, dataTemplateVars, constBindings) {
 }
 
 /**
+ * Extract an ordered array of property-path segments from an LHS reference on
+ * a tracked param. Walks a MemberExpression chain (or bare Identifier),
+ * collecting segments from the outermost node inward, then reverses to source
+ * order.
+ *
+ * Supported forms:
+ *   flag                        → ['flag']            (bare tracked param)
+ *   params.X                    → ['X']               (params root dropped)
+ *   encounter.type              → ['encounter','type']
+ *   params.encounter.type       → ['encounter','type']
+ *   encounter['type']           → ['encounter','type'] (string-literal bracket)
+ *   encounter.details['type']   → ['encounter','details','type']
+ *
+ * Returns null (→ Warn_And_Skip) for:
+ *   - a computed segment whose key is not a string literal (x[key], x[0])
+ *   - any non-identifier / non-string-literal segment
+ *   - a chain not rooted at a tracked param or `params`
+ *   - a chain exceeding 16 segments
+ *
+ * The root identifier is dropped from the result only when it equals `params`;
+ * a tracked-param root is kept as the first segment.
+ *
+ * @param {object} node - AST node (Identifier or MemberExpression)
+ * @param {Set<string>} trackedParams - set of known param names
+ * @returns {string[]|null} ordered path segments, or null if unsupported
+ */
+function extractParamPath(node, trackedParams) {
+  if (!node) return null;
+
+  // Bare tracked-param Identifier: `flag` → ['flag'].
+  if (node.type === 'Identifier') {
+    return trackedParams.has(node.name) ? [node.name] : null;
+  }
+
+  if (node.type !== 'MemberExpression') return null;
+
+  // Walk the MemberExpression chain from the outermost node inward,
+  // collecting one segment per hop. Segments are pushed in reverse
+  // (outermost-first) order, then reversed to source order below.
+  const MAX_SEGMENTS = 16;
+  const reversed = [];
+  var current = node;
+
+  while (current && current.type === 'MemberExpression') {
+    // Determine the property segment for this hop.
+    if (current.computed) {
+      // Bracket access: only a string-literal key is allowed.
+      if (
+        !current.property ||
+        current.property.type !== 'Literal' ||
+        typeof current.property.value !== 'string'
+      ) {
+        return null;
+      }
+      reversed.push(current.property.value);
+    } else {
+      // Dot access: property must be a plain identifier.
+      if (!current.property || current.property.type !== 'Identifier') {
+        return null;
+      }
+      reversed.push(current.property.name);
+    }
+
+    // Depth guard: including the eventual root segment, bail if too long.
+    if (reversed.length > MAX_SEGMENTS) return null;
+
+    current = current.object;
+  }
+
+  // After the walk, `current` is the root of the chain. It must be a plain
+  // Identifier that is either a tracked param or the literal `params`.
+  if (!current || current.type !== 'Identifier') return null;
+
+  const rootName = current.name;
+  if (rootName === 'params') {
+    // Drop the `params` root segment: params.X → ['X'].
+  } else if (trackedParams.has(rootName)) {
+    // Keep a tracked-param root as the first segment: encounter.type →
+    // ['encounter', 'type'].
+    reversed.push(rootName);
+  } else {
+    // Root is neither a tracked param nor `params` → unsupported.
+    return null;
+  }
+
+  // Enforce the depth guard on the final segment count as well.
+  if (reversed.length > MAX_SEGMENTS) return null;
+  if (reversed.length === 0) return null;
+
+  // Reverse the outermost-first collection to produce source order.
+  reversed.reverse();
+  return reversed;
+}
+
+/**
  * Extract the condition from an if-statement's test expression.
  * Resolves identifiers against tracked destructured params, and
  * recognizes ctx.keyName member expressions for context-based conditions.
@@ -3117,4 +3212,4 @@ function parseSource(source, filePath, rawSource, options) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractIfStep, extractWhenStep, extractCondition, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, parseDataTemplate, buildConstBindings, buildEnumBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };
+module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractIfStep, extractWhenStep, extractCondition, extractParamPath, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, parseDataTemplate, buildConstBindings, buildEnumBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };

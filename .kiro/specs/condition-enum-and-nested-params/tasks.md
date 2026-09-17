@@ -21,8 +21,8 @@ user runs the test suite manually.
 
 ## Tasks
 
-- [ ] 1. Implement `extractParamPath` pure LHS helper in parser.js
-  - [ ] 1.1 Add `extractParamPath(node, trackedParams)` to `packages/compiler/src/parser.js`
+- [x] 1. Implement `extractParamPath` pure LHS helper in parser.js
+  - [x] 1.1 Add `extractParamPath(node, trackedParams)` to `packages/compiler/src/parser.js`
     - Walk a `MemberExpression` chain (or bare `Identifier`) collecting segments from the outermost node inward, then reverse to source order
     - Support dot access and string-literal bracket access (`encounter['type']` ≡ `encounter.type`)
     - Root at a tracked param → keep the root segment (`encounter.type` → `['encounter','type']`); root at `params` → drop the `params` root segment (`params.encounter.type` → `['encounter','type']`)
