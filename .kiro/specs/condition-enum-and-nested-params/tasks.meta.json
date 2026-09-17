@@ -19,6 +19,18 @@
         "chatSessionId": "sess_d59db3bd-b53a-4cac-970b-096bfc8d0009",
         "timestamp": 1789671249462
       }
+    ],
+    "2. Implement RHS resolution helpers in parser.js": [
+      {
+        "executionId": "8c127030-d8a5-4213-91b1-01db83758960",
+        "chatSessionId": "sess_315a4be2-e035-453f-8330-1d30ee38854f",
+        "timestamp": 1789671994836
+      },
+      {
+        "executionId": "8c127030-d8a5-4213-91b1-01db83758960",
+        "chatSessionId": "sess_315a4be2-e035-453f-8330-1d30ee38854f",
+        "timestamp": 1789672104889
+      }
     ]
   }
 }

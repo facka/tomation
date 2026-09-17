@@ -37,7 +37,7 @@ user runs the test suite manually.
     - Generators build acorn AST member-access chains (or small source strings parsed with `locations: true`), matching the existing `parser.test.js` fast-check pattern
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 2. Implement RHS resolution helpers in parser.js
+- [x] 2. Implement RHS resolution helpers in parser.js
   - [ ] 2.1 Add `resolveRhsReference(node, constBindings, filePath)` to parser.js
     - Accept `EnumName.KEY`, `EnumName["KEY"]`, `ConstName.KEY`, `ConstName["KEY"]`; normalize the string-literal `["KEY"]` computed form to the property name before delegating to the existing `resolveConstMemberExpression`
     - Resolve against `constBindings` only (built by `buildConstBindings`, already merging imported enum/const bindings) — no global-scope or extra import lookup (Req 1.6)

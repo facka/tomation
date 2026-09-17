@@ -1801,6 +1801,93 @@ function extractParamPath(node, trackedParams) {
 }
 
 /**
+ * Resolve an RHS enum/const member reference to its literal value.
+ *
+ * Accepts the enum/const reference forms used on the right-hand side of a
+ * condition:
+ *   - EnumName.KEY / ConstName.KEY          (dot access, Identifier property)
+ *   - EnumName["KEY"] / ConstName["KEY"]    (computed access, string-literal key)
+ *
+ * The computed string-literal `["KEY"]` form is normalized to the equivalent
+ * property name before delegating to the existing `resolveConstMemberExpression`
+ * (which handles the `Identifier.Identifier` form). Resolution is performed
+ * against `constBindings` ONLY — `buildConstBindings` already merges imported
+ * enum/const bindings, so same-file and imported references both resolve, and
+ * there is no global-scope or extra import lookup (Req 1.6).
+ *
+ * `resolveConstMemberExpression` pushes a low-level "Unknown property" warning
+ * on a missing key; here we pass a throwaway warnings array so that warning is
+ * not double-emitted (the caller emits a single condition-specific warning on
+ * Warn_And_Skip). Existing element-matcher callers keep passing the real
+ * warnings array, so they are unchanged.
+ *
+ * @param {object} node - AST node (expected MemberExpression)
+ * @param {object} constBindings - map from buildConstBindings()
+ * @param {string} filePath - current file path (for the throwaway warning only)
+ * @returns {{ok: true, value: string|number|boolean} | {ok: false, reason: string}}
+ */
+function resolveRhsReference(node, constBindings, filePath) {
+  if (!node || node.type !== 'MemberExpression') {
+    return { ok: false, reason: 'not a member expression' };
+  }
+  if (!node.object || node.object.type !== 'Identifier') {
+    return { ok: false, reason: 'object is not an identifier' };
+  }
+
+  // Normalize the property access to a plain identifier form that
+  // `resolveConstMemberExpression` understands.
+  let lookupNode = node;
+  if (node.computed) {
+    // Bracket access: only a string-literal key resolves; anything else
+    // (numeric index, variable, computed expression) is a computed
+    // non-literal → unresolvable.
+    if (
+      !node.property ||
+      node.property.type !== 'Literal' ||
+      typeof node.property.value !== 'string'
+    ) {
+      return { ok: false, reason: 'computed non-literal member' };
+    }
+    // Rebuild an equivalent dot-access node so the shared resolver can walk it.
+    lookupNode = {
+      type: 'MemberExpression',
+      computed: false,
+      object: node.object,
+      property: { type: 'Identifier', name: node.property.value },
+      loc: node.loc,
+    };
+  } else {
+    // Dot access: property must be a plain identifier.
+    if (!node.property || node.property.type !== 'Identifier') {
+      return { ok: false, reason: 'unsupported member' };
+    }
+  }
+
+  // Bail early with a specific reason when the object is unknown, so the
+  // shared resolver's key-missing warning path is never reached for it.
+  if (!constBindings || !(node.object.name in constBindings)) {
+    return { ok: false, reason: 'unknown object' };
+  }
+
+  // Delegate to the shared resolver with a throwaway warnings array so its
+  // "Unknown property" warning is not double-emitted.
+  const throwaway = [];
+  const resolved = resolveConstMemberExpression(lookupNode, constBindings, filePath || '', throwaway);
+
+  if (resolved === null || resolved === undefined) {
+    return { ok: false, reason: 'unknown key' };
+  }
+
+  const t = typeof resolved;
+  if (t === 'string' || t === 'number' || t === 'boolean') {
+    return { ok: true, value: resolved };
+  }
+
+  // Resolved to a non-primitive (object/array/etc.) — unsupported.
+  return { ok: false, reason: 'non-primitive value' };
+}
+
+/**
  * Extract the condition from an if-statement's test expression.
  * Resolves identifiers against tracked destructured params, and
  * recognizes ctx.keyName member expressions for context-based conditions.
@@ -3212,4 +3299,4 @@ function parseSource(source, filePath, rawSource, options) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractIfStep, extractWhenStep, extractCondition, extractParamPath, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, parseDataTemplate, buildConstBindings, buildEnumBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };
+module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractIfStep, extractWhenStep, extractCondition, extractParamPath, resolveRhsReference, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, parseDataTemplate, buildConstBindings, buildEnumBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };
