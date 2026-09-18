@@ -117,6 +117,25 @@
         "chatSessionId": "sess_58c075d8-cc3f-45e2-8fc1-d46d7f1215bd",
         "timestamp": 1789704877529
       }
+    ],
+    "8.1 Add nested `path` walking to `evaluateCondition(condition, params, contextStore)` in `packages/extension/src/background.js`": [
+      {
+        "executionId": "3a5a9863-ee63-4824-b549-fb8df9d9c15f",
+        "chatSessionId": "sess_d0c47792-46af-4d3b-b138-b5a0545e3dd5",
+        "timestamp": 1789729148809
+      },
+      {
+        "executionId": "3a5a9863-ee63-4824-b549-fb8df9d9c15f",
+        "chatSessionId": "sess_d0c47792-46af-4d3b-b138-b5a0545e3dd5",
+        "timestamp": 1789729205755
+      }
+    ],
+    "8. Implement runtime path-walk in `evaluateCondition` (background.js) — SYNC POINT with parser emit": [
+      {
+        "executionId": "3a5a9863-ee63-4824-b549-fb8df9d9c15f",
+        "chatSessionId": "sess_d0c47792-46af-4d3b-b138-b5a0545e3dd5",
+        "timestamp": 1789729205889
+      }
     ]
   }
 }

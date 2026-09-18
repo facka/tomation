@@ -93,8 +93,8 @@ user runs the test suite manually.
     - **Property 14: Non-new-construct unsupported condition still emits the spec** — tag `Property 14`; assert emitted artifacts and a recorded warning; ALL unresolvable conditions emit the spec (Validates Req 6.3, 6.4, 6.5, 8.5)
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 8.4, 8.5_
 
-- [ ] 8. Implement runtime path-walk in `evaluateCondition` (background.js) — SYNC POINT with parser emit
-  - [ ] 8.1 Add nested `path` walking to `evaluateCondition(condition, params, contextStore)` in `packages/extension/src/background.js`
+- [x] 8. Implement runtime path-walk in `evaluateCondition` (background.js) — SYNC POINT with parser emit
+  - [x] 8.1 Add nested `path` walking to `evaluateCondition(condition, params, contextStore)` in `packages/extension/src/background.js`
     - When `condition.path` is present and non-empty, walk segments left-to-right from `params`; on a `null`/`undefined` intermediate, stop with `val = undefined` and never throw
     - When `path` is absent, keep the legacy flat lookup `params ? params[condition.param] : undefined`
     - Keep `ctx` handling unchanged (`contextStore` presence-checked); operator switch unchanged with strict `===`/`!==` (no coercion) and `default: return false`
