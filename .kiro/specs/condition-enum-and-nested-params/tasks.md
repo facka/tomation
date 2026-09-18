@@ -75,14 +75,14 @@ user runs the test suite manually.
 - [ ] 5. Checkpoint - Ensure all parser helper and extractCondition tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. Wire Warn_And_Skip handling into `extractIfStep` and `extractWhenStep` (parser.js)
-  - [ ] 6.1 Pass `constBindings` and `filePath` into `extractCondition` and branch on the return value
+- [x] 6. Wire Warn_And_Skip handling into `extractIfStep` and `extractWhenStep` (parser.js)
+  - [x] 6.1 Pass `constBindings` and `filePath` into `extractCondition` and branch on the return value
     - In both `extractIfStep` and `extractWhenStep` (two-way branch): on a descriptor, proceed as today; on `null`, push the existing `Unsupported if-condition …` / `Unsupported When() condition …` warning and return null (Warn_And_Skip) — this covers unsupported non-new-construct conditions AND unresolvable New_Condition_Constructs alike, so no step is produced and the file still emits its spec
     - Keep `When()` and `if` handling behaviorally identical through the shared `extractCondition`
     - _Requirements: 6.1 (warn-and-skip), 6.2 (warn-and-skip), 6.3 (warn-and-skip), 8.1, 8.2, 8.3, 8.4, 8.5_
 
-- [ ] 7. Ensure unresolvable-condition warnings surface via the existing warnings array (parser.js)
-  - [ ] 7.1 Confirm unresolvable New_Condition_Construct conditions warn through the existing warnings array
+- [x] 7. Ensure unresolvable-condition warnings surface via the existing warnings array (parser.js)
+  - [x] 7.1 Confirm unresolvable New_Condition_Construct conditions warn through the existing warnings array
     - No `errors` array is added; no clearing of `tests`/`tasks`/`automations`; no file-level failure. `parseSource` continues to emit the spec
     - The warning message for an unresolvable new construct includes the source file path, the 1-based line number (`lineOf(node)`), and the offending reference text (Req 6.1)
     - This is mostly ensuring `extractCondition`/`extractIfStep`/`extractWhenStep` push the right warning onto the existing `warnings` array; if the existing warning message is already sufficient, this is a light verification step

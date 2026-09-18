@@ -1281,6 +1281,17 @@ function reconstructSource(node) {
   if (node.type === 'BinaryExpression') {
     return reconstructSource(node.left) + ' ' + node.operator + ' ' + reconstructSource(node.right);
   }
+  if (node.type === 'MemberExpression') {
+    // Bracket access with a string-literal key → obj['key'];
+    // dot access (or non-literal keys) → obj.key.
+    if (node.computed) {
+      if (node.property && node.property.type === 'Literal') {
+        return reconstructSource(node.object) + '[' + String(node.property.raw != null ? node.property.raw : JSON.stringify(node.property.value)) + ']';
+      }
+      return reconstructSource(node.object) + '[' + reconstructSource(node.property) + ']';
+    }
+    return reconstructSource(node.object) + '.' + reconstructSource(node.property);
+  }
   if (node.type === 'CallExpression' && node.callee && node.callee.type === 'Identifier') {
     const args = (node.arguments || []).map(a => reconstructSource(a)).join(', ');
     return node.callee.name + '(' + args + ')';
@@ -2180,9 +2191,12 @@ function extractIfStep(stmt, filePath, trackedParams, warnings, source, declared
   // Extract the condition
   const condition = extractCondition(stmt.test, trackedParams, constBindings, filePath);
   if (!condition) {
-    // Unsupported condition pattern — emit warning
+    // Unsupported/unresolvable condition pattern — Warn_And_Skip (Req 6.1).
+    // Message includes the file path, 1-based line, and the offending
+    // condition reference text so unresolvable enum/const/nested-path
+    // constructs are identifiable.
     warnings.push({
-      message: `Unsupported if-condition at ${filePath}:${lineOf(stmt)} — only param truthiness/equality checks are allowed`,
+      message: `Unsupported if-condition at ${filePath}:${lineOf(stmt)} — could not resolve \`${reconstructSource(stmt.test)}\`; only param truthiness/equality checks and resolvable enum/const references are allowed`,
       filePath,
       line: lineOf(stmt),
     });
@@ -2225,8 +2239,12 @@ function extractWhenStep(exprNode, filePath, trackedParams, warnings, source, de
   // Extract the condition (param- or ctx-based)
   const condition = extractCondition(conditionNode, trackedParams, constBindings, filePath);
   if (!condition) {
+    // Unsupported/unresolvable condition pattern — Warn_And_Skip (Req 6.1).
+    // Message includes the file path, 1-based line, and the offending
+    // condition reference text so unresolvable enum/const/nested-path
+    // constructs are identifiable.
     warnings.push({
-      message: `Unsupported When() condition at ${filePath}:${lineOf(exprNode)} — only param/ctx truthiness or equality checks are allowed`,
+      message: `Unsupported When() condition at ${filePath}:${lineOf(exprNode)} — could not resolve \`${reconstructSource(conditionNode)}\`; only param/ctx truthiness or equality checks and resolvable enum/const references are allowed`,
       filePath,
       line: lineOf(exprNode),
     });

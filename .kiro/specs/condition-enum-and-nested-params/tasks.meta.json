@@ -79,6 +79,44 @@
         "chatSessionId": "sess_be244787-80c2-4679-a22d-ceaf5d5354e8",
         "timestamp": 1789703379297
       }
+    ],
+    "6.1 Pass `constBindings` and `filePath` into `extractCondition` and branch on the return value": [
+      {
+        "executionId": "fd5d0a46-1269-4037-98ea-0a39d63c5dcf",
+        "chatSessionId": "sess_dbf6e139-a9ca-4cfc-9ae5-307ccbbc91c4",
+        "timestamp": 1789704328756
+      },
+      {
+        "executionId": "fd5d0a46-1269-4037-98ea-0a39d63c5dcf",
+        "chatSessionId": "sess_dbf6e139-a9ca-4cfc-9ae5-307ccbbc91c4",
+        "timestamp": 1789704386939
+      }
+    ],
+    "6. Wire Warn_And_Skip handling into `extractIfStep` and `extractWhenStep` (parser.js)": [
+      {
+        "executionId": "fd5d0a46-1269-4037-98ea-0a39d63c5dcf",
+        "chatSessionId": "sess_dbf6e139-a9ca-4cfc-9ae5-307ccbbc91c4",
+        "timestamp": 1789704387084
+      }
+    ],
+    "7.1 Confirm unresolvable New_Condition_Construct conditions warn through the existing warnings array": [
+      {
+        "executionId": "386d3502-2bc9-462d-adfa-acddea608560",
+        "chatSessionId": "sess_58c075d8-cc3f-45e2-8fc1-d46d7f1215bd",
+        "timestamp": 1789704764750
+      },
+      {
+        "executionId": "386d3502-2bc9-462d-adfa-acddea608560",
+        "chatSessionId": "sess_58c075d8-cc3f-45e2-8fc1-d46d7f1215bd",
+        "timestamp": 1789704877373
+      }
+    ],
+    "7. Ensure unresolvable-condition warnings surface via the existing warnings array (parser.js)": [
+      {
+        "executionId": "386d3502-2bc9-462d-adfa-acddea608560",
+        "chatSessionId": "sess_58c075d8-cc3f-45e2-8fc1-d46d7f1215bd",
+        "timestamp": 1789704877529
+      }
     ]
   }
 }
