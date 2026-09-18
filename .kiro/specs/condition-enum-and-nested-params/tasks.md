@@ -38,7 +38,7 @@ user runs the test suite manually.
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
 - [x] 2. Implement RHS resolution helpers in parser.js
-  - [ ] 2.1 Add `resolveRhsReference(node, constBindings, filePath)` to parser.js
+  - [x] 2.1 Add `resolveRhsReference(node, constBindings, filePath)` to parser.js
     - Accept `EnumName.KEY`, `EnumName["KEY"]`, `ConstName.KEY`, `ConstName["KEY"]`; normalize the string-literal `["KEY"]` computed form to the property name before delegating to the existing `resolveConstMemberExpression`
     - Resolve against `constBindings` only (built by `buildConstBindings`, already merging imported enum/const bindings) — no global-scope or extra import lookup (Req 1.6)
     - Return `{ ok: true, value }` when it resolves to a string/number/boolean literal (type preserved); `{ ok: false, reason }` for unknown object, unknown key, non-primitive, or computed non-literal
@@ -51,14 +51,14 @@ user runs the test suite manually.
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.4, 2.5, 5.2, 5.4_
 
 - [x] 3. Implement `usesNewConditionConstruct` predicate in parser.js
-  - [ ] 3.1 Add `usesNewConditionConstruct(testNode, trackedParams)` to parser.js
+  - [x] 3.1 Add `usesNewConditionConstruct(testNode, trackedParams)` to parser.js
     - Return true when the condition (including the operand wrapped by a negation or binary expression) uses (a) an enum/const member reference on the RHS (`Identifier.Identifier` or `Identifier["str"]` where the object is not `ctx` and not a bare param root), or (b) a nested LHS member-access path of depth > 1 rooted at a tracked param or `params`
     - Single-segment param paths and pure string/boolean/number literal RHS are NOT new constructs
     - This predicate is now OPTIONAL / message-only: it no longer gates control flow (all unresolvable conditions → `null` → Warn_And_Skip). It may be used only to craft a more specific warning message (e.g. "unresolvable enum/const reference" vs a generic "unsupported condition"), or omitted entirely
     - _Requirements: 6.1 (warn-and-skip), 6.2 (warn-and-skip), 6.5 (warn-and-skip)_
 
-- [ ] 4. Integrate helpers into `extractCondition` (parser.js — signature change)
-  - [ ] 4.1 Change `extractCondition` to `(testNode, trackedParams, constBindings, filePath)` and integrate LHS/RHS/new-construct logic
+- [x] 4. Integrate helpers into `extractCondition` (parser.js — signature change)
+  - [x] 4.1 Change `extractCondition` to `(testNode, trackedParams, constBindings, filePath)` and integrate LHS/RHS/new-construct logic
     - Replace the internal `getParamName` usage with `extractParamPath` for the LHS; a resolved path yields `{ path, op, value? }`; keep `ctx.key` handling unchanged (Req 3.8, 7.5)
     - RHS resolution order for the equality branch (`===`/`==`/`!==`/`!=`): `extractBoolean` → `extractString` → `extractNumber` → `resolveRhsReference`; boolean → `truthy`/`falsy` (no value), string/number → `equals`/`notEquals` preserving type, enum/const → map by resolved literal's type
     - Preserve all existing supported forms: flat truthy (`if (flag)`), negation (`if (!flag)`), string/boolean equality, `params.X`, `ctx.key` (Req 7.1–7.6, 3.8)

@@ -2009,12 +2009,35 @@ function usesNewConditionConstruct(testNode, trackedParams) {
  *   if (ctx.key == true)       → { source: "ctx", key: "key", op: "truthy" }
  *   if (ctx.key == false)      → { source: "ctx", key: "key", op: "falsy" }
  *
- * @param {object} testNode - the `test` property of an IfStatement AST node
+ * Return contract (two-way):
+ *   - a Condition_Descriptor object on success, OR
+ *   - `null` for Warn_And_Skip — this covers BOTH an unsupported
+ *     non-new-construct condition AND an unresolvable New_Condition_Construct
+ *     (unknown enum/const object, missing key, computed/non-primitive resolved
+ *     value, invalid LHS path). There is no `{ __compileError }` sentinel.
+ * On `null`, the caller (extractIfStep/extractWhenStep) emits the warning.
+ *
+ * Param-based descriptors carry an ordered `path` segment list
+ * (`extractParamPath`); a flat param yields a single-segment path (`['flag']`).
+ * `ctx.key` descriptors are unchanged (`{ source: 'ctx', key, op, value? }`).
+ *
+ * RHS resolution order for the equality branch (`===`/`==`/`!==`/`!=`):
+ *   extractBoolean → extractString → extractNumber → resolveRhsReference.
+ *   - boolean literal / resolved boolean → `truthy`/`falsy` (no value),
+ *   - string literal / resolved string → `equals`/`notEquals`, string value,
+ *   - number literal / resolved number → `equals`/`notEquals`, numeric value,
+ *   - enum/const member ref → resolve, then map by the resolved literal's type.
+ *
+ * @param {object} testNode - the `test` property of an IfStatement / When() AST node
  * @param {Set<string>} trackedParams - set of known param names from destructuring
- * @returns {object|null} condition object or null if pattern is unsupported
+ * @param {object} [constBindings] - const/enum bindings map for RHS resolution
+ * @param {string} [filePath] - current file path (threaded for warning messages)
+ * @returns {object|null} Condition_Descriptor, or null for Warn_And_Skip
  */
-function extractCondition(testNode, trackedParams) {
+function extractCondition(testNode, trackedParams, constBindings, filePath) {
   if (!testNode) return null;
+  if (!trackedParams) trackedParams = new Set();
+  if (!constBindings) constBindings = {};
 
   // --- Helper: check if a node is a ctx.keyName MemberExpression ---
   function getCtxKey(node) {
@@ -2032,38 +2055,19 @@ function extractCondition(testNode, trackedParams) {
     return null;
   }
 
-  // --- Helper: resolve a node to a param name. Accepts a bare tracked
-  // identifier (e.g., `unreviewed`) or a `params.X` member expression
-  // (consistent with how value expressions treat params.X → {{X}}).
-  function getParamName(node) {
-    if (!node) return null;
-    if (node.type === 'Identifier' && trackedParams.has(node.name)) {
-      return node.name;
-    }
-    if (
-      node.type === 'MemberExpression' &&
-      node.object && node.object.type === 'Identifier' &&
-      node.object.name === 'params' &&
-      node.property && node.property.type === 'Identifier'
-    ) {
-      return node.property.name;
-    }
-    return null;
-  }
-
-  // Pattern: ctx.key (truthy)
+  // Pattern: ctx.key (truthy) — unchanged (Req 3.8, 7.5)
   var ctxKey = getCtxKey(testNode);
   if (ctxKey) {
     return { source: 'ctx', key: ctxKey, op: 'truthy' };
   }
 
-  // Pattern: paramName / params.X (truthy)
-  var truthyParam = getParamName(testNode);
-  if (truthyParam) {
-    return { param: truthyParam, op: 'truthy' };
+  // Pattern: paramName / params.X / nested chain (truthy)
+  var truthyPath = extractParamPath(testNode, trackedParams);
+  if (truthyPath) {
+    return { path: truthyPath, op: 'truthy' };
   }
 
-  // Pattern: !ctx.key (falsy) or !paramName / !params.X (falsy)
+  // Pattern: !ctx.key (falsy) or !<param path> (falsy)
   if (
     testNode.type === 'UnaryExpression' &&
     testNode.operator === '!' &&
@@ -2073,14 +2077,15 @@ function extractCondition(testNode, trackedParams) {
     if (negCtxKey) {
       return { source: 'ctx', key: negCtxKey, op: 'falsy' };
     }
-    var negParam = getParamName(testNode.argument);
-    if (negParam) {
-      return { param: negParam, op: 'falsy' };
+    var negPath = extractParamPath(testNode.argument, trackedParams);
+    if (negPath) {
+      return { path: negPath, op: 'falsy' };
     }
     return null;
   }
 
-  // Pattern: paramName/params.X/ctx.key ===/==/!==/!= value (string or boolean)
+  // Pattern: <ctx.key | param path> ===/==/!==/!= value
+  // where value is a string/boolean/number literal or an enum/const member ref.
   if (
     testNode.type === 'BinaryExpression' &&
     (testNode.operator === '===' || testNode.operator === '!==' ||
@@ -2088,36 +2093,59 @@ function extractCondition(testNode, trackedParams) {
   ) {
     const isEquality = testNode.operator === '===' || testNode.operator === '==';
 
-    // Determine if left side is a ctx.key or a param (bare or params.X)
+    // LHS: either a ctx.key or a param path (bare, params.X, or nested chain).
     var binCtxKey = getCtxKey(testNode.left);
-    var binParam = getParamName(testNode.left);
+    var binPath = binCtxKey ? null : extractParamPath(testNode.left, trackedParams);
 
-    // Must be either ctx.key or a param
-    if (!binCtxKey && !binParam) return null;
+    // Must resolve to either ctx.key or a param path on the LHS.
+    if (!binCtxKey && !binPath) return null;
 
-    // Boolean literal on the right: treat as truthy/falsy
+    // Build a descriptor for the resolved LHS with a given op (and optional value).
+    function build(op, value) {
+      const desc = binCtxKey
+        ? { source: 'ctx', key: binCtxKey, op }
+        : { path: binPath, op };
+      if (arguments.length > 1) desc.value = value;
+      return desc;
+    }
+
+    // RHS resolution order: boolean → string → number → enum/const reference.
+
+    // 1. Boolean literal → truthy/falsy (no value) (Req 5.4, 7.4).
     const boolVal = extractBoolean(testNode.right);
     if (boolVal !== null) {
       const isTruthy = isEquality ? boolVal === true : boolVal === false;
-      if (binCtxKey) {
-        return { source: 'ctx', key: binCtxKey, op: isTruthy ? 'truthy' : 'falsy' };
-      }
-      return { param: binParam, op: isTruthy ? 'truthy' : 'falsy' };
+      return build(isTruthy ? 'truthy' : 'falsy');
     }
 
-    // String literal on the right: equals/notEquals
-    const right = extractString(testNode.right);
-    if (right !== null) {
-      if (binCtxKey) {
-        return { source: 'ctx', key: binCtxKey, op: isEquality ? 'equals' : 'notEquals', value: right };
-      }
-      return {
-        param: binParam,
-        op: isEquality ? 'equals' : 'notEquals',
-        value: right,
-      };
+    // 2. String literal → equals/notEquals preserving string type (Req 7.3, 5.3).
+    const strVal = extractString(testNode.right);
+    if (strVal !== null) {
+      return build(isEquality ? 'equals' : 'notEquals', strVal);
     }
 
+    // 3. Number literal → equals/notEquals preserving numeric type (Req 5.1).
+    const numVal = extractNumber(testNode.right);
+    if (numVal !== null) {
+      return build(isEquality ? 'equals' : 'notEquals', numVal);
+    }
+
+    // 4. Enum/const member reference → resolve via constBindings and map by
+    //    the resolved literal's type (Req 1.1–1.4, 2.1–2.4, 5.2). An
+    //    unresolvable new construct → Warn_And_Skip (null) (Req 1.6–1.8,
+    //    2.6–2.8, 6.1, 6.2).
+    const resolved = resolveRhsReference(testNode.right, constBindings, filePath);
+    if (resolved.ok) {
+      const t = typeof resolved.value;
+      if (t === 'boolean') {
+        const isTruthy = isEquality ? resolved.value === true : resolved.value === false;
+        return build(isTruthy ? 'truthy' : 'falsy');
+      }
+      // string or number → equals/notEquals preserving type.
+      return build(isEquality ? 'equals' : 'notEquals', resolved.value);
+    }
+
+    // Unresolvable RHS → Warn_And_Skip.
     return null;
   }
 
@@ -2150,7 +2178,7 @@ function extractIfStep(stmt, filePath, trackedParams, warnings, source, declared
   }
 
   // Extract the condition
-  const condition = extractCondition(stmt.test, trackedParams);
+  const condition = extractCondition(stmt.test, trackedParams, constBindings, filePath);
   if (!condition) {
     // Unsupported condition pattern — emit warning
     warnings.push({
@@ -2195,7 +2223,7 @@ function extractWhenStep(exprNode, filePath, trackedParams, warnings, source, de
   const bodyNode = args[1];
 
   // Extract the condition (param- or ctx-based)
-  const condition = extractCondition(conditionNode, trackedParams);
+  const condition = extractCondition(conditionNode, trackedParams, constBindings, filePath);
   if (!condition) {
     warnings.push({
       message: `Unsupported When() condition at ${filePath}:${lineOf(exprNode)} — only param/ctx truthiness or equality checks are allowed`,

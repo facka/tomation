@@ -43,6 +43,42 @@
         "chatSessionId": "sess_4a7c5f32-09d3-43b4-b9ba-f6e68b2986c8",
         "timestamp": 1789673964292
       }
+    ],
+    "2.1 Add `resolveRhsReference(node, constBindings, filePath)` to parser.js": [
+      {
+        "executionId": "0c34038b-17cf-46f3-bbe0-cb7874885caf",
+        "chatSessionId": "sess_6e63c6d7-f573-4e61-8b04-ca835a76e594",
+        "timestamp": 1789703055957
+      },
+      {
+        "executionId": "0c34038b-17cf-46f3-bbe0-cb7874885caf",
+        "chatSessionId": "sess_6e63c6d7-f573-4e61-8b04-ca835a76e594",
+        "timestamp": 1789703077764
+      }
+    ],
+    "3.1 Add `usesNewConditionConstruct(testNode, trackedParams)` to parser.js": [
+      {
+        "executionId": "b08707da-a90f-46b0-b2b1-26a702d58084",
+        "chatSessionId": "sess_13bb1c66-8d4b-47a6-91d3-bc1f2e2fa855",
+        "timestamp": 1789703107724
+      },
+      {
+        "executionId": "b08707da-a90f-46b0-b2b1-26a702d58084",
+        "chatSessionId": "sess_13bb1c66-8d4b-47a6-91d3-bc1f2e2fa855",
+        "timestamp": 1789703173218
+      }
+    ],
+    "4.1 Change `extractCondition` to `(testNode, trackedParams, constBindings, filePath)` and integrate LHS/RHS/new-construct logic": [
+      {
+        "executionId": "61766f75-babd-4ddb-a059-4c674518f612",
+        "chatSessionId": "sess_be244787-80c2-4679-a22d-ceaf5d5354e8",
+        "timestamp": 1789703238588
+      },
+      {
+        "executionId": "61766f75-babd-4ddb-a059-4c674518f612",
+        "chatSessionId": "sess_be244787-80c2-4679-a22d-ceaf5d5354e8",
+        "timestamp": 1789703379297
+      }
     ]
   }
 }
