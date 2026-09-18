@@ -50,7 +50,7 @@ user runs the test suite manually.
     - Generate `constBindings` maps with string and number member values; assert resolved `value` strictly equals the binding with matching `typeof`, `op` is `equals`/`notEquals`, and boolean members map to `truthy`/`falsy` with no `value`
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.4, 2.5, 5.2, 5.4_
 
-- [ ] 3. Implement `usesNewConditionConstruct` predicate in parser.js
+- [x] 3. Implement `usesNewConditionConstruct` predicate in parser.js
   - [ ] 3.1 Add `usesNewConditionConstruct(testNode, trackedParams)` to parser.js
     - Return true when the condition (including the operand wrapped by a negation or binary expression) uses (a) an enum/const member reference on the RHS (`Identifier.Identifier` or `Identifier["str"]` where the object is not `ctx` and not a bare param root), or (b) a nested LHS member-access path of depth > 1 rooted at a tracked param or `params`
     - Single-segment param paths and pure string/boolean/number literal RHS are NOT new constructs

@@ -31,6 +31,18 @@
         "chatSessionId": "sess_315a4be2-e035-453f-8330-1d30ee38854f",
         "timestamp": 1789672104889
       }
+    ],
+    "3. Implement `usesNewConditionConstruct` predicate in parser.js": [
+      {
+        "executionId": "ef58171c-2387-49ad-ba30-dc6c2eb61097",
+        "chatSessionId": "sess_4a7c5f32-09d3-43b4-b9ba-f6e68b2986c8",
+        "timestamp": 1789673869506
+      },
+      {
+        "executionId": "ef58171c-2387-49ad-ba30-dc6c2eb61097",
+        "chatSessionId": "sess_4a7c5f32-09d3-43b4-b9ba-f6e68b2986c8",
+        "timestamp": 1789673964292
+      }
     ]
   }
 }

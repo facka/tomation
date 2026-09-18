@@ -1888,6 +1888,103 @@ function resolveRhsReference(node, constBindings, filePath) {
 }
 
 /**
+ * Detect whether a condition test node uses a New_Condition_Construct.
+ *
+ * A New_Condition_Construct is either:
+ *   (a) an enum/const member reference on the RHS — a MemberExpression of the
+ *       form `Identifier.Identifier` or `Identifier["str"]` whose object
+ *       identifier is NOT `ctx`, NOT `params`, and NOT a bare tracked param
+ *       root (i.e. it looks like an EnumName/ConstName reference), OR
+ *   (b) a nested LHS member-access path of depth > 1 rooted at a tracked param
+ *       or `params` (a resolved `extractParamPath` length > 1).
+ *
+ * Single-segment param paths (length 1), pure string/boolean/number literal
+ * RHS values, and `ctx.*` references are NOT new constructs.
+ *
+ * This predicate is OPTIONAL / message-only: it does NOT gate control flow and
+ * is not wired into `extractCondition`. It exists only to let a caller craft a
+ * more specific warning message (e.g. "unresolvable enum/const reference" vs a
+ * generic "unsupported condition"). It MUST never throw for any AST node shape;
+ * unrecognized shapes yield `false`.
+ *
+ * Unwrapping:
+ *   - UnaryExpression `!x` → inspect the argument as an LHS operand.
+ *   - BinaryExpression `a === b` (and `==`/`!==`/`!=`) → inspect BOTH the left
+ *     (LHS nested path, depth > 1) and the right (RHS enum/const member ref).
+ *   - a bare MemberExpression/Identifier → treat as an LHS operand.
+ *
+ * @param {object} testNode - the `test` expression of an if / When() condition
+ * @param {Set<string>} trackedParams - set of known param names
+ * @returns {boolean} true when the condition uses a New_Condition_Construct
+ */
+function usesNewConditionConstruct(testNode, trackedParams) {
+  if (!testNode) return false;
+
+  var params = trackedParams || new Set();
+
+  // --- Helper: is `node` an enum/const-style member reference on the RHS? ---
+  // Matches `Identifier.Identifier` or `Identifier["str"]` where the object
+  // identifier is not `ctx`, not `params`, and not a bare tracked param root.
+  function isEnumConstMemberRef(node) {
+    if (!node || node.type !== 'MemberExpression') return false;
+    if (!node.object || node.object.type !== 'Identifier') return false;
+
+    var objName = node.object.name;
+    if (objName === 'ctx' || objName === 'params' || params.has(objName)) {
+      return false;
+    }
+
+    if (node.computed) {
+      // Bracket access: only a string-literal key looks like `Obj["KEY"]`.
+      return !!(
+        node.property &&
+        node.property.type === 'Literal' &&
+        typeof node.property.value === 'string'
+      );
+    }
+    // Dot access: property must be a plain identifier (`Obj.KEY`).
+    return !!(node.property && node.property.type === 'Identifier');
+  }
+
+  // --- Helper: is `node` a nested LHS param path of depth > 1? ---
+  function isNestedParamPath(node) {
+    var path = extractParamPath(node, params);
+    return !!(path && path.length > 1);
+  }
+
+  // BinaryExpression comparison: inspect both operands.
+  if (
+    testNode.type === 'BinaryExpression' &&
+    (testNode.operator === '===' ||
+      testNode.operator === '==' ||
+      testNode.operator === '!==' ||
+      testNode.operator === '!=')
+  ) {
+    // RHS enum/const member reference on either side (order-agnostic), and
+    // nested LHS param path on either side.
+    if (isEnumConstMemberRef(testNode.right) || isEnumConstMemberRef(testNode.left)) {
+      return true;
+    }
+    if (isNestedParamPath(testNode.left) || isNestedParamPath(testNode.right)) {
+      return true;
+    }
+    return false;
+  }
+
+  // UnaryExpression negation `!x`: inspect the operand as an LHS.
+  if (
+    testNode.type === 'UnaryExpression' &&
+    testNode.operator === '!' &&
+    testNode.argument
+  ) {
+    return isNestedParamPath(testNode.argument);
+  }
+
+  // Bare MemberExpression / Identifier: treat as an LHS operand.
+  return isNestedParamPath(testNode);
+}
+
+/**
  * Extract the condition from an if-statement's test expression.
  * Resolves identifiers against tracked destructured params, and
  * recognizes ctx.keyName member expressions for context-based conditions.
@@ -3299,4 +3396,4 @@ function parseSource(source, filePath, rawSource, options) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractIfStep, extractWhenStep, extractCondition, extractParamPath, resolveRhsReference, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, parseDataTemplate, buildConstBindings, buildEnumBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };
+module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractIfStep, extractWhenStep, extractCondition, extractParamPath, resolveRhsReference, usesNewConditionConstruct, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, parseDataTemplate, buildConstBindings, buildEnumBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };
