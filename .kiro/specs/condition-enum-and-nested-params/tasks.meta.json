@@ -136,6 +136,127 @@
         "chatSessionId": "sess_d0c47792-46af-4d3b-b138-b5a0545e3dd5",
         "timestamp": 1789729205889
       }
+    ],
+    "10.1 Write and run the `When()` vs `if` parity property test in parser.test.js": [
+      {
+        "executionId": "db99ca55-1aef-482c-a5d9-15db5a56098a",
+        "chatSessionId": "sess_8697ec8a-48e3-41ad-b30f-ad0225316287",
+        "timestamp": 1789730038467
+      }
+    ],
+    "10. Cross-component round-trip and When/if parity": [
+      {
+        "executionId": "db99ca55-1aef-482c-a5d9-15db5a56098a",
+        "chatSessionId": "sess_8697ec8a-48e3-41ad-b30f-ad0225316287",
+        "timestamp": 1789730038566
+      }
+    ],
+    "10.2 Write and run the compiler→runtime shared-shape round-trip property test": [
+      {
+        "executionId": "db99ca55-1aef-482c-a5d9-15db5a56098a",
+        "chatSessionId": "sess_8697ec8a-48e3-41ad-b30f-ad0225316287",
+        "timestamp": 1789730039866
+      }
+    ],
+    "10.3 Write and run the motivating-example compiler round-trip unit test in parser.test.js": [
+      {
+        "executionId": "db99ca55-1aef-482c-a5d9-15db5a56098a",
+        "chatSessionId": "sess_8697ec8a-48e3-41ad-b30f-ad0225316287",
+        "timestamp": 1789730040844
+      }
+    ],
+    "12.1 Verify `flattener.js` and `emitter.js` forward the `condition` object (including the new `path` field) unchanged": [
+      {
+        "executionId": "9f576e72-8f8f-4eed-8191-6dacb3d71a79",
+        "chatSessionId": "sess_b9fb2d46-d933-43fa-b01c-7feb8a37e48a",
+        "timestamp": 1789730089092
+      },
+      {
+        "executionId": "9f576e72-8f8f-4eed-8191-6dacb3d71a79",
+        "chatSessionId": "sess_b9fb2d46-d933-43fa-b01c-7feb8a37e48a",
+        "timestamp": 1789730158457
+      }
+    ],
+    "12.2 Verify `expandStep`/`emitLog`/plan-builder in background.js forward the `condition` object unchanged": [
+      {
+        "executionId": "9f576e72-8f8f-4eed-8191-6dacb3d71a79",
+        "chatSessionId": "sess_b9fb2d46-d933-43fa-b01c-7feb8a37e48a",
+        "timestamp": 1789730093742
+      },
+      {
+        "executionId": "9f576e72-8f8f-4eed-8191-6dacb3d71a79",
+        "chatSessionId": "sess_b9fb2d46-d933-43fa-b01c-7feb8a37e48a",
+        "timestamp": 1789730162990
+      }
+    ],
+    "12. Verify consumer pass-through of the `condition` object": [
+      {
+        "executionId": "9f576e72-8f8f-4eed-8191-6dacb3d71a79",
+        "chatSessionId": "sess_b9fb2d46-d933-43fa-b01c-7feb8a37e48a",
+        "timestamp": 1789730163089
+      }
+    ],
+    "13.1 Write and run preservation tests for existing condition forms in parser.test.js": [
+      {
+        "executionId": "ec5804b0-22b8-4332-b9fc-1cb3198d5bb9",
+        "chatSessionId": "sess_1e7a5d8b-fbaf-45f6-a365-d96aae18dfaf",
+        "timestamp": 1789735659162
+      },
+      {
+        "executionId": "ec5804b0-22b8-4332-b9fc-1cb3198d5bb9",
+        "chatSessionId": "sess_1e7a5d8b-fbaf-45f6-a365-d96aae18dfaf",
+        "timestamp": 1789735783897
+      }
+    ],
+    "13.2 Write and run legacy flat-descriptor evaluation tests in background.preservation.test.js": [
+      {
+        "executionId": "ec5804b0-22b8-4332-b9fc-1cb3198d5bb9",
+        "chatSessionId": "sess_1e7a5d8b-fbaf-45f6-a365-d96aae18dfaf",
+        "timestamp": 1789735663145
+      },
+      {
+        "executionId": "ec5804b0-22b8-4332-b9fc-1cb3198d5bb9",
+        "chatSessionId": "sess_1e7a5d8b-fbaf-45f6-a365-d96aae18dfaf",
+        "timestamp": 1789735789236
+      }
+    ],
+    "13. Preservation tests for existing condition forms and backward compatibility": [
+      {
+        "executionId": "ec5804b0-22b8-4332-b9fc-1cb3198d5bb9",
+        "chatSessionId": "sess_1e7a5d8b-fbaf-45f6-a365-d96aae18dfaf",
+        "timestamp": 1789735784032
+      }
+    ],
+    "9.1 Update the descriptor emit shape so every param-based condition carries `path: string[]`": [
+      {
+        "executionId": "12fc8378-2f7c-4bc0-95e5-46d0163f2b02",
+        "chatSessionId": "sess_e0979b23-e82f-4439-88c5-8b409c71576a",
+        "timestamp": 1789736257928
+      },
+      {
+        "executionId": "12fc8378-2f7c-4bc0-95e5-46d0163f2b02",
+        "chatSessionId": "sess_e0979b23-e82f-4439-88c5-8b409c71576a",
+        "timestamp": 1789736329729
+      }
+    ],
+    "14.1 Confirm the full pipeline works end-to-end with no orphaned code": [
+      {
+        "executionId": "12fc8378-2f7c-4bc0-95e5-46d0163f2b02",
+        "chatSessionId": "sess_e0979b23-e82f-4439-88c5-8b409c71576a",
+        "timestamp": 1789736343914
+      },
+      {
+        "executionId": "12fc8378-2f7c-4bc0-95e5-46d0163f2b02",
+        "chatSessionId": "sess_e0979b23-e82f-4439-88c5-8b409c71576a",
+        "timestamp": 1789736597381
+      }
+    ],
+    "14. Final wiring / end-to-end verification": [
+      {
+        "executionId": "12fc8378-2f7c-4bc0-95e5-46d0163f2b02",
+        "chatSessionId": "sess_e0979b23-e82f-4439-88c5-8b409c71576a",
+        "timestamp": 1789736597623
+      }
     ]
   }
 }

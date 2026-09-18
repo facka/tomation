@@ -110,7 +110,7 @@ user runs the test suite manually.
     - _Requirements: 4.1, 4.3, 4.4, 4.5, 4.7, 4.8, 5.5, 5.6, 7.6_
 
 - [x] 9. Emit `path` for all param-based conditions (parser.js) — SYNC POINT with runtime consume
-  - [ ] 9.1 Update the descriptor emit shape so every param-based condition carries `path: string[]`
+  - [x] 9.1 Update the descriptor emit shape so every param-based condition carries `path: string[]`
     - Flat param emits `path: ['name']`; nested emits the full segment list; stop emitting the `param` field for newly compiled specs
     - Confirm the runtime reads `path` when present and falls back to `param` for previously compiled specs (coordinate with task 8.1)
     - This is the parser half of the emit/consume sync — keep it in the same change set as task 8
@@ -120,16 +120,16 @@ user runs the test suite manually.
     - **Property 9: Flat descriptor backward-compat equivalence** — tag `Property 9`; assert `{ param: key, op }` and `{ path: [key], op }` produce identical operator results (Validates Req 4.2, 4.6, 7.1, 7.2, 7.6)
     - _Requirements: 4.2, 4.6, 7.1, 7.2, 7.6_
 
-- [ ] 10. Cross-component round-trip and When/if parity
-  - [ ]* 10.1 Write and run the `When()` vs `if` parity property test in parser.test.js
+- [x] 10. Cross-component round-trip and When/if parity
+  - [x]* 10.1 Write and run the `When()` vs `if` parity property test in parser.test.js
     - **Property 15: `When()` and `if` produce identical descriptors** — tag `Property 15`; assert the result (descriptor or `null`) from `extractCondition` is identical whether sourced from an `if` statement or a `When(cond, cb)` call (Validates Req 8.1, 8.2, 8.3, 8.4)
     - _Requirements: 8.1, 8.2, 8.3, 8.4_
 
-  - [ ]* 10.2 Write and run the compiler→runtime shared-shape round-trip property test
+  - [x]* 10.2 Write and run the compiler→runtime shared-shape round-trip property test
     - **Property 12: Compiler → runtime shared-shape round-trip** — tag `Property 12`; compile a generated `<path> === <value>` (nested path, string/number value), take the emitted descriptor, and evaluate with `evaluateCondition` — `true` for matching params, `false` for differing params. This is the primary guard for the emit/consume sync (Validates Req 4.6, 3.1, 5.1)
     - _Requirements: 4.6, 3.1, 5.1_
 
-  - [ ]* 10.3 Write and run the motivating-example compiler round-trip unit test in parser.test.js
+  - [x]* 10.3 Write and run the motivating-example compiler round-trip unit test in parser.test.js
     - Assert `if (encounter.type === EncounterTypes.OFFICE_NOTE)` compiles to `{ path: ['encounter','type'], op: 'equals', value: 'office_note' }`
     - Add one import-based example: enum/const declared in an imported file resolves via merged `constBindings` (Req 1.5, 2.5)
     - Add one warn-and-skip warning example for an unresolvable new construct, asserting the warning message contains file path, 1-based line, and offending reference text (Req 6.1)
@@ -139,12 +139,12 @@ user runs the test suite manually.
 - [ ] 11. Checkpoint - Ensure all compiler and runtime tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 12. Verify consumer pass-through of the `condition` object
-  - [ ] 12.1 Verify `flattener.js` and `emitter.js` forward the `condition` object (including the new `path` field) unchanged
+- [x] 12. Verify consumer pass-through of the `condition` object
+  - [x] 12.1 Verify `flattener.js` and `emitter.js` forward the `condition` object (including the new `path` field) unchanged
     - Confirm both recurse into `step.then` and read only `step.action`/`step.source`, forwarding `step.condition` opaquely; make no functional edits unless a gap is found
     - _Requirements: 4.6, 7.6_
 
-  - [ ] 12.2 Verify `expandStep`/`emitLog`/plan-builder in background.js forward the `condition` object unchanged
+  - [x] 12.2 Verify `expandStep`/`emitLog`/plan-builder in background.js forward the `condition` object unchanged
     - Confirm the whole `condition` object (with `path`) passes through the flatten/emit/log layers; param-based descriptors evaluate eagerly via `evaluateCondition`, `ctx` descriptors defer as `ctxIf`
     - _Requirements: 4.6, 7.6_
 
@@ -152,17 +152,17 @@ user runs the test suite manually.
     - Only if 12.1/12.2 surface a missing forward of the `path` field, add a targeted test in `parser.test.js` or the relevant `background.*.test.js`; otherwise no test change
     - _Requirements: 4.6_
 
-- [ ] 13. Preservation tests for existing condition forms and backward compatibility
-  - [ ]* 13.1 Write and run preservation tests for existing condition forms in parser.test.js
+- [x] 13. Preservation tests for existing condition forms and backward compatibility
+  - [x]* 13.1 Write and run preservation tests for existing condition forms in parser.test.js
     - Assert flat truthy `if (flag)`, negation `if (!flag)`, string equality, boolean equality, and `ctx.key` truthy/negation still compile unchanged (Req 7.1–7.5, 3.8)
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 3.8_
 
-  - [ ]* 13.2 Write and run legacy flat-descriptor evaluation tests in background.preservation.test.js
+  - [x]* 13.2 Write and run legacy flat-descriptor evaluation tests in background.preservation.test.js
     - Assert legacy `{ param, op }` descriptors still evaluate identically at runtime (backward compat, reuses Property 9 coverage)
     - _Requirements: 4.2, 7.6_
 
-- [ ] 14. Final wiring / end-to-end verification
-  - [ ] 14.1 Confirm the full pipeline works end-to-end with no orphaned code
+- [x] 14. Final wiring / end-to-end verification
+  - [x] 14.1 Confirm the full pipeline works end-to-end with no orphaned code
     - Write and run a compiler-emit → spec JSON → runtime-evaluate check covering: a nested-path condition, an enum/const RHS condition, and a numeric condition — asserting each emitted descriptor evaluates to the correct boolean in `evaluateCondition`
     - Confirm every new helper (`extractParamPath`, `resolveRhsReference`, `usesNewConditionConstruct`) is reached through `extractCondition`/`extractIfStep`/`extractWhenStep`, and that the parser emit and runtime consume of `path` are in sync
     - _Requirements: 4.6, 3.1, 1.1, 5.1, 6.5, 8.1_
