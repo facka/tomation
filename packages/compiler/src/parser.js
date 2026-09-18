@@ -2000,19 +2000,22 @@ function usesNewConditionConstruct(testNode, trackedParams) {
  * Resolves identifiers against tracked destructured params, and
  * recognizes ctx.keyName member expressions for context-based conditions.
  *
- * Supported patterns:
- *   if (paramName)              → { param: "paramName", op: "truthy" }
- *   if (!paramName)             → { param: "paramName", op: "falsy" }
- *   if (paramName === 'val')    → { param: "paramName", op: "equals", value: "val" }
- *   if (paramName !== 'val')    → { param: "paramName", op: "notEquals", value: "val" }
- *   if (paramName == true)      → { param: "paramName", op: "truthy" }
- *   if (paramName === true)     → { param: "paramName", op: "truthy" }
- *   if (paramName == false)     → { param: "paramName", op: "falsy" }
- *   if (paramName === false)    → { param: "paramName", op: "falsy" }
- *   if (paramName !== true)     → { param: "paramName", op: "falsy" }
- *   if (paramName != true)      → { param: "paramName", op: "falsy" }
- *   if (paramName !== false)    → { param: "paramName", op: "truthy" }
- *   if (paramName != false)     → { param: "paramName", op: "truthy" }
+ * Supported patterns (param-based descriptors carry `path: string[]`;
+ * `param` is no longer emitted for newly compiled specs — Req 4.6):
+ *   if (paramName)              → { path: ["paramName"], op: "truthy" }
+ *   if (!paramName)             → { path: ["paramName"], op: "falsy" }
+ *   if (paramName === 'val')    → { path: ["paramName"], op: "equals", value: "val" }
+ *   if (paramName !== 'val')    → { path: ["paramName"], op: "notEquals", value: "val" }
+ *   if (paramName == true)      → { path: ["paramName"], op: "truthy" }
+ *   if (paramName === true)     → { path: ["paramName"], op: "truthy" }
+ *   if (paramName == false)     → { path: ["paramName"], op: "falsy" }
+ *   if (paramName === false)    → { path: ["paramName"], op: "falsy" }
+ *   if (paramName !== true)     → { path: ["paramName"], op: "falsy" }
+ *   if (paramName != true)      → { path: ["paramName"], op: "falsy" }
+ *   if (paramName !== false)    → { path: ["paramName"], op: "truthy" }
+ *   if (paramName != false)     → { path: ["paramName"], op: "truthy" }
+ *   if (encounter.type === EncounterTypes.OFFICE_NOTE)
+ *                               → { path: ["encounter","type"], op: "equals", value: "office_note" }
  *   if (ctx.key)               → { source: "ctx", key: "key", op: "truthy" }
  *   if (!ctx.key)              → { source: "ctx", key: "key", op: "falsy" }
  *   if (ctx.key === 'value')   → { source: "ctx", key: "key", op: "equals", value: "value" }

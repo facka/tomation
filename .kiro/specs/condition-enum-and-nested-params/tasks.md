@@ -109,7 +109,7 @@ user runs the test suite manually.
     - Mirror the existing `background.property.test.js` fast-check style (`evaluateCondition` is exported)
     - _Requirements: 4.1, 4.3, 4.4, 4.5, 4.7, 4.8, 5.5, 5.6, 7.6_
 
-- [ ] 9. Emit `path` for all param-based conditions (parser.js) — SYNC POINT with runtime consume
+- [x] 9. Emit `path` for all param-based conditions (parser.js) — SYNC POINT with runtime consume
   - [ ] 9.1 Update the descriptor emit shape so every param-based condition carries `path: string[]`
     - Flat param emits `path: ['name']`; nested emits the full segment list; stop emitting the `param` field for newly compiled specs
     - Confirm the runtime reads `path` when present and falls back to `param` for previously compiled specs (coordinate with task 8.1)
