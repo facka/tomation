@@ -1,0 +1,262 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Add `extractParamPath(node, trackedParams)` to `packages/compiler/src/parser.js`": [
+      {
+        "executionId": "965468bb-31e0-4e23-9b27-84ff8fae0a63",
+        "chatSessionId": "sess_d59db3bd-b53a-4cac-970b-096bfc8d0009",
+        "timestamp": 1789671152843
+      },
+      {
+        "executionId": "965468bb-31e0-4e23-9b27-84ff8fae0a63",
+        "chatSessionId": "sess_d59db3bd-b53a-4cac-970b-096bfc8d0009",
+        "timestamp": 1789671249220
+      }
+    ],
+    "1. Implement `extractParamPath` pure LHS helper in parser.js": [
+      {
+        "executionId": "965468bb-31e0-4e23-9b27-84ff8fae0a63",
+        "chatSessionId": "sess_d59db3bd-b53a-4cac-970b-096bfc8d0009",
+        "timestamp": 1789671249462
+      }
+    ],
+    "2. Implement RHS resolution helpers in parser.js": [
+      {
+        "executionId": "8c127030-d8a5-4213-91b1-01db83758960",
+        "chatSessionId": "sess_315a4be2-e035-453f-8330-1d30ee38854f",
+        "timestamp": 1789671994836
+      },
+      {
+        "executionId": "8c127030-d8a5-4213-91b1-01db83758960",
+        "chatSessionId": "sess_315a4be2-e035-453f-8330-1d30ee38854f",
+        "timestamp": 1789672104889
+      }
+    ],
+    "3. Implement `usesNewConditionConstruct` predicate in parser.js": [
+      {
+        "executionId": "ef58171c-2387-49ad-ba30-dc6c2eb61097",
+        "chatSessionId": "sess_4a7c5f32-09d3-43b4-b9ba-f6e68b2986c8",
+        "timestamp": 1789673869506
+      },
+      {
+        "executionId": "ef58171c-2387-49ad-ba30-dc6c2eb61097",
+        "chatSessionId": "sess_4a7c5f32-09d3-43b4-b9ba-f6e68b2986c8",
+        "timestamp": 1789673964292
+      }
+    ],
+    "2.1 Add `resolveRhsReference(node, constBindings, filePath)` to parser.js": [
+      {
+        "executionId": "0c34038b-17cf-46f3-bbe0-cb7874885caf",
+        "chatSessionId": "sess_6e63c6d7-f573-4e61-8b04-ca835a76e594",
+        "timestamp": 1789703055957
+      },
+      {
+        "executionId": "0c34038b-17cf-46f3-bbe0-cb7874885caf",
+        "chatSessionId": "sess_6e63c6d7-f573-4e61-8b04-ca835a76e594",
+        "timestamp": 1789703077764
+      }
+    ],
+    "3.1 Add `usesNewConditionConstruct(testNode, trackedParams)` to parser.js": [
+      {
+        "executionId": "b08707da-a90f-46b0-b2b1-26a702d58084",
+        "chatSessionId": "sess_13bb1c66-8d4b-47a6-91d3-bc1f2e2fa855",
+        "timestamp": 1789703107724
+      },
+      {
+        "executionId": "b08707da-a90f-46b0-b2b1-26a702d58084",
+        "chatSessionId": "sess_13bb1c66-8d4b-47a6-91d3-bc1f2e2fa855",
+        "timestamp": 1789703173218
+      }
+    ],
+    "4.1 Change `extractCondition` to `(testNode, trackedParams, constBindings, filePath)` and integrate LHS/RHS/new-construct logic": [
+      {
+        "executionId": "61766f75-babd-4ddb-a059-4c674518f612",
+        "chatSessionId": "sess_be244787-80c2-4679-a22d-ceaf5d5354e8",
+        "timestamp": 1789703238588
+      },
+      {
+        "executionId": "61766f75-babd-4ddb-a059-4c674518f612",
+        "chatSessionId": "sess_be244787-80c2-4679-a22d-ceaf5d5354e8",
+        "timestamp": 1789703379297
+      }
+    ],
+    "6.1 Pass `constBindings` and `filePath` into `extractCondition` and branch on the return value": [
+      {
+        "executionId": "fd5d0a46-1269-4037-98ea-0a39d63c5dcf",
+        "chatSessionId": "sess_dbf6e139-a9ca-4cfc-9ae5-307ccbbc91c4",
+        "timestamp": 1789704328756
+      },
+      {
+        "executionId": "fd5d0a46-1269-4037-98ea-0a39d63c5dcf",
+        "chatSessionId": "sess_dbf6e139-a9ca-4cfc-9ae5-307ccbbc91c4",
+        "timestamp": 1789704386939
+      }
+    ],
+    "6. Wire Warn_And_Skip handling into `extractIfStep` and `extractWhenStep` (parser.js)": [
+      {
+        "executionId": "fd5d0a46-1269-4037-98ea-0a39d63c5dcf",
+        "chatSessionId": "sess_dbf6e139-a9ca-4cfc-9ae5-307ccbbc91c4",
+        "timestamp": 1789704387084
+      }
+    ],
+    "7.1 Confirm unresolvable New_Condition_Construct conditions warn through the existing warnings array": [
+      {
+        "executionId": "386d3502-2bc9-462d-adfa-acddea608560",
+        "chatSessionId": "sess_58c075d8-cc3f-45e2-8fc1-d46d7f1215bd",
+        "timestamp": 1789704764750
+      },
+      {
+        "executionId": "386d3502-2bc9-462d-adfa-acddea608560",
+        "chatSessionId": "sess_58c075d8-cc3f-45e2-8fc1-d46d7f1215bd",
+        "timestamp": 1789704877373
+      }
+    ],
+    "7. Ensure unresolvable-condition warnings surface via the existing warnings array (parser.js)": [
+      {
+        "executionId": "386d3502-2bc9-462d-adfa-acddea608560",
+        "chatSessionId": "sess_58c075d8-cc3f-45e2-8fc1-d46d7f1215bd",
+        "timestamp": 1789704877529
+      }
+    ],
+    "8.1 Add nested `path` walking to `evaluateCondition(condition, params, contextStore)` in `packages/extension/src/background.js`": [
+      {
+        "executionId": "3a5a9863-ee63-4824-b549-fb8df9d9c15f",
+        "chatSessionId": "sess_d0c47792-46af-4d3b-b138-b5a0545e3dd5",
+        "timestamp": 1789729148809
+      },
+      {
+        "executionId": "3a5a9863-ee63-4824-b549-fb8df9d9c15f",
+        "chatSessionId": "sess_d0c47792-46af-4d3b-b138-b5a0545e3dd5",
+        "timestamp": 1789729205755
+      }
+    ],
+    "8. Implement runtime path-walk in `evaluateCondition` (background.js) — SYNC POINT with parser emit": [
+      {
+        "executionId": "3a5a9863-ee63-4824-b549-fb8df9d9c15f",
+        "chatSessionId": "sess_d0c47792-46af-4d3b-b138-b5a0545e3dd5",
+        "timestamp": 1789729205889
+      }
+    ],
+    "10.1 Write and run the `When()` vs `if` parity property test in parser.test.js": [
+      {
+        "executionId": "db99ca55-1aef-482c-a5d9-15db5a56098a",
+        "chatSessionId": "sess_8697ec8a-48e3-41ad-b30f-ad0225316287",
+        "timestamp": 1789730038467
+      }
+    ],
+    "10. Cross-component round-trip and When/if parity": [
+      {
+        "executionId": "db99ca55-1aef-482c-a5d9-15db5a56098a",
+        "chatSessionId": "sess_8697ec8a-48e3-41ad-b30f-ad0225316287",
+        "timestamp": 1789730038566
+      }
+    ],
+    "10.2 Write and run the compiler→runtime shared-shape round-trip property test": [
+      {
+        "executionId": "db99ca55-1aef-482c-a5d9-15db5a56098a",
+        "chatSessionId": "sess_8697ec8a-48e3-41ad-b30f-ad0225316287",
+        "timestamp": 1789730039866
+      }
+    ],
+    "10.3 Write and run the motivating-example compiler round-trip unit test in parser.test.js": [
+      {
+        "executionId": "db99ca55-1aef-482c-a5d9-15db5a56098a",
+        "chatSessionId": "sess_8697ec8a-48e3-41ad-b30f-ad0225316287",
+        "timestamp": 1789730040844
+      }
+    ],
+    "12.1 Verify `flattener.js` and `emitter.js` forward the `condition` object (including the new `path` field) unchanged": [
+      {
+        "executionId": "9f576e72-8f8f-4eed-8191-6dacb3d71a79",
+        "chatSessionId": "sess_b9fb2d46-d933-43fa-b01c-7feb8a37e48a",
+        "timestamp": 1789730089092
+      },
+      {
+        "executionId": "9f576e72-8f8f-4eed-8191-6dacb3d71a79",
+        "chatSessionId": "sess_b9fb2d46-d933-43fa-b01c-7feb8a37e48a",
+        "timestamp": 1789730158457
+      }
+    ],
+    "12.2 Verify `expandStep`/`emitLog`/plan-builder in background.js forward the `condition` object unchanged": [
+      {
+        "executionId": "9f576e72-8f8f-4eed-8191-6dacb3d71a79",
+        "chatSessionId": "sess_b9fb2d46-d933-43fa-b01c-7feb8a37e48a",
+        "timestamp": 1789730093742
+      },
+      {
+        "executionId": "9f576e72-8f8f-4eed-8191-6dacb3d71a79",
+        "chatSessionId": "sess_b9fb2d46-d933-43fa-b01c-7feb8a37e48a",
+        "timestamp": 1789730162990
+      }
+    ],
+    "12. Verify consumer pass-through of the `condition` object": [
+      {
+        "executionId": "9f576e72-8f8f-4eed-8191-6dacb3d71a79",
+        "chatSessionId": "sess_b9fb2d46-d933-43fa-b01c-7feb8a37e48a",
+        "timestamp": 1789730163089
+      }
+    ],
+    "13.1 Write and run preservation tests for existing condition forms in parser.test.js": [
+      {
+        "executionId": "ec5804b0-22b8-4332-b9fc-1cb3198d5bb9",
+        "chatSessionId": "sess_1e7a5d8b-fbaf-45f6-a365-d96aae18dfaf",
+        "timestamp": 1789735659162
+      },
+      {
+        "executionId": "ec5804b0-22b8-4332-b9fc-1cb3198d5bb9",
+        "chatSessionId": "sess_1e7a5d8b-fbaf-45f6-a365-d96aae18dfaf",
+        "timestamp": 1789735783897
+      }
+    ],
+    "13.2 Write and run legacy flat-descriptor evaluation tests in background.preservation.test.js": [
+      {
+        "executionId": "ec5804b0-22b8-4332-b9fc-1cb3198d5bb9",
+        "chatSessionId": "sess_1e7a5d8b-fbaf-45f6-a365-d96aae18dfaf",
+        "timestamp": 1789735663145
+      },
+      {
+        "executionId": "ec5804b0-22b8-4332-b9fc-1cb3198d5bb9",
+        "chatSessionId": "sess_1e7a5d8b-fbaf-45f6-a365-d96aae18dfaf",
+        "timestamp": 1789735789236
+      }
+    ],
+    "13. Preservation tests for existing condition forms and backward compatibility": [
+      {
+        "executionId": "ec5804b0-22b8-4332-b9fc-1cb3198d5bb9",
+        "chatSessionId": "sess_1e7a5d8b-fbaf-45f6-a365-d96aae18dfaf",
+        "timestamp": 1789735784032
+      }
+    ],
+    "9.1 Update the descriptor emit shape so every param-based condition carries `path: string[]`": [
+      {
+        "executionId": "12fc8378-2f7c-4bc0-95e5-46d0163f2b02",
+        "chatSessionId": "sess_e0979b23-e82f-4439-88c5-8b409c71576a",
+        "timestamp": 1789736257928
+      },
+      {
+        "executionId": "12fc8378-2f7c-4bc0-95e5-46d0163f2b02",
+        "chatSessionId": "sess_e0979b23-e82f-4439-88c5-8b409c71576a",
+        "timestamp": 1789736329729
+      }
+    ],
+    "14.1 Confirm the full pipeline works end-to-end with no orphaned code": [
+      {
+        "executionId": "12fc8378-2f7c-4bc0-95e5-46d0163f2b02",
+        "chatSessionId": "sess_e0979b23-e82f-4439-88c5-8b409c71576a",
+        "timestamp": 1789736343914
+      },
+      {
+        "executionId": "12fc8378-2f7c-4bc0-95e5-46d0163f2b02",
+        "chatSessionId": "sess_e0979b23-e82f-4439-88c5-8b409c71576a",
+        "timestamp": 1789736597381
+      }
+    ],
+    "14. Final wiring / end-to-end verification": [
+      {
+        "executionId": "12fc8378-2f7c-4bc0-95e5-46d0163f2b02",
+        "chatSessionId": "sess_e0979b23-e82f-4439-88c5-8b409c71576a",
+        "timestamp": 1789736597623
+      }
+    ]
+  }
+}

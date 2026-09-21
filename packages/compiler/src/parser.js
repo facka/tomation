@@ -1281,6 +1281,17 @@ function reconstructSource(node) {
   if (node.type === 'BinaryExpression') {
     return reconstructSource(node.left) + ' ' + node.operator + ' ' + reconstructSource(node.right);
   }
+  if (node.type === 'MemberExpression') {
+    // Bracket access with a string-literal key → obj['key'];
+    // dot access (or non-literal keys) → obj.key.
+    if (node.computed) {
+      if (node.property && node.property.type === 'Literal') {
+        return reconstructSource(node.object) + '[' + String(node.property.raw != null ? node.property.raw : JSON.stringify(node.property.value)) + ']';
+      }
+      return reconstructSource(node.object) + '[' + reconstructSource(node.property) + ']';
+    }
+    return reconstructSource(node.object) + '.' + reconstructSource(node.property);
+  }
   if (node.type === 'CallExpression' && node.callee && node.callee.type === 'Identifier') {
     const args = (node.arguments || []).map(a => reconstructSource(a)).join(', ');
     return node.callee.name + '(' + args + ')';
@@ -1706,23 +1717,305 @@ function extractTaskInvocationParams(objNode, dataTemplateVars, constBindings) {
 }
 
 /**
+ * Extract an ordered array of property-path segments from an LHS reference on
+ * a tracked param. Walks a MemberExpression chain (or bare Identifier),
+ * collecting segments from the outermost node inward, then reverses to source
+ * order.
+ *
+ * Supported forms:
+ *   flag                        → ['flag']            (bare tracked param)
+ *   params.X                    → ['X']               (params root dropped)
+ *   encounter.type              → ['encounter','type']
+ *   params.encounter.type       → ['encounter','type']
+ *   encounter['type']           → ['encounter','type'] (string-literal bracket)
+ *   encounter.details['type']   → ['encounter','details','type']
+ *
+ * Returns null (→ Warn_And_Skip) for:
+ *   - a computed segment whose key is not a string literal (x[key], x[0])
+ *   - any non-identifier / non-string-literal segment
+ *   - a chain not rooted at a tracked param or `params`
+ *   - a chain exceeding 16 segments
+ *
+ * The root identifier is dropped from the result only when it equals `params`;
+ * a tracked-param root is kept as the first segment.
+ *
+ * @param {object} node - AST node (Identifier or MemberExpression)
+ * @param {Set<string>} trackedParams - set of known param names
+ * @returns {string[]|null} ordered path segments, or null if unsupported
+ */
+function extractParamPath(node, trackedParams) {
+  if (!node) return null;
+
+  // Bare tracked-param Identifier: `flag` → ['flag'].
+  if (node.type === 'Identifier') {
+    return trackedParams.has(node.name) ? [node.name] : null;
+  }
+
+  if (node.type !== 'MemberExpression') return null;
+
+  // Walk the MemberExpression chain from the outermost node inward,
+  // collecting one segment per hop. Segments are pushed in reverse
+  // (outermost-first) order, then reversed to source order below.
+  const MAX_SEGMENTS = 16;
+  const reversed = [];
+  var current = node;
+
+  while (current && current.type === 'MemberExpression') {
+    // Determine the property segment for this hop.
+    if (current.computed) {
+      // Bracket access: only a string-literal key is allowed.
+      if (
+        !current.property ||
+        current.property.type !== 'Literal' ||
+        typeof current.property.value !== 'string'
+      ) {
+        return null;
+      }
+      reversed.push(current.property.value);
+    } else {
+      // Dot access: property must be a plain identifier.
+      if (!current.property || current.property.type !== 'Identifier') {
+        return null;
+      }
+      reversed.push(current.property.name);
+    }
+
+    // Depth guard: including the eventual root segment, bail if too long.
+    if (reversed.length > MAX_SEGMENTS) return null;
+
+    current = current.object;
+  }
+
+  // After the walk, `current` is the root of the chain. It must be a plain
+  // Identifier that is either a tracked param or the literal `params`.
+  if (!current || current.type !== 'Identifier') return null;
+
+  const rootName = current.name;
+  if (rootName === 'params') {
+    // Drop the `params` root segment: params.X → ['X'].
+  } else if (trackedParams.has(rootName)) {
+    // Keep a tracked-param root as the first segment: encounter.type →
+    // ['encounter', 'type'].
+    reversed.push(rootName);
+  } else {
+    // Root is neither a tracked param nor `params` → unsupported.
+    return null;
+  }
+
+  // Enforce the depth guard on the final segment count as well.
+  if (reversed.length > MAX_SEGMENTS) return null;
+  if (reversed.length === 0) return null;
+
+  // Reverse the outermost-first collection to produce source order.
+  reversed.reverse();
+  return reversed;
+}
+
+/**
+ * Resolve an RHS enum/const member reference to its literal value.
+ *
+ * Accepts the enum/const reference forms used on the right-hand side of a
+ * condition:
+ *   - EnumName.KEY / ConstName.KEY          (dot access, Identifier property)
+ *   - EnumName["KEY"] / ConstName["KEY"]    (computed access, string-literal key)
+ *
+ * The computed string-literal `["KEY"]` form is normalized to the equivalent
+ * property name before delegating to the existing `resolveConstMemberExpression`
+ * (which handles the `Identifier.Identifier` form). Resolution is performed
+ * against `constBindings` ONLY — `buildConstBindings` already merges imported
+ * enum/const bindings, so same-file and imported references both resolve, and
+ * there is no global-scope or extra import lookup (Req 1.6).
+ *
+ * `resolveConstMemberExpression` pushes a low-level "Unknown property" warning
+ * on a missing key; here we pass a throwaway warnings array so that warning is
+ * not double-emitted (the caller emits a single condition-specific warning on
+ * Warn_And_Skip). Existing element-matcher callers keep passing the real
+ * warnings array, so they are unchanged.
+ *
+ * @param {object} node - AST node (expected MemberExpression)
+ * @param {object} constBindings - map from buildConstBindings()
+ * @param {string} filePath - current file path (for the throwaway warning only)
+ * @returns {{ok: true, value: string|number|boolean} | {ok: false, reason: string}}
+ */
+function resolveRhsReference(node, constBindings, filePath) {
+  if (!node || node.type !== 'MemberExpression') {
+    return { ok: false, reason: 'not a member expression' };
+  }
+  if (!node.object || node.object.type !== 'Identifier') {
+    return { ok: false, reason: 'object is not an identifier' };
+  }
+
+  // Normalize the property access to a plain identifier form that
+  // `resolveConstMemberExpression` understands.
+  let lookupNode = node;
+  if (node.computed) {
+    // Bracket access: only a string-literal key resolves; anything else
+    // (numeric index, variable, computed expression) is a computed
+    // non-literal → unresolvable.
+    if (
+      !node.property ||
+      node.property.type !== 'Literal' ||
+      typeof node.property.value !== 'string'
+    ) {
+      return { ok: false, reason: 'computed non-literal member' };
+    }
+    // Rebuild an equivalent dot-access node so the shared resolver can walk it.
+    lookupNode = {
+      type: 'MemberExpression',
+      computed: false,
+      object: node.object,
+      property: { type: 'Identifier', name: node.property.value },
+      loc: node.loc,
+    };
+  } else {
+    // Dot access: property must be a plain identifier.
+    if (!node.property || node.property.type !== 'Identifier') {
+      return { ok: false, reason: 'unsupported member' };
+    }
+  }
+
+  // Bail early with a specific reason when the object is unknown, so the
+  // shared resolver's key-missing warning path is never reached for it.
+  if (!constBindings || !(node.object.name in constBindings)) {
+    return { ok: false, reason: 'unknown object' };
+  }
+
+  // Delegate to the shared resolver with a throwaway warnings array so its
+  // "Unknown property" warning is not double-emitted.
+  const throwaway = [];
+  const resolved = resolveConstMemberExpression(lookupNode, constBindings, filePath || '', throwaway);
+
+  if (resolved === null || resolved === undefined) {
+    return { ok: false, reason: 'unknown key' };
+  }
+
+  const t = typeof resolved;
+  if (t === 'string' || t === 'number' || t === 'boolean') {
+    return { ok: true, value: resolved };
+  }
+
+  // Resolved to a non-primitive (object/array/etc.) — unsupported.
+  return { ok: false, reason: 'non-primitive value' };
+}
+
+/**
+ * Detect whether a condition test node uses a New_Condition_Construct.
+ *
+ * A New_Condition_Construct is either:
+ *   (a) an enum/const member reference on the RHS — a MemberExpression of the
+ *       form `Identifier.Identifier` or `Identifier["str"]` whose object
+ *       identifier is NOT `ctx`, NOT `params`, and NOT a bare tracked param
+ *       root (i.e. it looks like an EnumName/ConstName reference), OR
+ *   (b) a nested LHS member-access path of depth > 1 rooted at a tracked param
+ *       or `params` (a resolved `extractParamPath` length > 1).
+ *
+ * Single-segment param paths (length 1), pure string/boolean/number literal
+ * RHS values, and `ctx.*` references are NOT new constructs.
+ *
+ * This predicate is OPTIONAL / message-only: it does NOT gate control flow and
+ * is not wired into `extractCondition`. It exists only to let a caller craft a
+ * more specific warning message (e.g. "unresolvable enum/const reference" vs a
+ * generic "unsupported condition"). It MUST never throw for any AST node shape;
+ * unrecognized shapes yield `false`.
+ *
+ * Unwrapping:
+ *   - UnaryExpression `!x` → inspect the argument as an LHS operand.
+ *   - BinaryExpression `a === b` (and `==`/`!==`/`!=`) → inspect BOTH the left
+ *     (LHS nested path, depth > 1) and the right (RHS enum/const member ref).
+ *   - a bare MemberExpression/Identifier → treat as an LHS operand.
+ *
+ * @param {object} testNode - the `test` expression of an if / When() condition
+ * @param {Set<string>} trackedParams - set of known param names
+ * @returns {boolean} true when the condition uses a New_Condition_Construct
+ */
+function usesNewConditionConstruct(testNode, trackedParams) {
+  if (!testNode) return false;
+
+  var params = trackedParams || new Set();
+
+  // --- Helper: is `node` an enum/const-style member reference on the RHS? ---
+  // Matches `Identifier.Identifier` or `Identifier["str"]` where the object
+  // identifier is not `ctx`, not `params`, and not a bare tracked param root.
+  function isEnumConstMemberRef(node) {
+    if (!node || node.type !== 'MemberExpression') return false;
+    if (!node.object || node.object.type !== 'Identifier') return false;
+
+    var objName = node.object.name;
+    if (objName === 'ctx' || objName === 'params' || params.has(objName)) {
+      return false;
+    }
+
+    if (node.computed) {
+      // Bracket access: only a string-literal key looks like `Obj["KEY"]`.
+      return !!(
+        node.property &&
+        node.property.type === 'Literal' &&
+        typeof node.property.value === 'string'
+      );
+    }
+    // Dot access: property must be a plain identifier (`Obj.KEY`).
+    return !!(node.property && node.property.type === 'Identifier');
+  }
+
+  // --- Helper: is `node` a nested LHS param path of depth > 1? ---
+  function isNestedParamPath(node) {
+    var path = extractParamPath(node, params);
+    return !!(path && path.length > 1);
+  }
+
+  // BinaryExpression comparison: inspect both operands.
+  if (
+    testNode.type === 'BinaryExpression' &&
+    (testNode.operator === '===' ||
+      testNode.operator === '==' ||
+      testNode.operator === '!==' ||
+      testNode.operator === '!=')
+  ) {
+    // RHS enum/const member reference on either side (order-agnostic), and
+    // nested LHS param path on either side.
+    if (isEnumConstMemberRef(testNode.right) || isEnumConstMemberRef(testNode.left)) {
+      return true;
+    }
+    if (isNestedParamPath(testNode.left) || isNestedParamPath(testNode.right)) {
+      return true;
+    }
+    return false;
+  }
+
+  // UnaryExpression negation `!x`: inspect the operand as an LHS.
+  if (
+    testNode.type === 'UnaryExpression' &&
+    testNode.operator === '!' &&
+    testNode.argument
+  ) {
+    return isNestedParamPath(testNode.argument);
+  }
+
+  // Bare MemberExpression / Identifier: treat as an LHS operand.
+  return isNestedParamPath(testNode);
+}
+
+/**
  * Extract the condition from an if-statement's test expression.
  * Resolves identifiers against tracked destructured params, and
  * recognizes ctx.keyName member expressions for context-based conditions.
  *
- * Supported patterns:
- *   if (paramName)              → { param: "paramName", op: "truthy" }
- *   if (!paramName)             → { param: "paramName", op: "falsy" }
- *   if (paramName === 'val')    → { param: "paramName", op: "equals", value: "val" }
- *   if (paramName !== 'val')    → { param: "paramName", op: "notEquals", value: "val" }
- *   if (paramName == true)      → { param: "paramName", op: "truthy" }
- *   if (paramName === true)     → { param: "paramName", op: "truthy" }
- *   if (paramName == false)     → { param: "paramName", op: "falsy" }
- *   if (paramName === false)    → { param: "paramName", op: "falsy" }
- *   if (paramName !== true)     → { param: "paramName", op: "falsy" }
- *   if (paramName != true)      → { param: "paramName", op: "falsy" }
- *   if (paramName !== false)    → { param: "paramName", op: "truthy" }
- *   if (paramName != false)     → { param: "paramName", op: "truthy" }
+ * Supported patterns (param-based descriptors carry `path: string[]`;
+ * `param` is no longer emitted for newly compiled specs — Req 4.6):
+ *   if (paramName)              → { path: ["paramName"], op: "truthy" }
+ *   if (!paramName)             → { path: ["paramName"], op: "falsy" }
+ *   if (paramName === 'val')    → { path: ["paramName"], op: "equals", value: "val" }
+ *   if (paramName !== 'val')    → { path: ["paramName"], op: "notEquals", value: "val" }
+ *   if (paramName == true)      → { path: ["paramName"], op: "truthy" }
+ *   if (paramName === true)     → { path: ["paramName"], op: "truthy" }
+ *   if (paramName == false)     → { path: ["paramName"], op: "falsy" }
+ *   if (paramName === false)    → { path: ["paramName"], op: "falsy" }
+ *   if (paramName !== true)     → { path: ["paramName"], op: "falsy" }
+ *   if (paramName != true)      → { path: ["paramName"], op: "falsy" }
+ *   if (paramName !== false)    → { path: ["paramName"], op: "truthy" }
+ *   if (paramName != false)     → { path: ["paramName"], op: "truthy" }
+ *   if (encounter.type === EncounterTypes.OFFICE_NOTE)
+ *                               → { path: ["encounter","type"], op: "equals", value: "office_note" }
  *   if (ctx.key)               → { source: "ctx", key: "key", op: "truthy" }
  *   if (!ctx.key)              → { source: "ctx", key: "key", op: "falsy" }
  *   if (ctx.key === 'value')   → { source: "ctx", key: "key", op: "equals", value: "value" }
@@ -1730,12 +2023,35 @@ function extractTaskInvocationParams(objNode, dataTemplateVars, constBindings) {
  *   if (ctx.key == true)       → { source: "ctx", key: "key", op: "truthy" }
  *   if (ctx.key == false)      → { source: "ctx", key: "key", op: "falsy" }
  *
- * @param {object} testNode - the `test` property of an IfStatement AST node
+ * Return contract (two-way):
+ *   - a Condition_Descriptor object on success, OR
+ *   - `null` for Warn_And_Skip — this covers BOTH an unsupported
+ *     non-new-construct condition AND an unresolvable New_Condition_Construct
+ *     (unknown enum/const object, missing key, computed/non-primitive resolved
+ *     value, invalid LHS path). There is no `{ __compileError }` sentinel.
+ * On `null`, the caller (extractIfStep/extractWhenStep) emits the warning.
+ *
+ * Param-based descriptors carry an ordered `path` segment list
+ * (`extractParamPath`); a flat param yields a single-segment path (`['flag']`).
+ * `ctx.key` descriptors are unchanged (`{ source: 'ctx', key, op, value? }`).
+ *
+ * RHS resolution order for the equality branch (`===`/`==`/`!==`/`!=`):
+ *   extractBoolean → extractString → extractNumber → resolveRhsReference.
+ *   - boolean literal / resolved boolean → `truthy`/`falsy` (no value),
+ *   - string literal / resolved string → `equals`/`notEquals`, string value,
+ *   - number literal / resolved number → `equals`/`notEquals`, numeric value,
+ *   - enum/const member ref → resolve, then map by the resolved literal's type.
+ *
+ * @param {object} testNode - the `test` property of an IfStatement / When() AST node
  * @param {Set<string>} trackedParams - set of known param names from destructuring
- * @returns {object|null} condition object or null if pattern is unsupported
+ * @param {object} [constBindings] - const/enum bindings map for RHS resolution
+ * @param {string} [filePath] - current file path (threaded for warning messages)
+ * @returns {object|null} Condition_Descriptor, or null for Warn_And_Skip
  */
-function extractCondition(testNode, trackedParams) {
+function extractCondition(testNode, trackedParams, constBindings, filePath) {
   if (!testNode) return null;
+  if (!trackedParams) trackedParams = new Set();
+  if (!constBindings) constBindings = {};
 
   // --- Helper: check if a node is a ctx.keyName MemberExpression ---
   function getCtxKey(node) {
@@ -1753,38 +2069,19 @@ function extractCondition(testNode, trackedParams) {
     return null;
   }
 
-  // --- Helper: resolve a node to a param name. Accepts a bare tracked
-  // identifier (e.g., `unreviewed`) or a `params.X` member expression
-  // (consistent with how value expressions treat params.X → {{X}}).
-  function getParamName(node) {
-    if (!node) return null;
-    if (node.type === 'Identifier' && trackedParams.has(node.name)) {
-      return node.name;
-    }
-    if (
-      node.type === 'MemberExpression' &&
-      node.object && node.object.type === 'Identifier' &&
-      node.object.name === 'params' &&
-      node.property && node.property.type === 'Identifier'
-    ) {
-      return node.property.name;
-    }
-    return null;
-  }
-
-  // Pattern: ctx.key (truthy)
+  // Pattern: ctx.key (truthy) — unchanged (Req 3.8, 7.5)
   var ctxKey = getCtxKey(testNode);
   if (ctxKey) {
     return { source: 'ctx', key: ctxKey, op: 'truthy' };
   }
 
-  // Pattern: paramName / params.X (truthy)
-  var truthyParam = getParamName(testNode);
-  if (truthyParam) {
-    return { param: truthyParam, op: 'truthy' };
+  // Pattern: paramName / params.X / nested chain (truthy)
+  var truthyPath = extractParamPath(testNode, trackedParams);
+  if (truthyPath) {
+    return { path: truthyPath, op: 'truthy' };
   }
 
-  // Pattern: !ctx.key (falsy) or !paramName / !params.X (falsy)
+  // Pattern: !ctx.key (falsy) or !<param path> (falsy)
   if (
     testNode.type === 'UnaryExpression' &&
     testNode.operator === '!' &&
@@ -1794,14 +2091,15 @@ function extractCondition(testNode, trackedParams) {
     if (negCtxKey) {
       return { source: 'ctx', key: negCtxKey, op: 'falsy' };
     }
-    var negParam = getParamName(testNode.argument);
-    if (negParam) {
-      return { param: negParam, op: 'falsy' };
+    var negPath = extractParamPath(testNode.argument, trackedParams);
+    if (negPath) {
+      return { path: negPath, op: 'falsy' };
     }
     return null;
   }
 
-  // Pattern: paramName/params.X/ctx.key ===/==/!==/!= value (string or boolean)
+  // Pattern: <ctx.key | param path> ===/==/!==/!= value
+  // where value is a string/boolean/number literal or an enum/const member ref.
   if (
     testNode.type === 'BinaryExpression' &&
     (testNode.operator === '===' || testNode.operator === '!==' ||
@@ -1809,36 +2107,59 @@ function extractCondition(testNode, trackedParams) {
   ) {
     const isEquality = testNode.operator === '===' || testNode.operator === '==';
 
-    // Determine if left side is a ctx.key or a param (bare or params.X)
+    // LHS: either a ctx.key or a param path (bare, params.X, or nested chain).
     var binCtxKey = getCtxKey(testNode.left);
-    var binParam = getParamName(testNode.left);
+    var binPath = binCtxKey ? null : extractParamPath(testNode.left, trackedParams);
 
-    // Must be either ctx.key or a param
-    if (!binCtxKey && !binParam) return null;
+    // Must resolve to either ctx.key or a param path on the LHS.
+    if (!binCtxKey && !binPath) return null;
 
-    // Boolean literal on the right: treat as truthy/falsy
+    // Build a descriptor for the resolved LHS with a given op (and optional value).
+    function build(op, value) {
+      const desc = binCtxKey
+        ? { source: 'ctx', key: binCtxKey, op }
+        : { path: binPath, op };
+      if (arguments.length > 1) desc.value = value;
+      return desc;
+    }
+
+    // RHS resolution order: boolean → string → number → enum/const reference.
+
+    // 1. Boolean literal → truthy/falsy (no value) (Req 5.4, 7.4).
     const boolVal = extractBoolean(testNode.right);
     if (boolVal !== null) {
       const isTruthy = isEquality ? boolVal === true : boolVal === false;
-      if (binCtxKey) {
-        return { source: 'ctx', key: binCtxKey, op: isTruthy ? 'truthy' : 'falsy' };
-      }
-      return { param: binParam, op: isTruthy ? 'truthy' : 'falsy' };
+      return build(isTruthy ? 'truthy' : 'falsy');
     }
 
-    // String literal on the right: equals/notEquals
-    const right = extractString(testNode.right);
-    if (right !== null) {
-      if (binCtxKey) {
-        return { source: 'ctx', key: binCtxKey, op: isEquality ? 'equals' : 'notEquals', value: right };
-      }
-      return {
-        param: binParam,
-        op: isEquality ? 'equals' : 'notEquals',
-        value: right,
-      };
+    // 2. String literal → equals/notEquals preserving string type (Req 7.3, 5.3).
+    const strVal = extractString(testNode.right);
+    if (strVal !== null) {
+      return build(isEquality ? 'equals' : 'notEquals', strVal);
     }
 
+    // 3. Number literal → equals/notEquals preserving numeric type (Req 5.1).
+    const numVal = extractNumber(testNode.right);
+    if (numVal !== null) {
+      return build(isEquality ? 'equals' : 'notEquals', numVal);
+    }
+
+    // 4. Enum/const member reference → resolve via constBindings and map by
+    //    the resolved literal's type (Req 1.1–1.4, 2.1–2.4, 5.2). An
+    //    unresolvable new construct → Warn_And_Skip (null) (Req 1.6–1.8,
+    //    2.6–2.8, 6.1, 6.2).
+    const resolved = resolveRhsReference(testNode.right, constBindings, filePath);
+    if (resolved.ok) {
+      const t = typeof resolved.value;
+      if (t === 'boolean') {
+        const isTruthy = isEquality ? resolved.value === true : resolved.value === false;
+        return build(isTruthy ? 'truthy' : 'falsy');
+      }
+      // string or number → equals/notEquals preserving type.
+      return build(isEquality ? 'equals' : 'notEquals', resolved.value);
+    }
+
+    // Unresolvable RHS → Warn_And_Skip.
     return null;
   }
 
@@ -1871,11 +2192,14 @@ function extractIfStep(stmt, filePath, trackedParams, warnings, source, declared
   }
 
   // Extract the condition
-  const condition = extractCondition(stmt.test, trackedParams);
+  const condition = extractCondition(stmt.test, trackedParams, constBindings, filePath);
   if (!condition) {
-    // Unsupported condition pattern — emit warning
+    // Unsupported/unresolvable condition pattern — Warn_And_Skip (Req 6.1).
+    // Message includes the file path, 1-based line, and the offending
+    // condition reference text so unresolvable enum/const/nested-path
+    // constructs are identifiable.
     warnings.push({
-      message: `Unsupported if-condition at ${filePath}:${lineOf(stmt)} — only param truthiness/equality checks are allowed`,
+      message: `Unsupported if-condition at ${filePath}:${lineOf(stmt)} — could not resolve \`${reconstructSource(stmt.test)}\`; only param truthiness/equality checks and resolvable enum/const references are allowed`,
       filePath,
       line: lineOf(stmt),
     });
@@ -1916,10 +2240,14 @@ function extractWhenStep(exprNode, filePath, trackedParams, warnings, source, de
   const bodyNode = args[1];
 
   // Extract the condition (param- or ctx-based)
-  const condition = extractCondition(conditionNode, trackedParams);
+  const condition = extractCondition(conditionNode, trackedParams, constBindings, filePath);
   if (!condition) {
+    // Unsupported/unresolvable condition pattern — Warn_And_Skip (Req 6.1).
+    // Message includes the file path, 1-based line, and the offending
+    // condition reference text so unresolvable enum/const/nested-path
+    // constructs are identifiable.
     warnings.push({
-      message: `Unsupported When() condition at ${filePath}:${lineOf(exprNode)} — only param/ctx truthiness or equality checks are allowed`,
+      message: `Unsupported When() condition at ${filePath}:${lineOf(exprNode)} — could not resolve \`${reconstructSource(conditionNode)}\`; only param/ctx truthiness or equality checks and resolvable enum/const references are allowed`,
       filePath,
       line: lineOf(exprNode),
     });
@@ -3143,4 +3471,4 @@ function parseSource(source, filePath, rawSource, options) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractIfStep, extractWhenStep, extractCondition, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, parseDataTemplate, buildConstBindings, buildEnumBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };
+module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractIfStep, extractWhenStep, extractCondition, extractParamPath, resolveRhsReference, usesNewConditionConstruct, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, parseDataTemplate, buildConstBindings, buildEnumBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };

@@ -413,3 +413,177 @@ const doStuff = Task(() => {
     }
   }
 });
+
+// ---------------------------------------------------------------------------
+// Requirements 7.1–7.5, 3.8: Preservation of existing condition forms
+//
+// These tests lock the compiled Condition_Descriptor shape for the condition
+// forms that existed before the enum/nested-path feature. Per task 9.1, all
+// param-based conditions now emit `path: string[]` (a flat param yields a
+// single-segment path such as ['flag']) and no longer emit a `param` field.
+// `ctx.key` conditions still emit a ctx-based descriptor
+// { source: 'ctx', key, op, value? }.
+// ---------------------------------------------------------------------------
+
+test('preservation: flat param truthiness `if (flag)` compiles to a truthy path descriptor (Req 7.1)', () => {
+  const src = `
+const el = is.BUTTON.where(idIs('go')).as('Go');
+const t = Task((params) => {
+  const { flag } = params;
+  if (flag) {
+    Click(el);
+  }
+}).as('FlatTruthy');
+`;
+  const result = parseSource(src, 'preserve-flat-truthy.test.js');
+
+  assert.equal(result.error, null);
+  assert.equal(result.tasks.length, 1);
+
+  const steps = result.tasks[0].steps;
+  assert.equal(steps.length, 1);
+  const ifStep = steps[0];
+  assert.equal(ifStep.action, 'if');
+  assert.deepEqual(ifStep.condition, { path: ['flag'], op: 'truthy' });
+  // The old flat `param` field is no longer emitted for newly compiled specs.
+  assert.equal('param' in ifStep.condition, false);
+  assert.ok(Array.isArray(ifStep.then) && ifStep.then.length === 1);
+});
+
+test('preservation: negation `if (!flag)` compiles to a falsy path descriptor (Req 7.2)', () => {
+  const src = `
+const el = is.BUTTON.where(idIs('go')).as('Go');
+const t = Task((params) => {
+  const { flag } = params;
+  if (!flag) {
+    Click(el);
+  }
+}).as('FlatFalsy');
+`;
+  const result = parseSource(src, 'preserve-flat-falsy.test.js');
+
+  assert.equal(result.error, null);
+  assert.equal(result.tasks.length, 1);
+
+  const ifStep = result.tasks[0].steps[0];
+  assert.equal(ifStep.action, 'if');
+  assert.deepEqual(ifStep.condition, { path: ['flag'], op: 'falsy' });
+  assert.equal('param' in ifStep.condition, false);
+});
+
+test('preservation: string equality `===`/`!==` compiles to equals/notEquals with a string value (Req 7.3)', () => {
+  const src = `
+const el = is.BUTTON.where(idIs('go')).as('Go');
+const t = Task((params) => {
+  const { status } = params;
+  if (status === 'active') {
+    Click(el);
+  }
+  if (status !== 'active') {
+    Click(el);
+  }
+}).as('StringEquality');
+`;
+  const result = parseSource(src, 'preserve-string-equality.test.js');
+
+  assert.equal(result.error, null);
+  assert.equal(result.tasks.length, 1);
+
+  const steps = result.tasks[0].steps;
+  assert.equal(steps.length, 2);
+
+  // === → equals, string value preserved
+  assert.deepEqual(steps[0].condition, { path: ['status'], op: 'equals', value: 'active' });
+  assert.equal(typeof steps[0].condition.value, 'string');
+
+  // !== → notEquals, string value preserved
+  assert.deepEqual(steps[1].condition, { path: ['status'], op: 'notEquals', value: 'active' });
+  assert.equal(typeof steps[1].condition.value, 'string');
+});
+
+test('preservation: boolean equality maps to truthy/falsy with no value (Req 7.4)', () => {
+  const src = `
+const el = is.BUTTON.where(idIs('go')).as('Go');
+const t = Task((params) => {
+  const { enabled } = params;
+  if (enabled === true) {
+    Click(el);
+  }
+  if (enabled === false) {
+    Click(el);
+  }
+  if (enabled !== true) {
+    Click(el);
+  }
+}).as('BooleanEquality');
+`;
+  const result = parseSource(src, 'preserve-boolean-equality.test.js');
+
+  assert.equal(result.error, null);
+  assert.equal(result.tasks.length, 1);
+
+  const steps = result.tasks[0].steps;
+  assert.equal(steps.length, 3);
+
+  // === true → truthy, no value
+  assert.deepEqual(steps[0].condition, { path: ['enabled'], op: 'truthy' });
+  assert.equal('value' in steps[0].condition, false);
+
+  // === false → falsy, no value
+  assert.deepEqual(steps[1].condition, { path: ['enabled'], op: 'falsy' });
+  assert.equal('value' in steps[1].condition, false);
+
+  // !== true → falsy, no value
+  assert.deepEqual(steps[2].condition, { path: ['enabled'], op: 'falsy' });
+  assert.equal('value' in steps[2].condition, false);
+});
+
+test('preservation: `ctx.key` truthiness and negation compile to ctx-based descriptors (Req 7.5, 3.8)', () => {
+  const src = `
+const el = is.BUTTON.where(idIs('go')).as('Go');
+const t = Task((params) => {
+  if (ctx.loggedIn) {
+    Click(el);
+  }
+  if (!ctx.loggedIn) {
+    Click(el);
+  }
+}).as('CtxKey');
+`;
+  const result = parseSource(src, 'preserve-ctx-key.test.js');
+
+  assert.equal(result.error, null);
+  assert.equal(result.tasks.length, 1);
+
+  const steps = result.tasks[0].steps;
+  assert.equal(steps.length, 2);
+
+  // ctx.key truthiness → ctx-based descriptor deferred to runtime
+  assert.deepEqual(steps[0].condition, { source: 'ctx', key: 'loggedIn', op: 'truthy' });
+  // ctx descriptors are not param-based: no `path` field
+  assert.equal('path' in steps[0].condition, false);
+
+  // !ctx.key → ctx-based falsy descriptor
+  assert.deepEqual(steps[1].condition, { source: 'ctx', key: 'loggedIn', op: 'falsy' });
+  assert.equal('path' in steps[1].condition, false);
+});
+
+test('preservation: `ctx.key` string equality compiles to a ctx-based descriptor with value (Req 7.3, 3.8)', () => {
+  const src = `
+const el = is.BUTTON.where(idIs('go')).as('Go');
+const t = Task((params) => {
+  if (ctx.role === 'admin') {
+    Click(el);
+  }
+}).as('CtxEquality');
+`;
+  const result = parseSource(src, 'preserve-ctx-equality.test.js');
+
+  assert.equal(result.error, null);
+  assert.equal(result.tasks.length, 1);
+
+  const cond = result.tasks[0].steps[0].condition;
+  assert.deepEqual(cond, { source: 'ctx', key: 'role', op: 'equals', value: 'admin' });
+  assert.equal(typeof cond.value, 'string');
+  assert.equal('path' in cond, false);
+});

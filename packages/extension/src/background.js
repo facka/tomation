@@ -425,7 +425,7 @@ function resolveValue(value, params, contextStore) {
  * Evaluate a conditional expression against the current params context.
  * Supports both param-based conditions and ctx-based conditions.
  *
- * @param {object} condition - The condition object { param?, source?, key?, op, value? }
+ * @param {object} condition - The condition object { param?, path?, source?, key?, op, value? }
  * @param {object} params - The current params map
  * @param {object} [contextStore] - The per-run context store (key → value)
  * @returns {boolean} - Whether the condition is met
@@ -434,8 +434,15 @@ function evaluateCondition(condition, params, contextStore) {
   var val;
   if (condition.source === 'ctx') {
     val = contextStore && contextStore.hasOwnProperty(condition.key) ? contextStore[condition.key] : undefined;
+  } else if (condition.path && condition.path.length) {
+    var cur = params;
+    for (var i = 0; i < condition.path.length; i++) {
+      if (cur == null) { cur = undefined; break; }
+      cur = cur[condition.path[i]];
+    }
+    val = cur;
   } else {
-    val = params[condition.param];
+    val = params ? params[condition.param] : undefined;
   }
   switch (condition.op) {
     case 'truthy':    return !!val;

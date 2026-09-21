@@ -380,3 +380,154 @@ test('PRESERVATION: safeSendMessage handles synchronous throw without crashing',
     { numRuns: 50 }
   );
 });
+// ---------------------------------------------------------------------------
+// PRESERVATION: Legacy flat-descriptor evaluation (backward compatibility)
+// Feature: condition-enum-and-nested-params
+// **Validates: Requirements 4.2, 7.6**
+//
+// These tests verify that a Condition_Descriptor emitted in the prior flat
+// single-key shape `{ param, op, value? }` still evaluates identically at
+// runtime — i.e. a legacy `{ param: key, op }` descriptor produces the same
+// result as the equivalent single-segment `{ path: [key], op }` descriptor
+// across the truthy/falsy/equals/notEquals operators and representative
+// params states. This reuses the Property 9 (flat descriptor backward-compat
+// equivalence) coverage at the runtime layer.
+// ---------------------------------------------------------------------------
+
+// Generate a valid property-name key
+var arbKey = fc.stringOf(
+  fc.constantFrom('a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','_'),
+  { minLength: 1, maxLength: 10 }
+);
+
+// Generate representative resolved values (mix of falsy and truthy, strings + numbers + booleans)
+var arbResolvedValue = fc.oneof(
+  fc.string({ minLength: 0, maxLength: 20 }),
+  fc.integer({ min: -1000, max: 1000 }),
+  fc.double({ min: -1000, max: 1000, noNaN: true }),
+  fc.boolean(),
+  fc.constantFrom(0, '', null, undefined, '0', 'false')
+);
+
+// Generate representative params states, sometimes carrying the key
+function arbParamsFor(key) {
+  return fc.oneof(
+    // params carrying the key with an arbitrary value
+    arbResolvedValue.map(function (v) {
+      var obj = {};
+      obj[key] = v;
+      return obj;
+    }),
+    // params present but missing the key
+    fc.constant({}),
+    // params with unrelated keys
+    fc.constant({ somethingElse: 1 }),
+    // absent / null params
+    fc.constantFrom(null, undefined)
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Property 9 (runtime): flat `{ param, op }` equivalent to `{ path: [key], op }`
+//                       for truthy / falsy
+// **Validates: Requirements 4.2, 7.6**
+// ---------------------------------------------------------------------------
+
+test('PRESERVATION: legacy { param, op } equals { path: [param], op } for truthy/falsy', function () {
+  // Feature: condition-enum-and-nested-params, Property 9: Flat descriptor backward-compat equivalence
+  fc.assert(
+    fc.property(
+      arbKey,
+      fc.constantFrom('truthy', 'falsy'),
+      function (key, op) {
+        return fc.assert(
+          fc.property(arbParamsFor(key), function (params) {
+            var legacy = { param: key, op: op };
+            var pathForm = { path: [key], op: op };
+
+            var legacyResult = bg.evaluateCondition(legacy, params);
+            var pathResult = bg.evaluateCondition(pathForm, params);
+
+            // Legacy flat descriptor must evaluate identically to the
+            // equivalent single-segment path descriptor.
+            assert.equal(legacyResult, pathResult);
+            // And it must match a direct property lookup on params.
+            var direct = params ? params[key] : undefined;
+            var expected = op === 'truthy' ? !!direct : !direct;
+            assert.equal(legacyResult, expected);
+          }),
+          { numRuns: 50 }
+        );
+      }
+    ),
+    { numRuns: 20 }
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Property 9 (runtime): flat `{ param, op, value }` equivalent to
+//                       `{ path: [key], op, value }` for equals / notEquals
+// **Validates: Requirements 4.2, 7.6**
+// ---------------------------------------------------------------------------
+
+test('PRESERVATION: legacy { param, op, value } equals { path: [param], op, value } for equals/notEquals', function () {
+  // Feature: condition-enum-and-nested-params, Property 9: Flat descriptor backward-compat equivalence
+  // Comparison values include strings and numbers to cover strict (no-coercion) equality.
+  var arbCompareValue = fc.oneof(
+    fc.string({ minLength: 0, maxLength: 20 }),
+    fc.integer({ min: -1000, max: 1000 }),
+    fc.constantFrom('200', 200, '', 0)
+  );
+
+  fc.assert(
+    fc.property(
+      arbKey,
+      fc.constantFrom('equals', 'notEquals'),
+      arbCompareValue,
+      function (key, op, value) {
+        return fc.assert(
+          fc.property(arbParamsFor(key), function (params) {
+            var legacy = { param: key, op: op, value: value };
+            var pathForm = { path: [key], op: op, value: value };
+
+            var legacyResult = bg.evaluateCondition(legacy, params);
+            var pathResult = bg.evaluateCondition(pathForm, params);
+
+            // Legacy flat descriptor must evaluate identically to the
+            // equivalent single-segment path descriptor.
+            assert.equal(legacyResult, pathResult);
+            // And it must match strict comparison against a direct lookup.
+            var direct = params ? params[key] : undefined;
+            var expected = op === 'equals' ? direct === value : direct !== value;
+            assert.equal(legacyResult, expected);
+          }),
+          { numRuns: 50 }
+        );
+      }
+    ),
+    { numRuns: 20 }
+  );
+});
+
+// ---------------------------------------------------------------------------
+// PRESERVATION: legacy flat descriptor never throws across arbitrary params states
+// **Validates: Requirements 4.2, 7.6**
+// ---------------------------------------------------------------------------
+
+test('PRESERVATION: legacy { param, op } never throws for any params state', function () {
+  // Feature: condition-enum-and-nested-params, Property 9: Flat descriptor backward-compat equivalence
+  fc.assert(
+    fc.property(
+      arbKey,
+      fc.constantFrom('truthy', 'falsy', 'equals', 'notEquals'),
+      arbParamsFor('someKey'),
+      function (key, op, params) {
+        var legacy = { param: key, op: op, value: 'x' };
+        assert.doesNotThrow(function () {
+          bg.evaluateCondition(legacy, params);
+        });
+      }
+    ),
+    { numRuns: 100 }
+  );
+});
