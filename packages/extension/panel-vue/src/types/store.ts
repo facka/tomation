@@ -17,6 +17,24 @@ export interface StepCondition {
   op: 'truthy' | 'falsy' | 'equals' | 'notEquals';
   value?: string;
 }
+/** A normalized row/column selector on a table cell accessor. */
+export interface CellSelector {
+  tag?: string;
+  index: number | 'first' | 'last';
+}
+
+/**
+ * The structured table-cell accessor attached to a step whose target is a
+ * `cell`/`firstRow`/`lastRow` call. Carried through to the run log so the
+ * panel can display the targeted row/column, preferring `columnName`.
+ */
+export interface TableCellAccessor {
+  type: 'tableCell';
+  row: CellSelector;
+  column: CellSelector;
+  columnName?: string;
+}
+
 export type TaskHeaderStatus = 'queued' | 'in-progress' | 'pass' | 'warning';
 
 export interface Runnable {
@@ -50,6 +68,9 @@ export interface LogEntry {
   findTrace?: FindTrace;
   // Present on wait steps: the configured wait duration in milliseconds
   ms?: number;
+  // Present on table-cell steps: the structured cell accessor, used to display
+  // the targeted row/column (preferring columnName) in the run log.
+  accessor?: TableCellAccessor;
 }
 
 export interface StoreState {

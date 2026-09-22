@@ -975,6 +975,47 @@ function handleHoverClear() {
 }
 
 /**
+ * Pick an element from a candidate NodeList/array by a normalized selector index.
+ * @param {Array|NodeList} candidates
+ * @param {number|'first'|'last'} index
+ * @returns {number} chosen 0-based index (may be out of range; caller checks)
+ */
+function selectorIndexToOffset(candidates, index) {
+  if (index === 'first') return 0;
+  if (index === 'last') return candidates.length - 1;
+  return index - 1; // 1-based → 0-based
+}
+
+/**
+ * Resolve a table cell relative to a resolved <table> (or table-like) anchor.
+ * @param {Element} table - resolved anchor element
+ * @param {{row: {tag?: string, index}, column: {tag?: string, index}}} spec
+ * @returns {{ok: true, element: Element} | {ok: false, error: string}}
+ */
+function resolveTableCell(table, spec) {
+  var rowSel = spec.row || {};
+  var colSel = spec.column || {};
+
+  var rows = table.querySelectorAll(rowSel.tag || 'tr');
+  if (!rows || rows.length === 0) {
+    return { ok: false, error: 'Table has no rows' };
+  }
+  var rowOffset = selectorIndexToOffset(rows, rowSel.index);
+  if (rowOffset < 0 || rowOffset >= rows.length) {
+    return { ok: false, error: 'Row ' + rowSel.index + ' not found (table has ' + rows.length + ' rows)' };
+  }
+  var row = rows[rowOffset];
+
+  var cellSelector = colSel.tag ? (':scope > ' + colSel.tag) : ':scope > th, :scope > td';
+  var cells = row.querySelectorAll(cellSelector);
+  var colOffset = selectorIndexToOffset(cells, colSel.index);
+  if (colOffset < 0 || colOffset >= cells.length) {
+    return { ok: false, error: 'Column ' + colSel.index + ' not found (row has ' + cells.length + ' cells)' };
+  }
+  return { ok: true, element: cells[colOffset] };
+}
+
+/**
  * Apply a sequence of navigation steps starting from an anchor element.
  * Traverses the DOM synchronously following each step in order.
  *
@@ -1043,12 +1084,26 @@ function findElementWithParent(stepMessage) {
   // (If the anchor fails to resolve, findElement rejects and this helper is
   // never called, so no hops are attempted — the anchorResolved:false case.)
   function applyNavigation(element) {
+    var current = element;
     if (navigateSteps && navigateSteps.length > 0) {
-      var navResult = applyNavigateSteps(element, navigateSteps);
-      navResult.anchorResolved = true;
-      return navResult;
+      var navResult = applyNavigateSteps(current, navigateSteps);
+      if (navResult.ok === false) {
+        navResult.anchorResolved = true;
+        return navResult;
+      }
+      current = navResult.element;
     }
-    return { ok: true, element: element };
+    // Table cell resolution: after the anchor (and any navigate) resolves, if a
+    // tableCell accessor is present, resolve the cell and use it as the final
+    // target. Failures route through the same not-found trace path as navigate.
+    if (elementDescriptor && elementDescriptor.tableCell) {
+      var cellResult = resolveTableCell(current, elementDescriptor.tableCell);
+      if (cellResult.ok === false) {
+        return { ok: false, error: cellResult.error, anchorResolved: true };
+      }
+      current = cellResult.element;
+    }
+    return { ok: true, element: current };
   }
 
   if (!parentDescriptor && !(stepMessage.parentChain && stepMessage.parentChain.length >= 1)) {

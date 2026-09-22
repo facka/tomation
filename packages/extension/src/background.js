@@ -717,11 +717,25 @@ function buildStepMessage(step, pageElements, params) {
   if (step.key !== undefined) {
     msg.key = step.key;
   }
+  if (step.accessor !== undefined) {
+    msg.accessor = step.accessor;
+  }
 
   // Attach element descriptors for steps with a target
   if (step.target && pageElements) {
     var descriptor = pageElements[step.target];
     if (descriptor) {
+      if (step.accessor && step.accessor.type === 'tableCell') {
+        // Clone so the shared pageElements entry is never mutated.
+        descriptor = Object.assign({}, descriptor);
+        descriptor.tableCell = {
+          row: step.accessor.row,
+          column: step.accessor.column
+        };
+        if (step.accessor.columnName !== undefined) {
+          descriptor.tableCell.columnName = step.accessor.columnName;
+        }
+      }
       msg.elementDescriptor = descriptor;
 
       // If the descriptor has a childOf field, resolve the full ancestor chain
@@ -1337,6 +1351,9 @@ function emitLog(stepIndex, step, ok, error, findTrace) {
     logMsg.error = error;
   }
   if (findTrace) logMsg.findTrace = findTrace;
+  // Table cell accessor: forwarded so the run log can show the targeted
+  // row/column (column prefers columnName).
+  if (step.accessor) logMsg.accessor = step.accessor;
   // Include context data for successful save steps
   if (ok && (step.action === 'saveText' || step.action === 'saveValue' ||
              step.action === 'saveAttribute' || step.action === 'saveExpression')) {
@@ -1404,6 +1421,10 @@ function emitStepPlan(resolvedSteps, originalSteps, tasksMap, checkedSteps) {
     }
     if (rs.taken != null) {
       entry.taken = rs.taken;
+    }
+    // Table cell accessor: forwarded so the queued plan shows the row/column.
+    if (rs.accessor != null) {
+      entry.accessor = rs.accessor;
     }
     planSteps.push(entry);
   }
@@ -1751,6 +1772,8 @@ function runStepLoop() {
       // so the run view can group and indent them under the condition row.
       if (step._taskPath) startMsg.taskPath = step._taskPath;
       if (step._condDepth != null) startMsg.taskDepth = (step._taskPath ? step._taskPath.length : 0) + step._condDepth;
+      // Table cell accessor: forwarded so the in-progress row shows the row/column.
+      if (step.accessor) startMsg.accessor = step.accessor;
       safeSendMessage(startMsg);
 
       return sendStepToRuntime(step, currentIndex).then(function (result) {

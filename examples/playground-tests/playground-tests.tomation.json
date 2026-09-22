@@ -60,6 +60,13 @@
         "id": "success-message"
       }
     },
+    "Tables__table": {
+      "tag": "table",
+      "label": "Orders",
+      "where": {
+        "id": "orders"
+      }
+    },
     "Todo__input": {
       "tag": "input",
       "label": "Todo Input",
@@ -343,7 +350,9 @@
         {
           "action": "if",
           "condition": {
-            "param": "isJunior",
+            "path": [
+              "isJunior"
+            ],
             "op": "truthy"
           },
           "then": [
@@ -356,7 +365,9 @@
         {
           "action": "if",
           "condition": {
-            "param": "isSemisenior",
+            "path": [
+              "isSemisenior"
+            ],
             "op": "truthy"
           },
           "then": [
@@ -369,7 +380,9 @@
         {
           "action": "if",
           "condition": {
-            "param": "isSenior",
+            "path": [
+              "isSenior"
+            ],
             "op": "truthy"
           },
           "then": [
@@ -660,6 +673,114 @@
           "city": "Springfield"
         }
       }
+    },
+    {
+      "name": "Read cells by explicit row and column",
+      "steps": [
+        {
+          "action": "assertHasText",
+          "target": "Tables__table",
+          "value": "#1001",
+          "accessor": {
+            "type": "tableCell",
+            "row": {
+              "index": 2
+            },
+            "column": {
+              "index": 1
+            },
+            "columnName": "OrderId"
+          }
+        },
+        {
+          "action": "assertHasText",
+          "target": "Tables__table",
+          "value": "Ada Lovelace",
+          "accessor": {
+            "type": "tableCell",
+            "row": {
+              "index": 2
+            },
+            "column": {
+              "index": 2
+            },
+            "columnName": "Customer"
+          }
+        },
+        {
+          "action": "assertHasText",
+          "target": "Tables__table",
+          "value": "Shipped",
+          "accessor": {
+            "type": "tableCell",
+            "row": {
+              "index": 2
+            },
+            "column": {
+              "index": 4
+            },
+            "columnName": "Status"
+          }
+        }
+      ],
+      "sourceFile": "tables"
+    },
+    {
+      "name": "Read the header row and the last data row",
+      "steps": [
+        {
+          "action": "assertHasText",
+          "target": "Tables__table",
+          "value": "Customer",
+          "accessor": {
+            "type": "tableCell",
+            "row": {
+              "index": "first"
+            },
+            "column": {
+              "index": 2
+            },
+            "columnName": "Customer"
+          }
+        },
+        {
+          "action": "assertHasText",
+          "target": "Tables__table",
+          "value": "Cancelled",
+          "accessor": {
+            "type": "tableCell",
+            "row": {
+              "index": "last"
+            },
+            "column": {
+              "index": 4
+            },
+            "columnName": "Status"
+          }
+        }
+      ],
+      "sourceFile": "tables"
+    },
+    {
+      "name": "Read a total using a named column",
+      "steps": [
+        {
+          "action": "assertHasText",
+          "target": "Tables__table",
+          "value": "$254.75",
+          "accessor": {
+            "type": "tableCell",
+            "row": {
+              "index": 4
+            },
+            "column": {
+              "index": 3
+            },
+            "columnName": "Total"
+          }
+        }
+      ],
+      "sourceFile": "tables"
     },
     {
       "name": "Add a todo item and verify it exists",

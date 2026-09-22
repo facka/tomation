@@ -130,6 +130,31 @@ export function getAssertSuffix(actionLower: string): string | null {
 }
 
 /**
+ * Format a normalized cell index for display. Numeric indexes render as-is;
+ * the symbolic `first`/`last` render as the word (e.g. `Row: first`).
+ */
+export function formatCellIndex(index: number | 'first' | 'last' | undefined): string {
+  if (index === 'first' || index === 'last') return index;
+  return index != null ? String(index) : '';
+}
+
+/**
+ * Build the row/column display for a table-cell accessor. The column prefers
+ * `columnName` (e.g. `Email`) over the numeric index; both fall back to the
+ * normalized selector index (numeric or `first`/`last`).
+ */
+export function formatCellAccessor(
+  accessor: { row?: { index?: number | 'first' | 'last' }; column?: { index?: number | 'first' | 'last' }; columnName?: string } | undefined,
+): { row: string; column: string } | null {
+  if (!accessor) return null;
+  const row = formatCellIndex(accessor.row?.index);
+  const column = accessor.columnName != null && accessor.columnName !== ''
+    ? accessor.columnName
+    : formatCellIndex(accessor.column?.index);
+  return { row, column };
+}
+
+/**
  * Build a human-readable description of a conditional (if / When).
  * Examples:
  *   ctx.status === 'Active'  → "ctx.status equals \"Active\""

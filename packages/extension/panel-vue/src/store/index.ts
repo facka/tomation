@@ -291,6 +291,7 @@ function setStepPlan(steps: StepPlanEntry[]): void {
     condition: step.condition,
     taken: step.taken,
     ms: step.ms,
+    accessor: step.accessor,
   }));
 }
 
@@ -320,6 +321,7 @@ function setStepStatus(stepIndex: number, status: StepStatus, meta?: Partial<Log
     if (meta.taken !== undefined) entry.taken = meta.taken;
     if (meta.findTrace !== undefined) entry.findTrace = meta.findTrace;
     if (meta.ms !== undefined) entry.ms = meta.ms;
+    if (meta.accessor !== undefined) entry.accessor = meta.accessor;
   }
 }
 

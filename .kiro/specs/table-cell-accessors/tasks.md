@@ -6,13 +6,13 @@ Add `cell(row, column)`, `firstRow(column)`, and `lastRow(column)` accessors to 
 
 ## Tasks
 
-- [ ] 1. Implement DSL cell accessors
-  - [ ] 1.1 Add `cell`/`firstRow`/`lastRow` to the descriptor in `packages/dsl/index.js`
+- [x] 1. Implement DSL cell accessors
+  - [x] 1.1 Add `cell`/`firstRow`/`lastRow` to the descriptor in `packages/dsl/index.js`
     - In `ElementBuilder.prototype.as`, attach `cell(row, column)`, `firstRow(column)`, `lastRow(column)` methods to the returned descriptor
     - Each returns a shallow copy of the descriptor with `tableCell = { row, column }`, storing selectors as given (number/string/object); `firstRow`/`lastRow` pass `'first'`/`'last'` as the row selector
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7_
 
-  - [ ] 1.2 Update TypeScript definitions in `packages/dsl/index.d.ts`
+  - [x] 1.2 Update TypeScript definitions in `packages/dsl/index.d.ts`
     - Add `CellIndex` and `CellSelector` type aliases and `cell`/`firstRow`/`lastRow` signatures to `ElementDescriptor`
     - _Requirements: 1.1, 1.2, 1.6_
 
@@ -20,8 +20,8 @@ Add `cell(row, column)`, `firstRow(column)`, and `lastRow(column)` accessors to 
     - `.as()` exposes accessors; `cell(2,3)` shape; object-form selectors stored as given; `firstRow`/`lastRow` symbolic row; named column resolves to a number; base `tag`/`where`/`label` inherited
     - _Requirements: 1.2, 1.3, 1.4, 1.5, 1.6_
 
-- [ ] 2. Implement compiler accessor recognition
-  - [ ] 2.1 Add accessor extraction to `packages/compiler/src/parser.js`
+- [x] 2. Implement compiler accessor recognition
+  - [x] 2.1 Add accessor extraction to `packages/compiler/src/parser.js`
     - Add `extractTableAccessor(node, constBindings, warnings, filePath)` recognizing `Base.cell/firstRow/lastRow(...)` call expressions and returning `{ baseRef, accessor }`
     - Add `normalizeCellSelector(argNode, constBindings, ...)` mapping number / `'first'`/`'last'` / const-member / `{ tag?, index }` object to the normalized `{ tag?, index }`; capture `columnName` only for the column's named-const form
     - Resolve base reference via existing bare/`A.b` logic
@@ -45,18 +45,18 @@ Add `cell(row, column)`, `firstRow(column)`, and `lastRow(column)` accessors to 
 - [ ] 3. Checkpoint — Ensure DSL and compiler tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. Implement runtime cell resolution
-  - [ ] 4.1 Add `resolveTableCell(table, spec)` to `packages/extension/src/runtime.js`
+- [x] 4. Implement runtime cell resolution
+  - [x] 4.1 Add `resolveTableCell(table, spec)` to `packages/extension/src/runtime.js`
     - Rows: `querySelectorAll(row.tag || 'tr')` in document order; map `row.index` (integer / `first` / `last`) 1-based
     - Columns: `:scope > {col.tag}` when tag present, else `:scope > th, :scope > td`; map `column.index` 1-based
     - Return `{ ok, element }` or `{ ok: false, error }` for out-of-range/no-rows
     - _Requirements: 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8_
 
-  - [ ] 4.2 Integrate `resolveTableCell` into `findElementWithParent` in `packages/extension/src/runtime.js`
+  - [x] 4.2 Integrate `resolveTableCell` into `findElementWithParent` in `packages/extension/src/runtime.js`
     - After the anchor resolves (and any `childOf`/`navigate`), if `elementDescriptor.tableCell` is present, apply `resolveTableCell` and use its result as the final target; route failures through the existing not-found trace/step-failure flow
     - _Requirements: 4.1, 4.7, 4.8_
 
-  - [ ] 4.3 Attach the accessor in `buildStepMessage` in `packages/extension/src/background.js`
+  - [x] 4.3 Attach the accessor in `buildStepMessage` in `packages/extension/src/background.js`
     - Copy `step.accessor` onto the message; when `accessor.type === 'tableCell'`, clone the looked-up descriptor and set `tableCell` (with optional `columnName`) without mutating the shared `pageElements` entry
     - _Requirements: 3.5, 6.2, 6.3_
 
@@ -74,8 +74,8 @@ Add `cell(row, column)`, `firstRow(column)`, and `lastRow(column)` accessors to 
 - [ ] 5. Checkpoint — Ensure runtime tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. Side panel / log display
-  - [ ] 6.1 Display row/column, preferring `columnName`
+- [x] 6. Side panel / log display
+  - [x] 6.1 Display row/column, preferring `columnName`
     - In the per-step target display path (panel + run log), render `Row: <row>` and `Column: <columnName || column>` when a step carries a `tableCell`/accessor; print `first`/`last` for symbolic rows
     - _Requirements: 7.1, 7.2, 7.3, 7.4_
 
@@ -83,16 +83,16 @@ Add `cell(row, column)`, `firstRow(column)`, and `lastRow(column)` accessors to 
     - Named column shows the name; numeric-only shows the index; `first`/`last` render readably
     - _Requirements: 7.2, 7.3, 7.4_
 
-- [ ] 7. Documentation
-  - [ ] 7.1 Add table accessor section to `README.md`
+- [x] 7. Documentation
+  - [x] 7.1 Add table accessor section to `README.md`
     - Document `cell`/`firstRow`/`lastRow`, 1-based indexing, `<th>`/`<td>` examples, numeric vs named-column forms, out-of-range behavior; recommend named columns for stable semantic columns
     - _Requirements: 8.1, 8.3, 8.4_
 
-  - [ ] 7.2 Add table accessor documentation to `examples/playground/docs.html`
+  - [x] 7.2 Add table accessor documentation to `examples/playground/docs.html`
     - Mirror README content within the Element/Locators Builder API section
     - _Requirements: 8.2, 8.3, 8.4_
 
-- [ ] 8. Final checkpoint — Ensure all tests pass
+- [x] 8. Final checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

@@ -479,6 +479,53 @@ const target = is.DIV.where(idIs('anchor')).navigate('parent,child[2]').as('Targ
 const container = is.DIV.where(idIs('section')).as('Section')
 const content = is.SPAN.childOf(container).where(innerTextIs('Header')).navigate('nextSibling').as('Content')</code></pre></div>
 
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Table Cell Accessors</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Define a table once as a normal <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">is.TABLE</code> locator, then reach a single cell at the point of use with the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.cell(row, column)</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.firstRow(column)</code>, and <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.lastRow(column)</code> accessors. Rows and columns are 1-based.
+    </p>
+
+    <div class="overflow-x-auto mb-4"><table class="w-full text-sm text-left border border-slate-700 rounded-lg overflow-hidden">
+      <thead class="bg-slate-800/80"><tr><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Accessor</th><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Description</th></tr></thead>
+      <tbody>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">cell(row, column)</code></td><td class="px-4 py-2.5 text-slate-300">Cell at an explicit 1-based row and column</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">firstRow(column)</code></td><td class="px-4 py-2.5 text-slate-300">Cell in the first row at the given column</td></tr>
+        <tr><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">lastRow(column)</code></td><td class="px-4 py-2.5 text-slate-300">Cell in the last row at the given column</td></tr>
+      </tbody>
+    </table></div>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Each of <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">row</code> and <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">column</code> accepts a cell selector: a 1-based number, the symbolic <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">first</code>/<code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">last</code>, or an object <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">{ tag?, index }</code> to narrow how rows or cells are counted. Column also accepts a named/enum value — a <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">const</code> object property such as <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">UsersColumn.Email</code> — which resolves to a numeric index while preserving the name for display.
+    </p>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">Usage examples:</p>
+
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">import { is, idIs } from '@tomationjs/dsl'
+
+// Define the table once
+const UsersTable = is.TABLE.where(idIs('users')).as('Users')
+
+// Reach cells at the point of use (1-based row and column)
+Click(UsersTable.cell(2, 3))
+Click(UsersTable.firstRow(2))
+Click(UsersTable.lastRow(3))
+
+// Named columns keep tests readable and stable
+const UsersColumn = { Name: 1, Email: 2, Status: 3 } as const
+AssertHasText(UsersTable.cell(2, UsersColumn.Email), 'john@example.com')
+
+// Object form narrows how rows/cells are counted by tag
+Click(UsersTable.cell({ tag: 'tr', index: 2 }, { tag: 'td', index: 3 }))</code></pre></div>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">Counting rules:</p>
+
+    <ul class="list-disc list-inside text-slate-300 text-sm leading-relaxed mb-4 space-y-1">
+      <li>Rows and columns are 1-based.</li>
+      <li>By default, rows are all <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">&lt;tr&gt;</code> across <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">&lt;thead&gt;</code>/<code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">&lt;tbody&gt;</code>/<code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">&lt;tfoot&gt;</code> flattened in document order.</li>
+      <li>By default, columns count <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">&lt;th&gt;</code> and <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">&lt;td&gt;</code> together within the row; a <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">tag</code> narrows the count to that tag.</li>
+      <li>An out-of-range row or column follows the standard not-found/waiting semantics, like any unresolved element.</li>
+      <li>Prefer named columns when a table has stable semantic columns — the display shows the name (e.g. <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Column: Email</code>) instead of a bare index.</li>
+    </ul>
+
     <h3 id="where-matchers" class="text-xl font-semibold text-white mt-12 mb-3">Where Matchers <a href="#where-matchers" class="heading-anchor">#</a></h3>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       The <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.where()</code> method accepts matcher functions that narrow down element selection by matching on attributes, text content, position, or state. You can combine multiple matchers to create precise locators.

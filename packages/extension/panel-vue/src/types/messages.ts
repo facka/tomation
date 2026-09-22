@@ -1,7 +1,7 @@
 import type { RunConfig } from './store';
 import type { Spec } from './spec';
 import type { AIConfig } from './lab';
-import type { StepCondition } from './store';
+import type { StepCondition, TableCellAccessor } from './store';
 import type { FindTrace } from './findTrace';
 
 // Messages sent FROM panel TO background
@@ -23,8 +23,8 @@ export type PanelMessage =
 // Messages sent FROM background TO panel
 export type BackgroundMessage =
   | { type: 'STEP_PLAN'; steps: StepPlanEntry[] }
-  | { type: 'STEP_STARTING'; stepIndex: number; action: string; target?: string; value?: string; url?: string; ms?: number; description?: string; name?: string; params?: Record<string, unknown>; taskDepth?: number; taskPath?: Array<{ name: string; label?: string; params?: Record<string, unknown> }> }
-  | { type: 'LOG'; stepIndex: number; action: string; target?: string; value?: string; ok: boolean; error?: string; retryAttempt?: number; contextKey?: string; savedValue?: unknown; resolvedContext?: Array<{ key: string; value: unknown }>; condition?: StepCondition; taken?: boolean; taskDepth?: number; taskPath?: Array<{ name: string; label?: string; params?: Record<string, unknown> }>; findTrace?: FindTrace; ms?: number }
+  | { type: 'STEP_STARTING'; stepIndex: number; action: string; target?: string; value?: string; url?: string; ms?: number; description?: string; name?: string; params?: Record<string, unknown>; taskDepth?: number; taskPath?: Array<{ name: string; label?: string; params?: Record<string, unknown> }>; accessor?: TableCellAccessor }
+  | { type: 'LOG'; stepIndex: number; action: string; target?: string; value?: string; ok: boolean; error?: string; retryAttempt?: number; contextKey?: string; savedValue?: unknown; resolvedContext?: Array<{ key: string; value: unknown }>; condition?: StepCondition; taken?: boolean; taskDepth?: number; taskPath?: Array<{ name: string; label?: string; params?: Record<string, unknown> }>; findTrace?: FindTrace; ms?: number; accessor?: TableCellAccessor }
   | { type: 'UPDATE_LOG_ENTRY'; stepIndex: number; ok: boolean; retryAttempt?: number; error?: string }
   | { type: 'STEP_FAILED_AWAITING_ACTION'; stepIndex: number; action: string; target?: string; value?: string; error?: string; retryAttempt?: number }
   | { type: 'RUN_COMPLETE'; total: number; passed: number; failed: number }
@@ -57,6 +57,7 @@ export interface StepPlanEntry {
   taskDepth?: number;
   condition?: StepCondition;
   taken?: boolean;
+  accessor?: TableCellAccessor;
 }
 // --- Content-script hover contract (panel → content script, via api.tabs.sendMessage) ---
 // These are a distinct content-script contract and are intentionally NOT part of

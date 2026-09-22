@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue';
 import type { LogEntry } from '@/types/store';
 import type { PageElement } from '@/types/spec';
-import { resolveTargetLabel, getAssertSuffix, describeCondition } from '@/logic/stepLabel';
+import { resolveTargetLabel, getAssertSuffix, describeCondition, formatCellAccessor } from '@/logic/stepLabel';
 import { buildFinderSnippet } from '@/logic/finderSnippet';
 import { useElementHighlight } from '@/composables/useElementHighlight';
 import ElementInfoCard from '@/components/ElementInfoCard.vue';
@@ -127,6 +127,10 @@ const isCondition = computed(() => {
 });
 
 const conditionDescription = computed(() => describeCondition(props.entry.condition));
+
+// Row/Column display for a table-cell accessor step. Null when the step carries
+// no accessor. Column prefers columnName over the numeric index (Req 7.1-7.4).
+const cellDisplay = computed(() => formatCellAccessor(props.entry.accessor));
 
 const conditionTaken = computed(() => props.entry.taken === true);
 
@@ -377,6 +381,12 @@ onBeforeUnmount(() => {
       >{{ valueDisplay }}</span>
     </template>
 
+    <!-- Table cell accessor: show the targeted row and column (column prefers columnName). -->
+    <span v-if="cellDisplay" class="cell-accessor">
+      <span class="cell-part">Row: {{ cellDisplay.row }}</span>
+      <span class="cell-part">Column: {{ cellDisplay.column }}</span>
+    </span>
+
     <span v-if="resolvedContextKeys" class="ctx-source">{{ resolvedContextKeys }}</span>
 
     <!-- Status indicators (condition rows render their own outcome badge) -->
@@ -458,6 +468,19 @@ onBeforeUnmount(() => {
   font-size: 10px;
   font-style: italic;
   margin-left: 4px;
+}
+
+/* Table cell accessor row/column display. */
+.cell-accessor {
+  display: inline-flex;
+  gap: 8px;
+  margin-left: 4px;
+  font-size: 10px;
+  color: var(--text-secondary, #aaa);
+}
+
+.cell-part {
+  font-family: var(--font-mono, monospace);
 }
 
 .condition-expr {
