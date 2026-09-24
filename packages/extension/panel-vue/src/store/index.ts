@@ -6,6 +6,7 @@ import type {
   RunConfig,
   LogEntry,
   StoreState,
+  CapturedRequest,
 } from '../types/store';
 import type { Spec, SpecEntry, Project, Param } from '../types/spec';
 import type { StepPlanEntry } from '../types/messages';
@@ -66,6 +67,8 @@ const state = reactive<StoreState>({
   isPaused: false,
   runConfig: null,
   logEntries: [],
+  networkRequests: {},
+  networkCapturePending: false,
   runSummary: null,
   contextStore: {},
   automationParams: null,
@@ -273,6 +276,10 @@ function startRun(config: RunConfig, params?: Record<string, unknown>): void {
   state.isPaused = false;
   state.runConfig = config;
   state.logEntries = [];
+  state.networkRequests = {};
+  // Assume capture attaches on run start; the run lifecycle flips this false on
+  // completion. While true, per-step counts render a loading placeholder.
+  state.networkCapturePending = true;
   state.runSummary = null;
   state.contextStore = {};
   state.automationParams = params ?? null;
@@ -325,9 +332,38 @@ function setStepStatus(stepIndex: number, status: StepStatus, meta?: Partial<Log
   }
 }
 
+/**
+ * Store a captured network request under its attributed step group.
+ * Attributed requests are keyed by String(stepIndex); requests with a null
+ * step index fall under the literal 'unattributed' group. Each group array is
+ * kept sorted ascending by `initiatedAt`.
+ */
+function addNetworkRequest(request: CapturedRequest): void {
+  const groupKey = request.stepIndex == null ? 'unattributed' : String(request.stepIndex);
+  const group = state.networkRequests[groupKey] ?? (state.networkRequests[groupKey] = []);
+  // Insert keeping the group sorted by initiatedAt (ascending).
+  let insertAt = group.length;
+  for (let i = 0; i < group.length; i++) {
+    if (group[i].initiatedAt > request.initiatedAt) {
+      insertAt = i;
+      break;
+    }
+  }
+  group.splice(insertAt, 0, request);
+}
+
+/**
+ * Number of captured requests attributed to a given step index. Returns 0 when
+ * the step has no captured requests (so callers render no count / no entry).
+ */
+function networkRequestCount(stepIndex: number): number {
+  return state.networkRequests[String(stepIndex)]?.length ?? 0;
+}
+
 function setRunComplete(summary: { total: number; passed: number; failed: number; stopped?: boolean; reason?: string }): void {
   state.isRunning = false;
   state.isPaused = false;
+  state.networkCapturePending = false;
   state.runSummary = summary;
 }
 
@@ -343,6 +379,7 @@ function markManuallyStopped(): void {
   const failed = Math.max(1, total - passed);
   state.isRunning = false;
   state.isPaused = false;
+  state.networkCapturePending = false;
   state.runSummary = {
     total,
     passed,
@@ -772,6 +809,8 @@ export function useStore() {
     setStepPlan,
     setStepStatus,
     setRunComplete,
+    addNetworkRequest,
+    networkRequestCount,
     markManuallyStopped,
     setPaused,
     stopRun,

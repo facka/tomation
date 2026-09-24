@@ -166,8 +166,8 @@ instruct running any specific CI command.
 - [ ] 10. Checkpoint — DSL, compiler, assert evaluation
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 11. Panel store: `networkRequests` slice + `NETWORK_REQUEST` handling (`packages/extension/panel-vue/src/store`)
-  - [ ] 11.1 Add store state and `NETWORK_REQUEST` handler
+- [x] 11. Panel store: `networkRequests` slice + `NETWORK_REQUEST` handling (`packages/extension/panel-vue/src/store`)
+  - [x] 11.1 Add store state and `NETWORK_REQUEST` handler
     - Add `networkRequests: Record<string, CapturedRequest[]>` and `networkCapturePending: boolean`; add `CapturedRequest` to panel `types`.
     - Handler: group by `String(stepIndex)` or `'unattributed'`, insert keeping each group sorted by `initiatedAt`; reset both on run start; set `networkCapturePending` true on start (if attach succeeded) and false on `RUN_COMPLETE`/`RUN_STOPPED`.
     - Derive per-step count from `networkRequests[String(i)]?.length`.
@@ -180,11 +180,11 @@ instruct running any specific CI command.
     - Attributed vs unattributed grouping, reset on run start, pending flag transitions.
     - _Requirements: 4.4, 5.11_
 
-- [ ] 12. `NetworkLogEntry.vue` component (`packages/extension/panel-vue/src/components/NetworkLogEntry.vue`) + `statusDisplay`
-  - [ ] 12.1 Implement `statusDisplay(status)` helper
+- [x] 12. `NetworkLogEntry.vue` component (`packages/extension/panel-vue/src/components/NetworkLogEntry.vue`) + `statusDisplay`
+  - [x] 12.1 Implement `statusDisplay(status)` helper
     - Add `statusDisplay` (in panel `logic/`): numeric 100..599 → string form; `null` → non-numeric pending/failed indicator.
     - _Requirements: 5.8_
-  - [ ] 12.2 Implement the component
+  - [x] 12.2 Implement the component
     - Collapsed by default; disclosure toggle expands; distinct network styling (never mistaken for a step); shows method, URL, `statusDisplay`; CSS-ellipsis URL with `title`; pending/failed indicator when status `null`.
     - Expanded view shows query params, request body, response body with capture-time truncation labels and `bodyUnavailable` indicator; full unmasked values, no display masking/truncation.
     - _Requirements: 5.2, 5.3, 5.4, 5.6, 5.8, 5.10, 11.3_
@@ -196,8 +196,8 @@ instruct running any specific CI command.
     - Collapsed-by-default, distinct markup vs a step, expand reveals query/request/response, pending/failed indicator, full URL when expanded.
     - _Requirements: 5.2, 5.4, 5.6, 5.8, 5.10_
 
-- [ ] 13. `LogContainer.vue` `renderItems` interleaving (`packages/extension/panel-vue/src/components/LogContainer.vue`)
-  - [ ] 13.1 Interleave network entries after their step
+- [x] 13. `LogContainer.vue` `renderItems` interleaving (`packages/extension/panel-vue/src/components/LogContainer.vue`)
+  - [x] 13.1 Interleave network entries after their step
     - Extend the `RenderItem` union with `network-entry`; after each `log-entry`, append its attributed network entries in `initiatedAt` order; key as `net-<stepIndex>-<requestId>` (autoscroll `data-key` pattern preserved).
     - Per-step count badge bound to the group length; loading placeholder while `networkCapturePending` and count not yet determined; render `NetworkLogEntry.vue` for each.
     - _Requirements: 5.1, 5.5, 5.7, 5.9, 5.11_

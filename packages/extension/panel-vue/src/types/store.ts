@@ -73,6 +73,28 @@ export interface LogEntry {
   accessor?: TableCellAccessor;
 }
 
+/**
+ * A single captured XHR/fetch request, attributed to the step that was
+ * executing when it was initiated. Produced by the background capture service,
+ * delivered over the `NETWORK_REQUEST` message, and stored (verbatim, unmasked)
+ * in `StoreState.networkRequests`.
+ */
+export interface CapturedRequest {
+  requestId: string;
+  url: string;
+  method: string;
+  queryParams: Record<string, string[]>;
+  requestBody: string;
+  requestBodyTruncated: boolean;
+  status: number | null;
+  responseBody: string;
+  responseBodyTruncated: boolean;
+  bodyUnavailable: boolean;
+  stepIndex: number | null;
+  taskPath: Array<{ name: string; label?: string; params?: unknown }> | null;
+  initiatedAt: number;
+}
+
 export interface StoreState {
   // Core state
   currentView: ViewName;
@@ -91,6 +113,13 @@ export interface StoreState {
   isPaused: boolean;
   runConfig: RunConfig | null;
   logEntries: LogEntry[];
+  // Captured network requests, keyed by String(stepIndex) or the literal
+  // 'unattributed' (for requests with a null step index). Each group is kept
+  // sorted by `initiatedAt`.
+  networkRequests: Record<string, CapturedRequest[]>;
+  // True while capture is attached and the run is in progress with no
+  // completion yet known; used to drive the per-step count loading placeholder.
+  networkCapturePending: boolean;
   runSummary: { total: number; passed: number; failed: number; stopped?: boolean; reason?: string } | null;
   contextStore: Record<string, unknown>;
   automationParams: Record<string, unknown> | null;
@@ -131,6 +160,8 @@ export interface StoreActions {
   setStepPlan(steps: StepPlanEntry[]): void;
   setStepStatus(stepIndex: number, status: StepStatus, meta?: Partial<LogEntry>): void;
   setRunComplete(summary: { total: number; passed: number; failed: number }): void;
+  addNetworkRequest(request: CapturedRequest): void;
+  networkRequestCount(stepIndex: number): number;
   setPaused(paused: boolean): void;
   stopRun(): void;
 

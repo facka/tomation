@@ -160,6 +160,75 @@
         "chatSessionId": "sess_e21990c3-a635-4c0d-89ca-7dbd6ddc5fb9",
         "timestamp": 1790270905225
       }
+    ],
+    "11.1 Add store state and `NETWORK_REQUEST` handler": [
+      {
+        "executionId": "7a9faaeb-40c5-4536-a6b7-caf08b1a4aa9",
+        "chatSessionId": "sess_e098c730-d1f1-4bcf-89bf-1debf45b0f5f",
+        "timestamp": 1790273887628
+      },
+      {
+        "executionId": "7a9faaeb-40c5-4536-a6b7-caf08b1a4aa9",
+        "chatSessionId": "sess_e098c730-d1f1-4bcf-89bf-1debf45b0f5f",
+        "timestamp": 1790274350740
+      }
+    ],
+    "11. Panel store: `networkRequests` slice + `NETWORK_REQUEST` handling (`packages/extension/panel-vue/src/store`)": [
+      {
+        "executionId": "7a9faaeb-40c5-4536-a6b7-caf08b1a4aa9",
+        "chatSessionId": "sess_e098c730-d1f1-4bcf-89bf-1debf45b0f5f",
+        "timestamp": 1790274350886
+      }
+    ],
+    "12.1 Implement `statusDisplay(status)` helper": [
+      {
+        "executionId": "cbafa9ed-e106-4652-b499-23fb8e4f8839",
+        "chatSessionId": "sess_d08ef515-c0d9-46e0-941c-f540ce2ff342",
+        "timestamp": 1790276169427
+      },
+      {
+        "executionId": "cbafa9ed-e106-4652-b499-23fb8e4f8839",
+        "chatSessionId": "sess_d08ef515-c0d9-46e0-941c-f540ce2ff342",
+        "timestamp": 1790276223638
+      }
+    ],
+    "12.2 Implement the component": [
+      {
+        "executionId": "cbafa9ed-e106-4652-b499-23fb8e4f8839",
+        "chatSessionId": "sess_d08ef515-c0d9-46e0-941c-f540ce2ff342",
+        "timestamp": 1790276224364
+      },
+      {
+        "executionId": "cbafa9ed-e106-4652-b499-23fb8e4f8839",
+        "chatSessionId": "sess_d08ef515-c0d9-46e0-941c-f540ce2ff342",
+        "timestamp": 1790276344398
+      }
+    ],
+    "12. `NetworkLogEntry.vue` component (`packages/extension/panel-vue/src/components/NetworkLogEntry.vue`) + `statusDisplay`": [
+      {
+        "executionId": "cbafa9ed-e106-4652-b499-23fb8e4f8839",
+        "chatSessionId": "sess_d08ef515-c0d9-46e0-941c-f540ce2ff342",
+        "timestamp": 1790276344518
+      }
+    ],
+    "13.1 Interleave network entries after their step": [
+      {
+        "executionId": "7fe05f63-edbf-49f8-8279-980142f6b3f9",
+        "chatSessionId": "sess_d94a62fb-7bc1-4071-9419-8572e516394d",
+        "timestamp": 1790276759243
+      },
+      {
+        "executionId": "7fe05f63-edbf-49f8-8279-980142f6b3f9",
+        "chatSessionId": "sess_d94a62fb-7bc1-4071-9419-8572e516394d",
+        "timestamp": 1790276879914
+      }
+    ],
+    "13. `LogContainer.vue` `renderItems` interleaving (`packages/extension/panel-vue/src/components/LogContainer.vue`)": [
+      {
+        "executionId": "7fe05f63-edbf-49f8-8279-980142f6b3f9",
+        "chatSessionId": "sess_d94a62fb-7bc1-4071-9419-8572e516394d",
+        "timestamp": 1790276880138
+      }
     ]
   }
 }

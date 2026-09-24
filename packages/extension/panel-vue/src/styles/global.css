@@ -758,6 +758,47 @@ h3 {
 }
 
 /* --------------------------------------------------------------------------
+   Per-step Network Summary (count badge / loading placeholder)
+   -------------------------------------------------------------------------- */
+.net-step-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 2px 24px;
+  padding: 2px 8px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.net-step-summary .net-glyph {
+  color: var(--net-accent, #5b8def);
+  font-size: 10px;
+}
+
+.net-step-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--net-accent, #5b8def);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.net-step-loading {
+  color: var(--warning, #f5a623);
+  font-style: italic;
+}
+
+.net-step-loading .net-glyph {
+  color: var(--warning, #f5a623);
+}
+
+/* --------------------------------------------------------------------------
    Step Labels & Element Badges
    -------------------------------------------------------------------------- */
 .step-action {
