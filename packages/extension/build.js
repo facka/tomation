@@ -59,6 +59,10 @@ function chromeManifest() {
 function firefoxManifest() {
   return Object.assign({}, BASE_MANIFEST, {
     manifest_version: 2,
+    // MV2 has no separate host_permissions field: the <all_urls> host permission
+    // must live in `permissions` so on-demand tabs.executeScript / DOM reads used
+    // by the Lab inspector are authorized (Chrome MV3 uses host_permissions).
+    permissions: BASE_MANIFEST.permissions.concat(['<all_urls>']),
     background: {
       scripts: ['src/storage.js', 'src/background.js']
     },

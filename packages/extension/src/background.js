@@ -2303,10 +2303,50 @@ function initTabUrlNotifier() {
 // Inspector Injection Handlers
 // ---------------------------------------------------------------------------
 
+// URL schemes/hosts where content scripts and tabs.executeScript are never
+// permitted, regardless of host permissions (Firefox: about:, view-source:,
+// reader/PDF viewer, AMO; Chrome: chrome:, chrome web store, edge:). Used to
+// return an actionable message instead of the opaque "Missing host permission".
+function inspectRestrictedReason(url) {
+  if (!url) {
+    return 'The active tab has no accessible URL. Open a normal web page (http/https) and try again.';
+  }
+  var lower = String(url).toLowerCase();
+  var blockedPrefixes = [
+    'about:', 'moz-extension:', 'chrome:', 'chrome-extension:', 'edge:',
+    'view-source:', 'resource:', 'file:', 'data:', 'javascript:'
+  ];
+  for (var i = 0; i < blockedPrefixes.length; i++) {
+    if (lower.indexOf(blockedPrefixes[i]) === 0) {
+      return 'This page (' + url + ') is a restricted browser page that extensions cannot access. Open a normal web page (http/https) and try again.';
+    }
+  }
+  if (lower.indexOf('https://addons.mozilla.org') === 0 ||
+      lower.indexOf('https://chromewebstore.google.com') === 0 ||
+      lower.indexOf('https://chrome.google.com/webstore') === 0) {
+    return 'The browser blocks extensions on its add-on/extension gallery (' + url + '). Open a different web page and try again.';
+  }
+  return null;
+}
+
+// Normalize an injection failure into a clearer, actionable message. Firefox's
+// raw "Missing host permission for the tab" is opaque; add the likely cause.
+function describeInjectError(err, url) {
+  var raw = (err && err.message) ? err.message : String(err);
+  if (/missing host permission/i.test(raw)) {
+    var restricted = inspectRestrictedReason(url);
+    if (restricted) return restricted;
+    return 'Missing host permission for the tab (' + (url || 'unknown URL') +
+      '). Reload the extension so the host permission takes effect, then reload the page and try again.';
+  }
+  return raw;
+}
+
 /**
  * Handle INJECT_INSPECTOR message: inject src/inspector.js into the active tab.
- * Detects browser API (Firefox uses browser.tabs.executeScript, Chrome uses
- * chrome.scripting.executeScript) and sends INSPECTOR_INJECTED response.
+ * Prefers the MV2 tabs.executeScript path (Firefox) and the MV3 scripting path
+ * (Chrome), and reports an actionable error on restricted pages / permission
+ * gaps rather than the opaque "Missing host permission for the tab".
  */
 function handleInjectInspector() {
   api.tabs.query({ active: true, currentWindow: true }, function (tabs) {
@@ -2314,24 +2354,33 @@ function handleInjectInspector() {
       safeSendMessage({ type: 'INSPECTOR_INJECTED', success: false, error: 'No active tab found' });
       return;
     }
-    var tabId = tabs[0].id;
+    var tab = tabs[0];
+    var tabId = tab.id;
+    var url = tab.url;
 
-    if (chrome && chrome.scripting && chrome.scripting.executeScript) {
-      // Chrome MV3: chrome.scripting.executeScript
+    var restricted = inspectRestrictedReason(url);
+    if (restricted) {
+      safeSendMessage({ type: 'INSPECTOR_INJECTED', success: false, error: restricted });
+      return;
+    }
+
+    // Firefox MV2 exposes browser.tabs.executeScript; Chrome MV3 exposes
+    // chrome.scripting.executeScript. Prefer the MV2 path when it exists so
+    // Firefox never falls through to the MV3 shape.
+    if (typeof browser !== 'undefined' && browser.tabs && browser.tabs.executeScript) {
+      browser.tabs.executeScript(tabId, { file: 'src/inspector.js' }).then(function () {
+        safeSendMessage({ type: 'INSPECTOR_INJECTED', success: true });
+      }).catch(function (err) {
+        safeSendMessage({ type: 'INSPECTOR_INJECTED', success: false, error: describeInjectError(err, url) });
+      });
+    } else if (chrome && chrome.scripting && chrome.scripting.executeScript) {
       chrome.scripting.executeScript({
         target: { tabId: tabId },
         files: ['src/inspector.js']
       }).then(function () {
         safeSendMessage({ type: 'INSPECTOR_INJECTED', success: true });
       }).catch(function (err) {
-        safeSendMessage({ type: 'INSPECTOR_INJECTED', success: false, error: err.message || String(err) });
-      });
-    } else if (typeof browser !== 'undefined' && browser.tabs && browser.tabs.executeScript) {
-      // Firefox MV2: browser.tabs.executeScript
-      browser.tabs.executeScript(tabId, { file: 'src/inspector.js' }).then(function () {
-        safeSendMessage({ type: 'INSPECTOR_INJECTED', success: true });
-      }).catch(function (err) {
-        safeSendMessage({ type: 'INSPECTOR_INJECTED', success: false, error: err.message || String(err) });
+        safeSendMessage({ type: 'INSPECTOR_INJECTED', success: false, error: describeInjectError(err, url) });
       });
     } else {
       safeSendMessage({ type: 'INSPECTOR_INJECTED', success: false, error: 'No script injection API available' });
@@ -2365,7 +2414,8 @@ function handleRemoveInspector() {
 /**
  * Handle GET_PAGE_HTML message: execute a script in the active tab to capture
  * the full page HTML (document.documentElement.outerHTML) and send a PAGE_HTML
- * response to the panel.
+ * response to the panel. Mirrors handleInjectInspector: restricted-page check,
+ * MV2-first branch selection, and actionable error messages.
  */
 function handleGetPageHtml() {
   api.tabs.query({ active: true, currentWindow: true }, function (tabs) {
@@ -2373,9 +2423,25 @@ function handleGetPageHtml() {
       safeSendMessage({ type: 'PAGE_HTML', error: 'No active tab found' });
       return;
     }
-    var tabId = tabs[0].id;
+    var tab = tabs[0];
+    var tabId = tab.id;
+    var url = tab.url;
 
-    if (chrome && chrome.scripting && chrome.scripting.executeScript) {
+    var restricted = inspectRestrictedReason(url);
+    if (restricted) {
+      safeSendMessage({ type: 'PAGE_HTML', error: restricted });
+      return;
+    }
+
+    if (typeof browser !== 'undefined' && browser.tabs && browser.tabs.executeScript) {
+      // Firefox MV2: browser.tabs.executeScript with code
+      browser.tabs.executeScript(tabId, { code: 'document.documentElement.outerHTML' }).then(function (results) {
+        var html = results && results[0] ? results[0] : '';
+        safeSendMessage({ type: 'PAGE_HTML', html: html });
+      }).catch(function (err) {
+        safeSendMessage({ type: 'PAGE_HTML', error: describeInjectError(err, url) });
+      });
+    } else if (chrome && chrome.scripting && chrome.scripting.executeScript) {
       // Chrome MV3: chrome.scripting.executeScript with func
       chrome.scripting.executeScript({
         target: { tabId: tabId },
@@ -2384,15 +2450,7 @@ function handleGetPageHtml() {
         var html = results && results[0] && results[0].result ? results[0].result : '';
         safeSendMessage({ type: 'PAGE_HTML', html: html });
       }).catch(function (err) {
-        safeSendMessage({ type: 'PAGE_HTML', error: err.message || String(err) });
-      });
-    } else if (typeof browser !== 'undefined' && browser.tabs && browser.tabs.executeScript) {
-      // Firefox MV2: browser.tabs.executeScript with code
-      browser.tabs.executeScript(tabId, { code: 'document.documentElement.outerHTML' }).then(function (results) {
-        var html = results && results[0] ? results[0] : '';
-        safeSendMessage({ type: 'PAGE_HTML', html: html });
-      }).catch(function (err) {
-        safeSendMessage({ type: 'PAGE_HTML', error: err.message || String(err) });
+        safeSendMessage({ type: 'PAGE_HTML', error: describeInjectError(err, url) });
       });
     } else {
       safeSendMessage({ type: 'PAGE_HTML', error: 'No script execution API available' });
