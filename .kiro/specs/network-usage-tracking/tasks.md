@@ -17,7 +17,7 @@ instruct running any specific CI command.
 
 ## Tasks
 
-- [ ] 1. Pure capture helpers (`packages/extension/src/networkCapture.js` [new], exported via `module.exports`)
+- [x] 1. Pure capture helpers (`packages/extension/src/networkCapture.js` [new], exported via `module.exports`)
   - [ ] 1.1 Implement `shouldCapture(resourceType)` and body/URL caps
     - Create `packages/extension/src/networkCapture.js` and export pure helpers via `module.exports` (background test-hook convention).
     - `shouldCapture(resourceType)`: returns `true` only for `'XHR'`/`'Fetch'`, `false` for `Image`/`Script`/`Stylesheet`/`Font`/`Media`/any other value.
@@ -42,7 +42,7 @@ instruct running any specific CI command.
     - **Validates: Requirements 1.4**
     - Assert `capBody(b)` byte length ≤ 1,048,576, equals the first 1 MB of `b`, and `truncated` iff `b` exceeds 1 MB.
 
-- [ ] 2. Attribution resolver (pure) + background run-state tracking
+- [x] 2. Attribution resolver (pure) + background run-state tracking
   - [ ] 2.1 Implement `resolveAttribution(snapshot)` (pure)
     - Add `resolveAttribution(snapshot)` to `packages/extension/src/networkCapture.js` (or `background.js` test hooks per design), reading `{ stepIndex, stepsLength, executing, steps, lastExecutedIndex }`.
     - Executing step → its index + `_taskPath` (`null` when `_taskPath` is empty); else most-recently-executed index; else `{ stepIndex: null, taskPath: null }`.
@@ -59,7 +59,7 @@ instruct running any specific CI command.
     - **Validates: Requirements 4.1**
     - Drive interleavings of step transitions and init/complete events; assert completed records keep the initiation-time attribution.
 
-- [ ] 3. `Network_Capture_Service` lifecycle + CDP event handling (`packages/extension/src/networkCapture.js` / `background.js`)
+- [x] 3. `Network_Capture_Service` lifecycle + CDP event handling (`packages/extension/src/networkCapture.js` / `background.js`)
   - [ ] 3.1 Implement `networkState` + attach lifecycle
     - Add the per-run `networkState` (attached, tabId, inFlight, captured, attributionCounter, listeners) and `resetNetworkState()`.
     - `attachNetworkCapture(tabId)`: `chrome.debugger.attach({tabId}, '1.3')` then `Network.enable`, register `onEvent`/`onDetach` listeners; 5s attach timeout and `lastError` handling both emit an `attach-error` capture log and resolve `false` (run continues without capture).
@@ -79,14 +79,14 @@ instruct running any specific CI command.
     - Detach on complete; `onDetach` `target_closed` vs external reason (2.3, 2.6, 2.7).
     - _Requirements: 1.1, 1.2, 1.3, 1.5, 2.1, 2.3, 2.5, 2.6, 2.7, 5.8_
 
-- [ ] 4. Background integration: wire capture into the run lifecycle (`packages/extension/src/background.js`)
-  - [ ] 4.1 Attach on run start; reset network state
+- [x] 4. Background integration: wire capture into the run lifecycle (`packages/extension/src/background.js`)
+  - [x] 4.1 Attach on run start; reset network state
     - Call `attachNetworkCapture(lockedTabId)` in `startRun`/`startAutomationRun` right after `lockTab` resolves; call `resetNetworkState()` in `resetRunState`.
     - _Requirements: 2.1, 2.2_
-  - [ ] 4.2 Detach on completion and every early-exit path
+  - [x] 4.2 Detach on completion and every early-exit path
     - Call `detachNetworkCapture()` in `finishRun` and every halt/early-exit path (stopped/failed/interrupted/navigation-timeout) alongside `teardownTabTracker()`/`unlockTab()`.
     - _Requirements: 2.3, 2.4_
-  - [ ] 4.3 Emit `NETWORK_REQUEST` messages and capture-service log entries
+  - [x] 4.3 Emit `NETWORK_REQUEST` messages and capture-service log entries
     - Add `emitNetworkRequest(rec)` → `safeSendMessage({ type: 'NETWORK_REQUEST', request: rec })`; call it when each record finalizes.
     - Add `emitCaptureLog(kind, info)` for `attached`/`attach-error`/`capture-ended`/`detached` info rows (Run_Log entries, not step rows).
     - _Requirements: 2.5, 2.6, 2.7, 5.1_

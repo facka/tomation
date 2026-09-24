@@ -1,0 +1,84 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Pure capture helpers (`packages/extension/src/networkCapture.js` [new], exported via `module.exports`)": [
+      {
+        "executionId": "d38287a9-9d64-47d9-996f-c9e2e77b06a4",
+        "chatSessionId": "sess_8e084034-62f7-45ce-b8c2-faabf6da3a18",
+        "timestamp": 1790261168780
+      },
+      {
+        "executionId": "d38287a9-9d64-47d9-996f-c9e2e77b06a4",
+        "chatSessionId": "sess_8e084034-62f7-45ce-b8c2-faabf6da3a18",
+        "timestamp": 1790261257413
+      }
+    ],
+    "2. Attribution resolver (pure) + background run-state tracking": [
+      {
+        "executionId": "acb62943-92b9-4285-88af-e29c508e04c3",
+        "chatSessionId": "sess_f5cf37c3-45e6-4c8e-afcf-fe627243c01e",
+        "timestamp": 1790262152238
+      },
+      {
+        "executionId": "acb62943-92b9-4285-88af-e29c508e04c3",
+        "chatSessionId": "sess_f5cf37c3-45e6-4c8e-afcf-fe627243c01e",
+        "timestamp": 1790262324373
+      }
+    ],
+    "3. `Network_Capture_Service` lifecycle + CDP event handling (`packages/extension/src/networkCapture.js` / `background.js`)": [
+      {
+        "executionId": "d566d491-2a60-4583-810c-45985923cfdd",
+        "chatSessionId": "sess_f300179c-82dd-49c2-b6e7-be9bd9f7dd68",
+        "timestamp": 1790262726826
+      },
+      {
+        "executionId": "d566d491-2a60-4583-810c-45985923cfdd",
+        "chatSessionId": "sess_f300179c-82dd-49c2-b6e7-be9bd9f7dd68",
+        "timestamp": 1790262928891
+      }
+    ],
+    "4.1 Attach on run start; reset network state": [
+      {
+        "executionId": "4b48c17e-fa8b-433d-8e14-7af8c88990a7",
+        "chatSessionId": "sess_c5b8f751-0ee5-4f67-8412-84029c398993",
+        "timestamp": 1790263130883
+      },
+      {
+        "executionId": "4b48c17e-fa8b-433d-8e14-7af8c88990a7",
+        "chatSessionId": "sess_c5b8f751-0ee5-4f67-8412-84029c398993",
+        "timestamp": 1790263365174
+      }
+    ],
+    "4.2 Detach on completion and every early-exit path": [
+      {
+        "executionId": "4b48c17e-fa8b-433d-8e14-7af8c88990a7",
+        "chatSessionId": "sess_c5b8f751-0ee5-4f67-8412-84029c398993",
+        "timestamp": 1790263132273
+      },
+      {
+        "executionId": "4b48c17e-fa8b-433d-8e14-7af8c88990a7",
+        "chatSessionId": "sess_c5b8f751-0ee5-4f67-8412-84029c398993",
+        "timestamp": 1790263366482
+      }
+    ],
+    "4.3 Emit `NETWORK_REQUEST` messages and capture-service log entries": [
+      {
+        "executionId": "4b48c17e-fa8b-433d-8e14-7af8c88990a7",
+        "chatSessionId": "sess_c5b8f751-0ee5-4f67-8412-84029c398993",
+        "timestamp": 1790263133406
+      },
+      {
+        "executionId": "4b48c17e-fa8b-433d-8e14-7af8c88990a7",
+        "chatSessionId": "sess_c5b8f751-0ee5-4f67-8412-84029c398993",
+        "timestamp": 1790263367713
+      }
+    ],
+    "4. Background integration: wire capture into the run lifecycle (`packages/extension/src/background.js`)": [
+      {
+        "executionId": "4b48c17e-fa8b-433d-8e14-7af8c88990a7",
+        "chatSessionId": "sess_c5b8f751-0ee5-4f67-8412-84029c398993",
+        "timestamp": 1790263367885
+      }
+    ]
+  }
+}

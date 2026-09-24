@@ -2,7 +2,26 @@
 // Implementation: Tasks 14, 15
 try { importScripts('storage.js'); } catch (e) { /* Node.js test environment */ }
 try { importScripts('faker.js'); } catch (e) { /* Node.js test environment */ }
+try { importScripts('networkCapture.js'); } catch (e) { /* Node.js test environment */ }
 var api = typeof browser !== 'undefined' ? browser : chrome;
+
+// Network-capture pure helpers bridge.
+// At runtime the worker loads networkCapture.js via importScripts, exposing the
+// helpers as globals. In the Node test environment importScripts throws (caught
+// above), so we require the module. `_nc` resolves the helpers in both contexts;
+// bare globals are used as a final fallback when neither path is available.
+var _nc = (function () {
+  if (typeof require !== 'undefined') {
+    try { return require('./networkCapture'); } catch (e) { /* fall through */ }
+  }
+  return null;
+})();
+function _ncFn(name) {
+  if (_nc && typeof _nc[name] === 'function') return _nc[name];
+  if (typeof self !== 'undefined' && typeof self[name] === 'function') return self[name];
+  if (typeof globalThis !== 'undefined' && typeof globalThis[name] === 'function') return globalThis[name];
+  return null;
+}
 
 // Open side panel when the extension icon is clicked (Chrome/Edge only)
 if (api.sidePanel && api.sidePanel.setPanelBehavior) {
@@ -891,7 +910,12 @@ var runState = {
   tabStack: [],
   pendingTabSwitch: null,
   metaHostnames: null,
-  contextStore: {}
+  contextStore: {},
+  // Network-capture attribution tracking (Req 4.1, 4.3).
+  // `executing` is true while a step is dispatched and not yet resolved;
+  // `lastExecutedIndex` is the index of the most recently completed step (-1 = none).
+  executing: false,
+  lastExecutedIndex: -1
 };
 
 // ---------------------------------------------------------------------------
@@ -958,6 +982,305 @@ function resetRunState() {
   runState.metaHostnames = null;
   runState.contextStore = {};
   runState.dataStore = {};
+  // Reset network-capture attribution tracking (Req 4.1, 4.3).
+  runState.executing = false;
+  runState.lastExecutedIndex = -1;
+  // Reset the per-run network-capture state alongside run state.
+  resetNetworkState();
+}
+
+// ===========================================================================
+// Network_Capture_Service (Task 3)
+// ---------------------------------------------------------------------------
+// Owns the chrome.debugger (CDP Network domain) attachment, the requestId
+// correlation map, and the array of completed captured requests for the current
+// run. Reads step attribution from the shared `runState` at request initiation
+// and locks it. Hosted here in background.js in the existing ES5-ish style.
+// ===========================================================================
+
+/**
+ * Per-run in-memory network-capture state (design's NetworkState shape).
+ * Not persisted or messaged; it exists only for the duration of a run to drive
+ * correlation (inFlight) and attribution.
+ */
+var networkState = {
+  attached: false,          // whether chrome.debugger is currently attached (Req 2.1, 2.3)
+  tabId: null,              // the debuggee tabId (mirrors runState.lockedTabId)
+  inFlight: {},             // requestId -> partial CapturedRequest (correlation map, Req 4.1)
+  captured: [],             // completed CapturedRequest records, in completion order (Req 5.7)
+  attributionCounter: 0,    // monotonic seq to order requests by initiation (Req 5.7)
+  onEventListener: null,    // bound chrome.debugger.onEvent handler
+  onDetachListener: null    // bound chrome.debugger.onDetach handler
+};
+
+/**
+ * Clear the per-run network-capture state back to its defaults.
+ */
+function resetNetworkState() {
+  networkState.attached = false;
+  networkState.tabId = null;
+  networkState.inFlight = {};
+  networkState.captured = [];
+  networkState.attributionCounter = 0;
+  networkState.onEventListener = null;
+  networkState.onDetachListener = null;
+}
+
+/**
+ * Return a copy of the completed captured requests (for assertRequest + persist).
+ * @returns {Array} shallow copy of networkState.captured
+ */
+function getCapturedRequests() {
+  return networkState.captured.slice();
+}
+
+/**
+ * Emit a NETWORK_REQUEST panel message for a finalized captured request.
+ * @param {object} rec - the completed CapturedRequest
+ */
+function emitNetworkRequest(rec) {
+  safeSendMessage({ type: 'NETWORK_REQUEST', request: rec });
+}
+
+/**
+ * Emit a capture-service log entry (Run_Log info row, not a step row).
+ * Used for attach/attach-error/attached/detached/capture-ended lifecycle events
+ * (Req 2.5, 2.6, 2.7).
+ *
+ * Per the design, these are emitted on the panel's existing LOG channel in a
+ * LOG-shaped message so the Run_Log renders them as a distinct info row rather
+ * than a step row: `stepIndex` is null (no step association) and a dedicated
+ * `action: 'captureInfo'` marks the row as a capture-service info entry. The
+ * `ok` flag reflects success (`false` only for an attach error). The `kind` and
+ * `info` fields carry the specific lifecycle detail for display.
+ *
+ * @param {string} kind - lifecycle kind ('attached'|'attach-error'|'capture-ended'|'detached')
+ * @param {object} info - contextual info (e.g. { tabId, reason })
+ */
+function emitCaptureLog(kind, info) {
+  safeSendMessage({
+    type: 'LOG',
+    stepIndex: null,          // info row — not associated with any step
+    action: 'captureInfo',    // distinct info-row marker (not a step action)
+    ok: kind !== 'attach-error',
+    kind: kind,               // lifecycle kind for the panel to render
+    info: info || {}          // contextual detail (tabId, reason, ...)
+  });
+}
+
+/**
+ * Register the bound onEvent/onDetach debugger listeners.
+ * Guarded so it never throws in the Node test environment (no api.debugger).
+ */
+function registerDebuggerListeners() {
+  networkState.onEventListener = onDebuggerEvent;
+  networkState.onDetachListener = onDebuggerDetach;
+  if (api && api.debugger) {
+    if (api.debugger.onEvent && api.debugger.onEvent.addListener) {
+      api.debugger.onEvent.addListener(networkState.onEventListener);
+    }
+    if (api.debugger.onDetach && api.debugger.onDetach.addListener) {
+      api.debugger.onDetach.addListener(networkState.onDetachListener);
+    }
+  }
+}
+
+/**
+ * Remove the bound onEvent/onDetach debugger listeners.
+ * Guarded so it never throws in the Node test environment (no api.debugger).
+ */
+function unregisterDebuggerListeners() {
+  if (api && api.debugger) {
+    if (networkState.onEventListener && api.debugger.onEvent && api.debugger.onEvent.removeListener) {
+      api.debugger.onEvent.removeListener(networkState.onEventListener);
+    }
+    if (networkState.onDetachListener && api.debugger.onDetach && api.debugger.onDetach.removeListener) {
+      api.debugger.onDetach.removeListener(networkState.onDetachListener);
+    }
+  }
+  networkState.onEventListener = null;
+  networkState.onDetachListener = null;
+}
+
+/**
+ * Attach chrome.debugger to the tab and enable the Network domain (Req 2.1, 2.2, 2.5).
+ * Attach failure is non-fatal: the run continues without capture (resolves false).
+ *
+ * @param {number} tabId - the Tab_Under_Test id
+ * @returns {Promise<boolean>} true if attached + Network.enable succeeded
+ */
+function attachNetworkCapture(tabId) {
+  networkState.tabId = tabId;
+  var attachTimedOut = false;
+  var timer = setTimeout(function () {
+    attachTimedOut = true;
+    emitCaptureLog('attach-error', { tabId: tabId, reason: 'Attach timed out after 5s' }); // Req 2.5
+  }, 5000);
+
+  return new Promise(function (resolve) {
+    api.debugger.attach({ tabId: tabId }, '1.3', function () {
+      clearTimeout(timer);
+      if (attachTimedOut) { resolve(false); return; }
+      if (api.runtime.lastError) {
+        // includes "Another debugger is already attached" (Req 2.5)
+        emitCaptureLog('attach-error', { tabId: tabId, reason: api.runtime.lastError.message });
+        resolve(false); // continue run WITHOUT capture
+        return;
+      }
+      api.debugger.sendCommand({ tabId: tabId }, 'Network.enable', {}, function () {
+        networkState.attached = true;
+        registerDebuggerListeners();
+        emitCaptureLog('attached', { tabId: tabId }); // banner appears now (Req 3.1)
+        resolve(true);
+      });
+    });
+  });
+}
+
+/**
+ * Single bound CDP onEvent listener. Ignores events for other tabs and
+ * dispatches by method to build/finalize captured requests (Req 1.1, 1.3, 1.4,
+ * 1.5, 4.1, 5.8). Correlation is strictly by requestId through networkState.inFlight.
+ *
+ * @param {object} source - CDP debuggee source ({ tabId })
+ * @param {string} method - CDP event method
+ * @param {object} params - CDP event params
+ */
+function onDebuggerEvent(source, method, params) {
+  if (!source || source.tabId !== networkState.tabId) return;
+  params = params || {};
+
+  if (method === 'Network.requestWillBeSent') {
+    var shouldCaptureFn = _ncFn('shouldCapture');
+    // Filter to XHR/Fetch only; drop static assets (Req 1.2).
+    if (shouldCaptureFn && !shouldCaptureFn(params.type)) return;
+
+    // Lock attribution from the current run state at initiation (Req 4.1).
+    var snapshot = {
+      stepIndex: runState.stepIndex,
+      stepsLength: runState.steps.length,
+      executing: runState.executing,
+      steps: runState.steps,
+      lastExecutedIndex: runState.lastExecutedIndex
+    };
+    var resolveAttributionFn = _ncFn('resolveAttribution');
+    var attribution = resolveAttributionFn
+      ? resolveAttributionFn(snapshot)
+      : { stepIndex: null, taskPath: null };
+
+    var buildCapturedRequestFn = _ncFn('buildCapturedRequest');
+    if (!buildCapturedRequestFn) return;
+    var record = buildCapturedRequestFn(params, attribution, networkState.attributionCounter++);
+    networkState.inFlight[params.requestId] = record;
+    return;
+  }
+
+  if (method === 'Network.responseReceived') {
+    var rr = networkState.inFlight[params.requestId];
+    if (rr && params.response) {
+      rr.status = params.response.status; // Req 1.3
+    }
+    return;
+  }
+
+  if (method === 'Network.loadingFinished') {
+    var lf = networkState.inFlight[params.requestId];
+    if (!lf) return;
+    var requestId = params.requestId;
+    api.debugger.sendCommand(
+      { tabId: networkState.tabId },
+      'Network.getResponseBody',
+      { requestId: requestId },
+      function (result) {
+        if (api.runtime.lastError || !result) {
+          // Body could not be read (Req 1.5).
+          lf.responseBody = '';
+          lf.responseBodyTruncated = false;
+          lf.bodyUnavailable = true;
+        } else {
+          // Keep bytes as a raw string and cap it; no masking (Req 1.4, 11).
+          // base64Encoded bodies are treated as raw and capped (decode optional).
+          var capBodyFn = _ncFn('capBody');
+          var raw = result.body == null ? '' : String(result.body);
+          if (capBodyFn) {
+            var capped = capBodyFn(raw);
+            lf.responseBody = capped.value;
+            lf.responseBodyTruncated = capped.truncated;
+          } else {
+            lf.responseBody = raw;
+            lf.responseBodyTruncated = false;
+          }
+          lf.bodyUnavailable = false;
+        }
+        finalizeCapturedRequest(requestId);
+      }
+    );
+    return;
+  }
+
+  if (method === 'Network.loadingFailed') {
+    var failed = networkState.inFlight[params.requestId];
+    if (!failed) return;
+    failed.status = null;            // failed indicator (Req 5.8)
+    failed.responseBody = '';
+    failed.responseBodyTruncated = false;
+    failed.bodyUnavailable = true;
+    finalizeCapturedRequest(params.requestId);
+    return;
+  }
+}
+
+/**
+ * Move an in-flight record to the completed captured list and emit it.
+ * @param {string} requestId
+ */
+function finalizeCapturedRequest(requestId) {
+  var record = networkState.inFlight[requestId];
+  if (!record) return;
+  networkState.captured.push(record);
+  delete networkState.inFlight[requestId];
+  emitNetworkRequest(record);
+}
+
+/**
+ * Detach chrome.debugger from the tab (Req 2.3, 2.4, 3.2).
+ * No-op (resolved) when not attached. Chrome removes the debugger banner on
+ * detach, so no extra code is required for Req 3.2.
+ *
+ * @returns {Promise<void>}
+ */
+function detachNetworkCapture() {
+  if (!networkState.attached) return Promise.resolve();
+  unregisterDebuggerListeners();
+  return new Promise(function (resolve) {
+    api.debugger.detach({ tabId: networkState.tabId }, function () {
+      // ignore lastError (tab may already be gone) — Req 2.6
+      if (api.runtime.lastError) { /* intentionally ignored */ }
+      networkState.attached = false;
+      resolve();
+    });
+  });
+}
+
+/**
+ * Handle an external chrome.debugger.onDetach (Req 2.6, 2.7).
+ * Ignores non-matching tabs. On target_closed, logs capture-ended (no error);
+ * otherwise logs a detached event with the reason. Prior captures are retained
+ * and the run continues.
+ *
+ * @param {object} source - CDP debuggee source ({ tabId })
+ * @param {string} reason - detach reason (e.g. 'target_closed')
+ */
+function onDebuggerDetach(source, reason) {
+  if (!source || source.tabId !== networkState.tabId) return;
+  networkState.attached = false;
+  unregisterDebuggerListeners();
+  if (reason === 'target_closed') {
+    emitCaptureLog('capture-ended', { tabId: source.tabId }); // tab closed, no error (Req 2.6)
+  } else {
+    emitCaptureLog('detached', { tabId: source.tabId, reason: reason }); // external detach (Req 2.7)
+  }
+  // Run continues; requests captured before this point are retained.
 }
 
 // ---------------------------------------------------------------------------
@@ -1191,11 +1514,51 @@ function unlockTab() {
 /**
  * Send a single step to the runtime content script and return its response.
  *
+ * This wrapper maintains the network-capture attribution tracking on runState:
+ * it marks `runState.executing = true` right before the step begins execution
+ * (so requests fired during the step are attributed to it, Req 4.1), and when
+ * the step resolves/completes it clears `executing` and records the step's
+ * index in `runState.lastExecutedIndex` (Req 4.3).
+ *
  * @param {object} step - The resolved EXECUTE_STEP message
  * @param {number} stepIndex - The current step index
  * @returns {Promise<{ok: boolean, error?: string}>}
  */
 function sendStepToRuntime(step, stepIndex) {
+  // A step begins execution now — attribute in-flight requests to it (Req 4.1).
+  runState.executing = true;
+
+  function onStepSettled() {
+    // The step has resolved/completed — stop attributing to it and remember it
+    // as the most recently executed step (Req 4.3).
+    runState.executing = false;
+    runState.lastExecutedIndex = stepIndex;
+  }
+
+  var result;
+  try {
+    result = dispatchStepToRuntime(step, stepIndex);
+  } catch (err) {
+    onStepSettled();
+    throw err;
+  }
+
+  return Promise.resolve(result).then(
+    function (value) { onStepSettled(); return value; },
+    function (error) { onStepSettled(); throw error; }
+  );
+}
+
+/**
+ * Internal: build the EXECUTE_STEP message and send it to the runtime content
+ * script, returning its response. Attribution tracking is handled by the
+ * `sendStepToRuntime` wrapper above.
+ *
+ * @param {object} step - The resolved EXECUTE_STEP message
+ * @param {number} stepIndex - The current step index
+ * @returns {Promise<{ok: boolean, error?: string}>}
+ */
+function dispatchStepToRuntime(step, stepIndex) {
   var msg = {};
   var keys = Object.keys(step);
   for (var i = 0; i < keys.length; i++) {
@@ -1307,6 +1670,14 @@ function extractResolvedContext(template, contextStore) {
  * @param {object} [findTrace] - Structured find trace attached to element-not-found failures
  */
 function emitLog(stepIndex, step, ok, error, findTrace) {
+  // A step has completed — record it as the most recently executed step so
+  // network requests fired between steps are attributed to it (Req 4.3). This
+  // covers background-handled steps (navigate/wait/manual/upload/saveExpression)
+  // that do not flow through the sendStepToRuntime wrapper.
+  if (typeof stepIndex === 'number' && stepIndex >= 0) {
+    runState.lastExecutedIndex = stepIndex;
+  }
+
   var logMsg = {
     type: 'LOG',
     stepIndex: stepIndex,
@@ -1587,6 +1958,10 @@ function startRun(tabId, test, spec, checkedSteps, config) {
 
   return lockTab(tabId).then(function () {
     initTabTracker();
+    // Attach network capture to the locked tab as soon as the tab is locked
+    // (Req 2.1, 2.2). Attach failure is non-fatal — the run continues without
+    // captured requests — so we don't block the step loop on the result.
+    attachNetworkCapture(runState.lockedTabId);
     return runStepLoop();
   });
 }
@@ -1690,6 +2065,7 @@ function runStepLoop() {
             return;
           }
           // Halt run on failure
+          detachNetworkCapture(); // Req 2.4 (interrupted early exit)
           teardownTabTracker();
           unlockTab();
           runState.running = false;
@@ -1825,6 +2201,7 @@ function runStepLoop() {
           }
 
           // v1 behavior: halt run on failure immediately
+          detachNetworkCapture(); // Req 2.4 (failed early exit)
           teardownTabTracker();
           unlockTab();
           runState.running = false;
@@ -1890,6 +2267,7 @@ function handleNavigateStep(step, currentIndex) {
       // Navigation timed out or failed
       runState.failCount++;
       emitLog(currentIndex, step, false, err.message || 'Navigation failed');
+      detachNetworkCapture(); // Req 2.4 (navigation-timeout early exit)
       teardownTabTracker();
       unlockTab();
       runState.running = false;
@@ -2011,6 +2389,7 @@ function handleUploadStep(step, currentIndex) {
   }).catch(function (err) {
     runState.failCount++;
     emitLog(currentIndex, step, false, err.message || 'Upload failed');
+    detachNetworkCapture(); // Req 2.4 (failed early exit)
     unlockTab();
     runState.running = false;
     emitSummary('RUN_COMPLETE', currentIndex + 1, runState.passCount, runState.failCount);
@@ -2050,6 +2429,7 @@ function sendUploadToRuntime(step, currentIndex, fileDataUrl, mimeType) {
     emitLog(currentIndex, step, !!ok, error || undefined, result && result.findTrace);
 
     if (!ok) {
+      detachNetworkCapture(); // Req 2.4 (failed early exit)
       unlockTab();
       runState.running = false;
       emitSummary('RUN_COMPLETE', currentIndex + 1, runState.passCount, runState.failCount);
@@ -2159,6 +2539,8 @@ function handleSkipStep(msg) {
  * Unlocks tab and emits appropriate summary.
  */
 function finishRun() {
+  // Detach network capture alongside tab teardown/unlock (Req 2.3, 2.4).
+  detachNetworkCapture();
   teardownTabTracker();
   unlockTab();
   runState.running = false;
@@ -3038,6 +3420,10 @@ function startAutomationRun(tabId, automation, spec, checkedSteps, config, param
 
   return lockTab(tabId).then(function () {
     initTabTracker();
+    // Attach network capture to the locked tab as soon as the tab is locked
+    // (Req 2.1, 2.2). Attach failure is non-fatal — the run continues without
+    // captured requests — so we don't block the step loop on the result.
+    attachNetworkCapture(runState.lockedTabId);
     return runStepLoop();
   });
 }
@@ -3094,6 +3480,18 @@ if (typeof module !== 'undefined' && module.exports) {
     resetRunState: resetRunState,
     extractHostname: extractHostname,
     isMatchingHostname: isMatchingHostname,
+    networkState: networkState,
+    resetNetworkState: resetNetworkState,
+    getCapturedRequests: getCapturedRequests,
+    attachNetworkCapture: attachNetworkCapture,
+    detachNetworkCapture: detachNetworkCapture,
+    onDebuggerEvent: onDebuggerEvent,
+    onDebuggerDetach: onDebuggerDetach,
+    finalizeCapturedRequest: finalizeCapturedRequest,
+    registerDebuggerListeners: registerDebuggerListeners,
+    unregisterDebuggerListeners: unregisterDebuggerListeners,
+    emitNetworkRequest: emitNetworkRequest,
+    emitCaptureLog: emitCaptureLog,
     lockTab: lockTab,
     unlockTab: unlockTab,
     sendStepToRuntime: sendStepToRuntime,
