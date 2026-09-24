@@ -67,6 +67,9 @@ export interface StepPlanEntry {
 export interface HoverHighlightMessage {
   type: 'HOVER_HIGHLIGHT';
   key: string;
+  // When the hovered step targets a table cell, the resolved accessor so the
+  // content script can highlight the cell rather than the whole table.
+  accessor?: TableCellAccessor;
 }
 
 // Highlight by XPath expression — used by the find-trace disclosure to

@@ -52,7 +52,10 @@ export function buildStepLabel(
 
   const action = capitalize(step.action);
   const actionLower = step.action.toLowerCase();
-  const targetLabel = step.target ? resolveTargetLabel(step.target, pageElements) : '';
+  const baseTargetLabel = step.target ? resolveTargetLabel(step.target, pageElements) : '';
+  const targetLabel = baseTargetLabel
+    ? buildCellTargetLabel(baseTargetLabel, step.accessor)
+    : baseTargetLabel;
 
   // Special handling for assert actions — produce natural sentences
   if (actionLower.startsWith('assert')) {
@@ -152,6 +155,22 @@ export function formatCellAccessor(
     ? accessor.columnName
     : formatCellIndex(accessor.column?.index);
   return { row, column };
+}
+
+/**
+ * Build the badge label for a table-cell step. Combines the resolved cell
+ * coordinates with the base table's label so the log reads e.g.
+ * `Cell {2, Email} of Orders` instead of just the table's label. The column
+ * prefers `columnName` over the numeric index. Falls back to the base label
+ * alone when the accessor is absent or carries no usable coordinates.
+ */
+export function buildCellTargetLabel(
+  baseLabel: string,
+  accessor: { row?: { index?: number | 'first' | 'last' }; column?: { index?: number | 'first' | 'last' }; columnName?: string } | undefined,
+): string {
+  const cell = formatCellAccessor(accessor);
+  if (!cell || (cell.row === '' && cell.column === '')) return baseLabel;
+  return 'Cell {' + cell.row + ', ' + cell.column + '} of ' + baseLabel;
 }
 
 /**

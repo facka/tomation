@@ -1,4 +1,4 @@
-import type { StepCondition } from './store';
+import type { StepCondition, TableCellAccessor } from './store';
 
 export interface PageElement {
   tag: string;
@@ -23,6 +23,8 @@ export interface Step {
   // Conditional (if / When) steps
   condition?: StepCondition;
   then?: Step[];
+  // Present on table-cell steps: the structured cell accessor.
+  accessor?: TableCellAccessor;
 }
 
 export interface Param {

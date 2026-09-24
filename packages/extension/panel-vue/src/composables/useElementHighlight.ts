@@ -1,4 +1,5 @@
 import { api } from '@/logic/browserApi';
+import type { TableCellAccessor } from '@/types/store';
 import type {
   HoverHighlightMessage,
   HoverHighlightXPathMessage,
@@ -88,8 +89,12 @@ export function useElementHighlight() {
    * `HighlightOutcome`, or `null` when the request could not be delivered.
    * _Requirements: 3.1, 4.3, 5.1, 3.10_
    */
-  function highlight(key: string): Promise<HighlightOutcome | null> {
-    return debouncedHighlight('key:' + key, { type: 'HOVER_HIGHLIGHT', key });
+  function highlight(key: string, accessor?: TableCellAccessor): Promise<HighlightOutcome | null> {
+    // Include the accessor in both the token and the message so a table-cell
+    // hover highlights the resolved cell, and different cells of the same table
+    // are treated as distinct hover targets.
+    const token = accessor ? 'key:' + key + ':' + JSON.stringify(accessor) : 'key:' + key;
+    return debouncedHighlight(token, { type: 'HOVER_HIGHLIGHT', key, accessor });
   }
 
   /**
