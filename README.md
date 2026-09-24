@@ -227,6 +227,58 @@ const content = is.SPAN.childOf(container).where(textIs('Header')).navigate('nex
 
 At runtime, the extension first resolves the anchor element using the standard tag + where logic, then applies each navigation step sequentially. If any step results in a null element, the extension reports an error indicating which step failed and its position in the path.
 
+#### Table cell accessors
+
+When you define a table once as an `is.TABLE` element, you can reach a single cell inline at the point of use — no separate element per cell. A table reference exposes three accessors:
+
+| Accessor | Description |
+|----------|-------------|
+| `cell(row, column)` | The cell at an explicit `row` and `column` |
+| `firstRow(column)` | The cell in the first row at the given `column` |
+| `lastRow(column)` | The cell in the last row at the given `column` |
+
+Both `row` and `column` are **1-based** and count `<th>` and `<td>` together. Rows are all `<tr>` across `<thead>`, `<tbody>`, and `<tfoot>`, flattened in document order.
+
+```typescript
+import { is, idIs, Click, AssertHasText } from '@tomationjs/dsl'
+
+const UsersTable = is.TABLE.where(idIs('users')).as('Users')
+
+// Explicit row + column (1-based)
+Click(UsersTable.cell(2, 3))
+
+// First / last row at a given column
+Click(UsersTable.firstRow(2))
+Click(UsersTable.lastRow(3))
+```
+
+The accessor result behaves exactly like any other element reference, so it works with every action and assertion (`Click`, `Type().in`, `AssertHasText`, etc.).
+
+**Numeric vs. named columns**
+
+Each of `row` and `column` accepts a **cell selector**, which can be:
+
+- a 1-based number — `cell(2, 3)`
+- the symbolic `'first'` / `'last'` — `cell('last', 1)`
+- an object `{ tag?, index }` — where `tag` narrows what gets counted and `index` is a number or `'first'`/`'last'`
+- (column only) a **named/enum value** — a `const` object property such as `UsersColumn.Email`
+
+Named columns resolve to their numeric index while preserving the name for the extension side panel and execution log. Prefer named columns when a table has stable, semantic columns — the tests read clearly and logs show `Column: Email` instead of `Column: 2`.
+
+```typescript
+// Recommended for stable semantic columns
+const UsersColumn = { Name: 1, Email: 2, Status: 3 } as const
+
+AssertHasText(UsersTable.cell(2, UsersColumn.Email), 'john@example.com')
+
+// Object form — narrow the counted elements by tag
+Click(UsersTable.cell({ tag: 'tr', index: 2 }, { tag: 'td', index: 3 }))
+```
+
+**Out-of-range behavior**
+
+If the requested row or column does not exist in the resolved table, the cell simply cannot be resolved. This follows the same not-found/waiting semantics as any other element that cannot be located — the step waits through the standard polling timeout and then reports a not-found failure through the normal step-failure flow. No separate waiting mechanism is introduced.
+
 #### XPath elements
 
 For complex selectors that can't be expressed with tag + where matchers, use XPath:

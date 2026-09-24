@@ -28,6 +28,21 @@ ElementBuilder.prototype.navigate = function (path) {
   return this;
 };
 
+/**
+ * Build a table cell reference — a shallow copy of the base descriptor with a
+ * `tableCell` accessor carrying the (un-normalized) row/column selectors.
+ * Selectors are stored as given (number/string/object); the compiler normalizes.
+ * @param {object} base - the base element descriptor
+ * @param {number|string|object} row - row selector
+ * @param {number|string|object} column - column selector
+ * @returns {object} a new descriptor carrying `tableCell`
+ */
+function makeCellRef(base, row, column) {
+  var ref = Object.assign({}, base);
+  ref.tableCell = { row: row, column: column };
+  return ref;
+}
+
 ElementBuilder.prototype.as = function (label) {
   var descriptor = { tag: this._tag, label: label, where: this._where, __el: true };
   if (this._childOf !== undefined) {
@@ -36,6 +51,15 @@ ElementBuilder.prototype.as = function (label) {
   if (this._navigate !== undefined) {
     descriptor.navigate = this._navigate;
   }
+  descriptor.cell = function (row, column) {
+    return makeCellRef(descriptor, row, column);
+  };
+  descriptor.firstRow = function (column) {
+    return makeCellRef(descriptor, 'first', column);
+  };
+  descriptor.lastRow = function (column) {
+    return makeCellRef(descriptor, 'last', column);
+  };
   return descriptor;
 };
 

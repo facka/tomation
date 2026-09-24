@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import type { Step, PageElement } from '@/types/spec';
-import { resolveTargetLabel, getAssertSuffix, describeCondition } from '@/logic/stepLabel';
+import { resolveTargetLabel, getAssertSuffix, describeCondition, buildCellTargetLabel } from '@/logic/stepLabel';
 
 const props = defineProps<{
   steps: Step[];
@@ -164,7 +164,7 @@ function getActionLabel(step: Step): string {
 }
 
 function getTargetLabel(step: Step): string {
-  return resolveTargetLabel(step.target, props.pageElements);
+  return buildCellTargetLabel(resolveTargetLabel(step.target, props.pageElements), step.accessor);
 }
 
 function getElementTooltip(target: string): string {

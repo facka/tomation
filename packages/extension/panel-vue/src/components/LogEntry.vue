@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue';
 import type { LogEntry } from '@/types/store';
 import type { PageElement } from '@/types/spec';
-import { resolveTargetLabel, getAssertSuffix, describeCondition } from '@/logic/stepLabel';
+import { resolveTargetLabel, getAssertSuffix, describeCondition, buildCellTargetLabel } from '@/logic/stepLabel';
 import { buildFinderSnippet } from '@/logic/finderSnippet';
 import { useElementHighlight } from '@/composables/useElementHighlight';
 import ElementInfoCard from '@/components/ElementInfoCard.vue';
@@ -68,7 +68,10 @@ const actionLabel = computed(() => {
 
 const targetLabel = computed(() => {
   if (!props.entry.target) return '';
-  return resolveTargetLabel(props.entry.target, props.pageElements);
+  return buildCellTargetLabel(
+    resolveTargetLabel(props.entry.target, props.pageElements),
+    props.entry.accessor,
+  );
 });
 
 const valueDisplay = computed(() => {
@@ -266,7 +269,7 @@ async function onPointerEnter() {
   if (!key) return; // No target — nothing to highlight (Req 3.3).
   hovering = true;
   showRemovedMessage.value = false;
-  const outcome = await highlight(key);
+  const outcome = await highlight(key, props.entry.accessor);
   if (!hovering) return; // Pointer already left — ignore this late result.
   if (outcome?.found === 0 && stepResolvedElement(props.entry)) {
     showRemovedMessage.value = true; // Element resolved during the run but is gone now (Req 8.1-8.3).
@@ -328,6 +331,7 @@ onBeforeUnmount(() => {
           :page-elements="pageElements"
           :removed="showRemovedMessage"
           :parent-resolution="entry.findTrace?.parent"
+          :accessor="entry.accessor"
           @close="closeCard"
         />
       </span>
@@ -367,6 +371,7 @@ onBeforeUnmount(() => {
           :page-elements="pageElements"
           :removed="showRemovedMessage"
           :parent-resolution="entry.findTrace?.parent"
+          :accessor="entry.accessor"
           @close="closeCard"
         />
       </span>

@@ -2,6 +2,8 @@
 import { computed, onMounted, onUnmounted, reactive } from 'vue';
 import type { PageElement } from '@/types/spec';
 import type { ParentTrace } from '@/types/findTrace';
+import type { TableCellAccessor } from '@/types/store';
+import { formatCellAccessor } from '@/logic/stepLabel';
 import type { ElementChainNode } from '@/logic/elementChain';
 import { buildElementChain, toHighlightDescriptor } from '@/logic/elementChain';
 import { useElementHighlight } from '@/composables/useElementHighlight';
@@ -16,13 +18,73 @@ const props = defineProps<{
   // The step's parent-resolution outcome (from entry.findTrace.parent). Used to
   // mark the parent row that failed to resolve. Purely derived — no DOM lookup.
   parentResolution?: ParentTrace;
+  // When the step targets a table cell, the resolved accessor. Drives the
+  // "Target cell" section (the actual target) shown above the table metadata.
+  accessor?: TableCellAccessor;
 }>();
 
 const emit = defineEmits<{
   (e: 'close'): void;
 }>();
 
-const { highlightNode, clear } = useElementHighlight();
+const { highlightNode, highlight, clear } = useElementHighlight();
+
+// Row/column display for the targeted cell (column prefers columnName). Null
+// when the step carries no table-cell accessor.
+const cellInfo = computed(() => formatCellAccessor(props.accessor));
+
+// Hover state for the "Target cell" row. `active` tints the row; `found`/`hidden`
+// carry the runtime outcome so the cell shows the same removed / hidden-ancestor
+// notices as the table (self) node. Reset on leave.
+const cellHovered = reactive<{ active: boolean; found: number | null; hidden: boolean }>({
+  active: false,
+  found: null,
+  hidden: false,
+});
+
+// Plain (non-reactive) guard: true while the pointer is over the cell row, so a
+// late highlight result after leave is ignored.
+let cellHovering = false;
+
+/**
+ * Hover the "Target cell" row → highlight the exact resolved cell on the page.
+ * Reuses the accessor-aware highlight path so the runtime derives the same
+ * unique cell key it stamped during execution and highlights only that cell.
+ * Records the outcome so the cell shows the removed / hidden-ancestor notices.
+ */
+async function onCellEnter() {
+  if (!props.accessor) return;
+  cellHovering = true;
+  cellHovered.active = true;
+  cellHovered.found = null;
+  cellHovered.hidden = false;
+  const outcome = await highlight(props.elementKey, props.accessor);
+  // Pointer already left the cell row — ignore this late result.
+  if (!cellHovering) return;
+  if (outcome) {
+    cellHovered.found = outcome.found;
+    cellHovered.hidden = outcome.hiddenByAncestor;
+  }
+}
+
+function onCellLeave() {
+  cellHovering = false;
+  cellHovered.active = false;
+  cellHovered.found = null;
+  cellHovered.hidden = false;
+  void clear();
+}
+
+// The removed notice shows for the cell when the runtime found no match but the
+// step resolved the cell during the run (mirrors the self node's `removed`).
+const isCellRemoved = computed(
+  () => cellHovered.found === 0 && props.removed === true,
+);
+
+// The hidden-ancestor notice shows for the cell when the runtime reports the
+// match exists but is hidden by an ancestor.
+const isCellHidden = computed(() => cellHovered.hidden === true);
+
 
 // The full resolution chain: self first, then each childOf ancestor.
 const chain = computed(() => buildElementChain(props.elementKey, props.pageElements));
@@ -158,15 +220,51 @@ onUnmounted(() => {
   <div class="eic-card" role="dialog" aria-label="Element details">
     <div class="eic-header">
       <div class="eic-title-group">
-        <span class="eic-title">{{ self?.label ?? elementKey }}</span>
+        <span class="eic-title">
+          <template v-if="cellInfo">Cell {{ '{' }}{{ cellInfo.row }}, {{ cellInfo.column }}{{ '}' }}</template>
+          <template v-else>{{ self?.label ?? elementKey }}</template>
+        </span>
       </div>
       <button class="eic-close" title="Close" @click="emit('close')">
         <font-awesome-icon :icon="['fas', 'xmark']" />
       </button>
     </div>
 
-    <!-- Own metadata -->
+    <!-- Target cell (the actual target when the step uses a table cell accessor) -->
+    <div v-if="cellInfo" class="eic-section">
+      <div class="eic-section-label">Target cell</div>
+      <div
+        class="eic-self eic-cell"
+        :class="{ 'eic-cell-hovered': cellHovered.active }"
+        @pointerenter="onCellEnter"
+        @pointerleave="onCellLeave"
+      >
+        <span class="element-badge eic-badge">
+          <font-awesome-icon :icon="['fas', 'crosshairs']" />
+          Cell {{ '{' }}{{ cellInfo.row }}, {{ cellInfo.column }}{{ '}' }}
+        </span>
+      </div>
+      <div class="eic-cell-meta">
+        <div><span class="eic-cell-key">Row</span><span class="eic-cell-value">{{ cellInfo.row }}</span></div>
+        <div><span class="eic-cell-key">Column</span><span class="eic-cell-value">{{ cellInfo.column }}</span></div>
+      </div>
+
+      <!-- Cell notices, shown only while the Target cell row is hovered. -->
+      <div v-if="isCellRemoved" class="eic-removed">
+        <font-awesome-icon :icon="['fas', 'triangle-exclamation']" />
+        <span>This cell is no longer in the page — it may have been removed by a later navigation or DOM change.</span>
+      </div>
+      <div v-if="isCellHidden" class="eic-hidden-ancestor">
+        <font-awesome-icon :icon="['fas', 'eye-slash']" />
+        <span>This cell exists but cannot be shown because an ancestor is hidden.</span>
+      </div>
+    </div>
+
+
+    <!-- Own metadata (the table the cell belongs to, when a cell accessor is present) -->
     <div v-if="self" class="eic-section">
+      <div v-if="cellInfo" class="eic-section-label">Table</div>
+
       <div
         class="eic-self"
         @pointerenter="onNodeEnter(self)"
@@ -376,6 +474,40 @@ onUnmounted(() => {
 .eic-self:hover {
   background: rgba(245, 166, 35, 0.1);
 }
+
+/* Target-cell row highlight while hovered (mirrors the on-page highlight). */
+.eic-cell.eic-cell-hovered {
+  background: rgba(245, 166, 35, 0.14);
+}
+
+/* Row/Column detail for the target cell. */
+.eic-cell-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+  padding-left: 5px;
+}
+
+.eic-cell-meta > div {
+  display: flex;
+  gap: 8px;
+}
+
+.eic-cell-key {
+  flex: 0 0 52px;
+  color: var(--text-muted, #888);
+  text-transform: uppercase;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  padding-top: 1px;
+}
+
+.eic-cell-value {
+  font-family: var(--font-mono, monospace);
+  color: var(--text-primary, #ddd);
+}
+
 
 .eic-chain-item {
   display: flex;

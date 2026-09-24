@@ -47,6 +47,16 @@ export type WhereMatcher =
 
 // --- Element Descriptors ---
 
+/** A 1-based index or a symbolic first/last position. */
+export type CellIndex = number | 'first' | 'last';
+
+/**
+ * How a row or column is identified: a 1-based index (or a named column value
+ * from a `const` object, which is a number), a symbolic first/last, or an
+ * object narrowing the counted elements by tag.
+ */
+export type CellSelector = CellIndex | { tag?: string; index: CellIndex };
+
 /**
  * Describes a single named element in the spec output.
  */
@@ -58,6 +68,12 @@ export interface ElementDescriptor {
   xpath?: string;
   navigate?: string;
   __el?: true;
+  /** Cell at the given row and column selectors. */
+  cell(row: CellSelector, column: CellSelector): ElementDescriptor;
+  /** Cell in the first row at the given column selector. */
+  firstRow(column: CellSelector): ElementDescriptor;
+  /** Cell in the last row at the given column selector. */
+  lastRow(column: CellSelector): ElementDescriptor;
 }
 
 // --- Element Builders ---

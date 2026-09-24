@@ -1403,6 +1403,241 @@ function extractElementRef(node) {
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// Table cell accessor extraction
+// Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 3.1, 3.2, 3.3, 3.4, 3.6, 5.1, 5.2, 5.3, 5.4
+// ---------------------------------------------------------------------------
+
+/**
+ * Validate a resolved numeric cell index (a positive integer). Pushes a warning
+ * on invalid values but never throws — the accessor is still emitted best-effort.
+ *
+ * @param {number} value - resolved index value
+ * @param {string} kind - 'row' or 'column' (drives the message wording)
+ * @param {object} node - AST node for line reporting
+ * @param {Array} warnings - mutable warnings array
+ * @param {string} filePath - current file path for error reporting
+ * @returns {boolean} true when valid, false otherwise
+ */
+function validateCellIndex(value, kind, node, warnings, filePath) {
+  if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+    return true;
+  }
+  var line = lineOf(node);
+  var label = kind === 'column' ? 'column' : 'row';
+  warnings.push({
+    message: 'Invalid table cell ' + label + ' "' + value + '": must be a positive integer',
+    filePath: filePath,
+    line: line,
+  });
+  return false;
+}
+
+/**
+ * Normalize a single cell selector argument to the object form { tag?, index }.
+ *
+ * Handles:
+ *   - numeric literal `n`                → { index: n }
+ *   - string literal 'first'/'last'      → { index: 'first' | 'last' }
+ *   - const-member expression (Obj.Prop) → { index: <resolved value> } (+ columnName when column)
+ *   - object expression { tag?, index }  → { tag?, index: <resolved index> }
+ *
+ * The `index` of the object form is resolved by the same rules (number, symbolic,
+ * or const-member). `columnName` is captured only for the column argument's
+ * named-const form (never for rows, never for the object form).
+ *
+ * @param {object} argNode - AST node for the selector argument
+ * @param {object} constBindings - const/enum bindings map
+ * @param {Array} warnings - mutable warnings array
+ * @param {string} filePath - current file path for error reporting
+ * @param {boolean} isColumn - true when this is the column argument
+ * @returns {{ selector: object|null, columnName?: string }}
+ */
+function normalizeCellSelector(argNode, constBindings, warnings, filePath, isColumn) {
+  if (!argNode) return { selector: null };
+  if (!warnings) warnings = [];
+  if (!constBindings) constBindings = {};
+
+  var kind = isColumn ? 'column' : 'row';
+
+  // Numeric literal (or -N via UnaryExpression)
+  var num = extractNumber(argNode);
+  if (num !== null) {
+    validateCellIndex(num, kind, argNode, warnings, filePath);
+    return { selector: { index: num } };
+  }
+
+  // String literal: 'first' / 'last'
+  var str = extractString(argNode);
+  if (str !== null) {
+    if (str === 'first' || str === 'last') {
+      return { selector: { index: str } };
+    }
+    // Unrecognized string — surface via warning, emit best-effort with the raw value
+    warnings.push({
+      message: 'Invalid table cell ' + kind + ' "' + str + '": must be a positive integer',
+      filePath: filePath,
+      line: lineOf(argNode),
+    });
+    return { selector: { index: str } };
+  }
+
+  // const-member expression: Obj.Prop
+  if (argNode.type === 'MemberExpression') {
+    var resolved = resolveConstMemberExpression(argNode, constBindings, filePath, warnings);
+    if (resolved === null) {
+      // Unresolvable const member — column-specific message per design
+      if (isColumn) {
+        var exprText = '';
+        if (
+          argNode.object && argNode.object.type === 'Identifier' &&
+          argNode.property && argNode.property.type === 'Identifier'
+        ) {
+          exprText = argNode.object.name + '.' + argNode.property.name;
+        }
+        warnings.push({
+          message: 'Cannot resolve column value from "' + exprText + '"',
+          filePath: filePath,
+          line: lineOf(argNode),
+        });
+      }
+      return { selector: { index: null } };
+    }
+    validateCellIndex(resolved, kind, argNode, warnings, filePath);
+    var result = { selector: { index: resolved } };
+    // Capture columnName only for the column's named-const form
+    if (isColumn && argNode.property && argNode.property.type === 'Identifier') {
+      result.columnName = argNode.property.name;
+    }
+    return result;
+  }
+
+  // Object expression: { tag?, index }
+  if (argNode.type === 'ObjectExpression') {
+    var selector = {};
+    var indexNode = null;
+    for (var i = 0; i < argNode.properties.length; i++) {
+      var prop = argNode.properties[i];
+      if (prop.type !== 'Property') continue;
+      var key = prop.key.type === 'Identifier' ? prop.key.name
+        : prop.key.type === 'Literal' ? String(prop.key.value)
+        : null;
+      if (key === 'tag') {
+        var tagStr = extractString(prop.value);
+        if (tagStr !== null) selector.tag = tagStr;
+      } else if (key === 'index') {
+        indexNode = prop.value;
+      }
+    }
+    // Resolve index by the same rules (number, symbolic, const-member).
+    // The object form never carries a columnName.
+    if (indexNode !== null) {
+      var idxNum = extractNumber(indexNode);
+      if (idxNum !== null) {
+        validateCellIndex(idxNum, kind, indexNode, warnings, filePath);
+        selector.index = idxNum;
+      } else {
+        var idxStr = extractString(indexNode);
+        if (idxStr !== null && (idxStr === 'first' || idxStr === 'last')) {
+          selector.index = idxStr;
+        } else if (indexNode.type === 'MemberExpression') {
+          var idxResolved = resolveConstMemberExpression(indexNode, constBindings, filePath, warnings);
+          if (idxResolved !== null) {
+            validateCellIndex(idxResolved, kind, indexNode, warnings, filePath);
+            selector.index = idxResolved;
+          } else {
+            selector.index = null;
+          }
+        } else if (idxStr !== null) {
+          warnings.push({
+            message: 'Invalid table cell ' + kind + ' "' + idxStr + '": must be a positive integer',
+            filePath: filePath,
+            line: lineOf(indexNode),
+          });
+          selector.index = idxStr;
+        } else {
+          selector.index = null;
+        }
+      }
+    }
+    return { selector: selector };
+  }
+
+  return { selector: null };
+}
+
+/**
+ * Recognize a table cell accessor call used as a step target:
+ *   Base.cell(row, column)
+ *   Base.firstRow(column)
+ *   Base.lastRow(column)
+ * where `Base` is an Identifier or a two-level `A.b` MemberExpression.
+ *
+ * @param {object} node - AST node (expected CallExpression)
+ * @param {object} constBindings - const/enum bindings map
+ * @param {Array} warnings - mutable warnings array
+ * @param {string} filePath - current file path for error reporting
+ * @returns {{ baseRef: string, accessor: object }|null}
+ */
+function extractTableAccessor(node, constBindings, warnings, filePath) {
+  if (!node || node.type !== 'CallExpression') return null;
+  var callee = node.callee;
+  if (!callee || callee.type !== 'MemberExpression') return null;
+  if (callee.computed) return null;
+  if (!callee.property || callee.property.type !== 'Identifier') return null;
+
+  var method = callee.property.name;
+  if (method !== 'cell' && method !== 'firstRow' && method !== 'lastRow') return null;
+
+  // Resolve the base reference via the existing bare/`A.b` logic.
+  var baseRef = extractElementRef(callee.object);
+  if (baseRef === null) return null;
+
+  if (!warnings) warnings = [];
+  if (!constBindings) constBindings = {};
+
+  var args = node.arguments || [];
+  var accessor = { type: 'tableCell' };
+  var columnArgNode;
+
+  if (method === 'cell') {
+    var rowResult = normalizeCellSelector(args[0], constBindings, warnings, filePath, false);
+    accessor.row = rowResult.selector || {};
+    columnArgNode = args[1];
+  } else {
+    // firstRow(column) / lastRow(column) → symbolic row selector
+    accessor.row = { index: method === 'firstRow' ? 'first' : 'last' };
+    columnArgNode = args[0];
+  }
+
+  var colResult = normalizeCellSelector(columnArgNode, constBindings, warnings, filePath, true);
+  accessor.column = colResult.selector || {};
+  if (colResult.columnName !== undefined) {
+    accessor.columnName = colResult.columnName;
+  }
+
+  return { baseRef: baseRef, accessor: accessor };
+}
+
+/**
+ * Resolve a step target node into a base reference plus an optional table cell
+ * accessor. Reuses the existing bare/`A.b` extraction for backward compatibility:
+ * a node with no accessor call returns { target } and no `accessor` field.
+ *
+ * @param {object} node - AST node for the target argument
+ * @param {object} constBindings - const/enum bindings map
+ * @param {Array} warnings - mutable warnings array
+ * @param {string} filePath - current file path for error reporting
+ * @returns {{ target: string|null, accessor?: object }}
+ */
+function resolveTarget(node, constBindings, warnings, filePath) {
+  var accessorResult = extractTableAccessor(node, constBindings, warnings, filePath);
+  if (accessorResult) {
+    return { target: accessorResult.baseRef, accessor: accessorResult.accessor };
+  }
+  return { target: extractElementRef(node) };
+}
+
 function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindings, dataTemplateVars) {
   if (!exprNode) return null;
   if (!warnings) warnings = [];
@@ -1452,23 +1687,29 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
         }
 
         if (fnName === 'SaveText') {
-          const target = extractElementRef(innerCall.arguments[0]);
-          if (target === null) return null;
-          return { action: 'saveText', target, contextKey: keyName };
+          const resolved = resolveTarget(innerCall.arguments[0], constBindings, warnings, filePath);
+          if (resolved.target === null) return null;
+          const step = { action: 'saveText', target: resolved.target, contextKey: keyName };
+          if (resolved.accessor) step.accessor = resolved.accessor;
+          return step;
         }
 
         if (fnName === 'SaveAttribute') {
-          const target = extractElementRef(innerCall.arguments[0]);
-          if (target === null) return null;
+          const resolved = resolveTarget(innerCall.arguments[0], constBindings, warnings, filePath);
+          if (resolved.target === null) return null;
           const attrName = extractString(innerCall.arguments[1]);
           if (attrName === null) return null;
-          return { action: 'saveAttribute', target, attributeName: attrName, contextKey: keyName };
+          const step = { action: 'saveAttribute', target: resolved.target, attributeName: attrName, contextKey: keyName };
+          if (resolved.accessor) step.accessor = resolved.accessor;
+          return step;
         }
 
         if (fnName === 'SaveValue') {
-          const target = extractElementRef(innerCall.arguments[0]);
-          if (target === null) return null;
-          return { action: 'saveValue', target, contextKey: keyName };
+          const resolved = resolveTarget(innerCall.arguments[0], constBindings, warnings, filePath);
+          if (resolved.target === null) return null;
+          const step = { action: 'saveValue', target: resolved.target, contextKey: keyName };
+          if (resolved.accessor) step.accessor = resolved.accessor;
+          return step;
         }
 
         if (fnName === 'Save') {
@@ -1532,9 +1773,11 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
         const valueArg = innerCall.arguments[0];
         const value = extractValueExpression(valueArg, filePath, warnings, constBindings, dataTemplateVars);
         const targetArg = exprNode.arguments[0];
-        const target = extractElementRef(targetArg);
-        if (target === null) return null;
-        return { action, target, value: value !== null ? value : '' };
+        const resolved = resolveTarget(targetArg, constBindings, warnings, filePath);
+        if (resolved.target === null) return null;
+        const step = { action, target: resolved.target, value: value !== null ? value : '' };
+        if (resolved.accessor) step.accessor = resolved.accessor;
+        return step;
       }
       // Press(key, options).in(element) → pressKey with target
       if (actionName === 'Press') {
@@ -1542,9 +1785,11 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
         if (key === null) return null;
         const opts = extractSimpleObject(innerCall.arguments[1]) || {};
         const targetArg = exprNode.arguments[0];
-        const target = extractElementRef(targetArg);
-        if (target === null) return null;
-        return { action: 'pressKey', target: target, key: key, options: opts };
+        const resolved = resolveTarget(targetArg, constBindings, warnings, filePath);
+        if (resolved.target === null) return null;
+        const step = { action: 'pressKey', target: resolved.target, key: key, options: opts };
+        if (resolved.accessor) step.accessor = resolved.accessor;
+        return step;
       }
     }
   }
@@ -1582,30 +1827,38 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
         case 'Click':
         case 'AssertExists':
         case 'AssertNotExists': {
-          const target = extractElementRef(args[0]);
-          if (target === null) return null;
+          const resolved = resolveTarget(args[0], constBindings, warnings, filePath);
+          if (resolved.target === null) return null;
           const actionNameMap = { Click: 'click', AssertExists: 'assertExists', AssertNotExists: 'assertNotExists' };
-          return { action: actionNameMap[fnName], target };
+          const step = { action: actionNameMap[fnName], target: resolved.target };
+          if (resolved.accessor) step.accessor = resolved.accessor;
+          return step;
         }
 
         case 'WaitFor': {
-          const target = extractElementRef(args[0]);
-          if (target === null) return null;
-          return { action: 'waitFor', target, gone: false };
+          const resolved = resolveTarget(args[0], constBindings, warnings, filePath);
+          if (resolved.target === null) return null;
+          const step = { action: 'waitFor', target: resolved.target, gone: false };
+          if (resolved.accessor) step.accessor = resolved.accessor;
+          return step;
         }
 
         case 'WaitForGone': {
-          const target = extractElementRef(args[0]);
-          if (target === null) return null;
-          return { action: 'waitFor', target, gone: true };
+          const resolved = resolveTarget(args[0], constBindings, warnings, filePath);
+          if (resolved.target === null) return null;
+          const step = { action: 'waitFor', target: resolved.target, gone: true };
+          if (resolved.accessor) step.accessor = resolved.accessor;
+          return step;
         }
 
         // Two-argument target+value: AssertHasText(element, text)
         case 'AssertHasText': {
-          const target = extractElementRef(args[0]);
-          if (target === null) return null;
+          const resolved = resolveTarget(args[0], constBindings, warnings, filePath);
+          if (resolved.target === null) return null;
           const value = extractValueExpression(args[1], filePath, warnings, constBindings, dataTemplateVars);
-          return { action: 'assertHasText', target, value: value !== null ? value : '' };
+          const step = { action: 'assertHasText', target: resolved.target, value: value !== null ? value : '' };
+          if (resolved.accessor) step.accessor = resolved.accessor;
+          return step;
         }
 
         // Value-only: Navigate(url)
@@ -3471,4 +3724,4 @@ function parseSource(source, filePath, rawSource, options) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractIfStep, extractWhenStep, extractCondition, extractParamPath, resolveRhsReference, usesNewConditionConstruct, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, parseDataTemplate, buildConstBindings, buildEnumBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };
+module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractTableAccessor, normalizeCellSelector, resolveTarget, extractIfStep, extractWhenStep, extractCondition, extractParamPath, resolveRhsReference, usesNewConditionConstruct, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, parseDataTemplate, buildConstBindings, buildEnumBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };

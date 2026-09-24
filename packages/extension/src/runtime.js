@@ -8,12 +8,137 @@ var api = typeof browser !== 'undefined' ? browser : chrome;
   (document.head || document.documentElement).appendChild(style);
 })();
 
-// Inject hover-highlight CSS so data-tomation-hover elements are visible with a distinct color
+// Inject hover-highlight overlay CSS. The hover highlight is drawn as a separate
+// absolutely-positioned overlay element (see the hover-overlay manager below)
+// rather than an outline/box-shadow on the target itself. Drawing an overlay is
+// independent of the target's size and border box and is not clipped by an
+// ancestor's `overflow: hidden`, so it stays visible for thin elements (e.g.
+// table cells) and content inside scroll/overflow containers.
 (function injectHoverStyles() {
   var style = document.createElement('style');
-  style.textContent = '[data-tomation-hover="true"] { outline: 2px dashed #f5a623 !important; outline-offset: 2px; box-shadow: 0 0 0 4px rgba(245, 166, 35, 0.25) !important; transition: outline 0.15s ease, box-shadow 0.15s ease; }';
+  style.textContent =
+    '.tomation-hover-overlay {' +
+      'position: absolute;' +
+      'z-index: 2147483646;' +
+      'pointer-events: none;' +
+      'box-sizing: border-box;' +
+      'border: 2px solid #f5a623;' +
+      'background: rgba(245, 166, 35, 0.22);' +
+      'box-shadow: 0 0 0 2px rgba(245, 166, 35, 0.35), 0 0 12px 2px rgba(245, 166, 35, 0.45);' +
+      'border-radius: 2px;' +
+      'transition: opacity 0.12s ease;' +
+    '}';
   (document.head || document.documentElement).appendChild(style);
 })();
+
+// --- Hover-highlight overlay manager -------------------------------------
+// Draws one overlay <div> per highlighted element, positioned over the element
+// via getBoundingClientRect(). Overlays are appended to <body> so they are not
+// clipped by the target's ancestors, and repositioned on scroll/resize while any
+// highlight is active. Cleared together with the data-tomation-hover attributes.
+
+var hoverOverlays = [];        // { overlay: HTMLDivElement, target: Element }
+var hoverReflowBound = false;  // whether scroll/resize listeners are attached
+
+/**
+ * Position a single overlay over its target's current bounding rect. Hides the
+ * overlay (opacity 0) when the target has no layout box (e.g. display:none).
+ *
+ * @param {{overlay: HTMLElement, target: Element}} pair
+ */
+function positionHoverOverlay(pair) {
+  var target = pair.target;
+  var overlay = pair.overlay;
+  if (!target || !target.getBoundingClientRect) return;
+  var rect = target.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) {
+    overlay.style.opacity = '0';
+    return;
+  }
+  overlay.style.opacity = '1';
+  var scrollX = window.pageXOffset || document.documentElement.scrollLeft || 0;
+  var scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+  overlay.style.top = (rect.top + scrollY) + 'px';
+  overlay.style.left = (rect.left + scrollX) + 'px';
+  overlay.style.width = rect.width + 'px';
+  overlay.style.height = rect.height + 'px';
+}
+
+/**
+ * Reposition every active overlay. Bound to scroll (capture) and resize while
+ * any hover highlight is active so overlays track the target as the page moves.
+ */
+function reflowHoverOverlays() {
+  for (var i = 0; i < hoverOverlays.length; i++) {
+    positionHoverOverlay(hoverOverlays[i]);
+  }
+}
+
+/**
+ * Create and position an overlay <div> over the given element, tracking it for
+ * later repositioning and cleanup. Attaches scroll/resize listeners lazily the
+ * first time an overlay exists.
+ *
+ * @param {Element} el
+ */
+function addHoverOverlay(el) {
+  var overlay = document.createElement('div');
+  overlay.className = 'tomation-hover-overlay';
+  overlay.setAttribute('data-tomation-hover-overlay', 'true');
+  (document.body || document.documentElement).appendChild(overlay);
+  var pair = { overlay: overlay, target: el };
+  hoverOverlays.push(pair);
+  positionHoverOverlay(pair);
+
+  if (!hoverReflowBound) {
+    window.addEventListener('scroll', reflowHoverOverlays, true);
+    window.addEventListener('resize', reflowHoverOverlays, true);
+    hoverReflowBound = true;
+  }
+}
+
+/**
+ * Remove every hover overlay from the DOM and detach the scroll/resize
+ * listeners. Safe to call when there are no overlays.
+ */
+function clearHoverOverlays() {
+  for (var i = 0; i < hoverOverlays.length; i++) {
+    var overlay = hoverOverlays[i].overlay;
+    if (overlay && overlay.parentNode) {
+      overlay.parentNode.removeChild(overlay);
+    }
+  }
+  hoverOverlays = [];
+  if (hoverReflowBound) {
+    window.removeEventListener('scroll', reflowHoverOverlays, true);
+    window.removeEventListener('resize', reflowHoverOverlays, true);
+    hoverReflowBound = false;
+  }
+}
+
+/**
+ * Apply the hover highlight to a resolved list of elements: tag each with
+ * data-tomation-hover (bookkeeping for the clear query), draw an overlay over
+ * each, and scroll the first into view when off-screen. Shared by all three
+ * hover-highlight entry points.
+ *
+ * @param {Array<Element>} elements
+ * @returns {{type: string, found: number, hiddenByAncestor: boolean}}
+ */
+function applyHoverHighlight(elements) {
+  // Clear any highlight from a previous request so overlays never stack when the
+  // same key is re-highlighted without an intervening HOVER_CLEAR.
+  handleHoverClear();
+  for (var i = 0; i < elements.length; i++) {
+    elements[i].setAttribute('data-tomation-hover', 'true');
+    addHoverOverlay(elements[i]);
+  }
+  if (!isInViewport(elements[0])) {
+    elements[0].scrollIntoView({ block: 'nearest' });
+    reflowHoverOverlays();
+  }
+  return { type: 'HOVER_RESULT', found: elements.length, hiddenByAncestor: detectHiddenAncestor(elements[0]) };
+}
 
 var TIMEOUT_5sec = 5000;
 /**
@@ -749,6 +874,43 @@ function hoverSelectorFor(key) {
 }
 
 /**
+ * Serialize one normalized cell selector ({ tag?, index }) into a stable token
+ * for use in a cell-specific element key. Includes the tag (when present) and
+ * the index so distinct rows/columns produce distinct tokens.
+ *
+ * @param {{tag?: string, index?: (number|string)}} sel
+ * @returns {string}
+ */
+function cellSelectorToken(sel) {
+  sel = sel || {};
+  var tag = sel.tag != null ? String(sel.tag) : '';
+  var index = sel.index != null ? String(sel.index) : '';
+  return tag + ':' + index;
+}
+
+/**
+ * Build a cell-specific element key by suffixing the base table key with the
+ * accessor's row/column selectors. Deterministic and identical on the tagging
+ * side (during step execution) and the hover side (panel highlight), so a hover
+ * matches exactly the one cell that was tagged. Returns the base key unchanged
+ * when there is no tableCell accessor.
+ *
+ * Example: "Tables__table" + { row: {index: 2}, column: {index: 3} }
+ *          → "Tables__table@cell(:2,:3)"
+ *
+ * @param {string} baseKey
+ * @param {{type?: string, row?: object, column?: object}} [accessor]
+ * @returns {string}
+ */
+function cellKeyFor(baseKey, accessor) {
+  if (!accessor || accessor.type !== 'tableCell') {
+    return baseKey;
+  }
+  return baseKey + '@cell(' + cellSelectorToken(accessor.row) + ',' + cellSelectorToken(accessor.column) + ')';
+}
+
+
+/**
  * Return true when the element is fully within the viewport.
  * Reads getBoundingClientRect and window dimensions defensively, falling
  * back to documentElement client dimensions.
@@ -815,26 +977,28 @@ function detectHiddenAncestor(el) {
 }
 
 /**
- * Highlight all elements tagged with the given element key for panel hover.
+ * Highlight the element(s) tagged with the given element key for panel hover.
  * On zero matches, touches nothing and reports found: 0. Otherwise sets
  * data-tomation-hover="true" on every match and scrolls the first match into
  * view only when it is off-screen.
  *
- * @param {string} key - the element key to hover-highlight
+ * When a table-cell `accessor` is supplied, the lookup targets the cell-specific
+ * key (base key + row/column suffix) that the runtime stamped on the resolved
+ * cell during execution — see cellKeyFor. That key is unique per cell, so the
+ * hover highlights exactly the one targeted cell rather than the whole table or
+ * every cell that shares the base table key.
+ *
+ * @param {string} key - the base element key to hover-highlight
+ * @param {{type: string, row?: object, column?: object}} [accessor] - optional table-cell accessor
  * @returns {{type: string, found: number, hiddenByAncestor: boolean}}
  */
-function handleHoverHighlight(key) {
-  var matches = document.querySelectorAll(hoverSelectorFor(key));
+function handleHoverHighlight(key, accessor) {
+  var lookupKey = cellKeyFor(key, accessor);
+  var matches = document.querySelectorAll(hoverSelectorFor(lookupKey));
   if (matches.length === 0) {
     return { type: 'HOVER_RESULT', found: 0 };
   }
-  for (var i = 0; i < matches.length; i++) {
-    matches[i].setAttribute('data-tomation-hover', 'true');
-  }
-  if (!isInViewport(matches[0])) {
-    matches[0].scrollIntoView({ block: 'nearest' });
-  }
-  return { type: 'HOVER_RESULT', found: matches.length, hiddenByAncestor: detectHiddenAncestor(matches[0]) };
+  return applyHoverHighlight(matches);
 }
 
 /**
@@ -871,13 +1035,7 @@ function handleHoverHighlightXPath(xpath) {
   if (els.length === 0) {
     return { type: 'HOVER_RESULT', found: 0 };
   }
-  for (var j = 0; j < els.length; j++) {
-    els[j].setAttribute('data-tomation-hover', 'true');
-  }
-  if (!isInViewport(els[0])) {
-    els[0].scrollIntoView({ block: 'nearest' });
-  }
-  return { type: 'HOVER_RESULT', found: els.length, hiddenByAncestor: detectHiddenAncestor(els[0]) };
+  return applyHoverHighlight(els);
 }
 
 /**
@@ -951,13 +1109,7 @@ function handleHoverHighlightDescriptor(descriptor) {
   if (els.length === 0) {
     return { type: 'HOVER_RESULT', found: 0 };
   }
-  for (var j = 0; j < els.length; j++) {
-    els[j].setAttribute('data-tomation-hover', 'true');
-  }
-  if (!isInViewport(els[0])) {
-    els[0].scrollIntoView({ block: 'nearest' });
-  }
-  return { type: 'HOVER_RESULT', found: els.length, hiddenByAncestor: detectHiddenAncestor(els[0]) };
+  return applyHoverHighlight(els);
 }
 
 /**
@@ -971,7 +1123,49 @@ function handleHoverClear() {
   for (var i = 0; i < hovered.length; i++) {
     hovered[i].removeAttribute('data-tomation-hover');
   }
+  clearHoverOverlays();
   return { ok: true };
+}
+
+/**
+ * Pick an element from a candidate NodeList/array by a normalized selector index.
+ * @param {Array|NodeList} candidates
+ * @param {number|'first'|'last'} index
+ * @returns {number} chosen 0-based index (may be out of range; caller checks)
+ */
+function selectorIndexToOffset(candidates, index) {
+  if (index === 'first') return 0;
+  if (index === 'last') return candidates.length - 1;
+  return index - 1; // 1-based → 0-based
+}
+
+/**
+ * Resolve a table cell relative to a resolved <table> (or table-like) anchor.
+ * @param {Element} table - resolved anchor element
+ * @param {{row: {tag?: string, index}, column: {tag?: string, index}}} spec
+ * @returns {{ok: true, element: Element} | {ok: false, error: string}}
+ */
+function resolveTableCell(table, spec) {
+  var rowSel = spec.row || {};
+  var colSel = spec.column || {};
+
+  var rows = table.querySelectorAll(rowSel.tag || 'tr');
+  if (!rows || rows.length === 0) {
+    return { ok: false, error: 'Table has no rows' };
+  }
+  var rowOffset = selectorIndexToOffset(rows, rowSel.index);
+  if (rowOffset < 0 || rowOffset >= rows.length) {
+    return { ok: false, error: 'Row ' + rowSel.index + ' not found (table has ' + rows.length + ' rows)' };
+  }
+  var row = rows[rowOffset];
+
+  var cellSelector = colSel.tag ? (':scope > ' + colSel.tag) : ':scope > th, :scope > td';
+  var cells = row.querySelectorAll(cellSelector);
+  var colOffset = selectorIndexToOffset(cells, colSel.index);
+  if (colOffset < 0 || colOffset >= cells.length) {
+    return { ok: false, error: 'Column ' + colSel.index + ' not found (row has ' + cells.length + ' cells)' };
+  }
+  return { ok: true, element: cells[colOffset] };
 }
 
 /**
@@ -1043,12 +1237,26 @@ function findElementWithParent(stepMessage) {
   // (If the anchor fails to resolve, findElement rejects and this helper is
   // never called, so no hops are attempted — the anchorResolved:false case.)
   function applyNavigation(element) {
+    var current = element;
     if (navigateSteps && navigateSteps.length > 0) {
-      var navResult = applyNavigateSteps(element, navigateSteps);
-      navResult.anchorResolved = true;
-      return navResult;
+      var navResult = applyNavigateSteps(current, navigateSteps);
+      if (navResult.ok === false) {
+        navResult.anchorResolved = true;
+        return navResult;
+      }
+      current = navResult.element;
     }
-    return { ok: true, element: element };
+    // Table cell resolution: after the anchor (and any navigate) resolves, if a
+    // tableCell accessor is present, resolve the cell and use it as the final
+    // target. Failures route through the same not-found trace path as navigate.
+    if (elementDescriptor && elementDescriptor.tableCell) {
+      var cellResult = resolveTableCell(current, elementDescriptor.tableCell);
+      if (cellResult.ok === false) {
+        return { ok: false, error: cellResult.error, anchorResolved: true };
+      }
+      current = cellResult.element;
+    }
+    return { ok: true, element: current };
   }
 
   if (!parentDescriptor && !(stepMessage.parentChain && stepMessage.parentChain.length >= 1)) {
@@ -1680,7 +1888,7 @@ var ACTIONS_NEEDING_ELEMENT = ['click', 'type', 'typePassword', 'select', 'asser
 
 api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.type === 'HOVER_HIGHLIGHT') {
-    sendResponse(handleHoverHighlight(message.key));
+    sendResponse(handleHoverHighlight(message.key, message.accessor));
     return;
   }
   if (message.type === 'HOVER_HIGHLIGHT_XPATH') {
@@ -1713,7 +1921,7 @@ api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     findElementWithParent(message).then(function (findResult) {
       var element = findResult.ok ? findResult.element : null;
       if (findResult.ok) {
-        tagElementKey(element, message.target);
+        tagElementKey(element, cellKeyFor(message.target, message.accessor));
       }
       return executeAction(message, element);
     }).then(function (result) {
@@ -1734,7 +1942,7 @@ api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
           return;
         }
         var element = findResult.element;
-        tagElementKey(element, message.target);
+        tagElementKey(element, cellKeyFor(message.target, message.accessor));
         highlightElement(element);
         return new Promise(function (resolve) { setTimeout(resolve, 400); }).then(function () {
           return handlePressKey(element, message.key, message.options);
@@ -1763,7 +1971,7 @@ api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
         return;
       }
       var element = findResult.element;
-      tagElementKey(element, message.target);
+      tagElementKey(element, cellKeyFor(message.target, message.accessor));
       highlightElement(element);
       // Brief delay so user can see the highlighted element before action executes
       return new Promise(function (resolve) {
