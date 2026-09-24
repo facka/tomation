@@ -117,6 +117,7 @@ export type Step =
   | { action: "assertExists"; target: string }
   | { action: "assertNotExists"; target: string }
   | { action: "assertHasText"; target: string; value: string }
+  | { action: "assertRequest"; matcher: RequestMatcher; expectation: RequestExpectation }
   | { action: "task"; name: string; params?: Record<string, string> }
   | { action: "navigate"; url: string }
   | { action: "wait"; ms: number }
@@ -267,6 +268,45 @@ export declare function Wait(ms: number): any;
 export declare function WaitFor(element: ElementDescriptor): any;
 export declare function WaitForGone(element: ElementDescriptor): any;
 export declare function Manual(description: string): any;
+
+// --- AssertRequest Types ---
+
+export interface UrlCriterion {
+  kind: 'exact' | 'regex' | 'glob';
+  value?: string; source?: string; flags?: string; pattern?: string;
+}
+export interface StatusCriterion {
+  kind: 'exact' | 'range'; value?: number; min?: number; max?: number;
+}
+export interface BodyCriterion {
+  kind: 'json' | 'form' | 'raw'; value: unknown;
+}
+export interface RequestMatcher {
+  url?: UrlCriterion;
+  method?: string;
+  queryParams?: Record<string, string>;
+  body?: BodyCriterion;
+  status?: StatusCriterion;
+}
+export interface RequestExpectation {
+  kind: 'exists' | 'notMade' | 'count';
+  count?: number;
+}
+export interface AssertRequestBuilder {
+  __step: true;
+  action: 'assertRequest';
+  matcher: RequestMatcher;
+  expectation: RequestExpectation;
+  method(m: string): AssertRequestBuilder;
+  query(pairs: Record<string, string>): AssertRequestBuilder;
+  jsonBody(obj: unknown): AssertRequestBuilder;
+  formBody(pairs: Record<string, string>): AssertRequestBuilder;
+  rawBody(raw: string): AssertRequestBuilder;
+  status(s: number | string | { min: number; max: number }): AssertRequestBuilder;
+  notMade(): AssertRequestBuilder;
+  times(n: number): AssertRequestBuilder;
+}
+export declare function AssertRequest(url?: string | RegExp | { glob: string }): AssertRequestBuilder;
 
 // --- Conditional ---
 

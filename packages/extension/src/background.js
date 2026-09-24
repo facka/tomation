@@ -1678,6 +1678,48 @@ function emitLog(stepIndex, step, ok, error, findTrace) {
     runState.lastExecutedIndex = stepIndex;
   }
 
+  safeSendMessage(buildLogMsg(stepIndex, step, ok, error, findTrace));
+}
+
+/**
+ * Emit a LOG message like emitLog, but without swallowing synchronous send
+ * errors. Where emitLog routes through safeSendMessage (which try/catches a
+ * synchronous throw from runtime.sendMessage), emitLogStrict lets a synchronous
+ * throw propagate to the caller so the caller can react (Req 9.4).
+ *
+ * @param {number} stepIndex - The index of the completed step
+ * @param {object} step - The step object (with action, target, value)
+ * @param {boolean} ok - Whether the step passed
+ * @param {string} [error] - Error message if the step failed
+ * @param {object} [findTrace] - Structured find trace attached to failures
+ */
+function emitLogStrict(stepIndex, step, ok, error, findTrace) {
+  if (typeof stepIndex === 'number' && stepIndex >= 0) {
+    runState.lastExecutedIndex = stepIndex;
+  }
+
+  var logMsg = buildLogMsg(stepIndex, step, ok, error, findTrace);
+  // Deliberately NOT wrapped in try/catch: a synchronous throw from
+  // runtime.sendMessage propagates to the caller (Req 9.4). The async
+  // rejection is still handled so it does not surface as an unhandled rejection.
+  var p = api.runtime.sendMessage(logMsg);
+  if (p && typeof p.catch === 'function') {
+    p.catch(function () { /* async delivery failure is non-fatal */ });
+  }
+}
+
+/**
+ * Build the LOG message payload for a completed step. Shared by emitLog and
+ * emitLogStrict so both produce an identical message shape.
+ *
+ * @param {number} stepIndex - The index of the completed step
+ * @param {object} step - The step object (with action, target, value)
+ * @param {boolean} ok - Whether the step passed
+ * @param {string} [error] - Error message if the step failed
+ * @param {object} [findTrace] - Structured find trace attached to failures
+ * @returns {object} the LOG message
+ */
+function buildLogMsg(stepIndex, step, ok, error, findTrace) {
   var logMsg = {
     type: 'LOG',
     stepIndex: stepIndex,
@@ -1738,7 +1780,31 @@ function emitLog(stepIndex, step, ok, error, findTrace) {
   if (step.value && typeof step.value === 'string' && step.value.indexOf('{{ctx.') !== -1) {
     logMsg.resolvedContext = extractResolvedContext(step.value, runState.contextStore);
   }
-  safeSendMessage(logMsg);
+  return logMsg;
+}
+
+/**
+ * Emit the pass/fail outcome of an assertRequest step through emitLogStrict.
+ * If displaying the outcome throws synchronously (the Run_Log display system
+ * fails while showing the AssertRequest outcome), halt the run: detach network
+ * capture, tear down tab tracking, unlock the tab, and clear the running flag
+ * (Req 9.4).
+ *
+ * @param {number} currentIndex - The assertRequest step index
+ * @param {object} step - The assertRequest step
+ * @param {boolean} ok - Whether the assertion passed
+ * @param {string} [message] - The failure message (when ok is false)
+ */
+function emitAssertOutcomeOrHalt(currentIndex, step, ok, message) {
+  try {
+    emitLogStrict(currentIndex, step, ok, ok ? undefined : message);
+  } catch (e) {
+    // The Run_Log display path failed synchronously — halt the run (Req 9.4).
+    detachNetworkCapture();
+    teardownTabTracker();
+    unlockTab();
+    runState.running = false;
+  }
 }
 
 /**
@@ -2080,6 +2146,42 @@ function runStepLoop() {
       runState.passCount++;
       runState.stepIndex++;
       return runStepLoop();
+    }
+
+    // Handle assertRequest steps entirely in the background (no message sent to
+    // runtime — this is NOT a DOM step). Evaluate the matcher/expectation against
+    // the captured request set, then emit a pass/fail LOG and advance or halt.
+    // (Req 6.5, 6.12, 7.1, 7.2, 7.4, 7.5, 8.2, 8.3, 9.1, 9.2, 9.3)
+    if (step.action === 'assertRequest') {
+      safeSendMessage({ type: 'STEP_STARTING', stepIndex: currentIndex, action: 'assertRequest' });
+
+      var evaluateAssertRequestFn = _ncFn('evaluateAssertRequest');
+      var assertResult = evaluateAssertRequestFn
+        ? evaluateAssertRequestFn(step, getCapturedRequests())
+        : { ok: false, matchCount: 0, message: 'AssertRequest evaluation unavailable' };
+
+      if (assertResult && assertResult.ok) {
+        // Pass — emit a passing LOG (halts the run if display fails, Req 9.4),
+        // record the step as executed, and advance the loop (mirrors saveExpression).
+        emitAssertOutcomeOrHalt(currentIndex, step, true);
+        if (!runState.running) return; // display-failure halt (Req 9.4)
+        runState.passCount++;
+        runState.stepIndex++;
+        return runStepLoop();
+      }
+
+      // Fail — emit a failing LOG with the failure message (halts on display
+      // failure, Req 9.4), then halt the run using the standard early-exit sequence.
+      var assertMessage = (assertResult && assertResult.message) || 'AssertRequest failed';
+      emitAssertOutcomeOrHalt(currentIndex, step, false, assertMessage);
+      runState.failCount++;
+      if (!runState.running) return; // display-failure halt already tore down (Req 9.4)
+      detachNetworkCapture(); // Req 2.4 (failed early exit)
+      teardownTabTracker();
+      unlockTab();
+      runState.running = false;
+      emitSummary('RUN_COMPLETE', currentIndex + 1, runState.passCount, runState.failCount);
+      return;
     }
 
     // Handle condition marker steps (param-based if/When, resolved at flatten time).
@@ -3496,6 +3598,9 @@ if (typeof module !== 'undefined' && module.exports) {
     unlockTab: unlockTab,
     sendStepToRuntime: sendStepToRuntime,
     emitLog: emitLog,
+    emitLogStrict: emitLogStrict,
+    buildLogMsg: buildLogMsg,
+    emitAssertOutcomeOrHalt: emitAssertOutcomeOrHalt,
     emitSummary: emitSummary,
     startRun: startRun,
     startAutomationRun: startAutomationRun,

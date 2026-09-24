@@ -240,6 +240,49 @@ function Navigate(url) {
   return { __step: true, action: 'navigate', url: url };
 }
 
+/**
+ * AssertRequest — fluent builder that asserts a network request was (or was not) made.
+ * The URL argument yields an exact / regex / glob criterion; chain methods to refine
+ * the matcher (method, query, body, status) and set the expectation (exists / notMade / times).
+ * @param {string|RegExp|{glob: string}} [url] - URL criterion: plain string → exact, RegExp → pattern, { glob } → glob
+ * @returns {object} chainable AssertRequest builder descriptor
+ */
+function AssertRequest(url) {
+  var matcher = {};
+  if (url !== undefined && url !== null) {
+    // plain string → exact; RegExp → pattern; { glob: '...' } → glob (Req 6.2, 6.3)
+    if (url instanceof RegExp) matcher.url = { kind: 'regex', source: url.source, flags: url.flags };
+    else if (url && typeof url === 'object' && url.glob) matcher.url = { kind: 'glob', pattern: url.glob };
+    else matcher.url = { kind: 'exact', value: String(url) };
+  }
+  var expectation = { kind: 'exists' }; // default: at least one match (Req 7.1)
+
+  var builder = {
+    __step: true,
+    action: 'assertRequest',
+    matcher: matcher,
+    expectation: expectation,
+    method: function (m) { matcher.method = m; return builder; },        // case-insensitive (Req 6.4)
+    query: function (obj) { matcher.queryParams = obj; return builder; }, // subset (Req 6.6)
+    jsonBody: function (obj) { matcher.body = { kind: 'json', value: obj }; return builder; },   // Req 6.7
+    formBody: function (obj) { matcher.body = { kind: 'form', value: obj }; return builder; },   // Req 6.7
+    rawBody: function (str) { matcher.body = { kind: 'raw', value: String(str) }; return builder; }, // Req 6.7
+    status: function (s) {                                                // int or range (Req 6.9, 6.10)
+      if (typeof s === 'string' && /^[1-5]xx$/i.test(s)) {
+        var lo = parseInt(s[0], 10) * 100; matcher.status = { kind: 'range', min: lo, max: lo + 99 };
+      } else if (s && typeof s === 'object' && s.min != null) {
+        matcher.status = { kind: 'range', min: s.min, max: s.max };
+      } else {
+        matcher.status = { kind: 'exact', value: s };
+      }
+      return builder;
+    },
+    notMade: function () { expectation.kind = 'notMade'; return builder; }, // Req 7.3
+    times: function (n) { expectation.kind = 'count'; expectation.count = n; return builder; } // Req 8.1
+  };
+  return builder;
+}
+
 function Wait(ms) {
   return { __step: true, action: 'wait', ms: ms };
 }
@@ -525,6 +568,7 @@ module.exports = {
   AssertExists: AssertExists,
   AssertNotExists: AssertNotExists,
   AssertHasText: AssertHasText,
+  AssertRequest: AssertRequest,
   Navigate: Navigate,
   Wait: Wait,
   WaitFor: WaitFor,

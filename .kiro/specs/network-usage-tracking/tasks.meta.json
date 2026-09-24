@@ -79,6 +79,87 @@
         "chatSessionId": "sess_c5b8f751-0ee5-4f67-8412-84029c398993",
         "timestamp": 1790263367885
       }
+    ],
+    "6.1 Implement the `AssertRequest` builder in `index.js`": [
+      {
+        "executionId": "7000cb64-22ad-4dd7-a8ee-4022b6eba032",
+        "chatSessionId": "sess_3ef8b46b-06b4-40b4-a825-6621d0f14212",
+        "timestamp": 1790265029487
+      },
+      {
+        "executionId": "7000cb64-22ad-4dd7-a8ee-4022b6eba032",
+        "chatSessionId": "sess_3ef8b46b-06b4-40b4-a825-6621d0f14212",
+        "timestamp": 1790265121891
+      }
+    ],
+    "6.2 Add `index.d.ts` type declarations": [
+      {
+        "executionId": "7000cb64-22ad-4dd7-a8ee-4022b6eba032",
+        "chatSessionId": "sess_3ef8b46b-06b4-40b4-a825-6621d0f14212",
+        "timestamp": 1790265030425
+      },
+      {
+        "executionId": "7000cb64-22ad-4dd7-a8ee-4022b6eba032",
+        "chatSessionId": "sess_3ef8b46b-06b4-40b4-a825-6621d0f14212",
+        "timestamp": 1790265122807
+      }
+    ],
+    "6. DSL `AssertRequest` builder (`packages/dsl/index.js` + `packages/dsl/index.d.ts`)": [
+      {
+        "executionId": "7000cb64-22ad-4dd7-a8ee-4022b6eba032",
+        "chatSessionId": "sess_3ef8b46b-06b4-40b4-a825-6621d0f14212",
+        "timestamp": 1790265122935
+      }
+    ],
+    "7.1 Verify/extend compiler to carry `assertRequest` + nested `matcher`/`expectation`": [
+      {
+        "executionId": "41a97a73-42bd-41aa-8e64-b93e8b469cc6",
+        "chatSessionId": "sess_1ae25594-e535-4681-acfd-1499e6504681",
+        "timestamp": 1790265504217
+      },
+      {
+        "executionId": "41a97a73-42bd-41aa-8e64-b93e8b469cc6",
+        "chatSessionId": "sess_1ae25594-e535-4681-acfd-1499e6504681",
+        "timestamp": 1790265715528
+      }
+    ],
+    "7. Compiler pass-through verification (`packages/compiler`) — DESIGN VERIFICATION ITEM": [
+      {
+        "executionId": "41a97a73-42bd-41aa-8e64-b93e8b469cc6",
+        "chatSessionId": "sess_1ae25594-e535-4681-acfd-1499e6504681",
+        "timestamp": 1790265715752
+      }
+    ],
+    "9.1 Handle `assertRequest` step in the loop": [
+      {
+        "executionId": "d33cd342-de4f-46ce-a4f6-279aacbe896f",
+        "chatSessionId": "sess_e21990c3-a635-4c0d-89ca-7dbd6ddc5fb9",
+        "timestamp": 1790270705573
+      },
+      {
+        "executionId": "d33cd342-de4f-46ce-a4f6-279aacbe896f",
+        "chatSessionId": "sess_e21990c3-a635-4c0d-89ca-7dbd6ddc5fb9",
+        "timestamp": 1790270904011
+      }
+    ],
+    "9.2 Implement `emitAssertOutcomeOrHalt` for log-display-failure halt": [
+      {
+        "executionId": "d33cd342-de4f-46ce-a4f6-279aacbe896f",
+        "chatSessionId": "sess_e21990c3-a635-4c0d-89ca-7dbd6ddc5fb9",
+        "timestamp": 1790270709886
+      },
+      {
+        "executionId": "d33cd342-de4f-46ce-a4f6-279aacbe896f",
+        "chatSessionId": "sess_e21990c3-a635-4c0d-89ca-7dbd6ddc5fb9",
+        "timestamp": 1790270905106
+      }
+    ],
+    "9. `assertRequest` runtime evaluation in `runStepLoop` (`packages/extension/src/background.js`)": [
+      {
+        "executionId": "d33cd342-de4f-46ce-a4f6-279aacbe896f",
+        "chatSessionId": "sess_e21990c3-a635-4c0d-89ca-7dbd6ddc5fb9",
+        "timestamp": 1790270905225
+      }
     ]
   }
 }

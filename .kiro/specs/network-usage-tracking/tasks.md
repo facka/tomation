@@ -97,21 +97,21 @@ instruct running any specific CI command.
 - [ ] 5. Checkpoint — capture core
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. DSL `AssertRequest` builder (`packages/dsl/index.js` + `packages/dsl/index.d.ts`)
-  - [ ] 6.1 Implement the `AssertRequest` builder in `index.js`
+- [x] 6. DSL `AssertRequest` builder (`packages/dsl/index.js` + `packages/dsl/index.d.ts`)
+  - [x] 6.1 Implement the `AssertRequest` builder in `index.js`
     - Fluent builder returning `{ __step: true, action: 'assertRequest', matcher, expectation }`; URL arg → `exact`/`regex`/`glob` criterion; default `expectation.kind = 'exists'`.
     - Chainable methods: `method`, `query`, `jsonBody`, `formBody`, `rawBody`, `status` (int / `Nxx` / `{min,max}`), `notMade`, `times(n)`.
     - Export `AssertRequest` from the DSL entry point alongside existing builders.
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.6, 6.7, 6.9, 6.10, 7.3, 8.1_
-  - [ ] 6.2 Add `index.d.ts` type declarations
+  - [x] 6.2 Add `index.d.ts` type declarations
     - Add `UrlCriterion`, `StatusCriterion`, `BodyCriterion`, `RequestMatcher`, `RequestExpectation`, `AssertRequestBuilder`, the `assertRequest` step-union member, and `export declare function AssertRequest(...)`.
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.6, 6.7, 6.9, 6.10, 7.3, 8.1_
   - [ ]* 6.3 Write unit tests for the builder descriptor shape
     - Assert descriptor shape and each criterion mapping; presence of `notMade()` and `times()`.
     - _Requirements: 6.1, 7.3, 8.1_
 
-- [ ] 7. Compiler pass-through verification (`packages/compiler`) — DESIGN VERIFICATION ITEM
-  - [ ] 7.1 Verify/extend compiler to carry `assertRequest` + nested `matcher`/`expectation`
+- [x] 7. Compiler pass-through verification (`packages/compiler`) — DESIGN VERIFICATION ITEM
+  - [x] 7.1 Verify/extend compiler to carry `assertRequest` + nested `matcher`/`expectation`
     - Read `packages/compiler` parser/emitter; confirm `{ __step: true, action: 'assertRequest', matcher, expectation }` passes through to spec `steps[]` without dropping/flattening the nested objects. If the emitter whitelists fields per action, extend it to preserve `matcher`/`expectation`.
     - Confirm `flattenSteps`/`expandStep` stamp `_taskPath` on the descriptor like any non-task step.
     - _Requirements: 6.1, 6.11_
@@ -119,7 +119,7 @@ instruct running any specific CI command.
     - DSL module → compiled spec → `steps[]` contains the intact `assertRequest` descriptor with `matcher`/`expectation` preserved.
     - _Requirements: 6.1, 6.11_
 
-- [ ] 8. `Request_Matcher` pure functions + assertion evaluation (`packages/extension/src/networkCapture.js` / `background.js` test hooks)
+- [x] 8. `Request_Matcher` pure functions + assertion evaluation (`packages/extension/src/networkCapture.js` / `background.js` test hooks)
   - [ ] 8.1 Implement the matcher family and `requestMatches`
     - `urlMatches` (exact `===` / regex / glob→regex), `methodMatches` (uppercased compare), `querySubsetMatches` (subset, case-sensitive values), `bodyMatches` (json/form subset + raw exact; parse failure → no match), `statusMatches` (exact / inclusive range; `null` never matches).
     - `requestMatches(matcher, req)`: logical AND over present criteria.
@@ -152,11 +152,11 @@ instruct running any specific CI command.
     - Assert `evaluateAssertRequest` fails the step with no request matched when `method` is empty/invalid.
     - _Requirements: 6.5_
 
-- [ ] 9. `assertRequest` runtime evaluation in `runStepLoop` (`packages/extension/src/background.js`)
-  - [ ] 9.1 Handle `assertRequest` step in the loop
+- [x] 9. `assertRequest` runtime evaluation in `runStepLoop` (`packages/extension/src/background.js`)
+  - [x] 9.1 Handle `assertRequest` step in the loop
     - In `runStepLoop`, background-handle `assertRequest` (like `saveExpression`): emit `STEP_STARTING`, call `evaluateAssertRequest(step, getCapturedRequests())`, `emitLog` pass (advance) or fail (halt via `detachNetworkCapture`/`teardownTabTracker`/`unlockTab` + summary).
     - _Requirements: 6.5, 6.12, 7.1, 7.2, 7.4, 7.5, 8.2, 8.3, 9.1, 9.2, 9.3_
-  - [ ] 9.2 Implement `emitAssertOutcomeOrHalt` for log-display-failure halt
+  - [x] 9.2 Implement `emitAssertOutcomeOrHalt` for log-display-failure halt
     - Add `emitLogStrict`/`emitAssertOutcomeOrHalt`: if sending the outcome throws synchronously, halt the run (detach, teardown, unlock, `running = false`).
     - _Requirements: 9.4_
   - [ ]* 9.3 Write unit tests for assert evaluation flow (mocked `api`)
