@@ -208,15 +208,15 @@ instruct running any specific CI command.
 - [ ] 14. Checkpoint — panel display
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 15. Persistence: new `run-results` store (`packages/extension/src/storage.js`) — DESIGN VERIFICATION ITEM
-  - [ ] 15.1 Add `saveRunResults`/`getRunResults` and resolve `runResults` key inclusion
+- [x] 15. Persistence: new `run-results` store (`packages/extension/src/storage.js`) — DESIGN VERIFICATION ITEM
+  - [x] 15.1 Add `saveRunResults`/`getRunResults` and resolve `runResults` key inclusion
     - Add `saveRunResults(record)` (rejection propagates, NOT swallowed) and `getRunResults(runId)` under a top-level `runResults` key (`runId → RunResultsRecord`).
     - Confirm `runResults` does not collide with existing keys; decide and explicitly encode whether `getAllProjects()`/`exportAll()` (which read `storage.local.get(null)`) include or exclude the `runResults` key.
     - _Requirements: 10.1, 10.2_
-  - [ ] 15.2 Build and persist the record in `finishRun` (`background.js`)
+  - [x] 15.2 Build and persist the record in `finishRun` (`background.js`)
     - Add `buildRunResultsRecord()` from `getCapturedRequests()` (byte-for-byte, unmasked); `finishRun` awaits `saveRunResults`; on rejection mark the whole run failed and emit `RUN_PERSIST_FAILED`.
     - _Requirements: 10.1, 10.2, 10.4, 11.4_
-  - [ ] 15.3 Implement reopen / rehydrate path
+  - [x] 15.3 Implement reopen / rehydrate path
     - Load via `getRunResults(runId)` and dispatch each `CapturedRequest` into `state.networkRequests` using the same grouping as live capture so `LogContainer` re-renders grouped by step.
     - _Requirements: 10.3, 11.4_
   - [ ]* 15.4 Write property test for persistence round-trip

@@ -229,6 +229,49 @@
         "chatSessionId": "sess_d94a62fb-7bc1-4071-9419-8572e516394d",
         "timestamp": 1790276880138
       }
+    ],
+    "15.1 Add `saveRunResults`/`getRunResults` and resolve `runResults` key inclusion": [
+      {
+        "executionId": "cb6af580-f82b-4d1f-ab29-a28096d26f6a",
+        "chatSessionId": "sess_3c91d7c4-28ee-4208-98df-54b291ef49b3",
+        "timestamp": 1790280621878
+      },
+      {
+        "executionId": "cb6af580-f82b-4d1f-ab29-a28096d26f6a",
+        "chatSessionId": "sess_3c91d7c4-28ee-4208-98df-54b291ef49b3",
+        "timestamp": 1790280724365
+      }
+    ],
+    "15.3 Implement reopen / rehydrate path": [
+      {
+        "executionId": "cb6af580-f82b-4d1f-ab29-a28096d26f6a",
+        "chatSessionId": "sess_3c91d7c4-28ee-4208-98df-54b291ef49b3",
+        "timestamp": 1790280738913
+      },
+      {
+        "executionId": "cb6af580-f82b-4d1f-ab29-a28096d26f6a",
+        "chatSessionId": "sess_3c91d7c4-28ee-4208-98df-54b291ef49b3",
+        "timestamp": 1790280808215
+      }
+    ],
+    "15.2 Build and persist the record in `finishRun` (`background.js`)": [
+      {
+        "executionId": "cb6af580-f82b-4d1f-ab29-a28096d26f6a",
+        "chatSessionId": "sess_3c91d7c4-28ee-4208-98df-54b291ef49b3",
+        "timestamp": 1790280846679
+      },
+      {
+        "executionId": "cb6af580-f82b-4d1f-ab29-a28096d26f6a",
+        "chatSessionId": "sess_3c91d7c4-28ee-4208-98df-54b291ef49b3",
+        "timestamp": 1790281006906
+      }
+    ],
+    "15. Persistence: new `run-results` store (`packages/extension/src/storage.js`) — DESIGN VERIFICATION ITEM": [
+      {
+        "executionId": "cb6af580-f82b-4d1f-ab29-a28096d26f6a",
+        "chatSessionId": "sess_3c91d7c4-28ee-4208-98df-54b291ef49b3",
+        "timestamp": 1790281007029
+      }
     ]
   }
 }

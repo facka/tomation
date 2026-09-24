@@ -893,6 +893,7 @@ var runState = {
   stopRequested: false,
   lockedTabId: null,
   currentTestName: '',
+  startedAt: null,
   steps: [],
   spec: null,
   stepIndex: 0,
@@ -964,6 +965,7 @@ function resetRunState() {
   runState.stopRequested = false;
   runState.lockedTabId = null;
   runState.currentTestName = '';
+  runState.startedAt = null;
   runState.steps = [];
   runState.stepIndex = 0;
   runState.passCount = 0;
@@ -2014,6 +2016,7 @@ function startRun(tabId, test, spec, checkedSteps, config) {
   emitStepPlan(resolvedSteps, test.steps, spec.tasks || {}, checkedSteps);
 
   runState.running = true;
+  runState.startedAt = new Date().toISOString();
   runState.contextStore = {};
   runState.currentTestName = test.name || '';
   runState.steps = resolvedSteps;
@@ -2637,8 +2640,53 @@ function handleSkipStep(msg) {
 }
 
 /**
+ * Build a RunResultsRecord for persistence from the current run state and the
+ * captured network requests. Captured requests are passed through byte-for-byte
+ * and UNMASKED — no transform/redaction is applied here (Req 11.4).
+ *
+ * @param {boolean} wasStopped - whether this run was stopped early (drives summary.stopped)
+ * @returns {object} the RunResultsRecord to persist
+ */
+function buildRunResultsRecord(wasStopped) {
+  // Derive hostname from the first spec meta URL, if available.
+  var metaUrls = (runState.spec && runState.spec.meta && runState.spec.meta.urls) || [];
+  var hostname = metaUrls.length > 0 ? extractHostname(metaUrls[0]) : '';
+
+  // No specId field exists on spec.meta; persist null per design.
+  var specId = (runState.spec && runState.spec.meta && runState.spec.meta.specId) || null;
+
+  var summary = {
+    total: runState.stepIndex,
+    passed: runState.passCount,
+    failed: runState.failCount
+  };
+  if (wasStopped) {
+    summary.stopped = true;
+  }
+
+  return {
+    runId: generateUUID(),
+    hostname: hostname,
+    specId: specId,
+    runnableName: runState.currentTestName || '',
+    startedAt: runState.startedAt || new Date().toISOString(),
+    finishedAt: new Date().toISOString(),
+    summary: summary,
+    // Unmasked, byte-for-byte captured requests (Req 11.4).
+    capturedRequests: getCapturedRequests()
+  };
+}
+
+/**
  * Finish the run (either all steps done or stopped).
- * Unlocks tab and emits appropriate summary.
+ * Unlocks tab, persists the run results, and emits the appropriate summary.
+ *
+ * Persistence is awaited: the summary is emitted only after the save settles so
+ * the panel's RUN_COMPLETE (which clears networkCapturePending) follows persistence.
+ * On persist failure the whole run is marked failed and RUN_PERSIST_FAILED is
+ * emitted (Req 10.1, 10.2, 10.4).
+ *
+ * @returns {Promise} resolves once the summary has been emitted
  */
 function finishRun() {
   // Detach network capture alongside tab teardown/unlock (Req 2.3, 2.4).
@@ -2651,12 +2699,44 @@ function finishRun() {
   var passed = runState.passCount;
   var failed = runState.failCount;
 
-  if (runState.stopRequested) {
-    runState.stopRequested = false;
-    emitSummary('RUN_STOPPED', total, passed, failed);
-  } else {
-    emitSummary('RUN_COMPLETE', total, passed, failed);
+  // Capture whether this was a stop BEFORE clearing the flag so both the
+  // summary emission and the persisted record agree.
+  var wasStopped = runState.stopRequested;
+  runState.stopRequested = false;
+
+  // Defensive: in Node test environments storage.js may not be loaded, so the
+  // storage globals may be undefined. Skip persistence and emit synchronously.
+  if (typeof saveRunResults !== 'function') {
+    if (wasStopped) {
+      emitSummary('RUN_STOPPED', total, passed, failed);
+    } else {
+      emitSummary('RUN_COMPLETE', total, passed, failed);
+    }
+    return Promise.resolve();
   }
+
+  var record = buildRunResultsRecord(wasStopped);
+
+  return saveRunResults(record).then(function () {
+    // Persistence succeeded — emit the normal summary.
+    if (wasStopped) {
+      emitSummary('RUN_STOPPED', total, passed, failed);
+    } else {
+      emitSummary('RUN_COMPLETE', total, passed, failed);
+    }
+  }).catch(function (err) {
+    // Persistence failed — fail the whole run (Req 10.4).
+    var errMessage = (err && err.message) || String(err);
+    safeSendMessage({ type: 'RUN_PERSIST_FAILED', error: errMessage });
+    // Signal run failure to the panel; persistFailed flags the failed run.
+    safeSendMessage({
+      type: 'RUN_COMPLETE',
+      total: total,
+      passed: passed,
+      failed: failed,
+      persistFailed: true
+    });
+  });
 }
 
 /**
@@ -3513,6 +3593,7 @@ function startAutomationRun(tabId, automation, spec, checkedSteps, config, param
   emitStepPlan(resolvedSteps, automation.steps, spec.tasks || {}, checkedSteps);
 
   runState.running = true;
+  runState.startedAt = new Date().toISOString();
   runState.currentTestName = automation.name || '';
   runState.steps = resolvedSteps;
   runState.spec = spec;
@@ -3606,6 +3687,7 @@ if (typeof module !== 'undefined' && module.exports) {
     startAutomationRun: startAutomationRun,
     runStepLoop: runStepLoop,
     finishRun: finishRun,
+    buildRunResultsRecord: buildRunResultsRecord,
     stopRun: stopRun,
     pauseRun: pauseRun,
     continueRun: continueRun,

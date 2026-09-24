@@ -781,6 +781,38 @@ async function loadProjectFromStorage(hostname: string): Promise<void> {
   }
 }
 
+/**
+ * Rehydrate the network log for a persisted (reopened) run.
+ *
+ * Reads the `RunResultsRecord` stored under the top-level `runResults`
+ * namespace (`runId -> RunResultsRecord`) and dispatches each captured request
+ * back through `addNetworkRequest` — the exact same grouping used by live
+ * capture — so `LogContainer` re-renders the network entries grouped by step
+ * (Req 10.3). No transformation is applied to the stored records, so the
+ * captured values are restored byte-for-byte identical to what was persisted
+ * (Req 11.4).
+ */
+async function rehydrateRunResults(runId: string): Promise<void> {
+  try {
+    const result = await storageGet('runResults');
+    const namespace = result['runResults'] as
+      | Record<string, { capturedRequests?: CapturedRequest[] }>
+      | undefined;
+    const record = namespace?.[runId];
+    if (!record) return; // Nothing persisted for this run — nothing to rehydrate.
+
+    // Reset first so reopening the same run is idempotent.
+    state.networkRequests = {};
+    for (const req of record.capturedRequests ?? []) {
+      addNetworkRequest(req);
+    }
+    // A reopened run is complete: per-step counts are final, not placeholders.
+    state.networkCapturePending = false;
+  } catch (err) {
+    console.error('rehydrateRunResults: failed to read run results for "' + runId + '":', err);
+  }
+}
+
 // --- Export ---
 
 export function useStore() {
@@ -823,6 +855,7 @@ export function useStore() {
     // Init
     loadPersistedState,
     loadProjectFromStorage,
+    rehydrateRunResults,
 
     // Persistence
     saveTestPlanConfig,
