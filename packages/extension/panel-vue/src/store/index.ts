@@ -6,6 +6,7 @@ import type {
   RunConfig,
   LogEntry,
   StoreState,
+  CapturedRequest,
 } from '../types/store';
 import type { Spec, SpecEntry, Project, Param } from '../types/spec';
 import type { StepPlanEntry } from '../types/messages';
@@ -66,6 +67,8 @@ const state = reactive<StoreState>({
   isPaused: false,
   runConfig: null,
   logEntries: [],
+  networkRequests: {},
+  networkCapturePending: false,
   runSummary: null,
   contextStore: {},
   automationParams: null,
@@ -273,6 +276,10 @@ function startRun(config: RunConfig, params?: Record<string, unknown>): void {
   state.isPaused = false;
   state.runConfig = config;
   state.logEntries = [];
+  state.networkRequests = {};
+  // Assume capture attaches on run start; the run lifecycle flips this false on
+  // completion. While true, per-step counts render a loading placeholder.
+  state.networkCapturePending = true;
   state.runSummary = null;
   state.contextStore = {};
   state.automationParams = params ?? null;
@@ -325,9 +332,38 @@ function setStepStatus(stepIndex: number, status: StepStatus, meta?: Partial<Log
   }
 }
 
+/**
+ * Store a captured network request under its attributed step group.
+ * Attributed requests are keyed by String(stepIndex); requests with a null
+ * step index fall under the literal 'unattributed' group. Each group array is
+ * kept sorted ascending by `initiatedAt`.
+ */
+function addNetworkRequest(request: CapturedRequest): void {
+  const groupKey = request.stepIndex == null ? 'unattributed' : String(request.stepIndex);
+  const group = state.networkRequests[groupKey] ?? (state.networkRequests[groupKey] = []);
+  // Insert keeping the group sorted by initiatedAt (ascending).
+  let insertAt = group.length;
+  for (let i = 0; i < group.length; i++) {
+    if (group[i].initiatedAt > request.initiatedAt) {
+      insertAt = i;
+      break;
+    }
+  }
+  group.splice(insertAt, 0, request);
+}
+
+/**
+ * Number of captured requests attributed to a given step index. Returns 0 when
+ * the step has no captured requests (so callers render no count / no entry).
+ */
+function networkRequestCount(stepIndex: number): number {
+  return state.networkRequests[String(stepIndex)]?.length ?? 0;
+}
+
 function setRunComplete(summary: { total: number; passed: number; failed: number; stopped?: boolean; reason?: string }): void {
   state.isRunning = false;
   state.isPaused = false;
+  state.networkCapturePending = false;
   state.runSummary = summary;
 }
 
@@ -343,6 +379,7 @@ function markManuallyStopped(): void {
   const failed = Math.max(1, total - passed);
   state.isRunning = false;
   state.isPaused = false;
+  state.networkCapturePending = false;
   state.runSummary = {
     total,
     passed,
@@ -744,6 +781,38 @@ async function loadProjectFromStorage(hostname: string): Promise<void> {
   }
 }
 
+/**
+ * Rehydrate the network log for a persisted (reopened) run.
+ *
+ * Reads the `RunResultsRecord` stored under the top-level `runResults`
+ * namespace (`runId -> RunResultsRecord`) and dispatches each captured request
+ * back through `addNetworkRequest` — the exact same grouping used by live
+ * capture — so `LogContainer` re-renders the network entries grouped by step
+ * (Req 10.3). No transformation is applied to the stored records, so the
+ * captured values are restored byte-for-byte identical to what was persisted
+ * (Req 11.4).
+ */
+async function rehydrateRunResults(runId: string): Promise<void> {
+  try {
+    const result = await storageGet('runResults');
+    const namespace = result['runResults'] as
+      | Record<string, { capturedRequests?: CapturedRequest[] }>
+      | undefined;
+    const record = namespace?.[runId];
+    if (!record) return; // Nothing persisted for this run — nothing to rehydrate.
+
+    // Reset first so reopening the same run is idempotent.
+    state.networkRequests = {};
+    for (const req of record.capturedRequests ?? []) {
+      addNetworkRequest(req);
+    }
+    // A reopened run is complete: per-step counts are final, not placeholders.
+    state.networkCapturePending = false;
+  } catch (err) {
+    console.error('rehydrateRunResults: failed to read run results for "' + runId + '":', err);
+  }
+}
+
 // --- Export ---
 
 export function useStore() {
@@ -772,6 +841,8 @@ export function useStore() {
     setStepPlan,
     setStepStatus,
     setRunComplete,
+    addNetworkRequest,
+    networkRequestCount,
     markManuallyStopped,
     setPaused,
     stopRun,
@@ -784,6 +855,7 @@ export function useStore() {
     // Init
     loadPersistedState,
     loadProjectFromStorage,
+    rehydrateRunResults,
 
     // Persistence
     saveTestPlanConfig,

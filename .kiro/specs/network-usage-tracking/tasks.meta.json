@@ -1,0 +1,296 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Pure capture helpers (`packages/extension/src/networkCapture.js` [new], exported via `module.exports`)": [
+      {
+        "executionId": "d38287a9-9d64-47d9-996f-c9e2e77b06a4",
+        "chatSessionId": "sess_8e084034-62f7-45ce-b8c2-faabf6da3a18",
+        "timestamp": 1790261168780
+      },
+      {
+        "executionId": "d38287a9-9d64-47d9-996f-c9e2e77b06a4",
+        "chatSessionId": "sess_8e084034-62f7-45ce-b8c2-faabf6da3a18",
+        "timestamp": 1790261257413
+      }
+    ],
+    "2. Attribution resolver (pure) + background run-state tracking": [
+      {
+        "executionId": "acb62943-92b9-4285-88af-e29c508e04c3",
+        "chatSessionId": "sess_f5cf37c3-45e6-4c8e-afcf-fe627243c01e",
+        "timestamp": 1790262152238
+      },
+      {
+        "executionId": "acb62943-92b9-4285-88af-e29c508e04c3",
+        "chatSessionId": "sess_f5cf37c3-45e6-4c8e-afcf-fe627243c01e",
+        "timestamp": 1790262324373
+      }
+    ],
+    "3. `Network_Capture_Service` lifecycle + CDP event handling (`packages/extension/src/networkCapture.js` / `background.js`)": [
+      {
+        "executionId": "d566d491-2a60-4583-810c-45985923cfdd",
+        "chatSessionId": "sess_f300179c-82dd-49c2-b6e7-be9bd9f7dd68",
+        "timestamp": 1790262726826
+      },
+      {
+        "executionId": "d566d491-2a60-4583-810c-45985923cfdd",
+        "chatSessionId": "sess_f300179c-82dd-49c2-b6e7-be9bd9f7dd68",
+        "timestamp": 1790262928891
+      }
+    ],
+    "4.1 Attach on run start; reset network state": [
+      {
+        "executionId": "4b48c17e-fa8b-433d-8e14-7af8c88990a7",
+        "chatSessionId": "sess_c5b8f751-0ee5-4f67-8412-84029c398993",
+        "timestamp": 1790263130883
+      },
+      {
+        "executionId": "4b48c17e-fa8b-433d-8e14-7af8c88990a7",
+        "chatSessionId": "sess_c5b8f751-0ee5-4f67-8412-84029c398993",
+        "timestamp": 1790263365174
+      }
+    ],
+    "4.2 Detach on completion and every early-exit path": [
+      {
+        "executionId": "4b48c17e-fa8b-433d-8e14-7af8c88990a7",
+        "chatSessionId": "sess_c5b8f751-0ee5-4f67-8412-84029c398993",
+        "timestamp": 1790263132273
+      },
+      {
+        "executionId": "4b48c17e-fa8b-433d-8e14-7af8c88990a7",
+        "chatSessionId": "sess_c5b8f751-0ee5-4f67-8412-84029c398993",
+        "timestamp": 1790263366482
+      }
+    ],
+    "4.3 Emit `NETWORK_REQUEST` messages and capture-service log entries": [
+      {
+        "executionId": "4b48c17e-fa8b-433d-8e14-7af8c88990a7",
+        "chatSessionId": "sess_c5b8f751-0ee5-4f67-8412-84029c398993",
+        "timestamp": 1790263133406
+      },
+      {
+        "executionId": "4b48c17e-fa8b-433d-8e14-7af8c88990a7",
+        "chatSessionId": "sess_c5b8f751-0ee5-4f67-8412-84029c398993",
+        "timestamp": 1790263367713
+      }
+    ],
+    "4. Background integration: wire capture into the run lifecycle (`packages/extension/src/background.js`)": [
+      {
+        "executionId": "4b48c17e-fa8b-433d-8e14-7af8c88990a7",
+        "chatSessionId": "sess_c5b8f751-0ee5-4f67-8412-84029c398993",
+        "timestamp": 1790263367885
+      }
+    ],
+    "6.1 Implement the `AssertRequest` builder in `index.js`": [
+      {
+        "executionId": "7000cb64-22ad-4dd7-a8ee-4022b6eba032",
+        "chatSessionId": "sess_3ef8b46b-06b4-40b4-a825-6621d0f14212",
+        "timestamp": 1790265029487
+      },
+      {
+        "executionId": "7000cb64-22ad-4dd7-a8ee-4022b6eba032",
+        "chatSessionId": "sess_3ef8b46b-06b4-40b4-a825-6621d0f14212",
+        "timestamp": 1790265121891
+      }
+    ],
+    "6.2 Add `index.d.ts` type declarations": [
+      {
+        "executionId": "7000cb64-22ad-4dd7-a8ee-4022b6eba032",
+        "chatSessionId": "sess_3ef8b46b-06b4-40b4-a825-6621d0f14212",
+        "timestamp": 1790265030425
+      },
+      {
+        "executionId": "7000cb64-22ad-4dd7-a8ee-4022b6eba032",
+        "chatSessionId": "sess_3ef8b46b-06b4-40b4-a825-6621d0f14212",
+        "timestamp": 1790265122807
+      }
+    ],
+    "6. DSL `AssertRequest` builder (`packages/dsl/index.js` + `packages/dsl/index.d.ts`)": [
+      {
+        "executionId": "7000cb64-22ad-4dd7-a8ee-4022b6eba032",
+        "chatSessionId": "sess_3ef8b46b-06b4-40b4-a825-6621d0f14212",
+        "timestamp": 1790265122935
+      }
+    ],
+    "7.1 Verify/extend compiler to carry `assertRequest` + nested `matcher`/`expectation`": [
+      {
+        "executionId": "41a97a73-42bd-41aa-8e64-b93e8b469cc6",
+        "chatSessionId": "sess_1ae25594-e535-4681-acfd-1499e6504681",
+        "timestamp": 1790265504217
+      },
+      {
+        "executionId": "41a97a73-42bd-41aa-8e64-b93e8b469cc6",
+        "chatSessionId": "sess_1ae25594-e535-4681-acfd-1499e6504681",
+        "timestamp": 1790265715528
+      }
+    ],
+    "7. Compiler pass-through verification (`packages/compiler`) — DESIGN VERIFICATION ITEM": [
+      {
+        "executionId": "41a97a73-42bd-41aa-8e64-b93e8b469cc6",
+        "chatSessionId": "sess_1ae25594-e535-4681-acfd-1499e6504681",
+        "timestamp": 1790265715752
+      }
+    ],
+    "9.1 Handle `assertRequest` step in the loop": [
+      {
+        "executionId": "d33cd342-de4f-46ce-a4f6-279aacbe896f",
+        "chatSessionId": "sess_e21990c3-a635-4c0d-89ca-7dbd6ddc5fb9",
+        "timestamp": 1790270705573
+      },
+      {
+        "executionId": "d33cd342-de4f-46ce-a4f6-279aacbe896f",
+        "chatSessionId": "sess_e21990c3-a635-4c0d-89ca-7dbd6ddc5fb9",
+        "timestamp": 1790270904011
+      }
+    ],
+    "9.2 Implement `emitAssertOutcomeOrHalt` for log-display-failure halt": [
+      {
+        "executionId": "d33cd342-de4f-46ce-a4f6-279aacbe896f",
+        "chatSessionId": "sess_e21990c3-a635-4c0d-89ca-7dbd6ddc5fb9",
+        "timestamp": 1790270709886
+      },
+      {
+        "executionId": "d33cd342-de4f-46ce-a4f6-279aacbe896f",
+        "chatSessionId": "sess_e21990c3-a635-4c0d-89ca-7dbd6ddc5fb9",
+        "timestamp": 1790270905106
+      }
+    ],
+    "9. `assertRequest` runtime evaluation in `runStepLoop` (`packages/extension/src/background.js`)": [
+      {
+        "executionId": "d33cd342-de4f-46ce-a4f6-279aacbe896f",
+        "chatSessionId": "sess_e21990c3-a635-4c0d-89ca-7dbd6ddc5fb9",
+        "timestamp": 1790270905225
+      }
+    ],
+    "11.1 Add store state and `NETWORK_REQUEST` handler": [
+      {
+        "executionId": "7a9faaeb-40c5-4536-a6b7-caf08b1a4aa9",
+        "chatSessionId": "sess_e098c730-d1f1-4bcf-89bf-1debf45b0f5f",
+        "timestamp": 1790273887628
+      },
+      {
+        "executionId": "7a9faaeb-40c5-4536-a6b7-caf08b1a4aa9",
+        "chatSessionId": "sess_e098c730-d1f1-4bcf-89bf-1debf45b0f5f",
+        "timestamp": 1790274350740
+      }
+    ],
+    "11. Panel store: `networkRequests` slice + `NETWORK_REQUEST` handling (`packages/extension/panel-vue/src/store`)": [
+      {
+        "executionId": "7a9faaeb-40c5-4536-a6b7-caf08b1a4aa9",
+        "chatSessionId": "sess_e098c730-d1f1-4bcf-89bf-1debf45b0f5f",
+        "timestamp": 1790274350886
+      }
+    ],
+    "12.1 Implement `statusDisplay(status)` helper": [
+      {
+        "executionId": "cbafa9ed-e106-4652-b499-23fb8e4f8839",
+        "chatSessionId": "sess_d08ef515-c0d9-46e0-941c-f540ce2ff342",
+        "timestamp": 1790276169427
+      },
+      {
+        "executionId": "cbafa9ed-e106-4652-b499-23fb8e4f8839",
+        "chatSessionId": "sess_d08ef515-c0d9-46e0-941c-f540ce2ff342",
+        "timestamp": 1790276223638
+      }
+    ],
+    "12.2 Implement the component": [
+      {
+        "executionId": "cbafa9ed-e106-4652-b499-23fb8e4f8839",
+        "chatSessionId": "sess_d08ef515-c0d9-46e0-941c-f540ce2ff342",
+        "timestamp": 1790276224364
+      },
+      {
+        "executionId": "cbafa9ed-e106-4652-b499-23fb8e4f8839",
+        "chatSessionId": "sess_d08ef515-c0d9-46e0-941c-f540ce2ff342",
+        "timestamp": 1790276344398
+      }
+    ],
+    "12. `NetworkLogEntry.vue` component (`packages/extension/panel-vue/src/components/NetworkLogEntry.vue`) + `statusDisplay`": [
+      {
+        "executionId": "cbafa9ed-e106-4652-b499-23fb8e4f8839",
+        "chatSessionId": "sess_d08ef515-c0d9-46e0-941c-f540ce2ff342",
+        "timestamp": 1790276344518
+      }
+    ],
+    "13.1 Interleave network entries after their step": [
+      {
+        "executionId": "7fe05f63-edbf-49f8-8279-980142f6b3f9",
+        "chatSessionId": "sess_d94a62fb-7bc1-4071-9419-8572e516394d",
+        "timestamp": 1790276759243
+      },
+      {
+        "executionId": "7fe05f63-edbf-49f8-8279-980142f6b3f9",
+        "chatSessionId": "sess_d94a62fb-7bc1-4071-9419-8572e516394d",
+        "timestamp": 1790276879914
+      }
+    ],
+    "13. `LogContainer.vue` `renderItems` interleaving (`packages/extension/panel-vue/src/components/LogContainer.vue`)": [
+      {
+        "executionId": "7fe05f63-edbf-49f8-8279-980142f6b3f9",
+        "chatSessionId": "sess_d94a62fb-7bc1-4071-9419-8572e516394d",
+        "timestamp": 1790276880138
+      }
+    ],
+    "15.1 Add `saveRunResults`/`getRunResults` and resolve `runResults` key inclusion": [
+      {
+        "executionId": "cb6af580-f82b-4d1f-ab29-a28096d26f6a",
+        "chatSessionId": "sess_3c91d7c4-28ee-4208-98df-54b291ef49b3",
+        "timestamp": 1790280621878
+      },
+      {
+        "executionId": "cb6af580-f82b-4d1f-ab29-a28096d26f6a",
+        "chatSessionId": "sess_3c91d7c4-28ee-4208-98df-54b291ef49b3",
+        "timestamp": 1790280724365
+      }
+    ],
+    "15.3 Implement reopen / rehydrate path": [
+      {
+        "executionId": "cb6af580-f82b-4d1f-ab29-a28096d26f6a",
+        "chatSessionId": "sess_3c91d7c4-28ee-4208-98df-54b291ef49b3",
+        "timestamp": 1790280738913
+      },
+      {
+        "executionId": "cb6af580-f82b-4d1f-ab29-a28096d26f6a",
+        "chatSessionId": "sess_3c91d7c4-28ee-4208-98df-54b291ef49b3",
+        "timestamp": 1790280808215
+      }
+    ],
+    "15.2 Build and persist the record in `finishRun` (`background.js`)": [
+      {
+        "executionId": "cb6af580-f82b-4d1f-ab29-a28096d26f6a",
+        "chatSessionId": "sess_3c91d7c4-28ee-4208-98df-54b291ef49b3",
+        "timestamp": 1790280846679
+      },
+      {
+        "executionId": "cb6af580-f82b-4d1f-ab29-a28096d26f6a",
+        "chatSessionId": "sess_3c91d7c4-28ee-4208-98df-54b291ef49b3",
+        "timestamp": 1790281006906
+      }
+    ],
+    "15. Persistence: new `run-results` store (`packages/extension/src/storage.js`) — DESIGN VERIFICATION ITEM": [
+      {
+        "executionId": "cb6af580-f82b-4d1f-ab29-a28096d26f6a",
+        "chatSessionId": "sess_3c91d7c4-28ee-4208-98df-54b291ef49b3",
+        "timestamp": 1790281007029
+      }
+    ],
+    "17.1 Connect the full path and remove orphaned code": [
+      {
+        "executionId": "89aedcc7-8719-4816-b16f-b60de07abf14",
+        "chatSessionId": "sess_9b9da772-fdb7-429a-a86e-415605aaf96b",
+        "timestamp": 1790283152632
+      },
+      {
+        "executionId": "89aedcc7-8719-4816-b16f-b60de07abf14",
+        "chatSessionId": "sess_9b9da772-fdb7-429a-a86e-415605aaf96b",
+        "timestamp": 1790283410626
+      }
+    ],
+    "17. Final wiring / end-to-end integration": [
+      {
+        "executionId": "89aedcc7-8719-4816-b16f-b60de07abf14",
+        "chatSessionId": "sess_9b9da772-fdb7-429a-a86e-415605aaf96b",
+        "timestamp": 1790283410756
+      }
+    ]
+  }
+}

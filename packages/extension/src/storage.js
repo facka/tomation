@@ -2,6 +2,16 @@
 // Implementation: Task 10
 var api = typeof browser !== 'undefined' ? browser : chrome;
 
+// Top-level storage key holding the run-results namespace: a single object
+// mapping runId -> RunResultsRecord. This is deliberately distinct from every
+// existing key convention so it cannot collide:
+//   - Projects are keyed by hostname (e.g. "example.com", always dotted).
+//   - Legacy favourites use the "automation_favourites_<hostname>" prefix.
+//   - Test plan configs use the "config:<specId>:<testIndex>" prefix.
+//   - The active-tab preference uses "home_active_tab".
+// None of those can equal the literal "runResults".
+var RUN_RESULTS_KEY = 'runResults';
+
 /**
  * Generate a UUID-v4 string using Math.random().
  * ES5-compatible, no external dependencies.
@@ -140,7 +150,15 @@ function renameProject(hostname, newName) {
  */
 function getAllProjects() {
   return api.storage.local.get(null).then(function (result) {
-    return result || {};
+    var data = result || {};
+    // DECISION: run-results are separate run artifacts, not projects, so they
+    // are EXCLUDED from project listing. Because get(null) returns every key,
+    // explicitly drop the runResults namespace here so the exclusion is
+    // deliberate and self-documenting rather than accidental. (Req 10.1)
+    if (data[RUN_RESULTS_KEY]) {
+      delete data[RUN_RESULTS_KEY];
+    }
+    return data;
   });
 }
 
@@ -154,6 +172,14 @@ function getAllProjects() {
 function exportAll(includeValues) {
   return api.storage.local.get(null).then(function (result) {
     var data = result || {};
+    // DECISION: run-results are separate run artifacts, not projects, so they
+    // are EXCLUDED from the export. get(null) returns every key, so explicitly
+    // drop the runResults namespace before returning. This keeps shared export
+    // files scoped to projects and avoids leaking captured request/response
+    // bodies (which are stored fully unmasked) into a shared file. (Req 10.1)
+    if (data[RUN_RESULTS_KEY]) {
+      delete data[RUN_RESULTS_KEY];
+    }
     if (includeValues === false) {
       data = JSON.parse(JSON.stringify(data));
       var keys = Object.keys(data);
@@ -544,6 +570,43 @@ function loadActiveTab() {
   });
 }
 
+/**
+ * Persist a RunResultsRecord under the top-level `runResults` key namespace.
+ * The namespace is a single object mapping `runId -> RunResultsRecord`.
+ *
+ * IMPORTANT: rejection PROPAGATES. Unlike the "silent fail" helpers above,
+ * this function intentionally does NOT catch/swallow storage errors — a failed
+ * write must reject so the caller (finishRun) can fail the whole run and emit
+ * RUN_PERSIST_FAILED (Req 10.4). Do not add a .catch() here.
+ *
+ * @param {object} record - RunResultsRecord (must include a `runId` string)
+ * @returns {Promise<void>}
+ */
+function saveRunResults(record) {
+  var runId = record && record.runId;
+  // Read-modify-write the runResults namespace so multiple runs coexist under
+  // the single top-level key. Rejections from get/set propagate to the caller.
+  return api.storage.local.get(RUN_RESULTS_KEY).then(function (result) {
+    var all = (result && result[RUN_RESULTS_KEY]) || {};
+    all[runId] = record;
+    var data = {};
+    data[RUN_RESULTS_KEY] = all;
+    return api.storage.local.set(data);
+  });
+}
+
+/**
+ * Read the RunResultsRecord for a given runId from the `runResults` namespace.
+ * @param {string} runId
+ * @returns {Promise<object|null>} the record, or null if absent
+ */
+function getRunResults(runId) {
+  return api.storage.local.get(RUN_RESULTS_KEY).then(function (result) {
+    var all = (result && result[RUN_RESULTS_KEY]) || {};
+    return all[runId] || null;
+  });
+}
+
 // Export for use by other extension scripts and for testing
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -556,6 +619,8 @@ if (typeof module !== 'undefined' && module.exports) {
     renameProject: renameProject,
     getAllProjects: getAllProjects,
     exportAll: exportAll,
+    saveRunResults: saveRunResults,
+    getRunResults: getRunResults,
     importAll: importAll,
     getTestPlanConfig: getTestPlanConfig,
     saveTestPlanConfig: saveTestPlanConfig,

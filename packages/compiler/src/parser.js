@@ -1638,10 +1638,229 @@ function resolveTarget(node, constBindings, warnings, filePath) {
   return { target: extractElementRef(node) };
 }
 
+/**
+ * Extract a plain JS value from an AST expression node, supporting nested
+ * ObjectExpression / ArrayExpression / Literal (string/number/boolean/null) forms.
+ * Used for AssertRequest query / body criteria which are arbitrary plain objects.
+ * Returns undefined for anything that cannot be resolved to a static literal.
+ *
+ * @param {object} node - AST node
+ * @returns {*} resolved literal value, or undefined if not statically resolvable
+ */
+function extractLiteralValue(node) {
+  if (!node) return undefined;
+
+  if (node.type === 'Literal') {
+    // Regex literals surface as Literal with a `regex` field — not a plain value.
+    if (node.regex) return undefined;
+    return node.value;
+  }
+
+  // Simple template literal with no expressions → its cooked string
+  if (node.type === 'TemplateLiteral' && node.expressions.length === 0 && node.quasis.length === 1) {
+    return node.quasis[0].value.cooked;
+  }
+
+  // Negative numbers: -N
+  if (node.type === 'UnaryExpression' && node.operator === '-') {
+    const inner = extractLiteralValue(node.argument);
+    return typeof inner === 'number' ? -inner : undefined;
+  }
+
+  if (node.type === 'ArrayExpression') {
+    const arr = [];
+    for (const el of node.elements) {
+      if (el === null) { arr.push(null); continue; } // elision
+      const v = extractLiteralValue(el);
+      if (v === undefined) return undefined; // non-static element → whole array unresolvable
+      arr.push(v);
+    }
+    return arr;
+  }
+
+  if (node.type === 'ObjectExpression') {
+    const obj = {};
+    for (const prop of node.properties) {
+      if (prop.type !== 'Property') continue;
+      const key = prop.key.type === 'Identifier' ? prop.key.name
+                 : prop.key.type === 'Literal' ? String(prop.key.value)
+                 : null;
+      if (key === null) continue;
+      const v = extractLiteralValue(prop.value);
+      if (v === undefined) continue; // skip non-static entries rather than failing whole object
+      obj[key] = v;
+    }
+    return obj;
+  }
+
+  return undefined;
+}
+
+/**
+ * Extract a RegExp descriptor { source, flags } from a regex Literal AST node.
+ * Returns null if the node is not a regex literal.
+ *
+ * @param {object} node - AST node
+ * @returns {{source: string, flags: string}|null}
+ */
+function extractRegexLiteral(node) {
+  if (node && node.type === 'Literal' && node.regex) {
+    return { source: node.regex.pattern, flags: node.regex.flags || '' };
+  }
+  return null;
+}
+
+/**
+ * Reconstruct an `assertRequest` step descriptor from an AssertRequest(...) fluent
+ * call chain in the AST. Mirrors the DSL builder in packages/dsl/index.js so the
+ * compiled spec `steps[]` carries the intact { action, matcher, expectation } shape.
+ *
+ * Recognized chain: AssertRequest(url).method(m).query(obj).jsonBody(obj)
+ *   .formBody(obj).rawBody(str).status(s).notMade().times(n)
+ *
+ * @param {object} exprNode - expression AST node (outermost CallExpression of the chain)
+ * @param {string} filePath - current file path for warnings
+ * @param {Array} warnings - mutable warnings array
+ * @returns {object|null} { __step, action, matcher, expectation } or null if not an AssertRequest chain
+ */
+function extractAssertRequestStep(exprNode, filePath, warnings) {
+  if (!exprNode || exprNode.type !== 'CallExpression') return null;
+  if (!warnings) warnings = [];
+
+  // Walk the method chain from the outermost call inward, collecting
+  // { name, args } for each chained method, until we reach the base AssertRequest(...) call.
+  const chain = [];
+  let current = exprNode;
+
+  while (
+    current &&
+    current.type === 'CallExpression' &&
+    current.callee &&
+    current.callee.type === 'MemberExpression' &&
+    current.callee.property &&
+    current.callee.property.type === 'Identifier'
+  ) {
+    chain.push({ name: current.callee.property.name, args: current.arguments || [] });
+    current = current.callee.object;
+  }
+
+  // Base must be AssertRequest(...) called as a bare identifier.
+  if (
+    !current ||
+    current.type !== 'CallExpression' ||
+    !current.callee ||
+    current.callee.type !== 'Identifier' ||
+    current.callee.name !== 'AssertRequest'
+  ) {
+    return null;
+  }
+
+  const matcher = {};
+  const expectation = { kind: 'exists' }; // default: at least one match (Req 7.1)
+
+  // --- Base URL criterion (Req 6.2, 6.3) ---
+  const urlArg = current.arguments && current.arguments[0];
+  if (urlArg) {
+    const regex = extractRegexLiteral(urlArg);
+    if (regex) {
+      matcher.url = { kind: 'regex', source: regex.source, flags: regex.flags };
+    } else if (urlArg.type === 'ObjectExpression') {
+      const obj = extractLiteralValue(urlArg);
+      if (obj && typeof obj.glob === 'string') {
+        matcher.url = { kind: 'glob', pattern: obj.glob };
+      }
+    } else {
+      const str = extractString(urlArg);
+      if (str !== null) {
+        matcher.url = { kind: 'exact', value: str };
+      }
+    }
+  }
+
+  // --- Chained refinements (applied outer→inner order does not matter for these fields) ---
+  for (let i = 0; i < chain.length; i++) {
+    const link = chain[i];
+    const a0 = link.args[0];
+    switch (link.name) {
+      case 'method': { // case-insensitive token (Req 6.4)
+        const m = extractString(a0);
+        if (m !== null) matcher.method = m;
+        break;
+      }
+      case 'query': { // query subset (Req 6.6)
+        const obj = extractLiteralValue(a0);
+        if (obj && typeof obj === 'object') matcher.queryParams = obj;
+        break;
+      }
+      case 'jsonBody': { // Req 6.7
+        const val = extractLiteralValue(a0);
+        if (val !== undefined) matcher.body = { kind: 'json', value: val };
+        break;
+      }
+      case 'formBody': { // Req 6.7
+        const val = extractLiteralValue(a0);
+        if (val !== undefined) matcher.body = { kind: 'form', value: val };
+        break;
+      }
+      case 'rawBody': { // Req 6.7
+        const str = extractString(a0);
+        if (str !== null) matcher.body = { kind: 'raw', value: str };
+        break;
+      }
+      case 'status': { // int, Nxx string, or { min, max } range (Req 6.9, 6.10)
+        const str = extractString(a0);
+        const num = extractNumber(a0);
+        if (str !== null && /^[1-5]xx$/i.test(str)) {
+          const lo = parseInt(str[0], 10) * 100;
+          matcher.status = { kind: 'range', min: lo, max: lo + 99 };
+        } else if (a0 && a0.type === 'ObjectExpression') {
+          const obj = extractLiteralValue(a0);
+          if (obj && obj.min != null) {
+            matcher.status = { kind: 'range', min: obj.min, max: obj.max };
+          }
+        } else if (num !== null) {
+          matcher.status = { kind: 'exact', value: num };
+        }
+        break;
+      }
+      case 'notMade': { // Req 7.3
+        expectation.kind = 'notMade';
+        break;
+      }
+      case 'times': { // exact count (Req 8.1)
+        const n = extractNumber(a0);
+        expectation.kind = 'count';
+        if (n !== null) expectation.count = n;
+        break;
+      }
+      default: {
+        warnings.push({
+          message: `Unknown AssertRequest method ".${link.name}()" at ${filePath}:${lineOf(exprNode)}`,
+          filePath,
+          line: lineOf(exprNode),
+        });
+        break;
+      }
+    }
+  }
+
+  return { action: 'assertRequest', matcher: matcher, expectation: expectation };
+}
+
 function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindings, dataTemplateVars) {
   if (!exprNode) return null;
   if (!warnings) warnings = [];
   if (!constBindings) constBindings = {};
+
+  // Pattern: AssertRequest(url).method(m).query(obj).status(s).notMade()/.times(n) ...
+  // The AssertRequest builder is a fluent chain whose base call is AssertRequest(url)
+  // and whose chained methods refine the matcher / expectation. This mirrors the DSL
+  // builder in packages/dsl/index.js — the compiler reconstructs the same
+  // { action: 'assertRequest', matcher, expectation } descriptor by walking the AST chain.
+  {
+    const assertReqStep = extractAssertRequestStep(exprNode, filePath, warnings);
+    if (assertReqStep) return assertReqStep;
+  }
 
   // Pattern: SaveText(el).as(key) / SaveAttribute(el, attr).as(key) / SaveValue(el).as(key) / Save(expr).as(key)
   // AST shape: CallExpression with callee being MemberExpression (X.as) where X is a CallExpression
@@ -3724,4 +3943,4 @@ function parseSource(source, filePath, rawSource, options) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractTableAccessor, normalizeCellSelector, resolveTarget, extractIfStep, extractWhenStep, extractCondition, extractParamPath, resolveRhsReference, usesNewConditionConstruct, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, parseDataTemplate, buildConstBindings, buildEnumBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };
+module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractTableAccessor, normalizeCellSelector, resolveTarget, extractAssertRequestStep, extractLiteralValue, extractRegexLiteral, extractIfStep, extractWhenStep, extractCondition, extractParamPath, resolveRhsReference, usesNewConditionConstruct, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, parseDataTemplate, buildConstBindings, buildEnumBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };
