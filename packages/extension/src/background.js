@@ -628,11 +628,23 @@ function expandTaskStep(step, tasksMap, pageElements, parentParams, parentPath, 
   var result = [];
   var taskSteps = taskDef.steps;
 
+  // Display params for this task header show the actually-resolved values
+  // (not the raw "{{token}}" strings from step.params), so nested task calls
+  // that forward an outer param (e.g. setDate({ date })) show the real value.
+  var displayParams = null;
+  if (step.params) {
+    displayParams = {};
+    var displayKeys = Object.keys(step.params);
+    for (var dpi = 0; dpi < displayKeys.length; dpi++) {
+      displayParams[displayKeys[dpi]] = mergedParams[displayKeys[dpi]];
+    }
+  }
+
   // Extend the path with this task so child steps render nested under its header.
   var childPath = parentPath.concat([{
     name: step.name,
     label: taskDef.label || null,
-    params: step.params || null
+    params: displayParams
   }]);
 
   for (var i = 0; i < taskSteps.length; i++) {
