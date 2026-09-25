@@ -8,7 +8,7 @@
     "urls": [
       "https://facka.github.io/tomation"
     ],
-    "compilerVersion": "2.0.0"
+    "compilerVersion": "2.1.0"
   },
   "pageElements": {
     "Login__usernameInput": {
@@ -93,6 +93,13 @@
       "label": "Status",
       "where": {
         "id": "status"
+      }
+    },
+    "Tables__table": {
+      "tag": "table",
+      "label": "Orders",
+      "where": {
+        "id": "orders"
       }
     },
     "Todo__input": {
