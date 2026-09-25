@@ -60,11 +60,39 @@
         "id": "success-message"
       }
     },
-    "Tables__table": {
-      "tag": "table",
-      "label": "Orders",
+    "Network__loadPostsButton": {
+      "tag": "button",
+      "label": "Load Posts",
       "where": {
-        "id": "orders"
+        "id": "load-posts-btn"
+      }
+    },
+    "Network__getPostButton": {
+      "tag": "button",
+      "label": "Get Post",
+      "where": {
+        "id": "get-post-btn"
+      }
+    },
+    "Network__createPostButton": {
+      "tag": "button",
+      "label": "Create Post",
+      "where": {
+        "id": "create-post-btn"
+      }
+    },
+    "Network__result": {
+      "tag": "code",
+      "label": "Result",
+      "where": {
+        "id": "result"
+      }
+    },
+    "Network__status": {
+      "tag": "span",
+      "label": "Status",
+      "where": {
+        "id": "status"
       }
     },
     "Todo__input": {
@@ -292,6 +320,135 @@
       ],
       "params": [],
       "label": "Verify Step 3"
+    },
+    "Network__loadPosts": {
+      "steps": [
+        {
+          "action": "click",
+          "target": "Network__loadPostsButton"
+        }
+      ],
+      "params": [],
+      "label": "Load Posts for User 1"
+    },
+    "Network__getPost": {
+      "steps": [
+        {
+          "action": "click",
+          "target": "Network__getPostButton"
+        }
+      ],
+      "params": [],
+      "label": "Get Post #1"
+    },
+    "Network__createPost": {
+      "steps": [
+        {
+          "action": "click",
+          "target": "Network__createPostButton"
+        }
+      ],
+      "params": [],
+      "label": "Create a Post"
+    },
+    "Network__assertPostsListRequest": {
+      "steps": [
+        {
+          "action": "assertRequest",
+          "matcher": {
+            "status": {
+              "kind": "exact",
+              "value": 200
+            },
+            "queryParams": {
+              "userId": "1"
+            },
+            "method": "GET"
+          },
+          "expectation": {
+            "kind": "exists"
+          }
+        }
+      ],
+      "params": [],
+      "label": "Assert GET /posts?userId=1"
+    },
+    "Network__assertGetPostRequest": {
+      "steps": [
+        {
+          "action": "assertRequest",
+          "matcher": {
+            "status": {
+              "kind": "range",
+              "min": 200,
+              "max": 299
+            },
+            "method": "GET"
+          },
+          "expectation": {
+            "kind": "exists"
+          }
+        }
+      ],
+      "params": [],
+      "label": "Assert GET /posts/1"
+    },
+    "Network__assertCreatePostRequest": {
+      "steps": [
+        {
+          "action": "assertRequest",
+          "matcher": {
+            "status": {
+              "kind": "exact",
+              "value": 201
+            },
+            "body": {
+              "kind": "json",
+              "value": {
+                "title": "Tomation",
+                "userId": 1
+              }
+            },
+            "method": "POST"
+          },
+          "expectation": {
+            "kind": "exists"
+          }
+        }
+      ],
+      "params": [],
+      "label": "Assert POST /posts"
+    },
+    "Network__assertNoDeleteRequest": {
+      "steps": [
+        {
+          "action": "assertRequest",
+          "matcher": {
+            "method": "DELETE"
+          },
+          "expectation": {
+            "kind": "notMade"
+          }
+        }
+      ],
+      "params": [],
+      "label": "Assert no DELETE was made"
+    },
+    "Network__assertCreateCalledOnce": {
+      "steps": [
+        {
+          "action": "assertRequest",
+          "matcher": {
+            "method": "POST"
+          },
+          "expectation": {
+            "kind": "count",
+            "count": 1
+          }
+        }
+      ],
+      "params": [],
+      "label": "Assert POST /posts happened once"
     },
     "Todo__addItem": {
       "steps": [
@@ -524,6 +681,132 @@
         }
       ],
       "sourceFile": "navigation"
+    },
+    {
+      "name": "GET request with query params is captured and asserted",
+      "steps": [
+        {
+          "action": "navigate",
+          "url": "network/index.html"
+        },
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "task",
+          "name": "Network__loadPosts"
+        },
+        {
+          "action": "wait",
+          "ms": 800
+        },
+        {
+          "action": "assertHasText",
+          "target": "Network__status",
+          "value": "200"
+        },
+        {
+          "action": "task",
+          "name": "Network__assertPostsListRequest"
+        }
+      ],
+      "sourceFile": "network"
+    },
+    {
+      "name": "GET a single resource returns 2xx",
+      "steps": [
+        {
+          "action": "navigate",
+          "url": "network/index.html"
+        },
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "task",
+          "name": "Network__getPost"
+        },
+        {
+          "action": "wait",
+          "ms": 800
+        },
+        {
+          "action": "task",
+          "name": "Network__assertGetPostRequest"
+        }
+      ],
+      "sourceFile": "network"
+    },
+    {
+      "name": "POST request body and 201 status are captured",
+      "steps": [
+        {
+          "action": "navigate",
+          "url": "network/index.html"
+        },
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "task",
+          "name": "Network__createPost"
+        },
+        {
+          "action": "wait",
+          "ms": 800
+        },
+        {
+          "action": "assertHasText",
+          "target": "Network__status",
+          "value": "201"
+        },
+        {
+          "action": "task",
+          "name": "Network__assertCreatePostRequest"
+        },
+        {
+          "action": "task",
+          "name": "Network__assertCreateCalledOnce"
+        }
+      ],
+      "sourceFile": "network"
+    },
+    {
+      "name": "No DELETE request is made during the flow",
+      "steps": [
+        {
+          "action": "navigate",
+          "url": "network/index.html"
+        },
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "task",
+          "name": "Network__loadPosts"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "task",
+          "name": "Network__getPost"
+        },
+        {
+          "action": "wait",
+          "ms": 800
+        },
+        {
+          "action": "task",
+          "name": "Network__assertNoDeleteRequest"
+        }
+      ],
+      "sourceFile": "network"
     },
     {
       "name": "Register a new patient with generated data",

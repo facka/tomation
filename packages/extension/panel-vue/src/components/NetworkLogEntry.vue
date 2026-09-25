@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import type { CapturedRequest } from '@/types/store';
-import { statusDisplay, PENDING_STATUS_INDICATOR } from '@/logic/statusDisplay';
+import { statusDisplay } from '@/logic/statusDisplay';
 
 const props = defineProps<{
   request: CapturedRequest;

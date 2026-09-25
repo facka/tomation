@@ -233,8 +233,8 @@ instruct running any specific CI command.
     - Verify no reuse of the existing `LogEntry`/param-banner masking for network entries across capture → `NETWORK_REQUEST` → store → display → persist/reload.
     - _Requirements: 11.1, 11.2, 11.3, 11.4_
 
-- [ ] 17. Final wiring / end-to-end integration
-  - [ ] 17.1 Connect the full path and remove orphaned code
+- [x] 17. Final wiring / end-to-end integration
+  - [x] 17.1 Connect the full path and remove orphaned code
     - Confirm DSL `AssertRequest` → compiler `steps[]` → background capture + `assertRequest` evaluation → `NETWORK_REQUEST` → panel store → `LogContainer`/`NetworkLogEntry` display → `finishRun` persistence → reopen rehydrate are all wired with no orphaned pieces; ensure all new `module.exports` test hooks are exported.
     - _Requirements: 5.1, 6.1, 7.1, 9.1, 10.1, 10.3_
   - [ ]* 17.2 Write integration/smoke tests

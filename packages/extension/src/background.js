@@ -1113,6 +1113,10 @@ function unregisterDebuggerListeners() {
  */
 function attachNetworkCapture(tabId) {
   networkState.tabId = tabId;
+  if (!api.debugger || typeof api.debugger.attach !== "function") {
+    emitCaptureLog("attach-error", { tabId: tabId, reason: "chrome.debugger unavailable (missing debugger permission or unsupported browser)" });
+    return Promise.resolve(false);
+  }
   var attachTimedOut = false;
   var timer = setTimeout(function () {
     attachTimedOut = true;

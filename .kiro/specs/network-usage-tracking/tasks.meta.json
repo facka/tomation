@@ -272,6 +272,25 @@
         "chatSessionId": "sess_3c91d7c4-28ee-4208-98df-54b291ef49b3",
         "timestamp": 1790281007029
       }
+    ],
+    "17.1 Connect the full path and remove orphaned code": [
+      {
+        "executionId": "89aedcc7-8719-4816-b16f-b60de07abf14",
+        "chatSessionId": "sess_9b9da772-fdb7-429a-a86e-415605aaf96b",
+        "timestamp": 1790283152632
+      },
+      {
+        "executionId": "89aedcc7-8719-4816-b16f-b60de07abf14",
+        "chatSessionId": "sess_9b9da772-fdb7-429a-a86e-415605aaf96b",
+        "timestamp": 1790283410626
+      }
+    ],
+    "17. Final wiring / end-to-end integration": [
+      {
+        "executionId": "89aedcc7-8719-4816-b16f-b60de07abf14",
+        "chatSessionId": "sess_9b9da772-fdb7-429a-a86e-415605aaf96b",
+        "timestamp": 1790283410756
+      }
     ]
   }
 }

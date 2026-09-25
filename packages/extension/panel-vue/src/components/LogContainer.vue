@@ -2,7 +2,7 @@
 import { ref, computed, watch, nextTick } from 'vue';
 import { useStore } from '@/store';
 import { useRunExecution } from '@/composables/useRunExecution';
-import type { TaskHeaderStatus } from '@/types/store';
+import type { TaskHeaderStatus, StepStatus } from '@/types/store';
 import type { LogEntry, CapturedRequest } from '@/types/store';
 import LogEntryComponent from './LogEntry.vue';
 import TaskHeader from './TaskHeader.vue';
@@ -177,12 +177,18 @@ function networkCountFor(stepIndex: number): number | undefined {
 }
 
 /**
- * True while capture is still pending for a step and its count has not yet been
- * determined; drives the loading placeholder (Req 5.11). Once a count is known
- * (including zero), the placeholder is suppressed.
+ * True while capture is still pending for the CURRENT (in-progress) step and
+ * its count has not yet been determined; drives the minimal loading indicator
+ * (Req 5.11). Scoped to the in-progress step only so the indicator never
+ * appears under multiple steps at once. Once a count is known (including zero),
+ * the indicator is suppressed.
  */
-function networkPendingFor(stepIndex: number): boolean {
-  return store.state.networkCapturePending && networkCountFor(stepIndex) === undefined;
+function networkPendingFor(stepIndex: number, status: StepStatus): boolean {
+  return (
+    status === 'in-progress' &&
+    store.state.networkCapturePending &&
+    networkCountFor(stepIndex) === undefined
+  );
 }
 
 // --- Auto-scroll to last updated step ---
@@ -293,11 +299,12 @@ function onSkip(stepIndex: number) {
              still pending and the count is not yet determined (Req 5.11). A
              step with zero requests shows neither (Req 5.9). -->
         <div
-          v-if="networkPendingFor(item.logEntry.stepIndex)"
-          class="net-step-summary net-step-loading"
+          v-if="networkPendingFor(item.logEntry.stepIndex, item.logEntry.status)"
+          class="net-step-loading"
+          aria-label="Capturing network"
+          title="Capturing network"
         >
-          <font-awesome-icon class="net-glyph" :icon="['fas', 'arrow-right-arrow-left']" />
-          <span class="net-step-loading-text">Capturing network…</span>
+          <span class="net-loading-dot" />
         </div>
         <div
           v-else-if="(networkCountFor(item.logEntry.stepIndex) || 0) > 0"
