@@ -233,7 +233,7 @@ export declare function Test(
 /**
  * Constrains Automation param values to supported scalar types.
  */
-type AutomationParamValue = string | number | Date;
+type AutomationParamValue = string | number | boolean | Date;
 
 /**
  * Descriptor returned by Automation('name', fn).

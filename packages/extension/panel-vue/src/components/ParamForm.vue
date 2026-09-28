@@ -11,20 +11,36 @@ const emit = defineEmits<{
   (e: 'update:values', values: Record<string, unknown>): void;
 }>();
 
-// Local form values keyed by param name
-const formValues = ref<Record<string, string>>({});
+// Local form values keyed by param name. String-typed inputs store their raw
+// string; boolean params store an actual boolean (driven by a checkbox).
+const formValues = ref<Record<string, string | boolean>>({});
 const fieldErrors = ref<Record<string, boolean>>({});
 const validationMessage = ref<string | null>(null);
+
+// Parse a saved/default value into a boolean for boolean-typed params.
+function toBool(v: unknown): boolean {
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'string') return v === 'true';
+  return !!v;
+}
 
 // Initialize form values when params or savedValues change
 watch(
   () => [props.params, props.savedValues] as const,
   ([params, saved]) => {
-    const values: Record<string, string> = {};
+    const values: Record<string, string | boolean> = {};
     for (const param of params) {
+      const hasSaved = saved && saved[param.name] !== undefined && saved[param.name] !== null;
+      if (param.type === 'boolean') {
+        // Boolean: saved value wins, else default, else false.
+        if (hasSaved) values[param.name] = toBool(saved![param.name]);
+        else if (param.defaultValue !== undefined) values[param.name] = toBool(param.defaultValue);
+        else values[param.name] = false;
+        continue;
+      }
       // Pre-fill from saved values, else use default, else empty
-      if (saved && saved[param.name] !== undefined && saved[param.name] !== null) {
-        values[param.name] = String(saved[param.name]);
+      if (hasSaved) {
+        values[param.name] = String(saved![param.name]);
       } else if (param.defaultValue) {
         values[param.name] = param.defaultValue;
       } else if (param.type === 'enum' && param.options && param.options.length > 0) {
@@ -51,14 +67,25 @@ function onInput(paramName: string, value: string) {
   emitValues();
 }
 
+function onCheckbox(paramName: string, checked: boolean) {
+  formValues.value[paramName] = checked;
+  if (fieldErrors.value[paramName]) {
+    fieldErrors.value[paramName] = false;
+  }
+  validationMessage.value = null;
+  emitValues();
+}
+
 function emitValues() {
   const result: Record<string, unknown> = {};
   for (const param of props.params) {
-    const raw = formValues.value[param.name] || '';
-    if (param.type === 'number' && raw) {
-      result[param.name] = parseFloat(raw);
+    const raw = formValues.value[param.name];
+    if (param.type === 'boolean') {
+      result[param.name] = raw === true;
+    } else if (param.type === 'number' && raw) {
+      result[param.name] = parseFloat(raw as string);
     } else {
-      result[param.name] = raw;
+      result[param.name] = raw ?? '';
     }
   }
   emit('update:values', result);
@@ -74,6 +101,9 @@ function validate(): boolean {
 
   for (const param of props.params) {
     if (param.optional) continue;
+    // Boolean params are always valid: an unchecked box is a legitimate `false`,
+    // not a missing value.
+    if (param.type === 'boolean') continue;
     const val = formValues.value[param.name];
     if (!val) {
       emptyFields.push(param.name);
@@ -104,60 +134,78 @@ defineExpose({ validate });
       v-for="param in params"
       :key="param.name"
       class="param-row"
-      :class="{ 'param-optional': param.optional }"
+      :class="{ 'param-optional': param.optional, 'param-row-boolean': param.type === 'boolean' }"
     >
-      <label :for="'param-' + param.name">
-        {{ param.name }}
+      <!-- Boolean: checkbox with an inline label -->
+      <label
+        v-if="param.type === 'boolean'"
+        class="param-checkbox-label"
+        :for="'param-' + param.name"
+      >
+        <input
+          :id="'param-' + param.name"
+          type="checkbox"
+          :checked="formValues[param.name] === true"
+          @change="onCheckbox(param.name, ($event.target as HTMLInputElement).checked)"
+        />
+        <span>{{ param.name }}</span>
         <span v-if="param.optional" class="optional-badge"> (optional)</span>
       </label>
 
-      <!-- Enum: select input -->
-      <select
-        v-if="param.type === 'enum' && param.options && param.options.length > 0"
-        :id="'param-' + param.name"
-        :class="{ 'param-error': fieldErrors[param.name] }"
-        :value="formValues[param.name]"
-        @input="onInput(param.name, ($event.target as HTMLSelectElement).value)"
-      >
-        <option
-          v-for="opt in param.options"
-          :key="opt"
-          :value="opt"
-        >{{ opt }}</option>
-      </select>
+      <template v-else>
+        <label :for="'param-' + param.name">
+          {{ param.name }}
+          <span v-if="param.optional" class="optional-badge"> (optional)</span>
+        </label>
 
-      <!-- Number input -->
-      <input
-        v-else-if="param.type === 'number'"
-        :id="'param-' + param.name"
-        type="number"
-        :class="{ 'param-error': fieldErrors[param.name] }"
-        :value="formValues[param.name]"
-        :placeholder="param.defaultValue || ''"
-        @input="onInput(param.name, ($event.target as HTMLInputElement).value)"
-      />
+        <!-- Enum: select input -->
+        <select
+          v-if="param.type === 'enum' && param.options && param.options.length > 0"
+          :id="'param-' + param.name"
+          :class="{ 'param-error': fieldErrors[param.name] }"
+          :value="formValues[param.name]"
+          @input="onInput(param.name, ($event.target as HTMLSelectElement).value)"
+        >
+          <option
+            v-for="opt in param.options"
+            :key="opt"
+            :value="opt"
+          >{{ opt }}</option>
+        </select>
 
-      <!-- Date input -->
-      <input
-        v-else-if="param.type === 'date'"
-        :id="'param-' + param.name"
-        type="date"
-        :class="{ 'param-error': fieldErrors[param.name] }"
-        :value="formValues[param.name]"
-        :placeholder="param.defaultValue || ''"
-        @input="onInput(param.name, ($event.target as HTMLInputElement).value)"
-      />
+        <!-- Number input -->
+        <input
+          v-else-if="param.type === 'number'"
+          :id="'param-' + param.name"
+          type="number"
+          :class="{ 'param-error': fieldErrors[param.name] }"
+          :value="formValues[param.name]"
+          :placeholder="param.defaultValue || ''"
+          @input="onInput(param.name, ($event.target as HTMLInputElement).value)"
+        />
 
-      <!-- Text input (default) -->
-      <input
-        v-else
-        :id="'param-' + param.name"
-        type="text"
-        :class="{ 'param-error': fieldErrors[param.name] }"
-        :value="formValues[param.name]"
-        :placeholder="param.defaultValue || ''"
-        @input="onInput(param.name, ($event.target as HTMLInputElement).value)"
-      />
+        <!-- Date input -->
+        <input
+          v-else-if="param.type === 'date'"
+          :id="'param-' + param.name"
+          type="date"
+          :class="{ 'param-error': fieldErrors[param.name] }"
+          :value="formValues[param.name]"
+          :placeholder="param.defaultValue || ''"
+          @input="onInput(param.name, ($event.target as HTMLInputElement).value)"
+        />
+
+        <!-- Text input (default) -->
+        <input
+          v-else
+          :id="'param-' + param.name"
+          type="text"
+          :class="{ 'param-error': fieldErrors[param.name] }"
+          :value="formValues[param.name]"
+          :placeholder="param.defaultValue || ''"
+          @input="onInput(param.name, ($event.target as HTMLInputElement).value)"
+        />
+      </template>
     </div>
 
     <div v-if="validationMessage" class="param-validation-message">
@@ -165,3 +213,23 @@ defineExpose({ validate });
     </div>
   </div>
 </template>
+
+<style scoped>
+.param-row-boolean {
+  flex-direction: row;
+}
+
+.param-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.param-checkbox-label input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--accent, #22c55e);
+}
+</style>

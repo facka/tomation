@@ -29,7 +29,7 @@ export interface Step {
 
 export interface Param {
   name: string;
-  type: 'string' | 'number' | 'date' | 'enum';
+  type: 'string' | 'number' | 'date' | 'enum' | 'boolean';
   optional?: boolean;
   defaultValue?: string;
   options?: string[];
