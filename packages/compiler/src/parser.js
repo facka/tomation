@@ -86,6 +86,46 @@ function extractString(node) {
 }
 
 /**
+ * Resolve a URL-like argument to a static string, supporting:
+ *  - plain string literals and zero-expression template literals (via extractString)
+ *  - template literals whose ${...} expressions are bare identifiers that resolve
+ *    to scalar string/number consts (e.g. `${API}/posts` with const API = '...')
+ *
+ * @param {object} node - AST node for the argument
+ * @param {object} [scalarConsts] - map of const name -> scalar value (bindings.__scalars)
+ * @returns {string|null} the resolved static string, or null if not statically resolvable
+ */
+function resolveStaticUrl(node, scalarConsts) {
+  const plain = extractString(node);
+  if (plain !== null) return plain;
+
+  if (node && node.type === 'TemplateLiteral') {
+    const scalars = scalarConsts || {};
+    let out = '';
+    // quasis.length === expressions.length + 1; interleave them.
+    for (let i = 0; i < node.quasis.length; i++) {
+      out += node.quasis[i].value.cooked;
+      if (i < node.expressions.length) {
+        const expr = node.expressions[i];
+        let val;
+        if (expr.type === 'Identifier' && expr.name in scalars) {
+          val = scalars[expr.name];
+        } else {
+          // A literal expression inside the template (e.g. `${1}`) is also fine.
+          val = extractString(expr);
+          if (val === null) val = extractNumber(expr);
+        }
+        if (val === null || val === undefined) return null; // unresolvable segment
+        out += String(val);
+      }
+    }
+    return out;
+  }
+
+  return null;
+}
+
+/**
  * Extract a number from a Literal node (or UnaryExpression -N).
  * @param {object} node
  * @returns {number|null}
@@ -174,9 +214,22 @@ function buildConstBindings(ast) {
       if (!declarator.id || declarator.id.type !== 'Identifier') continue;
       if (!declarator.init) continue;
 
+      const initNode = declarator.init;
+
+      // Record scalar string/number consts (e.g. `const API = 'https://...'`) under a
+      // reserved key so template literals like `${API}/posts` can be resolved.
+      // These are NOT object bindings, so they are stored separately from the
+      // member-access map to avoid colliding with `bindings[name][prop]` lookups.
+      {
+        const scalar = extractString(initNode) ?? extractNumber(initNode);
+        if (scalar !== null && scalar !== undefined) {
+          if (!bindings.__scalars) bindings.__scalars = {};
+          bindings.__scalars[declarator.id.name] = scalar;
+        }
+      }
+
       // Handle `as const` assertion: the init might be a TSAsExpression wrapping ObjectExpression
       // After type stripping, `as const` is removed, so init should be plain ObjectExpression
-      const initNode = declarator.init;
       if (initNode.type !== 'ObjectExpression') continue;
 
       const varName = declarator.id.name;
@@ -1723,7 +1776,7 @@ function extractRegexLiteral(node) {
  * @param {Array} warnings - mutable warnings array
  * @returns {object|null} { __step, action, matcher, expectation } or null if not an AssertRequest chain
  */
-function extractAssertRequestStep(exprNode, filePath, warnings) {
+function extractAssertRequestStep(exprNode, filePath, warnings, constBindings) {
   if (!exprNode || exprNode.type !== 'CallExpression') return null;
   if (!warnings) warnings = [];
 
@@ -1770,7 +1823,8 @@ function extractAssertRequestStep(exprNode, filePath, warnings) {
         matcher.url = { kind: 'glob', pattern: obj.glob };
       }
     } else {
-      const str = extractString(urlArg);
+      const scalars = (constBindings && constBindings.__scalars) || {};
+      const str = resolveStaticUrl(urlArg, scalars);
       if (str !== null) {
         matcher.url = { kind: 'exact', value: str };
       }
@@ -1858,7 +1912,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
   // builder in packages/dsl/index.js — the compiler reconstructs the same
   // { action: 'assertRequest', matcher, expectation } descriptor by walking the AST chain.
   {
-    const assertReqStep = extractAssertRequestStep(exprNode, filePath, warnings);
+    const assertReqStep = extractAssertRequestStep(exprNode, filePath, warnings, constBindings);
     if (assertReqStep) return assertReqStep;
   }
 
@@ -3050,6 +3104,11 @@ function mapTypeNode(typeNode, paramName, filePath, sourceFile, warnings) {
   // number keyword
   if (typeNode.kind === ts.SyntaxKind.NumberKeyword) {
     return { name: paramName, type: 'number' };
+  }
+
+  // boolean keyword
+  if (typeNode.kind === ts.SyntaxKind.BooleanKeyword) {
+    return { name: paramName, type: 'boolean' };
   }
 
   // TypeReference — check for "Date"

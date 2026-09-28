@@ -363,6 +363,10 @@
         {
           "action": "assertRequest",
           "matcher": {
+            "url": {
+              "kind": "exact",
+              "value": "https://jsonplaceholder.typicode.com/posts"
+            },
             "status": {
               "kind": "exact",
               "value": 200
@@ -385,6 +389,10 @@
         {
           "action": "assertRequest",
           "matcher": {
+            "url": {
+              "kind": "exact",
+              "value": "https://jsonplaceholder.typicode.com/posts/1"
+            },
             "status": {
               "kind": "range",
               "min": 200,
@@ -405,6 +413,10 @@
         {
           "action": "assertRequest",
           "matcher": {
+            "url": {
+              "kind": "exact",
+              "value": "https://jsonplaceholder.typicode.com/posts"
+            },
             "status": {
               "kind": "exact",
               "value": 201
@@ -446,6 +458,10 @@
         {
           "action": "assertRequest",
           "matcher": {
+            "url": {
+              "kind": "exact",
+              "value": "https://jsonplaceholder.typicode.com/posts"
+            },
             "method": "POST"
           },
           "expectation": {

@@ -142,49 +142,98 @@ const assertSuffix = computed(() => {
 
 const isAssertRequest = computed(() => props.entry.action === 'assertRequest');
 
-// Structured list of validated criteria (method, url, query, body, status),
-// each as a { label, value } pair for compact display in the log entry.
-const assertRequestCriteria = computed(() => {
+/**
+ * Truncate a URL for display, keeping the path + query readable while
+ * shortening a long origin to "start…end". Returns the string unchanged when
+ * it is already short.
+ */
+function truncateUrl(url: string): string {
+  if (url.length <= 60) return url;
+  // Try to keep the path + query intact and shorten the origin.
+  const m = url.match(/^(https?:\/\/)?([^/]+)(\/.*)?$/i);
+  if (m) {
+    const host = m[2] || '';
+    const rest = m[3] || '';
+    let shortHost = host;
+    if (host.length > 16) {
+      shortHost = host.slice(0, 6) + '…' + host.slice(-6);
+    }
+    const out = shortHost + rest;
+    if (out.length <= 80) return out;
+    return out.slice(0, 40) + '…' + out.slice(-30);
+  }
+  return url.slice(0, 40) + '…' + url.slice(-30);
+}
+
+// The HTTP method being asserted (upper-cased), or null when not specified.
+const assertRequestMethod = computed(() => {
   const m = props.entry.matcher;
-  if (!m) return [] as Array<{ label: string; value: string }>;
-  const out: Array<{ label: string; value: string }> = [];
-  if (m.method) out.push({ label: 'method', value: String(m.method).toUpperCase() });
-  if (m.url) {
-    if (m.url.kind === 'exact' && m.url.value) out.push({ label: 'url', value: m.url.value });
-    else if (m.url.kind === 'regex') out.push({ label: 'url matches', value: '/' + (m.url.source || '') + '/' + (m.url.flags || '') });
-    else if (m.url.kind === 'glob' && m.url.pattern) out.push({ label: 'url glob', value: m.url.pattern });
-  }
+  return m?.method ? String(m.method).toUpperCase() : null;
+});
+
+// The URL being asserted, with any query-param criteria appended, truncated for
+// display. Returns null when no URL criterion is present.
+const assertRequestUrl = computed(() => {
+  const m = props.entry.matcher;
+  if (!m || !m.url) return null;
+
+  let base: string;
+  if (m.url.kind === 'exact' && m.url.value) base = m.url.value;
+  else if (m.url.kind === 'regex') return '/' + (m.url.source || '') + '/' + (m.url.flags || '');
+  else if (m.url.kind === 'glob' && m.url.pattern) base = m.url.pattern;
+  else return null;
+
   if (m.queryParams) {
-    const qp = m.queryParams;
-    const pairs = Object.keys(qp).map((k) => k + '=' + qp[k]);
-    if (pairs.length) out.push({ label: 'query', value: pairs.join(' & ') });
+    const pairs = Object.keys(m.queryParams).map(
+      (k) => encodeURIComponent(k) + '=' + encodeURIComponent(m.queryParams![k]),
+    );
+    if (pairs.length) base += (base.indexOf('?') === -1 ? '?' : '&') + pairs.join('&');
   }
-  if (m.body) {
+  return truncateUrl(base);
+});
+
+// Trailing clause describing body + status + expectation, e.g.
+// "has been done with status 200" or "was NOT made".
+const assertRequestOutcome = computed(() => {
+  const m = props.entry.matcher;
+  const exp = props.entry.expectation;
+  const clauses: string[] = [];
+
+  // Verb reflecting the expectation kind.
+  if (exp?.kind === 'notMade') {
+    clauses.push('was NOT made');
+  } else if (exp?.kind === 'count') {
+    const n = exp.count ?? 0;
+    clauses.push('was done ' + n + ' time' + (n === 1 ? '' : 's'));
+  } else {
+    clauses.push('has been done');
+  }
+
+  // Body criterion.
+  if (m?.body) {
     let bodyVal: string;
     try {
       bodyVal = typeof m.body.value === 'string' ? m.body.value : JSON.stringify(m.body.value);
     } catch {
       bodyVal = String(m.body.value);
     }
-    out.push({ label: 'body (' + m.body.kind + ')', value: bodyVal });
+    if (bodyVal.length > 60) bodyVal = bodyVal.slice(0, 57) + '…';
+    clauses.push('with ' + m.body.kind + ' body ' + bodyVal);
   }
-  if (m.status) {
-    if (m.status.kind === 'exact' && m.status.value != null) out.push({ label: 'status', value: String(m.status.value) });
-    else if (m.status.kind === 'range') out.push({ label: 'status', value: m.status.min + '-' + m.status.max });
+
+  // Status criterion.
+  if (m?.status) {
+    if (m.status.kind === 'exact' && m.status.value != null) {
+      clauses.push('with status ' + m.status.value);
+    } else if (m.status.kind === 'range') {
+      clauses.push('with status ' + m.status.min + '-' + m.status.max);
+    }
   }
-  return out;
+
+  return clauses.join(' ');
 });
 
-// Human-readable summary of the expectation (exists / notMade / count).
-const assertRequestExpectation = computed(() => {
-  const exp = props.entry.expectation;
-  if (!exp) return 'at least 1 matching request';
-  if (exp.kind === 'notMade') return 'no matching request';
-  if (exp.kind === 'count') return 'exactly ' + (exp.count ?? 0) + ' matching request(s)';
-  return 'at least 1 matching request';
-});
-
-// Observed match count, shown when known (including zero).
+// Observed match count, shown as a subtle suffix when known (including zero).
 const assertRequestObserved = computed(() =>
   props.entry.matchCount != null ? String(props.entry.matchCount) : null,
 );
@@ -392,24 +441,14 @@ onBeforeUnmount(() => {
       <span v-if="valueDisplay" class="step-value">{{ valueDisplay }}</span>
     </template>
 
-    <!-- AssertRequest: "Assert request matches [criteria] → expectation (observed N)" -->
+    <!-- AssertRequest: reads as a sentence, e.g.
+         "Assert Request GET "…/posts?userId=1" has been done with status 200" -->
     <template v-else-if="isAssertRequest">
-      <span class="step-action">Assert request</span>
-      <span
-        v-for="crit in assertRequestCriteria"
-        :key="crit.label"
-        class="ar-criterion"
-      >
-        <span class="ar-crit-label">{{ crit.label }}</span>
-        <span class="ar-crit-value">{{ crit.value }}</span>
-      </span>
-      <span class="ar-expectation">
-        <font-awesome-icon :icon="['fas', 'arrow-right']" class="ar-arrow" />
-        {{ assertRequestExpectation }}
-      </span>
-      <span v-if="assertRequestObserved !== null" class="ar-observed">
-        observed {{ assertRequestObserved }}
-      </span>
+      <span class="step-action">Assert Request</span>
+      <span v-if="assertRequestMethod" class="ar-method">{{ assertRequestMethod }}</span>
+      <span v-if="assertRequestUrl" class="ar-url" :title="assertRequestUrl">"{{ assertRequestUrl }}"</span>
+      <span class="ar-outcome">{{ assertRequestOutcome }}</span>
+      <span v-if="assertRequestObserved !== null" class="ar-observed">(observed {{ assertRequestObserved }})</span>
     </template>
     <!-- Regular steps -->
     <template v-else>
@@ -684,43 +723,31 @@ onBeforeUnmount(() => {
   overflow-x: auto;
 }
 
-/* --- AssertRequest validation metadata --- */
-.ar-criterion {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+/* --- AssertRequest sentence layout --- */
+.ar-method {
   margin-left: 6px;
-  padding: 1px 6px;
-  border: 1px solid var(--border, #444);
-  border-radius: 4px;
-  font-size: 10px;
-}
-
-.ar-crit-label {
-  color: var(--text-muted, #888);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  font-size: 9px;
-}
-
-.ar-crit-value {
+  padding: 0 5px;
+  border-radius: 3px;
+  background: var(--net-accent, #5b8def);
+  color: #fff;
   font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.ar-url {
+  margin-left: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
   color: var(--text-secondary, #aaa);
   overflow-wrap: anywhere;
 }
 
-.ar-expectation {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: 8px;
-  font-size: 10px;
+.ar-outcome {
+  margin-left: 6px;
+  font-size: 11px;
   color: var(--text-secondary, #aaa);
-}
-
-.ar-arrow {
-  color: var(--text-muted, #888);
-  font-size: 9px;
 }
 
 .ar-observed {
