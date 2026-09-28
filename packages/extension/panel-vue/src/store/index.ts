@@ -329,6 +329,9 @@ function setStepStatus(stepIndex: number, status: StepStatus, meta?: Partial<Log
     if (meta.findTrace !== undefined) entry.findTrace = meta.findTrace;
     if (meta.ms !== undefined) entry.ms = meta.ms;
     if (meta.accessor !== undefined) entry.accessor = meta.accessor;
+    if (meta.matcher !== undefined) entry.matcher = meta.matcher;
+    if (meta.expectation !== undefined) entry.expectation = meta.expectation;
+    if (meta.matchCount !== undefined) entry.matchCount = meta.matchCount;
   }
 }
 

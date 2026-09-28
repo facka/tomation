@@ -51,6 +51,39 @@ export interface RunConfig {
   executionSpeed: 'FAST' | 'NORMAL' | 'SLOW';
 }
 
+export interface RequestUrlCriterion {
+  kind: 'exact' | 'regex' | 'glob';
+  value?: string;
+  source?: string;
+  flags?: string;
+  pattern?: string;
+}
+
+export interface RequestStatusCriterion {
+  kind: 'exact' | 'range';
+  value?: number;
+  min?: number;
+  max?: number;
+}
+
+export interface RequestBodyCriterion {
+  kind: 'json' | 'form' | 'raw';
+  value: unknown;
+}
+
+export interface RequestMatcher {
+  url?: RequestUrlCriterion;
+  method?: string;
+  queryParams?: Record<string, string>;
+  body?: RequestBodyCriterion;
+  status?: RequestStatusCriterion;
+}
+
+export interface RequestExpectation {
+  kind: 'exists' | 'notMade' | 'count';
+  count?: number;
+}
+
 export interface LogEntry {
   stepIndex: number;
   status: StepStatus;
@@ -71,6 +104,12 @@ export interface LogEntry {
   // Present on table-cell steps: the structured cell accessor, used to display
   // the targeted row/column (preferring columnName) in the run log.
   accessor?: TableCellAccessor;
+  // Present on assertRequest steps: the matcher criteria, the expectation
+  // (exists/notMade/count), and the observed match count. Used to render the
+  // full validation metadata in the run log.
+  matcher?: RequestMatcher;
+  expectation?: RequestExpectation;
+  matchCount?: number;
 }
 
 /**

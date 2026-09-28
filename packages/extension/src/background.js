@@ -1773,6 +1773,14 @@ function buildLogMsg(stepIndex, step, ok, error, findTrace) {
   // Table cell accessor: forwarded so the run log can show the targeted
   // row/column (column prefers columnName).
   if (step.accessor) logMsg.accessor = step.accessor;
+  // AssertRequest validation metadata: forward the matcher criteria, the
+  // expectation (exists/notMade/count), and the observed match count so the
+  // run log can show exactly what was validated.
+  if (step.action === 'assertRequest') {
+    if (step.matcher) logMsg.matcher = step.matcher;
+    if (step.expectation) logMsg.expectation = step.expectation;
+    if (step._matchCount != null) logMsg.matchCount = step._matchCount;
+  }
   // Include context data for successful save steps
   if (ok && (step.action === 'saveText' || step.action === 'saveValue' ||
              step.action === 'saveAttribute' || step.action === 'saveExpression')) {
@@ -2166,6 +2174,10 @@ function runStepLoop() {
       var assertResult = evaluateAssertRequestFn
         ? evaluateAssertRequestFn(step, getCapturedRequests())
         : { ok: false, matchCount: 0, message: 'AssertRequest evaluation unavailable' };
+
+      // Stash the observed match count so buildLogMsg can forward it to the panel
+      // as validation metadata (shown in the AssertRequest log entry).
+      step._matchCount = assertResult ? assertResult.matchCount : 0;
 
       if (assertResult && assertResult.ok) {
         // Pass — emit a passing LOG (halts the run if display fails, Req 9.4),

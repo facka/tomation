@@ -138,6 +138,57 @@ const assertSuffix = computed(() => {
   return getAssertSuffix(action) || '';
 });
 
+// --- AssertRequest validation metadata ---
+
+const isAssertRequest = computed(() => props.entry.action === 'assertRequest');
+
+// Structured list of validated criteria (method, url, query, body, status),
+// each as a { label, value } pair for compact display in the log entry.
+const assertRequestCriteria = computed(() => {
+  const m = props.entry.matcher;
+  if (!m) return [] as Array<{ label: string; value: string }>;
+  const out: Array<{ label: string; value: string }> = [];
+  if (m.method) out.push({ label: 'method', value: String(m.method).toUpperCase() });
+  if (m.url) {
+    if (m.url.kind === 'exact' && m.url.value) out.push({ label: 'url', value: m.url.value });
+    else if (m.url.kind === 'regex') out.push({ label: 'url matches', value: '/' + (m.url.source || '') + '/' + (m.url.flags || '') });
+    else if (m.url.kind === 'glob' && m.url.pattern) out.push({ label: 'url glob', value: m.url.pattern });
+  }
+  if (m.queryParams) {
+    const qp = m.queryParams;
+    const pairs = Object.keys(qp).map((k) => k + '=' + qp[k]);
+    if (pairs.length) out.push({ label: 'query', value: pairs.join(' & ') });
+  }
+  if (m.body) {
+    let bodyVal: string;
+    try {
+      bodyVal = typeof m.body.value === 'string' ? m.body.value : JSON.stringify(m.body.value);
+    } catch {
+      bodyVal = String(m.body.value);
+    }
+    out.push({ label: 'body (' + m.body.kind + ')', value: bodyVal });
+  }
+  if (m.status) {
+    if (m.status.kind === 'exact' && m.status.value != null) out.push({ label: 'status', value: String(m.status.value) });
+    else if (m.status.kind === 'range') out.push({ label: 'status', value: m.status.min + '-' + m.status.max });
+  }
+  return out;
+});
+
+// Human-readable summary of the expectation (exists / notMade / count).
+const assertRequestExpectation = computed(() => {
+  const exp = props.entry.expectation;
+  if (!exp) return 'at least 1 matching request';
+  if (exp.kind === 'notMade') return 'no matching request';
+  if (exp.kind === 'count') return 'exactly ' + (exp.count ?? 0) + ' matching request(s)';
+  return 'at least 1 matching request';
+});
+
+// Observed match count, shown when known (including zero).
+const assertRequestObserved = computed(() =>
+  props.entry.matchCount != null ? String(props.entry.matchCount) : null,
+);
+
 const showRetrySkip = computed(() => {
   return props.awaitingAction && props.debugMode && props.entry.status === 'fail';
 });
@@ -341,6 +392,25 @@ onBeforeUnmount(() => {
       <span v-if="valueDisplay" class="step-value">{{ valueDisplay }}</span>
     </template>
 
+    <!-- AssertRequest: "Assert request matches [criteria] → expectation (observed N)" -->
+    <template v-else-if="isAssertRequest">
+      <span class="step-action">Assert request</span>
+      <span
+        v-for="crit in assertRequestCriteria"
+        :key="crit.label"
+        class="ar-criterion"
+      >
+        <span class="ar-crit-label">{{ crit.label }}</span>
+        <span class="ar-crit-value">{{ crit.value }}</span>
+      </span>
+      <span class="ar-expectation">
+        <font-awesome-icon :icon="['fas', 'arrow-right']" class="ar-arrow" />
+        {{ assertRequestExpectation }}
+      </span>
+      <span v-if="assertRequestObserved !== null" class="ar-observed">
+        observed {{ assertRequestObserved }}
+      </span>
+    </template>
     <!-- Regular steps -->
     <template v-else>
       <span class="step-action">{{ actionLabel }}</span>
@@ -612,5 +682,51 @@ onBeforeUnmount(() => {
   color: var(--text-secondary, #aaa);
   white-space: pre;
   overflow-x: auto;
+}
+
+/* --- AssertRequest validation metadata --- */
+.ar-criterion {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border: 1px solid var(--border, #444);
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+.ar-crit-label {
+  color: var(--text-muted, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: 9px;
+}
+
+.ar-crit-value {
+  font-family: var(--font-mono, monospace);
+  color: var(--text-secondary, #aaa);
+  overflow-wrap: anywhere;
+}
+
+.ar-expectation {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  font-size: 10px;
+  color: var(--text-secondary, #aaa);
+}
+
+.ar-arrow {
+  color: var(--text-muted, #888);
+  font-size: 9px;
+}
+
+.ar-observed {
+  margin-left: 6px;
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-muted, #888);
 }
 </style>
