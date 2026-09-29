@@ -7,7 +7,7 @@ Library summary:
 - Elements can be scoped with `.childOf(parentElement)`
 - Elements support relative DOM navigation with `.navigate(path)`
 - Matcher factories: `innerTextIs`, `innerTextContains`, `classIncludes`, `placeholderIs`, `nameIs`, `typeIs`, `idIs`, `valueIs`, `ariaLabel`, `roleIs`, `titleIs`, `hrefContains`, `isDisabled`, `isNthElement`, `dataAttr`, `closestLabelIs`
-- Actions: `Click`, `Type`, `TypePassword`, `Select`, `AssertExists`, `AssertNotExists`, `AssertHasText`, `Navigate`, `Wait`, `WaitFor`, `WaitForGone`, `Manual`, `Upload`, `PressKey`, `Press`
+- Actions: `Click`, `Type`, `TypePassword`, `Select`, `AssertExists`, `AssertNotExists`, `AssertHasText`, `AssertRequest`, `Navigate`, `Wait`, `WaitFor`, `WaitForGone`, `Manual`, `Upload`, `PressKey`, `Press`
 - Save actions: `SaveText`, `SaveAttribute`, `SaveValue`, `Save`
 - Press key shortcuts: `PressUp`, `PressDown`, `PressLeft`, `PressRight`, `PressTab`, `PressEnter`, `PressEsc`, `PressSpace`
 - Date helpers: `today`, `tomorrow`, `yesterday`, `nextWeek`, `lastWeek`, `nextMonth`, `lastMonth`, `firstDateOfMonth`, `lastDateOfMonth`
@@ -21,7 +21,7 @@ Library summary:
 - Template strings with `${}` are evaluated at runtime for dynamic values
 - Context values are referenced with `{{ctx.keyName}}` syntax in any step that accepts a string
 
-Key APIs: Task(fn).as('label'), Test, Automation, Click, Type, TypePassword, Select, Upload, Press, PressKey, PressUp, PressDown, PressLeft, PressRight, PressTab, PressEnter, PressEsc, PressSpace, SaveText, SaveAttribute, SaveValue, Save, Navigate, Wait, WaitFor, WaitForGone, Manual, AssertExists, AssertNotExists, AssertHasText, is, Element, innerTextIs, innerTextContains, idIs, classIncludes, placeholderIs, nameIs, typeIs, valueIs, ariaLabel, roleIs, titleIs, hrefContains, isDisabled, isNthElement, dataAttr, closestLabelIs, today, tomorrow, yesterday, nextWeek, lastWeek, nextMonth, lastMonth, firstDateOfMonth, lastDateOfMonth, Data, Fake
+Key APIs: Task(fn).as('label'), Test, Automation, Click, Type, TypePassword, Select, Upload, Press, PressKey, PressUp, PressDown, PressLeft, PressRight, PressTab, PressEnter, PressEsc, PressSpace, SaveText, SaveAttribute, SaveValue, Save, Navigate, Wait, WaitFor, WaitForGone, Manual, AssertExists, AssertNotExists, AssertHasText, AssertRequest, is, Element, innerTextIs, innerTextContains, idIs, classIncludes, placeholderIs, nameIs, typeIs, valueIs, ariaLabel, roleIs, titleIs, hrefContains, isDisabled, isNthElement, dataAttr, closestLabelIs, today, tomorrow, yesterday, nextWeek, lastWeek, nextMonth, lastMonth, firstDateOfMonth, lastDateOfMonth, Data, Fake
 
 Rules:
 - **CRITICAL: Only use functions exported by `@tomationjs/dsl`**. The DSL is NOT general-purpose TypeScript — it is a structured DSL that compiles to JSON. Arbitrary TypeScript/JavaScript code (loops, conditionals, console.log, fetch, DOM manipulation, async/await, try/catch, etc.) will be silently ignored after compilation. Only DSL-provided functions (actions, assertions, element builders, tasks, tests, automations) produce executable steps.
@@ -97,6 +97,7 @@ const content = is.SPAN.childOf(container).where(innerTextIs('Header')).navigate
 | `AssertExists` | `AssertExists(element)` | Assert element is present in DOM |
 | `AssertNotExists` | `AssertNotExists(element)` | Assert element is NOT in DOM |
 | `AssertHasText` | `AssertHasText(element, text)` | Assert element contains text |
+| `AssertRequest` | `AssertRequest(url?).method(m).query(q).jsonBody(b).status(s)` | Assert a network request was (or was not) made — see Network Request Assertions below |
 | `Navigate` | `Navigate(url)` | Navigate to a URL |
 | `Wait` | `Wait(ms)` | Wait for a specified time in milliseconds |
 | `WaitFor` | `WaitFor(element)` | Wait until element appears in DOM |
@@ -130,6 +131,55 @@ PressKey('ArrowDown')                // Down arrow
 Press('Tab', { shift: true }).in(el) // Shift+Tab on a specific element
 ```
 
+---
+
+## Network Request Assertions
+
+`AssertRequest(url?)` asserts that the page made (or did not make) an XHR/fetch request matching a set of criteria. During a run the extension captures the requests the page fires and evaluates the assertion against that captured set (no mocking/interception). Available in Chrome/Edge only.
+
+The optional URL argument matches by: a string (exact), a `RegExp` (pattern), or `{ glob: '...' }` (wildcard). Omit it to match on other criteria only. Chain refinements, then optionally finish with an expectation.
+
+| Method | Description |
+|--------|-------------|
+| `.method(m)` | HTTP method, case-insensitive (`'GET'`, `'POST'`, ...) |
+| `.query(pairs)` | Query params as a subset (request may have extra params) |
+| `.jsonBody(obj)` | JSON request body as a structural subset |
+| `.formBody(pairs)` | URL-encoded form body as a subset |
+| `.rawBody(str)` | Exact raw request body string |
+| `.status(s)` | Response status: `200`, `'2xx'`, or `{ min, max }` |
+| `.notMade()` | Expectation: assert NO request matched |
+| `.times(n)` | Expectation: assert exactly `n` requests matched |
+
+Default expectation (no `.notMade()`/`.times()`): at least one matching request.
+
+```ts
+import { Test, Click, Wait, AssertRequest } from '@tomationjs/dsl'
+import Api from '~/pom/api.pom'
+
+const API = 'https://api.example.com'
+
+Test('Loading posts calls the API', () => {
+  Click(Api.loadButton)
+  Wait(800) // let the request complete
+  AssertRequest(`${API}/posts`).method('GET').query({ userId: '1' }).status(200)
+})
+
+Test('Creating a post sends the right body', () => {
+  Click(Api.createButton)
+  Wait(800)
+  AssertRequest(`${API}/posts`).method('POST').jsonBody({ title: 'Hello' }).status(201)
+})
+
+Test('No delete is triggered on load', () => {
+  Click(Api.loadButton)
+  Wait(500)
+  AssertRequest({ glob: `${API}/posts/*` }).method('DELETE').notMade()
+})
+```
+
+Notes:
+- Trigger the request first (e.g. with `Click`), then `Wait` briefly so the response is captured before asserting.
+- Captured requests are shown inline in the run log beneath the step that fired them, with a per-step count; each entry expands to show URL, query, and request/response bodies.
 ---
 
 ## Save Actions Reference
@@ -228,6 +278,7 @@ Automation('Add Todo Item', (params: { item: string }) => {
 Supported parameter types:
 - `string` → Text input
 - `number` → Number input
+- `boolean` → Checkbox
 - `Date` → Date picker
 - `'a' | 'b' | 'c'` → Select dropdown (string union literals)
 - Optional params use `?` suffix

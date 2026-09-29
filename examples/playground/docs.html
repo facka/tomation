@@ -84,7 +84,7 @@
     [id="get-started"], [id="cli"], [id="configuration"],
     [id="element-locators"], [id="where-matchers"], [id="user-functions"],
     [id="save-to-context"], [id="date-helpers"], [id="keyboard-actions"],
-    [id="assertions"], [id="test-data"], [id="enums-and-consts"], [id="conditionals"], [id="tests"], [id="automations"], [id="pom-files"] {
+    [id="assertions"], [id="network-assertions"], [id="test-data"], [id="enums-and-consts"], [id="conditionals"], [id="network-log"], [id="tests"], [id="automations"], [id="pom-files"] {
       scroll-margin-top: 70px;
     }
 
@@ -92,7 +92,7 @@
       [id="get-started"], [id="cli"], [id="configuration"],
       [id="element-locators"], [id="where-matchers"], [id="user-functions"],
       [id="save-to-context"], [id="date-helpers"], [id="keyboard-actions"],
-      [id="assertions"], [id="test-data"], [id="enums-and-consts"], [id="conditionals"], [id="tests"], [id="automations"], [id="pom-files"] {
+      [id="assertions"], [id="network-assertions"], [id="test-data"], [id="enums-and-consts"], [id="conditionals"], [id="network-log"], [id="tests"], [id="automations"], [id="pom-files"] {
         scroll-margin-top: 110px;
       }
     }
@@ -244,8 +244,18 @@
               Conditionals in Tasks
             </a>
           </li>
+          <li>
+            <a href="#network-assertions" class="sidebar-link block rounded-md py-1.5 pl-7 pr-3 text-sm text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
+              Network Request Assertions
+            </a>
+          </li>
         </ul>
       </div>
+
+      <!-- Network Usage in the Run Log -->
+      <a href="#network-log" class="sidebar-link block rounded-md px-3 py-2 text-sm font-medium text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
+        Network in the Run Log
+      </a>
 
       <!-- Tests -->
       <a href="#tests" class="sidebar-link block rounded-md px-3 py-2 text-sm font-medium text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
@@ -971,6 +981,86 @@ AssertNotExists(Login.errorMessage)
 // Verify text content
 AssertHasText(Login.message, 'Login successful')</code></pre></div>
 
+    <h3 id="network-assertions" class="text-xl font-semibold text-white mt-12 mb-3">Network Request Assertions <a href="#network-assertions" class="heading-anchor">#</a></h3>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">AssertRequest(url?)</code> verifies that the page made (or did not make) an XHR/fetch network request matching a set of criteria. During a run, Tomation captures the requests the page fires and evaluates the assertion against that captured set — no network mocking or interception is involved. Chain refinement methods to narrow what counts as a match, then finish with an expectation.
+    </p>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      The optional first argument matches the request URL. Pass a string for an exact match, a <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">RegExp</code> to match by pattern, or <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">{ glob: '...' }</code> for wildcard matching. Omit it to match on the other criteria alone.
+    </p>
+
+    <div class="overflow-x-auto mb-4"><table class="w-full text-sm text-left border border-slate-700 rounded-lg overflow-hidden">
+      <thead class="bg-slate-800/80"><tr><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Method</th><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Description</th></tr></thead>
+      <tbody>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.method(m)</code></td><td class="px-4 py-2.5 text-slate-300">Match the HTTP method (case-insensitive), e.g. <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">'GET'</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">'POST'</code>.</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.query(pairs)</code></td><td class="px-4 py-2.5 text-slate-300">Match query-string parameters as a subset — the request may carry extra params.</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.jsonBody(obj)</code></td><td class="px-4 py-2.5 text-slate-300">Match a JSON request body as a structural subset.</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.formBody(pairs)</code></td><td class="px-4 py-2.5 text-slate-300">Match a URL-encoded form body as a subset of key/value pairs.</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.rawBody(str)</code></td><td class="px-4 py-2.5 text-slate-300">Match the request body as an exact raw string.</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.status(s)</code></td><td class="px-4 py-2.5 text-slate-300">Match the response status: an exact code (<code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">200</code>), a class shorthand (<code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">'2xx'</code>), or a range (<code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">{ min: 200, max: 299 }</code>).</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.notMade()</code></td><td class="px-4 py-2.5 text-slate-300">Expectation: assert that <em>no</em> request matched. Passes when the match count is zero.</td></tr>
+        <tr><td class="px-4 py-2.5 text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.times(n)</code></td><td class="px-4 py-2.5 text-slate-300">Expectation: assert that exactly <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">n</code> requests matched.</td></tr>
+      </tbody>
+    </table></div>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      With no <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.notMade()</code> or <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.times()</code>, the default expectation is "at least one matching request".
+    </p>
+
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">import { AssertRequest } from '@tomationjs/dsl'
+
+const API = 'https://api.example.com'
+
+// A GET with a query param returned 200
+AssertRequest(`${API}/posts`).method('GET').query({ userId: '1' }).status(200)
+
+// A POST created a resource (201) with a matching JSON body subset
+AssertRequest(`${API}/posts`).method('POST').jsonBody({ title: 'Hello' }).status(201)
+
+// Match by pattern / glob instead of an exact URL
+AssertRequest(/\/posts\/\d+$/).method('GET').status('2xx')
+AssertRequest({ glob: `${API}/users/*` }).method('GET')
+
+// Negative and count expectations
+AssertRequest({ glob: `${API}/posts/*` }).method('DELETE').notMade()
+AssertRequest(`${API}/posts`).method('POST').times(1)</code></pre></div>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Trigger the request first (for example with a <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Click</code>), give it a moment to complete with <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Wait</code> if needed, then assert:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">Test('Loading posts calls the API', () => {
+  Click(Page.loadPostsButton)
+  Wait(800)
+  AssertRequest(`${API}/posts`).method('GET').query({ userId: '1' }).status(200)
+})</code></pre></div>
+
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      <strong class="text-slate-200">Note:</strong> network capture uses the Chrome DevTools Protocol and is available in Chrome/Edge only.
+    </p>
+    <h2 id="network-log" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Network Usage in the Run Log <a href="#network-log" class="heading-anchor">#</a></h2>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      While a test runs, the requests the page makes are captured and shown inline in the run log, interleaved with the steps in the order they were initiated. Each captured request appears as its own entry directly beneath the step that was executing when it fired, so you can see exactly which action triggered which call.
+    </p>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Per-step summary</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Under each step, a small network glyph with a count badge shows how many requests were attributed to it. While the step is running and the count is not yet known, a subtle pulsing dot indicates capture is in progress. Steps that made no requests show nothing.
+    </p>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Request entry</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      A captured request entry shows, on one line: a network glyph (so it is never mistaken for a step), the HTTP method, the URL, and the response status. When the request host matches the page's host, the origin is collapsed to <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">[…]</code> so the endpoint path is easy to scan — the full URL is available on hover. A status shown in an amber/pending style means the response has not completed (or failed to capture) yet.
+    </p>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Expanded detail</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Click a request entry to expand it. The detail view shows the full untruncated URL, the query parameters, and the request and response bodies. Values are shown verbatim. When a body was shortened while capturing (to keep captures lightweight), it is labeled <em>(truncated at capture)</em>; when a response body could not be captured, the entry notes that it is unavailable.
+    </p>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Relationship to AssertRequest</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      The requests displayed here are the same captured set that <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">AssertRequest</code> evaluates against. An <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">AssertRequest</code> step reads as a sentence in the log — for example, <em>Assert Request GET "[…]/posts?userId=1" has been done with status 200</em> — so you can cross-reference the assertion against the actual requests captured on the preceding steps.
+    </p>
     <h2 id="tests" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Tests <a href="#tests" class="heading-anchor">#</a></h2>
     <p class="text-slate-300 text-sm leading-relaxed mb-4">
       Tests are declared using the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Test(name, callback)</code> function in <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">*.test.ts</code> files. Each test has a descriptive name and a callback containing the sequence of interactions and assertions that make up the test scenario.
