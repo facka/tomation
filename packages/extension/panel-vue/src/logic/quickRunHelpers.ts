@@ -17,6 +17,7 @@ export function buildAllStepsChecked(steps: Step[]): number[] {
  * - number → 0
  * - date → today's date in YYYY-MM-DD format
  * - enum → first option value
+ * - boolean → false
  */
 export function buildDefaultParams(params: Param[]): Record<string, unknown> {
   const result: Record<string, unknown> = {};
@@ -39,6 +40,8 @@ export function buildDefaultParams(params: Param[]): Record<string, unknown> {
       result[param.name] = yyyy + '-' + mm + '-' + dd;
     } else if (type === 'enum') {
       result[param.name] = param.options && param.options.length > 0 ? param.options[0] : '';
+    } else if (type === 'boolean') {
+      result[param.name] = false;
     }
   }
 

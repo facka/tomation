@@ -224,6 +224,10 @@ function handleBackgroundMessage(msg: BackgroundMessage): void {
     case 'DATA_RESOLVED':
       store.setResolvedTestData(msg.data, msg.seeds);
       break;
+
+    case 'NETWORK_REQUEST':
+      store.addNetworkRequest(msg.request);
+      break;
   }
 }
 

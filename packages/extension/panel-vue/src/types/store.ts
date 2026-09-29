@@ -51,6 +51,39 @@ export interface RunConfig {
   executionSpeed: 'FAST' | 'NORMAL' | 'SLOW';
 }
 
+export interface RequestUrlCriterion {
+  kind: 'exact' | 'regex' | 'glob';
+  value?: string;
+  source?: string;
+  flags?: string;
+  pattern?: string;
+}
+
+export interface RequestStatusCriterion {
+  kind: 'exact' | 'range';
+  value?: number;
+  min?: number;
+  max?: number;
+}
+
+export interface RequestBodyCriterion {
+  kind: 'json' | 'form' | 'raw';
+  value: unknown;
+}
+
+export interface RequestMatcher {
+  url?: RequestUrlCriterion;
+  method?: string;
+  queryParams?: Record<string, string>;
+  body?: RequestBodyCriterion;
+  status?: RequestStatusCriterion;
+}
+
+export interface RequestExpectation {
+  kind: 'exists' | 'notMade' | 'count';
+  count?: number;
+}
+
 export interface LogEntry {
   stepIndex: number;
   status: StepStatus;
@@ -71,6 +104,34 @@ export interface LogEntry {
   // Present on table-cell steps: the structured cell accessor, used to display
   // the targeted row/column (preferring columnName) in the run log.
   accessor?: TableCellAccessor;
+  // Present on assertRequest steps: the matcher criteria, the expectation
+  // (exists/notMade/count), and the observed match count. Used to render the
+  // full validation metadata in the run log.
+  matcher?: RequestMatcher;
+  expectation?: RequestExpectation;
+  matchCount?: number;
+}
+
+/**
+ * A single captured XHR/fetch request, attributed to the step that was
+ * executing when it was initiated. Produced by the background capture service,
+ * delivered over the `NETWORK_REQUEST` message, and stored (verbatim, unmasked)
+ * in `StoreState.networkRequests`.
+ */
+export interface CapturedRequest {
+  requestId: string;
+  url: string;
+  method: string;
+  queryParams: Record<string, string[]>;
+  requestBody: string;
+  requestBodyTruncated: boolean;
+  status: number | null;
+  responseBody: string;
+  responseBodyTruncated: boolean;
+  bodyUnavailable: boolean;
+  stepIndex: number | null;
+  taskPath: Array<{ name: string; label?: string; params?: unknown }> | null;
+  initiatedAt: number;
 }
 
 export interface StoreState {
@@ -91,6 +152,13 @@ export interface StoreState {
   isPaused: boolean;
   runConfig: RunConfig | null;
   logEntries: LogEntry[];
+  // Captured network requests, keyed by String(stepIndex) or the literal
+  // 'unattributed' (for requests with a null step index). Each group is kept
+  // sorted by `initiatedAt`.
+  networkRequests: Record<string, CapturedRequest[]>;
+  // True while capture is attached and the run is in progress with no
+  // completion yet known; used to drive the per-step count loading placeholder.
+  networkCapturePending: boolean;
   runSummary: { total: number; passed: number; failed: number; stopped?: boolean; reason?: string } | null;
   contextStore: Record<string, unknown>;
   automationParams: Record<string, unknown> | null;
@@ -131,6 +199,8 @@ export interface StoreActions {
   setStepPlan(steps: StepPlanEntry[]): void;
   setStepStatus(stepIndex: number, status: StepStatus, meta?: Partial<LogEntry>): void;
   setRunComplete(summary: { total: number; passed: number; failed: number }): void;
+  addNetworkRequest(request: CapturedRequest): void;
+  networkRequestCount(stepIndex: number): number;
   setPaused(paused: boolean): void;
   stopRun(): void;
 

@@ -138,6 +138,106 @@ const assertSuffix = computed(() => {
   return getAssertSuffix(action) || '';
 });
 
+// --- AssertRequest validation metadata ---
+
+const isAssertRequest = computed(() => props.entry.action === 'assertRequest');
+
+/**
+ * Truncate a URL for display, keeping the path + query readable while
+ * shortening a long origin to "start…end". Returns the string unchanged when
+ * it is already short.
+ */
+function truncateUrl(url: string): string {
+  if (url.length <= 60) return url;
+  // Try to keep the path + query intact and shorten the origin.
+  const m = url.match(/^(https?:\/\/)?([^/]+)(\/.*)?$/i);
+  if (m) {
+    const host = m[2] || '';
+    const rest = m[3] || '';
+    let shortHost = host;
+    if (host.length > 16) {
+      shortHost = host.slice(0, 6) + '…' + host.slice(-6);
+    }
+    const out = shortHost + rest;
+    if (out.length <= 80) return out;
+    return out.slice(0, 40) + '…' + out.slice(-30);
+  }
+  return url.slice(0, 40) + '…' + url.slice(-30);
+}
+
+// The HTTP method being asserted (upper-cased), or null when not specified.
+const assertRequestMethod = computed(() => {
+  const m = props.entry.matcher;
+  return m?.method ? String(m.method).toUpperCase() : null;
+});
+
+// The URL being asserted, with any query-param criteria appended, truncated for
+// display. Returns null when no URL criterion is present.
+const assertRequestUrl = computed(() => {
+  const m = props.entry.matcher;
+  if (!m || !m.url) return null;
+
+  let base: string;
+  if (m.url.kind === 'exact' && m.url.value) base = m.url.value;
+  else if (m.url.kind === 'regex') return '/' + (m.url.source || '') + '/' + (m.url.flags || '');
+  else if (m.url.kind === 'glob' && m.url.pattern) base = m.url.pattern;
+  else return null;
+
+  if (m.queryParams) {
+    const pairs = Object.keys(m.queryParams).map(
+      (k) => encodeURIComponent(k) + '=' + encodeURIComponent(m.queryParams![k]),
+    );
+    if (pairs.length) base += (base.indexOf('?') === -1 ? '?' : '&') + pairs.join('&');
+  }
+  return truncateUrl(base);
+});
+
+// Trailing clause describing body + status + expectation, e.g.
+// "has been done with status 200" or "was NOT made".
+const assertRequestOutcome = computed(() => {
+  const m = props.entry.matcher;
+  const exp = props.entry.expectation;
+  const clauses: string[] = [];
+
+  // Verb reflecting the expectation kind.
+  if (exp?.kind === 'notMade') {
+    clauses.push('was NOT made');
+  } else if (exp?.kind === 'count') {
+    const n = exp.count ?? 0;
+    clauses.push('was done ' + n + ' time' + (n === 1 ? '' : 's'));
+  } else {
+    clauses.push('has been done');
+  }
+
+  // Body criterion.
+  if (m?.body) {
+    let bodyVal: string;
+    try {
+      bodyVal = typeof m.body.value === 'string' ? m.body.value : JSON.stringify(m.body.value);
+    } catch {
+      bodyVal = String(m.body.value);
+    }
+    if (bodyVal.length > 60) bodyVal = bodyVal.slice(0, 57) + '…';
+    clauses.push('with ' + m.body.kind + ' body ' + bodyVal);
+  }
+
+  // Status criterion.
+  if (m?.status) {
+    if (m.status.kind === 'exact' && m.status.value != null) {
+      clauses.push('with status ' + m.status.value);
+    } else if (m.status.kind === 'range') {
+      clauses.push('with status ' + m.status.min + '-' + m.status.max);
+    }
+  }
+
+  return clauses.join(' ');
+});
+
+// Observed match count, shown as a subtle suffix when known (including zero).
+const assertRequestObserved = computed(() =>
+  props.entry.matchCount != null ? String(props.entry.matchCount) : null,
+);
+
 const showRetrySkip = computed(() => {
   return props.awaitingAction && props.debugMode && props.entry.status === 'fail';
 });
@@ -341,6 +441,15 @@ onBeforeUnmount(() => {
       <span v-if="valueDisplay" class="step-value">{{ valueDisplay }}</span>
     </template>
 
+    <!-- AssertRequest: reads as a sentence, e.g.
+         "Assert Request GET "…/posts?userId=1" has been done with status 200" -->
+    <template v-else-if="isAssertRequest">
+      <span class="step-action">Assert Request</span>
+      <span v-if="assertRequestMethod" class="ar-method">{{ assertRequestMethod }}</span>
+      <span v-if="assertRequestUrl" class="ar-url" :title="assertRequestUrl">"{{ assertRequestUrl }}"</span>
+      <span class="ar-outcome">{{ assertRequestOutcome }}</span>
+      <span v-if="assertRequestObserved !== null" class="ar-observed">(observed {{ assertRequestObserved }})</span>
+    </template>
     <!-- Regular steps -->
     <template v-else>
       <span class="step-action">{{ actionLabel }}</span>
@@ -612,5 +721,39 @@ onBeforeUnmount(() => {
   color: var(--text-secondary, #aaa);
   white-space: pre;
   overflow-x: auto;
+}
+
+/* --- AssertRequest sentence layout --- */
+.ar-method {
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: var(--net-accent, #5b8def);
+  color: #fff;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.ar-url {
+  margin-left: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--text-secondary, #aaa);
+  overflow-wrap: anywhere;
+}
+
+.ar-outcome {
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--text-secondary, #aaa);
+}
+
+.ar-observed {
+  margin-left: 6px;
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-muted, #888);
 }
 </style>

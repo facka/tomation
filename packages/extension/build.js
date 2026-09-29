@@ -25,11 +25,12 @@ var SHARED_FILES = [
   'src/options.js',
   'src/storage.js',
   'src/inspector.js',
-  'src/faker.js'
+  'src/faker.js',
+  'src/networkCapture.js'
 ];
 
 // Playground directories to copy
-var PLAYGROUND_DIRS = ['login', 'todo', 'navigation', 'user-form'];
+var PLAYGROUND_DIRS = ['login', 'todo', 'navigation', 'user-form', 'network'];
 
 // ---------------------------------------------------------------------------
 // Manifest templates
@@ -38,7 +39,7 @@ var PLAYGROUND_DIRS = ['login', 'todo', 'navigation', 'user-form'];
 function chromeManifest() {
   return Object.assign({}, BASE_MANIFEST, {
     manifest_version: 3,
-    permissions: BASE_MANIFEST.permissions.concat(['sidePanel', 'scripting']),
+    permissions: BASE_MANIFEST.permissions.concat(['sidePanel', 'scripting', 'debugger']),
     host_permissions: ['<all_urls>'],
     background: {
       service_worker: 'src/background.js'

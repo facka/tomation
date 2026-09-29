@@ -76,7 +76,7 @@ export function validateSpec(obj: unknown): ValidateSpecResult {
       return { ok: false, error: 'automations field must be an array' };
     }
 
-    const validParamTypes = ['string', 'number', 'date', 'enum'];
+    const validParamTypes = ['string', 'number', 'date', 'enum', 'boolean'];
     const automations = spec.automations as Array<Record<string, unknown>>;
 
     for (let a = 0; a < automations.length; a++) {
@@ -99,7 +99,7 @@ export function validateSpec(obj: unknown): ValidateSpecResult {
           return { ok: false, error: 'automations entry "' + autoEntry.name + '" param at index ' + p + ' missing name field' };
         }
         if (validParamTypes.indexOf(param.type as string) === -1) {
-          return { ok: false, error: 'automations entry "' + autoEntry.name + '" param "' + param.name + '" has invalid type "' + param.type + '" (expected one of: string, number, date, enum)' };
+          return { ok: false, error: 'automations entry "' + autoEntry.name + '" param "' + param.name + '" has invalid type "' + param.type + '" (expected one of: string, number, date, enum, boolean)' };
         }
 
         // Validate enum params have a non-empty options array of strings

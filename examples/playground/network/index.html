@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Orders Table — Tomation Playground</title>
+  <title>Network Requests — Tomation Playground</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -30,6 +30,8 @@
     .source-file-tab.active { border-color: rgba(52, 211, 153, 0.7); background: rgba(16, 185, 129, 0.2); color: #a7f3d0; }
     .source-hidden { display: none; }
     @media (min-width: 1024px) { .source-hidden { display: block; } }
+    .status-ok { color: #86efac; }
+    .status-err { color: #fecaca; }
   </style>
 </head>
 <body class="min-h-full text-slate-100 antialiased">
@@ -42,35 +44,29 @@
       <span class="font-bold text-white">Tomation</span>
     </a>
     <div class="hidden items-center gap-4 sm:flex">
-      <a href="../docs.html" class="min-h-[44px] min-w-[44px] flex items-center justify-center text-sm font-medium text-slate-300 transition hover:text-emerald-300">Docs</a>
-      <a href="../playground.html" class="min-h-[44px] min-w-[44px] flex items-center justify-center text-sm font-medium text-slate-300 transition hover:text-emerald-300">Examples</a>
+      <a href="../docs.html" class="min-h-[44px] flex items-center justify-center text-sm font-medium text-slate-300 transition hover:text-emerald-300">Docs</a>
+      <a href="../playground.html" class="min-h-[44px] flex items-center justify-center text-sm font-medium text-slate-300 transition hover:text-emerald-300">Examples</a>
     </div>
-    <div class="flex items-center gap-3">
-      <a href="https://github.com/facka/tomation" aria-label="GitHub" class="hidden sm:inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md text-slate-300 transition hover:text-emerald-300">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.009-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
-      </a>
-      <button id="nav-menu-btn" aria-label="Open menu" aria-expanded="false" class="sm:hidden inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md text-slate-300 transition hover:text-emerald-300">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
-        </svg>
-      </button>
-    </div>
+    <button id="nav-menu-btn" aria-label="Open menu" aria-expanded="false" class="sm:hidden inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md text-slate-300 transition hover:text-emerald-300">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+    </button>
   </nav>
 
   <div id="nav-mobile-menu" class="hidden sm:hidden border-b border-slate-700/70 bg-slate-900/95 backdrop-blur px-4 py-3 space-y-2">
-    <a href="../docs.html" class="block rounded-md px-3 py-2 text-sm font-medium text-slate-300 transition hover:text-emerald-300 hover:bg-slate-800/50">Docs</a>
-    <a href="../playground.html" class="block rounded-md px-3 py-2 text-sm font-medium text-slate-300 transition hover:text-emerald-300 hover:bg-slate-800/50">Examples</a>
-    <a href="https://github.com/facka/tomation" class="block rounded-md px-3 py-2 text-xs font-medium text-slate-300 transition hover:text-emerald-300 hover:bg-slate-800/50">GitHub</a>
+    <a href="../docs.html" class="block rounded-md px-3 py-2 text-sm font-medium text-slate-300 hover:text-emerald-300 hover:bg-slate-800/50">Docs</a>
+    <a href="../playground.html" class="block rounded-md px-3 py-2 text-sm font-medium text-slate-300 hover:text-emerald-300 hover:bg-slate-800/50">Examples</a>
   </div>
 
-  <nav aria-label="Examples navigation" class="sticky top-[60px] z-30 flex items-center gap-1 border-b border-slate-700/70 bg-slate-900/80 px-4 py-2 backdrop-blur sm:px-6 lg:px-8 overflow-x-auto">
+  <nav aria-label="Examples navigation" class="sticky top-[60px] z-30 flex items-center gap-1 border-b border-slate-700/70 bg-slate-900/80 px-4 py-2 backdrop-blur sm:px-6 lg:px-8">
     <a href="../playground.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-slate-400 hover:text-slate-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Playground</a>
     <a href="../login/index.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-slate-400 hover:text-slate-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Login</a>
     <a href="../todo/index.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-slate-400 hover:text-slate-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Todo</a>
     <a href="../navigation/index.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-slate-400 hover:text-slate-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Navigation</a>
     <a href="../user-form/index.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-slate-400 hover:text-slate-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">User Form</a>
-    <a href="index.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-slate-400 hover:text-slate-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Orders Table</a>
-    <a href="../network/index.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-slate-400 hover:text-slate-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Network</a>
+    <a href="../tables/index.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-slate-400 hover:text-slate-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Orders Table</a>
+    <a href="index.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-slate-400 hover:text-slate-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Network</a>
   </nav>
 
   <main class="mx-auto min-h-[calc(100dvh-130px)] w-full max-w-7xl px-5 py-8 lg:py-10">
@@ -80,70 +76,85 @@
     </div>
 
     <div class="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6 lg:items-start">
-      <section id="app-panel" role="tabpanel" aria-labelledby="app-tab" class="rounded-3xl border border-emerald-500/25 bg-slate-900/70 p-7 shadow-[0_0_0_1px_rgba(34,197,94,0.18),0_20px_80px_rgba(2,6,23,0.7)] backdrop-blur">
+      <section id="app-panel" role="tabpanel" aria-labelledby="app-tab" class="rounded-3xl border border-emerald-500/25 bg-slate-900/70 p-7 backdrop-blur">
         <div class="mb-5">
-          <h1 class="text-3xl font-bold tracking-tight text-white">Orders</h1>
-          <p class="mt-2 text-sm text-slate-300">A static orders table. Tomation reads individual cells by row and column.</p>
+          <h1 class="text-3xl font-bold tracking-tight text-white">Network Requests</h1>
+          <p class="mt-2 text-sm text-slate-300">Each button calls the public JSONPlaceholder API. Run the tests to capture and assert these requests.</p>
         </div>
 
-        <div class="overflow-x-auto rounded-xl border border-slate-700">
-          <table id="orders" class="w-full text-left text-sm">
-            <thead class="bg-slate-800/80">
-              <tr>
-                <th class="px-4 py-3 font-medium text-slate-200">Order ID</th>
-                <th class="px-4 py-3 font-medium text-slate-200">Customer</th>
-                <th class="px-4 py-3 font-medium text-slate-200">Total</th>
-                <th class="px-4 py-3 font-medium text-slate-200">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr class="border-t border-slate-700/70">
-                <td class="px-4 py-2.5 text-slate-300">#1001</td>
-                <td class="px-4 py-2.5 text-slate-300">Ada Lovelace</td>
-                <td class="px-4 py-2.5 text-slate-300">$120.00</td>
-                <td class="px-4 py-2.5 text-emerald-300">Shipped</td>
-              </tr>
-              <tr class="border-t border-slate-700/70">
-                <td class="px-4 py-2.5 text-slate-300">#1002</td>
-                <td class="px-4 py-2.5 text-slate-300">Grace Hopper</td>
-                <td class="px-4 py-2.5 text-slate-300">$89.50</td>
-                <td class="px-4 py-2.5 text-amber-300">Pending</td>
-              </tr>
-              <tr class="border-t border-slate-700/70">
-                <td class="px-4 py-2.5 text-slate-300">#1003</td>
-                <td class="px-4 py-2.5 text-slate-300">Alan Turing</td>
-                <td class="px-4 py-2.5 text-slate-300">$254.75</td>
-                <td class="px-4 py-2.5 text-emerald-300">Shipped</td>
-              </tr>
-              <tr class="border-t border-slate-700/70">
-                <td class="px-4 py-2.5 text-slate-300">#1004</td>
-                <td class="px-4 py-2.5 text-slate-300">Katherine Johnson</td>
-                <td class="px-4 py-2.5 text-slate-300">$47.00</td>
-                <td class="px-4 py-2.5 text-rose-300">Cancelled</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="space-y-3">
+          <button type="button" id="load-posts-btn" class="w-full rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-bold text-emerald-950 transition hover:bg-emerald-300">GET /posts?userId=1</button>
+          <button type="button" id="get-post-btn" class="w-full rounded-xl bg-slate-700 px-4 py-2.5 text-sm font-bold text-slate-100 transition hover:bg-slate-600">GET /posts/1</button>
+          <button type="button" id="create-post-btn" class="w-full rounded-xl bg-slate-700 px-4 py-2.5 text-sm font-bold text-slate-100 transition hover:bg-slate-600">POST /posts</button>
+        </div>
+
+        <div class="mt-5 rounded-xl border border-slate-700 bg-slate-950/70 p-4">
+          <div class="mb-2 flex items-center gap-2 text-sm">
+            <span class="text-slate-400">Status:</span>
+            <span id="status" class="font-semibold text-slate-300">idle</span>
+          </div>
+          <pre class="code-scroll max-h-64 overflow-auto text-xs text-slate-200"><code id="result">No request made yet.</code></pre>
         </div>
       </section>
 
-      <section id="source-panel" role="tabpanel" aria-labelledby="source-tab" class="source-hidden rounded-3xl border border-slate-700/80 bg-slate-900/70 shadow-[0_0_0_1px_rgba(34,197,94,0.12),0_20px_80px_rgba(2,6,23,0.65)] backdrop-blur">
+      <section id="source-panel" role="tabpanel" aria-labelledby="source-tab" class="source-hidden rounded-3xl border border-slate-700/80 bg-slate-900/70 backdrop-blur">
         <div class="flex items-center justify-between border-b border-slate-700/80 px-4 py-3">
           <h2 class="text-sm font-semibold tracking-wide text-emerald-300">Test Source</h2>
           <div class="flex items-center gap-2">
-            <span id="source-file-badge" class="rounded-md border border-slate-600 px-2 py-1 text-xs text-slate-300">tables.test.ts</span>
+            <span id="source-file-badge" class="rounded-md border border-slate-600 px-2 py-1 text-xs text-slate-300">network.test.ts</span>
             <button id="source-copy-btn" type="button" class="min-h-[32px] rounded-md border border-slate-600 px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:border-emerald-400/70 hover:text-emerald-200">Copy</button>
           </div>
         </div>
         <div class="border-b border-slate-700/80 px-2 py-2">
           <div id="source-file-tabs" class="flex min-h-[44px] items-center gap-2 overflow-x-auto">
-            <button type="button" data-file="test" class="source-file-tab active rounded-md px-3 py-2 text-xs font-medium">tables.test.ts</button>
-            <button type="button" data-file="pom" class="source-file-tab rounded-md px-3 py-2 text-xs font-medium">pom/tables.pom.ts</button>
+            <button type="button" data-file="test" class="source-file-tab active rounded-md px-3 py-2 text-xs font-medium">network.test.ts</button>
+            <button type="button" data-file="pom" class="source-file-tab rounded-md px-3 py-2 text-xs font-medium">pom/network.pom.ts</button>
           </div>
         </div>
         <pre class="code-scroll overflow-x-auto p-4 text-slate-200"><code id="source-code-view" class="language-typescript"></code></pre>
       </section>
     </div>
   </main>
+
+  <script>
+    (function() {
+      var API = 'https://jsonplaceholder.typicode.com';
+      var statusEl = document.getElementById('status');
+      var resultEl = document.getElementById('result');
+
+      function setStatus(code, ok) {
+        statusEl.textContent = String(code);
+        statusEl.className = 'font-semibold ' + (ok ? 'status-ok' : 'status-err');
+      }
+      function showResult(data) {
+        resultEl.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+      }
+      function run(promise) {
+        setStatus('loading...', true);
+        promise.then(function(res) {
+          setStatus(res.status, res.ok);
+          return res.json();
+        }).then(showResult).catch(function(err) {
+          setStatus('error', false);
+          showResult(String(err));
+        });
+      }
+
+      document.getElementById('load-posts-btn').addEventListener('click', function() {
+        run(fetch(API + '/posts?userId=1'));
+      });
+      document.getElementById('get-post-btn').addEventListener('click', function() {
+        run(fetch(API + '/posts/1'));
+      });
+      document.getElementById('create-post-btn').addEventListener('click', function() {
+        run(fetch(API + '/posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: 'Tomation', body: 'Captured by AssertRequest', userId: 1 })
+        }));
+      });
+    })();
+  </script>
 
   <script>
     (function() {
@@ -178,50 +189,61 @@
       setView('app');
     })();
   </script>
+
   <script>
     (function() {
+      var NL = '\n';
+      var testCode = [
+        "import { Test, Navigate, Wait, AssertHasText } from '@tomationjs/dsl'",
+        "import Network from '~/pom/network.pom'",
+        "",
+        "Test('GET request with query params is captured', () => {",
+        "  Navigate('network/index.html')",
+        "  Wait(300)",
+        "  Network.loadPosts()",
+        "  Wait(800)",
+        "  AssertHasText(Network.status, '200')",
+        "  Network.assertPostsListRequest()",
+        "})",
+        "",
+        "Test('POST request body and 201 status are captured', () => {",
+        "  Navigate('network/index.html')",
+        "  Wait(300)",
+        "  Network.createPost()",
+        "  Wait(800)",
+        "  AssertHasText(Network.status, '201')",
+        "  Network.assertCreatePostRequest()",
+        "  Network.assertCreateCalledOnce()",
+        "})"
+      ].join(NL);
+
+      var pomCode = [
+        "import { is, idIs, Task, Click, AssertRequest } from '@tomationjs/dsl'",
+        "",
+        "const API = 'https://jsonplaceholder.typicode.com'",
+        "",
+        "const loadPostsButton = is.BUTTON.where(idIs('load-posts-btn')).as('Load Posts')",
+        "const createPostButton = is.BUTTON.where(idIs('create-post-btn')).as('Create Post')",
+        "",
+        "const loadPosts = Task(() => { Click(loadPostsButton) }).as('Load Posts')",
+        "const createPost = Task(() => { Click(createPostButton) }).as('Create a Post')",
+        "",
+        "// GET /posts?userId=1 - method + query subset + 200",
+        "const assertPostsListRequest = Task(() => {",
+        "  AssertRequest(API + '/posts').method('GET').query({ userId: '1' }).status(200)",
+        "}).as('Assert GET /posts?userId=1')",
+        "",
+        "// POST /posts - method + JSON body subset + 201 Created",
+        "const assertCreatePostRequest = Task(() => {",
+        "  AssertRequest(API + '/posts').method('POST').jsonBody({ title: 'Tomation', userId: 1 }).status(201)",
+        "}).as('Assert POST /posts')",
+        "",
+        "export default { loadPosts, createPost, assertPostsListRequest, assertCreatePostRequest }"
+      ].join(NL);
+
       var sourceFiles = {
-        test: {
-          name: 'tables.test.ts',
-          code: `import { Test, AssertHasText } from '@tomationjs/dsl'
-import Orders from '~/pom/tables.pom'
-
-// Named columns keep the tests readable (1-based)
-const OrdersColumn = {
-  OrderId: 1,
-  Customer: 2,
-  Total: 3,
-  Status: 4,
-} as const
-
-Test('Read cells by explicit row and column', () => {
-  // Row 1 is the header; row 2 is the first data row
-  AssertHasText(Orders.table.cell(2, OrdersColumn.OrderId), '#1001')
-  AssertHasText(Orders.table.cell(2, OrdersColumn.Customer), 'Ada Lovelace')
-  AssertHasText(Orders.table.cell(2, OrdersColumn.Status), 'Shipped')
-})
-
-Test('Read the header row and the last data row', () => {
-  // firstRow targets row 1 (the header), lastRow targets the final row
-  AssertHasText(Orders.table.firstRow(OrdersColumn.Customer), 'Customer')
-  AssertHasText(Orders.table.lastRow(OrdersColumn.Status), 'Cancelled')
-})
-
-Test('Read a total using a named column', () => {
-  AssertHasText(Orders.table.cell(4, OrdersColumn.Total), '$254.75')
-})
-`
-        },
-        pom: {
-          name: 'pom/tables.pom.ts',
-          code: `import { is, idIs } from '@tomationjs/dsl'
-
-// Define the table once as a normal locator
-const table = is.TABLE.where(idIs('orders')).as('Orders')
-
-export default { table }
-`
-        }
+        test: { name: 'network.test.ts', code: testCode },
+        pom: { name: 'pom/network.pom.ts', code: pomCode }
       };
 
       var tabContainer = document.getElementById('source-file-tabs');
@@ -239,8 +261,7 @@ export default { table }
         codeView.textContent = file.code;
         var buttons = tabContainer.querySelectorAll('button[data-file]');
         for (var i = 0; i < buttons.length; i += 1) {
-          var isActive = buttons[i].getAttribute('data-file') === fileKey;
-          buttons[i].classList.toggle('active', isActive);
+          buttons[i].classList.toggle('active', buttons[i].getAttribute('data-file') === fileKey);
         }
         if (window.Prism && typeof window.Prism.highlightElement === 'function') {
           window.Prism.highlightElement(codeView);

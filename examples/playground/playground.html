@@ -127,6 +127,7 @@
     <a href="navigation/index.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-slate-400 hover:text-slate-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Navigation</a>
     <a href="user-form/index.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-slate-400 hover:text-slate-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">User Form</a>
     <a href="tables/index.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-slate-400 hover:text-slate-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Orders Table</a>
+    <a href="network/index.html" class="min-h-[44px] flex items-center px-3 text-sm font-medium text-slate-400 hover:text-slate-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Network</a>
   </nav>
 
   <main class="relative mx-auto w-full max-w-6xl px-5 pb-16 pt-10 sm:px-8 sm:pt-14">
@@ -241,6 +242,28 @@ Test('Register user with generated data', () => {
           <h3 class="text-lg font-semibold text-white">Orders Table</h3>
           <p class="mb-4 mt-1 text-sm text-slate-300">Validate values inside an HTML table with <code class="text-emerald-200 text-xs">.cell(row, column)</code> accessors.</p>
           <a href="tables/index.html" class="inline-flex w-full items-center justify-center rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Open App</a>
+        </article>
+          
+        <!-- Network Card -->
+        <article class="group rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 transition hover:-translate-y-1 hover:border-emerald-400/60 hover:shadow-glow">
+          <div class="mb-4 rounded-xl border border-slate-700 bg-slate-950">
+            <div class="flex items-center gap-2 border-b border-slate-700 px-3 py-2">
+              <span class="h-2.5 w-2.5 rounded-full bg-red-400"></span>
+              <span class="h-2.5 w-2.5 rounded-full bg-amber-300"></span>
+              <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+              <span class="ml-2 text-xs font-medium text-slate-400">network.test.ts</span>
+            </div>
+<pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">Test('POST request body is captured', () => {
+  Network.createPost()
+  AssertRequest(API + '/posts')
+    .method('POST')
+    .jsonBody({ title: 'Tomation' })
+    .status(201)
+})</code></pre>
+          </div>
+          <h3 class="text-lg font-semibold text-white">Network Requests</h3>
+          <p class="mb-4 mt-1 text-sm text-slate-300">Capture and assert real API calls with <code class="text-emerald-200 text-xs">AssertRequest</code> against JSONPlaceholder.</p>
+          <a href="network/index.html" class="inline-flex w-full items-center justify-center rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">Open App</a>
         </article>
       </div>
     </section>

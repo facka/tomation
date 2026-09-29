@@ -2,10 +2,11 @@
 import { ref, computed, watch, nextTick } from 'vue';
 import { useStore } from '@/store';
 import { useRunExecution } from '@/composables/useRunExecution';
-import type { TaskHeaderStatus } from '@/types/store';
-import type { LogEntry } from '@/types/store';
+import type { TaskHeaderStatus, StepStatus } from '@/types/store';
+import type { LogEntry, CapturedRequest } from '@/types/store';
 import LogEntryComponent from './LogEntry.vue';
 import TaskHeader from './TaskHeader.vue';
+import NetworkLogEntry from './NetworkLogEntry.vue';
 
 const store = useStore();
 const { retry, skip } = useRunExecution();
@@ -52,10 +53,11 @@ interface TaskHeaderInfo {
 }
 
 interface RenderItem {
-  type: 'task-header' | 'log-entry';
+  type: 'task-header' | 'log-entry' | 'network-entry';
   key: string;
   taskHeader?: TaskHeaderInfo;
   logEntry?: LogEntry;
+  network?: CapturedRequest;
   awaitingAction?: boolean;
 }
 
@@ -100,6 +102,20 @@ const renderItems = computed(() => {
       logEntry: entry,
       awaitingAction: isAwaitingAction,
     });
+
+    // Append the step's attributed network entries in `initiatedAt` order,
+    // right after their originating step (Req 5.1). A step with zero captured
+    // requests produces no entries (Req 5.9). Keyed as
+    // `net-<stepIndex>-<requestId>`, preserving the `data-key` autoscroll
+    // pattern used for steps.
+    const group = store.state.networkRequests[String(entry.stepIndex)] || [];
+    for (const req of [...group].sort((a, b) => a.initiatedAt - b.initiatedAt)) {
+      items.push({
+        type: 'network-entry',
+        key: 'net-' + entry.stepIndex + '-' + req.requestId,
+        network: req,
+      });
+    }
   }
 
   return items;
@@ -146,6 +162,33 @@ function computeTaskHeaderStatus(pathKey: string): TaskHeaderStatus {
   }
 
   return 'queued';
+}
+
+// --- Per-step network count ---
+
+/**
+ * Number of captured network requests attributed to a step, used to bind the
+ * per-step count badge (Req 5.5). Returns undefined when no group exists yet so
+ * the loading placeholder can distinguish "not determined" from "zero".
+ */
+function networkCountFor(stepIndex: number): number | undefined {
+  const group = store.state.networkRequests[String(stepIndex)];
+  return group ? group.length : undefined;
+}
+
+/**
+ * True while capture is still pending for the CURRENT (in-progress) step and
+ * its count has not yet been determined; drives the minimal loading indicator
+ * (Req 5.11). Scoped to the in-progress step only so the indicator never
+ * appears under multiple steps at once. Once a count is known (including zero),
+ * the indicator is suppressed.
+ */
+function networkPendingFor(stepIndex: number, status: StepStatus): boolean {
+  return (
+    status === 'in-progress' &&
+    store.state.networkCapturePending &&
+    networkCountFor(stepIndex) === undefined
+  );
 }
 
 // --- Auto-scroll to last updated step ---
@@ -241,15 +284,40 @@ function onSkip(stepIndex: number) {
         :params="item.taskHeader.params"
         :status="item.taskHeader.status"
       />
-      <LogEntryComponent
-        v-else-if="item.type === 'log-entry' && item.logEntry"
+      <template v-else-if="item.type === 'log-entry' && item.logEntry">
+        <LogEntryComponent
+          :data-key="item.key"
+          :entry="item.logEntry"
+          :page-elements="pageElements"
+          :debug-mode="debugMode"
+          :awaiting-action="item.awaitingAction"
+          @retry="onRetry"
+          @skip="onSkip"
+        />
+        <!-- Per-step network summary: a count badge bound to the attributed
+             group length (Req 5.5), or a loading placeholder while capture is
+             still pending and the count is not yet determined (Req 5.11). A
+             step with zero requests shows neither (Req 5.9). -->
+        <div
+          v-if="networkPendingFor(item.logEntry.stepIndex, item.logEntry.status)"
+          class="net-step-loading"
+          aria-label="Capturing network"
+          title="Capturing network"
+        >
+          <span class="net-loading-dot" />
+        </div>
+        <div
+          v-else-if="(networkCountFor(item.logEntry.stepIndex) || 0) > 0"
+          class="net-step-summary"
+        >
+          <font-awesome-icon class="net-glyph" :icon="['fas', 'arrow-right-arrow-left']" />
+          <span class="net-step-count">{{ networkCountFor(item.logEntry.stepIndex) }}</span>
+        </div>
+      </template>
+      <NetworkLogEntry
+        v-else-if="item.type === 'network-entry' && item.network"
         :data-key="item.key"
-        :entry="item.logEntry"
-        :page-elements="pageElements"
-        :debug-mode="debugMode"
-        :awaiting-action="item.awaitingAction"
-        @retry="onRetry"
-        @skip="onSkip"
+        :request="item.network"
       />
     </template>
   </div>
