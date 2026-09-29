@@ -2070,6 +2070,12 @@ function startRun(tabId, test, spec, checkedSteps, config) {
  */
 function runStepLoop() {
   if (runState.stepIndex >= runState.steps.length || runState.stopRequested) {
+    // Natural completion (all steps done, not a stop) keeps network capture
+    // attached for a short grace window so requests the LAST step fired are
+    // still captured and attributed to it before teardown. A stop ends promptly.
+    if (!runState.stopRequested) {
+      return finishRunWithNetworkGrace();
+    }
     return finishRun();
   }
 
@@ -2705,7 +2711,28 @@ function buildRunResultsRecord(wasStopped) {
   };
 }
 
+// Grace window (ms) after the last step completes: capture stays attached so
+// the last step's network requests are recorded and attributed before teardown.
+var NETWORK_GRACE_MS = 500;
+
 /**
+ * Keep network capture attached for a short grace window on natural completion
+ * so requests fired by the LAST step are captured and attributed to it, then
+ * finish the run. When capture is not attached (debugger unavailable or a
+ * non-network run), finishes immediately.
+ *
+ * @returns {Promise} resolves once the run has finished
+ */
+function finishRunWithNetworkGrace() {
+  if (!networkState.attached) {
+    return finishRun();
+  }
+  return new Promise(function (resolve) {
+    setTimeout(resolve, NETWORK_GRACE_MS);
+  }).then(function () {
+    return finishRun();
+  });
+}/**
  * Finish the run (either all steps done or stopped).
  * Unlocks tab, persists the run results, and emits the appropriate summary.
  *
