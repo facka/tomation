@@ -677,21 +677,46 @@ h3 {
   opacity: 0.45;
 }
 
-.log-entry.param-banner {
-  background: var(--accent-soft);
-  border-left: 3px solid var(--accent);
-  font-size: 11px;
-  color: var(--text-secondary);
+/* Run parameters: a distinct pre-run summary panel shown at the top of the log,
+   deliberately styled unlike a step row (no left status bar, no mono step font)
+   so users read it as context captured before the run started. */
+.param-summary {
+  margin: 8px;
+  padding: 8px 10px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
 }
 
-.log-entry.param-banner .param-name {
+.param-summary-title {
+  font-size: 10px;
   font-weight: 600;
-  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
 }
 
-.log-entry.param-banner .param-val {
-  color: var(--text-muted);
-  font-style: italic;
+.param-summary-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  margin: 0;
+}
+
+.param-summary-key {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.param-summary-val {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 @keyframes spin {

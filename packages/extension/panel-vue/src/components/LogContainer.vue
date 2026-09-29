@@ -264,15 +264,17 @@ function onSkip(stepIndex: number) {
 
 <template>
   <div ref="containerRef" class="log-container">
-    <!-- Parameter banner -->
-    <div v-if="paramBannerItems.length > 0" class="log-entry param-banner">
-      <span class="step-action">Params</span>
-      <span v-for="(item, idx) in paramBannerItems" :key="item.name">
-        <span class="param-name">{{ item.name }}</span>:
-        <span class="param-val">"{{ item.value }}"</span>
-        <span v-if="idx < paramBannerItems.length - 1">, </span>
-      </span>
-    </div>
+    <!-- Run parameters: a distinct pre-run summary panel (not a step row) that
+         shows the parameter values the automation was launched with. -->
+    <section v-if="paramBannerItems.length > 0" class="param-summary">
+      <div class="param-summary-title">Run parameters</div>
+      <dl class="param-summary-list">
+        <template v-for="item in paramBannerItems" :key="item.name">
+          <dt class="param-summary-key">{{ item.name }}</dt>
+          <dd class="param-summary-val">{{ item.value }}</dd>
+        </template>
+      </dl>
+    </section>
 
     <!-- Render items (task headers + log entries) -->
     <template v-for="item in renderItems" :key="item.key">
