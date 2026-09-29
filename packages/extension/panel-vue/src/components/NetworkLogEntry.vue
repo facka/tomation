@@ -2,11 +2,37 @@
 import { computed, ref } from 'vue';
 import type { CapturedRequest } from '@/types/store';
 import { statusDisplay } from '@/logic/statusDisplay';
+import { useStore } from '@/store';
 
 const props = defineProps<{
   request: CapturedRequest;
   dataKey?: string;
 }>();
+
+const store = useStore();
+
+/**
+ * URL shown in the collapsed summary. When the request host matches the current
+ * tab/project host, the origin (protocol + host) is replaced with a compact
+ * "[…]" placeholder so the endpoint path is easier to read. Cross-origin
+ * requests keep their full URL. The complete URL is always available via the
+ * title tooltip (and the expanded detail).
+ */
+const displayUrl = computed(() => {
+  const raw = props.request.url;
+  const currentHost = store.state.currentHostname;
+  if (!currentHost) return raw;
+  try {
+    const parsed = new URL(raw);
+    if (parsed.host === currentHost || parsed.hostname === currentHost) {
+      const rest = parsed.pathname + parsed.search + parsed.hash;
+      return '[…]' + rest;
+    }
+  } catch {
+    // Non-absolute or unparseable URL — show as-is.
+  }
+  return raw;
+});
 
 // Local, initially-collapsed disclosure state (Req 5.6), mirroring the
 // ref-based collapse pattern used by LogEntry.vue's find-trace disclosure.
@@ -74,7 +100,7 @@ const hasRequestBody = computed(() => props.request.requestBody.length > 0);
       <span class="net-method">{{ request.method }}</span>
       <!-- URL truncates via CSS ellipsis while collapsed; full URL held in the
            title attribute for hover discovery (Req 5.3, 5.10). -->
-      <span class="net-url" :title="request.url">{{ request.url }}</span>
+      <span class="net-url" :title="request.url">{{ displayUrl }}</span>
       <span class="net-status" :class="{ pending: isPendingOrFailed }">{{ statusText }}</span>
     </button>
 
@@ -133,17 +159,13 @@ const hasRequestBody = computed(() => props.request.requestBody.length > 0);
 
 <style scoped>
 /* Distinct network styling so a captured request is never mistaken for a step
-   (Req 5.2): a left accent bar, a muted background, and monospace method/URL. */
+   (Req 5.2). No left accent bar (that reads as a step); a muted background plus
+   the network glyph and monospace method/URL keep it visually distinct. */
 .network-entry {
   margin: 2px 0 2px 24px;
-  border-left: 3px solid var(--net-accent, #5b8def);
   background: var(--bg-secondary, rgba(91, 141, 239, 0.06));
-  border-radius: 0 4px 4px 0;
+  border-radius: 4px;
   overflow: hidden;
-}
-
-.network-entry.is-pending {
-  border-left-color: var(--warning, #f5a623);
 }
 
 .net-summary {
