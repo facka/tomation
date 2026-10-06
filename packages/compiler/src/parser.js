@@ -2500,7 +2500,44 @@ function resolveRhsReference(node, constBindings, filePath) {
   if (!node || node.type !== 'MemberExpression') {
     return { ok: false, reason: 'not a member expression' };
   }
-  if (!node.object || node.object.type !== 'Identifier') {
+  // Three-level namespaced-enum reference: Namespace.Enum.KEY (e.g. a POM that
+  // re-exports an enum, `NewTaskPage.TaskTypes.AUTHORIZATION_REQUEST`). Resolve
+  // via the nested namespace in constBindings[ns][enum][key]. Mirrors the
+  // three-level handling in extractValueExpression so conditions and value
+  // positions behave identically.
+  if (
+    node.object && node.object.type === 'MemberExpression' &&
+    node.object.object && node.object.object.type === 'Identifier' &&
+    node.object.property && node.object.property.type === 'Identifier'
+  ) {
+    var nsName = node.object.object.name;
+    var enumName = node.object.property.name;
+    var memberKey = null;
+    if (!node.computed && node.property && node.property.type === 'Identifier') {
+      memberKey = node.property.name;
+    } else if (
+      node.computed && node.property && node.property.type === 'Literal' &&
+      typeof node.property.value === 'string'
+    ) {
+      memberKey = node.property.value;
+    } else {
+      return { ok: false, reason: 'computed non-literal member' };
+    }
+    if (
+      constBindings &&
+      constBindings[nsName] && typeof constBindings[nsName] === 'object' &&
+      constBindings[nsName][enumName] && typeof constBindings[nsName][enumName] === 'object' &&
+      Object.prototype.hasOwnProperty.call(constBindings[nsName][enumName], memberKey)
+    ) {
+      var nsResolved = constBindings[nsName][enumName][memberKey];
+      var nt = typeof nsResolved;
+      if (nt === 'string' || nt === 'number' || nt === 'boolean') {
+        return { ok: true, value: nsResolved };
+      }
+      return { ok: false, reason: 'non-primitive value' };
+    }
+    return { ok: false, reason: 'unknown namespaced enum member' };
+  }  if (!node.object || node.object.type !== 'Identifier') {
     return { ok: false, reason: 'object is not an identifier' };
   }
 
@@ -2597,6 +2634,20 @@ function usesNewConditionConstruct(testNode, trackedParams) {
   // identifier is not `ctx`, not `params`, and not a bare tracked param root.
   function isEnumConstMemberRef(node) {
     if (!node || node.type !== 'MemberExpression') return false;
+
+    // Three-level namespaced-enum ref: Namespace.Enum.KEY (object is itself a
+    // MemberExpression of two identifiers, root not ctx/params/tracked-param).
+    if (node.object && node.object.type === 'MemberExpression' &&
+        node.object.object && node.object.object.type === 'Identifier' &&
+        node.object.property && node.object.property.type === 'Identifier') {
+      var rootName = node.object.object.name;
+      if (rootName === 'ctx' || rootName === 'params' || params.has(rootName)) return false;
+      if (node.computed) {
+        return !!(node.property && node.property.type === 'Literal' && typeof node.property.value === 'string');
+      }
+      return !!(node.property && node.property.type === 'Identifier');
+    }
+
     if (!node.object || node.object.type !== 'Identifier') return false;
 
     var objName = node.object.name;
