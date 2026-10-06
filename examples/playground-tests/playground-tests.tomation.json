@@ -8,7 +8,7 @@
     "urls": [
       "https://facka.github.io/tomation"
     ],
-    "compilerVersion": "2.1.0"
+    "compilerVersion": "2.2.0"
   },
   "pageElements": {
     "Login__usernameInput": {

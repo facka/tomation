@@ -367,6 +367,109 @@ function buildEnumBindings(ast) {
   return bindings;
 }
 
+
+/**
+ * Build a namespace binding for a module's `export default { ... }` object so
+ * that properties which re-export an enum/const can be resolved three levels
+ * deep (e.g. `NewTaskPage.TaskTypes.AUTHORIZATION_REQUEST`).
+ *
+ * For each shorthand/value property on the default-export object whose value is
+ * an identifier, the identifier is resolved to its enum/const members using:
+ *   1. the module's own local const/enum bindings, then
+ *   2. a single level of the module's own `~/`/relative imports.
+ * Only properties that resolve to an object of literal members are included.
+ *
+ * @param {object} ast - parsed AST of the imported module
+ * @param {string} filePath - absolute path of the imported module (for import resolution)
+ * @param {string} baseUrl - base path for `~/` resolution
+ * @returns {object} map of exportedPropName -> { memberKey: literalValue, ... }
+ */
+function resolveDefaultExportNamespace(ast, filePath, baseUrl) {
+  var namespace = {};
+
+  // Find the `export default { ... }` ObjectExpression.
+  var defaultObj = null;
+  for (var i = 0; i < ast.body.length; i++) {
+    var node = ast.body[i];
+    if (node.type === 'ExportDefaultDeclaration' && node.declaration &&
+        node.declaration.type === 'ObjectExpression') {
+      defaultObj = node.declaration;
+      break;
+    }
+  }
+  if (!defaultObj) return namespace;
+
+  // Local const/enum bindings defined within this module.
+  var localBindings = buildConstBindings(ast);
+
+  // Collect this module's own default imports (localName -> importPath) so a
+  // re-exported enum that was imported into the module can be resolved one hop.
+  var moduleImports = {};
+  for (var b = 0; b < ast.body.length; b++) {
+    var imp = ast.body[b];
+    if (imp.type !== 'ImportDeclaration' || !imp.source || typeof imp.source.value !== 'string') continue;
+    var p = imp.source.value;
+    if (!p.startsWith('~/') && !p.startsWith('.')) continue;
+    if (!imp.specifiers) continue;
+    for (var s = 0; s < imp.specifiers.length; s++) {
+      var spec = imp.specifiers[s];
+      if ((spec.type === 'ImportDefaultSpecifier' || spec.type === 'ImportSpecifier') &&
+          spec.local && spec.local.name) {
+        moduleImports[spec.local.name] = { path: p, named: spec.type === 'ImportSpecifier' };
+      }
+    }
+  }
+
+  // Resolve a referenced local name to its enum/const members object.
+  function resolveLocalName(name) {
+    // 1) Local const/enum binding in this module.
+    if (name in localBindings && localBindings[name] && typeof localBindings[name] === 'object') {
+      return localBindings[name];
+    }
+    // 2) One hop into the module's own imports.
+    if (name in moduleImports) {
+      var info = moduleImports[name];
+      var resolvedPath = null;
+      try {
+        resolvedPath = resolveSpecifier(info.path, filePath, baseUrl || path.dirname(filePath));
+      } catch (e) {
+        return null;
+      }
+      if (!resolvedPath) return null;
+      try {
+        var src = fs.readFileSync(resolvedPath, 'utf8');
+        var jsSrc = src;
+        if (resolvedPath.endsWith('.ts') || resolvedPath.endsWith('.tsx')) {
+          var stripped = stripTypes(src, resolvedPath);
+          if (stripped.error) return null;
+          jsSrc = stripped.code;
+        }
+        var subAst = acorn.parse(jsSrc, { ecmaVersion: 2020, sourceType: 'module', locations: true });
+        var subBindings = buildConstBindings(subAst);
+        if (name in subBindings) return subBindings[name];
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  for (var pi = 0; pi < defaultObj.properties.length; pi++) {
+    var prop = defaultObj.properties[pi];
+    if (prop.type !== 'Property') continue;
+    var key = prop.key && prop.key.type === 'Identifier' ? prop.key.name
+            : (prop.key && prop.key.type === 'Literal' ? String(prop.key.value) : null);
+    if (!key) continue;
+    // Only resolve properties whose value is a bare identifier (shorthand or `key: Ident`).
+    if (!prop.value || prop.value.type !== 'Identifier') continue;
+    var members = resolveLocalName(prop.value.name);
+    if (members && typeof members === 'object') {
+      namespace[key] = members;
+    }
+  }
+
+  return namespace;
+}
 /**
  * Resolve a MemberExpression AST node against constBindings.
  * Returns the literal value if the expression references a known const object property,
@@ -1402,7 +1505,37 @@ function extractValueExpression(node, filePath, warnings, constBindings, dataTem
   // Identifier reference (e.g., destructured param variable)
   if (node.type === 'Identifier') return '{{' + node.name + '}}';
 
-  // MemberExpression: check for ctx FIRST, then data template vars, then const object resolution, then fall back to param reference
+  // Three-level MemberExpression: Namespace.Enum.KEY (e.g. a POM that re-exports
+  // an enum: NewTaskPage.TaskTypes.AUTHORIZATION_REQUEST). The object is itself
+  // a MemberExpression (Namespace.Enum); resolve via the nested namespace stored
+  // in constBindings[Namespace][Enum][KEY].
+  if (
+    node.type === 'MemberExpression' &&
+    node.object && node.object.type === 'MemberExpression' &&
+    node.object.object && node.object.object.type === 'Identifier' &&
+    node.object.property && node.object.property.type === 'Identifier'
+  ) {
+    const nsName = node.object.object.name;    // NewTaskPage
+    const enumName = node.object.property.name; // TaskTypes
+    // Member key: dot access (.KEY) or computed string-literal (["KEY"]).
+    let memberKey = null;
+    if (!node.computed && node.property && node.property.type === 'Identifier') {
+      memberKey = node.property.name;
+    } else if (node.computed && node.property && node.property.type === 'Literal' &&
+               typeof node.property.value === 'string') {
+      memberKey = node.property.value;
+    }
+    if (
+      memberKey !== null && constBindings &&
+      constBindings[nsName] && typeof constBindings[nsName] === 'object' &&
+      constBindings[nsName][enumName] && typeof constBindings[nsName][enumName] === 'object' &&
+      Object.prototype.hasOwnProperty.call(constBindings[nsName][enumName], memberKey)
+    ) {
+      return String(constBindings[nsName][enumName][memberKey]);
+    }
+    // Not a resolvable namespaced enum reference — fall through to null.
+    return null;
+  }  // MemberExpression: check for ctx FIRST, then data template vars, then const object resolution, then fall back to param reference
   if (
     node.type === 'MemberExpression' &&
     node.object && node.object.type === 'Identifier' &&
@@ -3744,6 +3877,14 @@ function parseSource(source, filePath, rawSource, options) {
       // Only import the specific named binding
       if (imp.localName in importedBindings) {
         constBindings[imp.localName] = importedBindings[imp.localName];
+      } else if (!imp.named) {
+        // Default import of a POM/module: expose any enum/const re-exported as a
+        // property of its `export default { ... }` under the local namespace, so
+        // three-level refs like `NewTaskPage.TaskTypes.KEY` resolve.
+        const ns = resolveDefaultExportNamespace(importedAst, resolvedPath, baseUrl);
+        if (ns && Object.keys(ns).length > 0) {
+          constBindings[imp.localName] = Object.assign({}, constBindings[imp.localName], ns);
+        }
       }
     } catch (e) {
       // Skip files that can't be read or parsed — don't fail compilation
