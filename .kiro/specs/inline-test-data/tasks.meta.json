@@ -200,6 +200,37 @@
         "chatSessionId": "sess_3f135e07-c055-4b43-8b5d-95607a6ad86f",
         "timestamp": 1791396454427
       }
+    ],
+    "18.1 Document inline `Data()` in `examples/playground/docs.html`": [
+      {
+        "executionId": "582669e6-389b-46c9-92fa-777a1b450924",
+        "chatSessionId": "sess_1c1d6c91-8c8c-4ca0-bec4-e5425ad90ec5",
+        "timestamp": 1791397153410
+      },
+      {
+        "executionId": "582669e6-389b-46c9-92fa-777a1b450924",
+        "chatSessionId": "sess_1c1d6c91-8c8c-4ca0-bec4-e5425ad90ec5",
+        "timestamp": 1791397227600
+      }
+    ],
+    "18.2 Document inline `Data()` in `tomation-ai.md`": [
+      {
+        "executionId": "582669e6-389b-46c9-92fa-777a1b450924",
+        "chatSessionId": "sess_1c1d6c91-8c8c-4ca0-bec4-e5425ad90ec5",
+        "timestamp": 1791397228708
+      },
+      {
+        "executionId": "582669e6-389b-46c9-92fa-777a1b450924",
+        "chatSessionId": "sess_1c1d6c91-8c8c-4ca0-bec4-e5425ad90ec5",
+        "timestamp": 1791397293272
+      }
+    ],
+    "18. Documentation": [
+      {
+        "executionId": "582669e6-389b-46c9-92fa-777a1b450924",
+        "chatSessionId": "sess_1c1d6c91-8c8c-4ca0-bec4-e5425ad90ec5",
+        "timestamp": 1791397293451
+      }
     ]
   }
 }

@@ -187,11 +187,11 @@ Ordering: compiler core (parse `.as` + `dataVars` + nested token emission + scop
     - Run `npm run compile:playground` (single-shot) and confirm the inline-data example compiles into the spec with the expected `{{data.*}}` tokens and attached `data`
     - _Requirements: 4.1, 4.2, 4.3_
 
-- [ ] 18. Documentation
-  - [ ] 18.1 Document inline `Data()` in `examples/playground/docs.html`
+- [x] 18. Documentation
+  - [x] 18.1 Document inline `Data()` in `examples/playground/docs.html`
     - Document inline `Data()`, optional `.as(name)`, nested `{{data.*}}` access, and that inline data is additive to the existing `.data.ts` + import flow
     - _Requirements: 1.1, 2.1, 2.2, 3.4, 8.1_
-  - [ ] 18.2 Document inline `Data()` in `tomation-ai.md`
+  - [x] 18.2 Document inline `Data()` in `tomation-ai.md`
     - Mirror the docs.html content: inline `Data()`, `.as(name)`, nested access, additive-to-shared note
     - _Requirements: 1.1, 2.1, 2.2, 3.4, 8.1_
 
