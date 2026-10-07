@@ -1747,8 +1747,16 @@ function buildLogMsg(stepIndex, step, ok, error, findTrace) {
     ok: ok
   };
 
-  // Resolve any remaining {{ctx.X}} or {{paramName}} templates in value at emission time
-  if (logMsg.value && typeof logMsg.value === 'string' && logMsg.value.indexOf('{{') !== -1) {
+  // Resolve the display value at emission time.
+  // 1) Object descriptors (dateHelper / runtimeTemplate) resolve to their
+  //    concrete value so the run log shows e.g. the formatted date, not the raw
+  //    descriptor object (which would render as "[object Object]").
+  if (logMsg.value && typeof logMsg.value === 'object' && logMsg.value.type) {
+    var resolvedDesc = resolveValue(logMsg.value, step.params || {}, runState.contextStore);
+    logMsg.value = (resolvedDesc !== null && typeof resolvedDesc !== 'object') ? resolvedDesc : null;
+  }
+  // 2) Remaining {{ctx.X}} / {{paramName}} templates in a string value.
+  else if (logMsg.value && typeof logMsg.value === 'string' && logMsg.value.indexOf('{{') !== -1) {
     var resolved = resolveValue(logMsg.value, {}, runState.contextStore);
     if (resolved && typeof resolved !== 'object') {
       logMsg.value = resolved;
@@ -1852,10 +1860,17 @@ function emitStepPlan(resolvedSteps, originalSteps, tasksMap, checkedSteps) {
     var rs = resolvedSteps[s];
     var taskPath = rs._taskPath || [];
     var lastTask = taskPath.length > 0 ? taskPath[taskPath.length - 1] : null;
+    // Resolve object descriptors (dateHelper / runtimeTemplate) for the queued
+    // plan preview so the row shows a concrete value, not "[object Object]".
+    var planValue = rs.value || null;
+    if (planValue && typeof planValue === 'object' && planValue.type) {
+      var rpv = resolveValue(planValue, rs._params || {}, runState.contextStore);
+      planValue = (rpv !== null && typeof rpv !== 'object') ? rpv : null;
+    }
     var entry = {
       action: rs.action,
       target: rs.target || null,
-      value: rs.value || null,
+      value: planValue,
       url: rs.url || null,
       description: rs.description || null,
       ms: (rs.ms != null) ? rs.ms : null,
