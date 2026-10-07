@@ -1241,6 +1241,60 @@ function extractTemplateValue(node) {
 }
 
 /**
+ * Walk a (possibly nested) member-access chain and, if its root object
+ * identifier is a tracked data variable, return the root variable name and the
+ * ordered property path from the outermost-left property to the leaf.
+ *
+ * Supports both dot access (`obj.task.type`) and string-literal computed access
+ * (`obj["task"]["type"]`). The returned `path` has length >= 1.
+ *
+ * Examples:
+ *   user.name            → { rootVar: 'user', path: ['name'] }
+ *   user.task.type       → { rootVar: 'user', path: ['task', 'type'] }
+ *   user["task"]["type"] → { rootVar: 'user', path: ['task', 'type'] }
+ *
+ * Returns null if `node` is not a member-access chain rooted at a tracked data
+ * variable (i.e. `dataVars.has(rootName)` is false), or if any segment is not a
+ * resolvable (dot or string-literal computed) property name.
+ *
+ * @param {object} node - AST node (expected MemberExpression)
+ * @param {Map<string, { dataName: string, template: object|null }>} dataVars
+ * @returns {{ rootVar: string, path: string[] }|null}
+ */
+function extractDataMemberPath(node, dataVars) {
+  if (!node || node.type !== 'MemberExpression') return null;
+  if (!dataVars) return null;
+
+  var path = [];
+  var current = node;
+
+  // Walk from the leaf inward, collecting each property name.
+  while (current && current.type === 'MemberExpression') {
+    var segment = null;
+    if (!current.computed && current.property && current.property.type === 'Identifier') {
+      segment = current.property.name;
+    } else if (
+      current.computed && current.property && current.property.type === 'Literal' &&
+      typeof current.property.value === 'string'
+    ) {
+      segment = current.property.value;
+    } else {
+      // Unsupported property form (e.g. computed numeric/dynamic index).
+      return null;
+    }
+    path.unshift(segment);
+    current = current.object;
+  }
+
+  // After unwinding the chain, `current` must be the root object identifier.
+  if (!current || current.type !== 'Identifier') return null;
+  if (!dataVars.has(current.name)) return null;
+  if (path.length < 1) return null;
+
+  return { rootVar: current.name, path: path };
+}
+
+/**
  * Extract a string or template value from an AST node.
  * Handles plain strings, simple template literals (no expressions),
  * and template literals with identifier expressions (→ {{param}} format).
@@ -1255,8 +1309,17 @@ function extractStringOrTemplate(node, dataVars, constBindings) {
   if (node.type === 'TemplateLiteral') return extractTemplateValue(node);
   // Handle variable references (e.g., destructured params) → template placeholder
   if (node.type === 'Identifier') return '{{' + node.name + '}}';
+  // Data template variable reference (possibly nested): user.task.type →
+  // {{data.<Data_Name>.task.type}}. Checked before the single-level member
+  // handling so nested chains rooted at a data var resolve to a data token.
+  if (node.type === 'MemberExpression') {
+    var dm = extractDataMemberPath(node, dataVars);
+    if (dm) {
+      var entry = dataVars.get(dm.rootVar);
+      return '{{data.' + entry.dataName + '.' + dm.path.join('.') + '}}';
+    }
+  }
   // Handle params.X member access → {{X}} template placeholder
-  // But first check for data template variable references → {{data.X.Y}}
   // And const/enum bindings → resolved literal
   if (
     node.type === 'MemberExpression' &&
@@ -1266,9 +1329,6 @@ function extractStringOrTemplate(node, dataVars, constBindings) {
     // Context value reference: ctx.greeting → {{ctx.greeting}}
     if (node.object.name === 'ctx') {
       return '{{ctx.' + node.property.name + '}}';
-    }
-    if (dataVars && dataVars.has(node.object.name)) {
-      return '{{data.' + dataVars.get(node.object.name).dataName + '.' + node.property.name + '}}';
     }
     // Resolve const/enum member expressions (e.g., TechSkill.TypeScript → "TypeScript")
     if (constBindings && node.object.name in constBindings) {
@@ -1587,6 +1647,20 @@ function extractValueExpression(node, filePath, warnings, constBindings, dataVar
   // Identifier reference (e.g., destructured param variable)
   if (node.type === 'Identifier') return '{{' + node.name + '}}';
 
+  // Data template variable reference (possibly nested): user.name →
+  // {{data.<Data_Name>.name}}, user.task.type → {{data.<Data_Name>.task.type}}.
+  // Checked before the namespaced-enum branch so a nested chain rooted at a data
+  // var resolves to a data token rather than being swallowed by the enum branch.
+  // Roots that are data vars are disjoint from ctx and constBindings namespaces,
+  // so this preserves the ctx → data → constBindings → param ordering.
+  if (node.type === 'MemberExpression') {
+    var dm = extractDataMemberPath(node, dataVars);
+    if (dm) {
+      var entry = dataVars.get(dm.rootVar);
+      return '{{data.' + entry.dataName + '.' + dm.path.join('.') + '}}';
+    }
+  }
+
   // Three-level MemberExpression: Namespace.Enum.KEY (e.g. a POM that re-exports
   // an enum: NewTaskPage.TaskTypes.AUTHORIZATION_REQUEST). The object is itself
   // a MemberExpression (Namespace.Enum); resolve via the nested namespace stored
@@ -1627,10 +1701,8 @@ function extractValueExpression(node, filePath, warnings, constBindings, dataVar
     if (node.object.name === 'ctx') {
       return '{{ctx.' + node.property.name + '}}';
     }
-    // Data template variable reference: user.name → {{data.user.name}}
-    if (dataVars && dataVars.has(node.object.name)) {
-      return '{{data.' + dataVars.get(node.object.name).dataName + '.' + node.property.name + '}}';
-    }
+    // (Data template variable references — including nested chains — are handled
+    // earlier via extractDataMemberPath, before the namespaced-enum branch.)
     // Try const object resolution if constBindings provided
     if (constBindings && node.object.name in constBindings) {
       const resolved = resolveConstMemberExpression(node, constBindings, filePath, warnings);

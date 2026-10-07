@@ -39,13 +39,13 @@ Ordering: compiler core (parse `.as` + `dataVars` + nested token emission + scop
     - Inline var maps to its Data_Name (incl. `.as` override); imported `.data` var maps `localName`→`localName`; mixed inline + imported both present
     - _Requirements: 2.3, 3.5, 8.1, 8.3_
 
-- [ ] 3. Compiler parse: nested-path token emission
-  - [ ] 3.1 Add `extractDataMemberPath(node, dataVars)` helper
+- [x] 3. Compiler parse: nested-path token emission
+  - [x] 3.1 Add `extractDataMemberPath(node, dataVars)` helper
     - Walk a (possibly nested) member-access chain; if the **root object identifier** is a tracked data var, return `{ rootVar, path: [p1, p2, ...] }` (k ≥ 1), else `null`
     - Support dot access and string-literal computed access (`obj["task"]["type"]`)
     - _Requirements: 3.1, 3.4_
 
-  - [ ] 3.2 Emit nested data tokens in `extractValueExpression` and `extractStringOrTemplate`
+  - [x] 3.2 Emit nested data tokens in `extractValueExpression` and `extractStringOrTemplate`
     - Replace the existing 2-level data branch in **both** functions with a single branch using `extractDataMemberPath`: emit `'{{data.' + entry.dataName + '.' + dm.path.join('.') + '}}'`
     - Preserve branch ordering: `ctx.*` first, then data vars, then `constBindings` enum resolution, then the param fallback; leave the namespaced-enum 3-level `constBindings` branch untouched
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 6.1_

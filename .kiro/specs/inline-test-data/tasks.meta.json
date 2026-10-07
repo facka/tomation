@@ -50,6 +50,37 @@
         "chatSessionId": "sess_0fdcbb8c-2cc5-4faf-a7fe-5249e2412d0d",
         "timestamp": 1791385761079
       }
+    ],
+    "3.1 Add `extractDataMemberPath(node, dataVars)` helper": [
+      {
+        "executionId": "34e95657-fbeb-49f7-b3e6-3bcaf000aa8a",
+        "chatSessionId": "sess_4f174d1c-7ac4-46b6-be8d-a8c9133404b0",
+        "timestamp": 1791386320673
+      },
+      {
+        "executionId": "34e95657-fbeb-49f7-b3e6-3bcaf000aa8a",
+        "chatSessionId": "sess_4f174d1c-7ac4-46b6-be8d-a8c9133404b0",
+        "timestamp": 1791386464024
+      }
+    ],
+    "3.2 Emit nested data tokens in `extractValueExpression` and `extractStringOrTemplate`": [
+      {
+        "executionId": "34e95657-fbeb-49f7-b3e6-3bcaf000aa8a",
+        "chatSessionId": "sess_4f174d1c-7ac4-46b6-be8d-a8c9133404b0",
+        "timestamp": 1791386322472
+      },
+      {
+        "executionId": "34e95657-fbeb-49f7-b3e6-3bcaf000aa8a",
+        "chatSessionId": "sess_4f174d1c-7ac4-46b6-be8d-a8c9133404b0",
+        "timestamp": 1791386465109
+      }
+    ],
+    "3. Compiler parse: nested-path token emission": [
+      {
+        "executionId": "34e95657-fbeb-49f7-b3e6-3bcaf000aa8a",
+        "chatSessionId": "sess_4f174d1c-7ac4-46b6-be8d-a8c9133404b0",
+        "timestamp": 1791386465220
+      }
     ]
   }
 }
