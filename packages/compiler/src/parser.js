@@ -2137,7 +2137,14 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
             });
             return null;
           }
-          return { action: 'saveExpression', value, key: keyName };
+          const saveStep = { action: 'saveExpression', value, key: keyName };
+          // Preserve the raw expression text (e.g. "today()") for display when the
+          // value compiled to a descriptor object (date helper / runtime template),
+          // so the test plan shows the expression instead of "[object Object]".
+          if (value !== null && typeof value === 'object') {
+            saveStep.valueText = reconstructSource(exprArg);
+          }
+          return saveStep;
         }
       }
     }

@@ -189,6 +189,11 @@ function getElementTooltip(target: string): string {
 
 function getValueDisplay(step: Step): string | null {
   if (step.action === 'typePassword') return '****';
+  // Descriptor-valued steps (e.g. Save(today())) compile `value` to an object;
+  // show the raw expression text (valueText) instead of "[object Object]".
+  if (step.value && typeof step.value === 'object') {
+    return step.valueText ? step.valueText : null;
+  }
   if (step.value) return '"' + step.value + '"';
   if (step.action === 'navigate' && step.url) return step.url;
   if (step.action === 'wait' && step.ms !== undefined) return step.ms + 'ms';

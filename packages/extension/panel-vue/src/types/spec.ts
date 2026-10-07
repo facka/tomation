@@ -12,7 +12,11 @@ export interface PageElement {
 export interface Step {
   action: string;
   target?: string;
-  value?: string;
+  // Usually a string; for Save() with a date-helper/runtime-template argument
+  // the compiled value is a descriptor object. `valueText` carries the raw
+  // expression source (e.g. "today()") for display in those cases.
+  value?: string | Record<string, unknown>;
+  valueText?: string;
   url?: string;
   ms?: number;
   description?: string;
