@@ -150,6 +150,25 @@
         "chatSessionId": "sess_684d89f2-db14-49a3-88c7-29e3cc699881",
         "timestamp": 1791390260676
       }
+    ],
+    "8.1 Add `.as(name: string)` to the `Data()` return type": [
+      {
+        "executionId": "14ee5058-f3e2-45c0-a5cf-12c03980e8bb",
+        "chatSessionId": "sess_6d9058b0-bb68-42b1-97a4-734158bb24ee",
+        "timestamp": 1791396089703
+      },
+      {
+        "executionId": "14ee5058-f3e2-45c0-a5cf-12c03980e8bb",
+        "chatSessionId": "sess_6d9058b0-bb68-42b1-97a4-734158bb24ee",
+        "timestamp": 1791396131776
+      }
+    ],
+    "8. DSL types: optional `.as(name)` in `packages/dsl/index.d.ts`": [
+      {
+        "executionId": "14ee5058-f3e2-45c0-a5cf-12c03980e8bb",
+        "chatSessionId": "sess_6d9058b0-bb68-42b1-97a4-734158bb24ee",
+        "timestamp": 1791396131943
+      }
     ]
   }
 }

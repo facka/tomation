@@ -94,8 +94,8 @@ Ordering: compiler core (parse `.as` + `dataVars` + nested token emission + scop
     - Automation referencing inline data gets `data` attached keyed by Data_Name; automation referencing nothing gets no `data`; a test and an automation referencing the same Data_Name both carry the identical template (incl. `__seed`)
     - _Requirements: 4.1, 4.2, 4.3, 7.2, 7.3_
 
-- [ ] 8. DSL types: optional `.as(name)` in `packages/dsl/index.d.ts`
-  - [ ] 8.1 Add `.as(name: string)` to the `Data()` return type
+- [x] 8. DSL types: optional `.as(name)` in `packages/dsl/index.d.ts`
+  - [x] 8.1 Add `.as(name: string)` to the `Data()` return type
     - Add an optional `as(name: string): DataTemplate<T> & T` to the `DataTemplate<T>` interface so typed property access and re-chainability are preserved (`Data({...}).as('x').color` type-checks); keep `Data<T>(template, options?): DataTemplate<T> & T`
     - _Requirements: 10.1, 10.2, 10.3_
 
