@@ -28,8 +28,8 @@ Ordering: compiler core (parse `.as` + `dataVars` + nested token emission + scop
     - Plain `const user = Data({...})` → `name === varName === 'user'`; `.as('customer')` → `name === 'customer'`, `varName === 'user'`; seed recorded/omitted; invalid `.as` (empty string, numeric literal, identifier, missing) warns and falls back to `varName`
     - _Requirements: 1.1, 1.2, 1.3, 2.1, 2.2, 2.4, 11.3_
 
-- [ ] 2. Compiler parse: file-wide data-variable tracking (`dataVars`)
-  - [ ] 2.1 Build the `dataVars` map in `parseSource` and thread it through step/value helpers
+- [x] 2. Compiler parse: file-wide data-variable tracking (`dataVars`)
+  - [x] 2.1 Build the `dataVars` map in `parseSource` and thread it through step/value helpers
     - After `dataTemplates` are collected, build `dataVars: Map<varName, { dataName, template }>` from each `result.dataTemplates[*]` (`varName`→`{ dataName: name, template }`) and from each import whose path ends in `.data` (`localName`→`{ dataName: localName, template: null }`)
     - Replace the `dataTemplateVars` `Set` usage: pass `dataVars` where `dataTemplateVars` is passed today, renaming the threaded parameter to `dataVars` across `extractValueExpression`, `extractStringOrTemplate`, `extractStep`, `extractSteps`, `extractIfStep`, `extractWhenStep`, `extractTaskInvocationParams`, `extractTest`, and the automation walk/`extractAutomation`
     - `has(name)` → `dataVars.has(name)`; emitted first segment → `dataVars.get(name).dataName`

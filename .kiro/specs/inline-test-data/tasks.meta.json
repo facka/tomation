@@ -31,6 +31,25 @@
         "chatSessionId": "sess_ee39d260-fb87-405d-a33c-8a58fcd83386",
         "timestamp": 1791385027449
       }
+    ],
+    "2.1 Build the `dataVars` map in `parseSource` and thread it through step/value helpers": [
+      {
+        "executionId": "6f07ab6e-a4f7-4c47-8b4e-279780578d9a",
+        "chatSessionId": "sess_0fdcbb8c-2cc5-4faf-a7fe-5249e2412d0d",
+        "timestamp": 1791385540311
+      },
+      {
+        "executionId": "6f07ab6e-a4f7-4c47-8b4e-279780578d9a",
+        "chatSessionId": "sess_0fdcbb8c-2cc5-4faf-a7fe-5249e2412d0d",
+        "timestamp": 1791385760946
+      }
+    ],
+    "2. Compiler parse: file-wide data-variable tracking (`dataVars`)": [
+      {
+        "executionId": "6f07ab6e-a4f7-4c47-8b4e-279780578d9a",
+        "chatSessionId": "sess_0fdcbb8c-2cc5-4faf-a7fe-5249e2412d0d",
+        "timestamp": 1791385761079
+      }
     ]
   }
 }

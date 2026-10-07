@@ -1248,7 +1248,7 @@ function extractTemplateValue(node) {
  * @param {object} node - AST node
  * @returns {string|null}
  */
-function extractStringOrTemplate(node, dataTemplateVars, constBindings) {
+function extractStringOrTemplate(node, dataVars, constBindings) {
   if (!node) return null;
   const plain = extractString(node);
   if (plain !== null) return plain;
@@ -1267,8 +1267,8 @@ function extractStringOrTemplate(node, dataTemplateVars, constBindings) {
     if (node.object.name === 'ctx') {
       return '{{ctx.' + node.property.name + '}}';
     }
-    if (dataTemplateVars && dataTemplateVars.has(node.object.name)) {
-      return '{{data.' + node.object.name + '.' + node.property.name + '}}';
+    if (dataVars && dataVars.has(node.object.name)) {
+      return '{{data.' + dataVars.get(node.object.name).dataName + '.' + node.property.name + '}}';
     }
     // Resolve const/enum member expressions (e.g., TechSkill.TypeScript → "TypeScript")
     if (constBindings && node.object.name in constBindings) {
@@ -1551,7 +1551,7 @@ function reconstructSource(node) {
  * @param {object} [constBindings] - const object bindings map for member expression resolution
  * @returns {string|object|null} plain string, descriptor object, or null
  */
-function extractValueExpression(node, filePath, warnings, constBindings, dataTemplateVars) {
+function extractValueExpression(node, filePath, warnings, constBindings, dataVars) {
   if (!node) return null;
 
   // Plain string literal
@@ -1628,8 +1628,8 @@ function extractValueExpression(node, filePath, warnings, constBindings, dataTem
       return '{{ctx.' + node.property.name + '}}';
     }
     // Data template variable reference: user.name → {{data.user.name}}
-    if (dataTemplateVars && dataTemplateVars.has(node.object.name)) {
-      return '{{data.' + node.object.name + '.' + node.property.name + '}}';
+    if (dataVars && dataVars.has(node.object.name)) {
+      return '{{data.' + dataVars.get(node.object.name).dataName + '.' + node.property.name + '}}';
     }
     // Try const object resolution if constBindings provided
     if (constBindings && node.object.name in constBindings) {
@@ -2116,7 +2116,7 @@ function extractAssertRequestStep(exprNode, filePath, warnings, constBindings) {
   return { action: 'assertRequest', matcher: matcher, expectation: expectation };
 }
 
-function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindings, dataTemplateVars) {
+function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindings, dataVars) {
   if (!exprNode) return null;
   if (!warnings) warnings = [];
   if (!constBindings) constBindings = {};
@@ -2210,7 +2210,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
             });
             return null;
           }
-          const value = extractValueExpression(exprArg, filePath, warnings, constBindings, dataTemplateVars);
+          const value = extractValueExpression(exprArg, filePath, warnings, constBindings, dataVars);
           if (value === null) {
             warnings.push({
               message: `Save() argument must be a string, date helper, or template literal at ${filePath}:${lineOf(exprArg)}`,
@@ -2266,7 +2266,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
       const action = actionMap[actionName];
       if (action) {
         const valueArg = innerCall.arguments[0];
-        const value = extractValueExpression(valueArg, filePath, warnings, constBindings, dataTemplateVars);
+        const value = extractValueExpression(valueArg, filePath, warnings, constBindings, dataVars);
         const targetArg = exprNode.arguments[0];
         const resolved = resolveTarget(targetArg, constBindings, warnings, filePath);
         if (resolved.target === null) return null;
@@ -2304,7 +2304,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
         // Optional params object
         const paramsArg = exprNode.arguments[0];
         if (paramsArg && paramsArg.type === 'ObjectExpression') {
-          const params = extractTaskInvocationParams(paramsArg, dataTemplateVars, constBindings);
+          const params = extractTaskInvocationParams(paramsArg, dataVars, constBindings);
           if (params && Object.keys(params).length > 0) step.params = params;
         }
         return step;
@@ -2350,7 +2350,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
         case 'AssertHasText': {
           const resolved = resolveTarget(args[0], constBindings, warnings, filePath);
           if (resolved.target === null) return null;
-          const value = extractValueExpression(args[1], filePath, warnings, constBindings, dataTemplateVars);
+          const value = extractValueExpression(args[1], filePath, warnings, constBindings, dataVars);
           const step = { action: 'assertHasText', target: resolved.target, value: value !== null ? value : '' };
           if (resolved.accessor) step.accessor = resolved.accessor;
           return step;
@@ -2358,7 +2358,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
 
         // Value-only: Navigate(url)
         case 'Navigate': {
-          const url = extractValueExpression(args[0], filePath, warnings, constBindings, dataTemplateVars);
+          const url = extractValueExpression(args[0], filePath, warnings, constBindings, dataVars);
           if (url === null) return null;
           return { action: 'navigate', url };
         }
@@ -2371,7 +2371,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
 
         // Value-only: Manual(description)
         case 'Manual': {
-          const description = extractValueExpression(args[0], filePath, warnings, constBindings, dataTemplateVars);
+          const description = extractValueExpression(args[0], filePath, warnings, constBindings, dataVars);
           return { action: 'manual', description: description !== null ? description : '' };
         }
 
@@ -2412,7 +2412,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
           }
           if (args.length === 1 && args[0] && args[0].type === 'ObjectExpression') {
             const step = { action: 'task', name: fnName };
-            const params = extractTaskInvocationParams(args[0], dataTemplateVars, constBindings);
+            const params = extractTaskInvocationParams(args[0], dataVars, constBindings);
             if (params && Object.keys(params).length > 0) step.params = params;
             return step;
           }
@@ -2434,7 +2434,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
  * @param {object} objNode - ObjectExpression AST node
  * @returns {object} params object
  */
-function extractTaskInvocationParams(objNode, dataTemplateVars, constBindings) {
+function extractTaskInvocationParams(objNode, dataVars, constBindings) {
   if (!objNode || objNode.type !== 'ObjectExpression') return {};
   const params = {};
   for (const prop of objNode.properties) {
@@ -2445,7 +2445,7 @@ function extractTaskInvocationParams(objNode, dataTemplateVars, constBindings) {
     if (!key) continue;
 
     // Try string/template, then number, then boolean
-    const strVal = extractStringOrTemplate(prop.value, dataTemplateVars, constBindings);
+    const strVal = extractStringOrTemplate(prop.value, dataVars, constBindings);
     if (strVal !== null) {
       params[key] = strVal;
       continue;
@@ -2978,7 +2978,7 @@ function extractCondition(testNode, trackedParams, constBindings, filePath) {
  * @param {object} [constBindings] - const object bindings map for member expression resolution
  * @returns {object|null} conditional step or null if condition is unsupported
  */
-function extractIfStep(stmt, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataTemplateVars) {
+function extractIfStep(stmt, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars) {
   if (!stmt || stmt.type !== 'IfStatement') return null;
 
   // Warn about else blocks (not supported)
@@ -3008,7 +3008,7 @@ function extractIfStep(stmt, filePath, trackedParams, warnings, source, declared
   // Recursively extract steps from the if-block body
   const consequent = stmt.consequent;
   const body = consequent && consequent.type === 'BlockStatement' ? consequent : null;
-  const thenSteps = body ? extractSteps(body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataTemplateVars) : [];
+  const thenSteps = body ? extractSteps(body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars) : [];
 
   if (thenSteps.length === 0) return null;
 
@@ -3027,10 +3027,10 @@ function extractIfStep(stmt, filePath, trackedParams, warnings, source, declared
  * @param {string} [source] - original source code for snippet extraction
  * @param {Set<string>} [declaredTaskNames] - task names declared in this file
  * @param {object} [constBindings] - const object bindings map
- * @param {Set<string>} [dataTemplateVars] - data template variable names
+ * @param {Map<string, { dataName: string, template: object|null }>} [dataVars] - data variable map
  * @returns {object|null} conditional step or null if the pattern is invalid
  */
-function extractWhenStep(exprNode, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataTemplateVars) {
+function extractWhenStep(exprNode, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars) {
   if (!exprNode || exprNode.type !== 'CallExpression') return null;
   if (!exprNode.callee || exprNode.callee.type !== 'Identifier' || exprNode.callee.name !== 'When') return null;
 
@@ -3069,10 +3069,10 @@ function extractWhenStep(exprNode, filePath, trackedParams, warnings, source, de
   // Function body may be a BlockStatement (() => { ... }) or a single expression (() => Click(x))
   let thenSteps = [];
   if (bodyNode.body && bodyNode.body.type === 'BlockStatement') {
-    thenSteps = extractSteps(bodyNode.body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataTemplateVars);
+    thenSteps = extractSteps(bodyNode.body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars);
   } else if (bodyNode.body) {
     // Concise arrow body: () => Click(x) — wrap the single expression as a step
-    const singleStep = extractStep(bodyNode.body, filePath, declaredTaskNames, warnings, constBindings, dataTemplateVars);
+    const singleStep = extractStep(bodyNode.body, filePath, declaredTaskNames, warnings, constBindings, dataVars);
     if (singleStep) thenSteps = [singleStep];
   }
 
@@ -3096,7 +3096,7 @@ function extractWhenStep(exprNode, filePath, trackedParams, warnings, source, de
  * @param {object} [constBindings] - const object bindings map for member expression resolution
  * @returns {Array} array of step objects
  */
-function extractSteps(body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataTemplateVars) {
+function extractSteps(body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars) {
   if (!body || body.type !== 'BlockStatement') return [];
   if (!trackedParams) trackedParams = new Set();
   if (!warnings) warnings = [];
@@ -3125,7 +3125,7 @@ function extractSteps(body, filePath, trackedParams, warnings, source, declaredT
 
     // Handle if-statements → conditional steps
     if (stmt.type === 'IfStatement') {
-      const ifStep = extractIfStep(stmt, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataTemplateVars);
+      const ifStep = extractIfStep(stmt, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars);
       if (ifStep) {
         steps.push(ifStep);
       }
@@ -3141,7 +3141,7 @@ function extractSteps(body, filePath, trackedParams, warnings, source, declaredT
       stmt.expression.callee.type === 'Identifier' &&
       stmt.expression.callee.name === 'When'
     ) {
-      const whenStep = extractWhenStep(stmt.expression, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataTemplateVars);
+      const whenStep = extractWhenStep(stmt.expression, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars);
       if (whenStep) {
         steps.push(whenStep);
       }
@@ -3150,7 +3150,7 @@ function extractSteps(body, filePath, trackedParams, warnings, source, declaredT
 
     // Process expression statements
     if (stmt.type === 'ExpressionStatement') {
-      const step = extractStep(stmt.expression, filePath, declaredTaskNames, warnings, constBindings, dataTemplateVars);
+      const step = extractStep(stmt.expression, filePath, declaredTaskNames, warnings, constBindings, dataVars);
       if (step) {
         steps.push(step);
       } else {
@@ -3460,7 +3460,7 @@ function mapTypeNode(typeNode, paramName, filePath, sourceFile, warnings) {
  * @param {Set<string>} [declaredTaskNames] - task names declared in this file
  * @returns {{ task: object|null, error: object|null, warnings: Array }}
  */
-function extractTask(declarator, filePath, source, declaredTaskNames, constBindings, dataTemplateVars) {
+function extractTask(declarator, filePath, source, declaredTaskNames, constBindings, dataVars) {
   if (!declarator || declarator.type !== 'VariableDeclarator') return { task: null, error: null };
   if (!declarator.init) return { task: null, error: null };
 
@@ -3567,7 +3567,7 @@ function extractTask(declarator, filePath, source, declaredTaskNames, constBindi
   // Extract steps from the function body
   const warnings = [];
   const steps = fn.body && fn.body.type === 'BlockStatement'
-    ? extractSteps(fn.body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataTemplateVars)
+    ? extractSteps(fn.body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars)
     : [];
 
   return {
@@ -3593,7 +3593,7 @@ function extractTask(declarator, filePath, source, declaredTaskNames, constBindi
  * @param {Set<string>} [declaredTaskNames] - task names declared in this file
  * @returns {{ test: object|null, error: object|null }}
  */
-function extractTest(node, filePath, source, declaredTaskNames, constBindings, dataTemplateVars) {
+function extractTest(node, filePath, source, declaredTaskNames, constBindings, dataVars) {
   if (!node || node.type !== 'CallExpression') return { test: null, error: null };
 
   const callee = node.callee;
@@ -3652,7 +3652,7 @@ function extractTest(node, filePath, source, declaredTaskNames, constBindings, d
   // Extract steps from the function body
   const warnings = [];
   const steps = fn.body && fn.body.type === 'BlockStatement'
-    ? extractSteps(fn.body, filePath, new Set(), warnings, source, declaredTaskNames, constBindings, dataTemplateVars)
+    ? extractSteps(fn.body, filePath, new Set(), warnings, source, declaredTaskNames, constBindings, dataVars)
     : [];
 
   return {
@@ -3682,7 +3682,7 @@ function extractTest(node, filePath, source, declaredTaskNames, constBindings, d
  * @param {Set<string>} [declaredTaskNames] - task names declared in this file
  * @returns {{ automation: object|null, error: object|null, warnings: Array }}
  */
-function extractAutomation(declarator, filePath, source, rawSource, declaredTaskNames, constBindings, dataTemplateVars) {
+function extractAutomation(declarator, filePath, source, rawSource, declaredTaskNames, constBindings, dataVars) {
   if (!declarator || declarator.type !== 'VariableDeclarator') return { automation: null, error: null, warnings: [] };
   if (!declarator.init) return { automation: null, error: null, warnings: [] };
 
@@ -3762,7 +3762,7 @@ function extractAutomation(declarator, filePath, source, rawSource, declaredTask
 
   // Extract steps from the function body
   var steps = fn.body && fn.body.type === 'BlockStatement'
-    ? extractSteps(fn.body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataTemplateVars)
+    ? extractSteps(fn.body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars)
     : [];
 
   // --- Validation warnings ---
@@ -4044,17 +4044,21 @@ function parseSource(source, filePath, rawSource, options) {
     }
   });
 
-  // Build the set of variable names that are Data template instances.
+  // Build the map of variable names that are Data template instances to their
+  // resolved Data_Name and (for inline declarations) their parsed template.
   // This includes:
-  //   1. Local Data() declarations (const user = Data({...}))
-  //   2. Imports from .data.ts files (import user from '~/data/user.data')
-  var dataTemplateVars = new Set();
+  //   1. Local Data() declarations (const user = Data({...})), keyed by the
+  //      declared variable name (varName), mapping to its Data_Name and template.
+  //   2. Imports from .data.ts files (import user from '~/data/user.data'),
+  //      keyed by the imported localName, with a null template (no local shape).
+  var dataVars = new Map();
   for (const dt of result.dataTemplates) {
-    dataTemplateVars.add(dt.name);
+    var varKey = dt.varName || dt.name;
+    dataVars.set(varKey, { dataName: dt.name, template: dt.template });
   }
   for (const imp of result.imports) {
     if (imp.importPath && imp.importPath.endsWith('.data')) {
-      dataTemplateVars.add(imp.localName);
+      dataVars.set(imp.localName, { dataName: imp.localName, template: null });
     }
   }
 
@@ -4139,7 +4143,7 @@ function parseSource(source, filePath, rawSource, options) {
   walk(ast, node => {
     if (node.type !== 'VariableDeclaration') return;
     for (const declarator of node.declarations) {
-      const { task, error, warnings } = extractTask(declarator, filePath, source, declaredTaskNames, constBindings, dataTemplateVars);
+      const { task, error, warnings } = extractTask(declarator, filePath, source, declaredTaskNames, constBindings, dataVars);
       if (error) {
         result.warnings.push(error);
       }
@@ -4160,7 +4164,7 @@ function parseSource(source, filePath, rawSource, options) {
     if (!callee || callee.type !== 'Identifier') return;
 
     if (callee.name === 'Test') {
-      const { test, error, warnings } = extractTest(node, filePath, source, declaredTaskNames, constBindings, dataTemplateVars);
+      const { test, error, warnings } = extractTest(node, filePath, source, declaredTaskNames, constBindings, dataVars);
       if (error) {
         result.warnings.push(error);
       }
@@ -4217,7 +4221,7 @@ function parseSource(source, filePath, rawSource, options) {
 
         // Extract steps
         var steps = fn.body && fn.body.type === 'BlockStatement'
-          ? extractSteps(fn.body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataTemplateVars)
+          ? extractSteps(fn.body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars)
           : [];
 
         // Validation warnings
@@ -4262,7 +4266,7 @@ function parseSource(source, filePath, rawSource, options) {
     // Pattern 2: Variable declaration — const X = Automation('name', fn)
     if (node.type === 'VariableDeclaration') {
       for (const declarator of node.declarations) {
-        const { automation, error, warnings } = extractAutomation(declarator, filePath, source, rawSource || null, declaredTaskNames, constBindings, dataTemplateVars);
+        const { automation, error, warnings } = extractAutomation(declarator, filePath, source, rawSource || null, declaredTaskNames, constBindings, dataVars);
         if (error) {
           result.warnings.push(error);
         }
