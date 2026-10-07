@@ -81,6 +81,37 @@
         "chatSessionId": "sess_4f174d1c-7ac4-46b6-be8d-a8c9133404b0",
         "timestamp": 1791386465220
       }
+    ],
+    "4.1 Scope data resolution to test/automation bodies (empty data-var map for tasks)": [
+      {
+        "executionId": "4aacc359-c12d-4891-8a7f-298f2c7d8621",
+        "chatSessionId": "sess_4995fa0b-228e-4702-84ad-ed7e8af8e154",
+        "timestamp": 1791386653452
+      },
+      {
+        "executionId": "4aacc359-c12d-4891-8a7f-298f2c7d8621",
+        "chatSessionId": "sess_4995fa0b-228e-4702-84ad-ed7e8af8e154",
+        "timestamp": 1791386841248
+      }
+    ],
+    "4.2 Add `validateDataPath(entry, path, filePath, line, warnings)` (warn-only) and call it on emission": [
+      {
+        "executionId": "4aacc359-c12d-4891-8a7f-298f2c7d8621",
+        "chatSessionId": "sess_4995fa0b-228e-4702-84ad-ed7e8af8e154",
+        "timestamp": 1791386654509
+      },
+      {
+        "executionId": "4aacc359-c12d-4891-8a7f-298f2c7d8621",
+        "chatSessionId": "sess_4995fa0b-228e-4702-84ad-ed7e8af8e154",
+        "timestamp": 1791386842307
+      }
+    ],
+    "4. Compiler parse: lexical scope and warn-only path validation": [
+      {
+        "executionId": "4aacc359-c12d-4891-8a7f-298f2c7d8621",
+        "chatSessionId": "sess_4995fa0b-228e-4702-84ad-ed7e8af8e154",
+        "timestamp": 1791386842476
+      }
     ]
   }
 }

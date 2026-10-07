@@ -1295,6 +1295,71 @@ function extractDataMemberPath(node, dataVars) {
 }
 
 /**
+ * Warn-only validation of a data member path against its Data_Template.
+ *
+ * Walks `entry.template` segment by segment along `path`. A segment is "missing"
+ * when, at any point, the current template node is not an object that owns the
+ * next segment key. This explicitly includes descending INTO a leaf: a static
+ * literal leaf (string/number/boolean) or a `Fake.*` node
+ * (`{ type: 'fake', method, options }`) is a terminal value — any attempt to
+ * continue past it (e.g. `user.name.first` where `name` is `Fake.firstName()`)
+ * is an unknown path.
+ *
+ * On a missing segment, pushes exactly ONE warning using the existing shape
+ * `{ message, filePath, line }`, naming the unknown dotted path, the Data_Name,
+ * and `file:line`. It NEVER throws and NEVER suppresses the token — the caller
+ * still emits the `{{data...}}` token regardless of warnings.
+ *
+ * Validation is skipped entirely when `entry.template` is null/undefined (an
+ * imported `.data` var with no local shape to check against).
+ *
+ * A path that terminates exactly AT a static literal or AT a `Fake.*` node is
+ * VALID (no warning). Only a missing intermediate key, a path continuing past a
+ * literal/Fake leaf, or an absent final key warns.
+ *
+ * @param {{ dataName: string, template: object|null }} entry - dataVars entry
+ * @param {string[]} path - ordered property path (length >= 1)
+ * @param {string} filePath - current file path for the warning message
+ * @param {number} line - 1-based source line of the reference
+ * @param {Array} warnings - mutable warnings array
+ * @returns {void}
+ */
+function validateDataPath(entry, path, filePath, line, warnings) {
+  if (!entry) return;
+  var template = entry.template;
+  // Imported var with no local template — nothing to validate against.
+  if (template === null || template === undefined) return;
+  if (!path || path.length < 1) return;
+
+  var current = template;
+  for (var i = 0; i < path.length; i++) {
+    var segment = path[i];
+
+    // To descend to the next segment, `current` must be a plain object that
+    // owns `segment`. A `Fake.*` node is a terminal leaf (even though it is an
+    // object), so descending into it is an unknown path. A static literal leaf
+    // (string/number/boolean) is likewise terminal.
+    var isPlainObject =
+      current !== null &&
+      typeof current === 'object' &&
+      !(current.type === 'fake');
+
+    if (!isPlainObject || !Object.prototype.hasOwnProperty.call(current, segment)) {
+      warnings.push({
+        message:
+          'Unknown data path "' + entry.dataName + '.' + path.join('.') + '" ' +
+          'on Data "' + entry.dataName + '" at ' + filePath + ':' + line,
+        filePath: filePath,
+        line: line,
+      });
+      return;
+    }
+
+    current = current[segment];
+  }
+}
+
+/**
  * Extract a string or template value from an AST node.
  * Handles plain strings, simple template literals (no expressions),
  * and template literals with identifier expressions (→ {{param}} format).
@@ -1302,7 +1367,7 @@ function extractDataMemberPath(node, dataVars) {
  * @param {object} node - AST node
  * @returns {string|null}
  */
-function extractStringOrTemplate(node, dataVars, constBindings) {
+function extractStringOrTemplate(node, dataVars, constBindings, filePath, warnings) {
   if (!node) return null;
   const plain = extractString(node);
   if (plain !== null) return plain;
@@ -1316,6 +1381,10 @@ function extractStringOrTemplate(node, dataVars, constBindings) {
     var dm = extractDataMemberPath(node, dataVars);
     if (dm) {
       var entry = dataVars.get(dm.rootVar);
+      // Warn-only path validation; the token is still emitted regardless.
+      if (warnings) {
+        validateDataPath(entry, dm.path, filePath, lineOf(node), warnings);
+      }
       return '{{data.' + entry.dataName + '.' + dm.path.join('.') + '}}';
     }
   }
@@ -1657,6 +1726,10 @@ function extractValueExpression(node, filePath, warnings, constBindings, dataVar
     var dm = extractDataMemberPath(node, dataVars);
     if (dm) {
       var entry = dataVars.get(dm.rootVar);
+      // Warn-only path validation; the token is still emitted regardless.
+      if (warnings) {
+        validateDataPath(entry, dm.path, filePath, lineOf(node), warnings);
+      }
       return '{{data.' + entry.dataName + '.' + dm.path.join('.') + '}}';
     }
   }
@@ -2376,7 +2449,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
         // Optional params object
         const paramsArg = exprNode.arguments[0];
         if (paramsArg && paramsArg.type === 'ObjectExpression') {
-          const params = extractTaskInvocationParams(paramsArg, dataVars, constBindings);
+          const params = extractTaskInvocationParams(paramsArg, dataVars, constBindings, filePath, warnings);
           if (params && Object.keys(params).length > 0) step.params = params;
         }
         return step;
@@ -2484,7 +2557,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
           }
           if (args.length === 1 && args[0] && args[0].type === 'ObjectExpression') {
             const step = { action: 'task', name: fnName };
-            const params = extractTaskInvocationParams(args[0], dataVars, constBindings);
+            const params = extractTaskInvocationParams(args[0], dataVars, constBindings, filePath, warnings);
             if (params && Object.keys(params).length > 0) step.params = params;
             return step;
           }
@@ -2506,7 +2579,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
  * @param {object} objNode - ObjectExpression AST node
  * @returns {object} params object
  */
-function extractTaskInvocationParams(objNode, dataVars, constBindings) {
+function extractTaskInvocationParams(objNode, dataVars, constBindings, filePath, warnings) {
   if (!objNode || objNode.type !== 'ObjectExpression') return {};
   const params = {};
   for (const prop of objNode.properties) {
@@ -2517,7 +2590,7 @@ function extractTaskInvocationParams(objNode, dataVars, constBindings) {
     if (!key) continue;
 
     // Try string/template, then number, then boolean
-    const strVal = extractStringOrTemplate(prop.value, dataVars, constBindings);
+    const strVal = extractStringOrTemplate(prop.value, dataVars, constBindings, filePath, warnings);
     if (strVal !== null) {
       params[key] = strVal;
       continue;
@@ -4212,10 +4285,19 @@ function parseSource(source, filePath, rawSource, options) {
   });
 
   // Walk the AST for Task declarations: const X = Task(fn).as('Label') / const X = Task(fn)
+  //
+  // Data resolution is lexically scoped to test/automation bodies. Task bodies
+  // must NOT resolve bare identifiers (or their member chains) as data tokens:
+  // a bare identifier inside a Task body is a param reference (`{{paramName}}`).
+  // So task extraction is invoked with an EMPTY data-var map. Task INVOCATIONS
+  // from a test/automation body are handled separately (extractTaskInvocationParams
+  // receives the real dataVars via the test/automation extraction path), so
+  // `login({ user: user.name })` still passes `{{data.user.name}}` as a param.
+  var taskDataVars = new Map();
   walk(ast, node => {
     if (node.type !== 'VariableDeclaration') return;
     for (const declarator of node.declarations) {
-      const { task, error, warnings } = extractTask(declarator, filePath, source, declaredTaskNames, constBindings, dataVars);
+      const { task, error, warnings } = extractTask(declarator, filePath, source, declaredTaskNames, constBindings, taskDataVars);
       if (error) {
         result.warnings.push(error);
       }

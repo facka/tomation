@@ -54,13 +54,13 @@ Ordering: compiler core (parse `.as` + `dataVars` + nested token emission + scop
     - `user.name` → `{{data.user.name}}`; `user.task.type` → `{{data.user.task.type}}`; `.as('buyer')` → `Data({color:'red'}).as('buyer')` referenced as `customer.color` → `{{data.buyer.color}}`; computed `user["task"]["type"]`; literal leaf and `Fake.*` leaf both emit a token (never inline the literal); assertion expected-value position (`AssertHasText(label, user.color)`)
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 6.1_
 
-- [ ] 4. Compiler parse: lexical scope and warn-only path validation
-  - [ ] 4.1 Scope data resolution to test/automation bodies (empty data-var map for tasks)
+- [x] 4. Compiler parse: lexical scope and warn-only path validation
+  - [x] 4.1 Scope data resolution to test/automation bodies (empty data-var map for tasks)
     - Call task extraction with an empty data-var map (`new Map()`) so a bare identifier in a task body resolves as a param reference (`{{paramName}}`), never a data token; keep passing the real `dataVars` to test and automation extraction
     - Ensure task **invocations** from a test/automation body still resolve arguments against `dataVars` (via `extractTaskInvocationParams`), so `login({ user: user.name })` passes `{{data.user.name}}`
     - _Requirements: 9.1, 9.2, 9.3_
 
-  - [ ] 4.2 Add `validateDataPath(entry, path, filePath, line, warnings)` (warn-only) and call it on emission
+  - [x] 4.2 Add `validateDataPath(entry, path, filePath, line, warnings)` (warn-only) and call it on emission
     - Walk `entry.template` along `path`; if a segment is missing (incl. descending into a `Fake.*` leaf), push exactly one warning naming the unknown path, the Data_Name, and `file:line` (E4/E5)
     - NEVER throw and NEVER suppress the token — the token is still emitted; skip validation when `entry.template` is `null` (imported var with no local template)
     - Call from the `extractDataMemberPath` emission branch (task 3.2)
