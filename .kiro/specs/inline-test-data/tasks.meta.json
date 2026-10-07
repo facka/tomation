@@ -169,6 +169,37 @@
         "chatSessionId": "sess_6d9058b0-bb68-42b1-97a4-734158bb24ee",
         "timestamp": 1791396131943
       }
+    ],
+    "17.1 Add an inline-data example under `examples/playground-tests`": [
+      {
+        "executionId": "b5c33f98-97c1-4759-9915-17209647a1aa",
+        "chatSessionId": "sess_3f135e07-c055-4b43-8b5d-95607a6ad86f",
+        "timestamp": 1791396287107
+      },
+      {
+        "executionId": "b5c33f98-97c1-4759-9915-17209647a1aa",
+        "chatSessionId": "sess_3f135e07-c055-4b43-8b5d-95607a6ad86f",
+        "timestamp": 1791396375658
+      }
+    ],
+    "17.2 Recompile the playground spec": [
+      {
+        "executionId": "b5c33f98-97c1-4759-9915-17209647a1aa",
+        "chatSessionId": "sess_3f135e07-c055-4b43-8b5d-95607a6ad86f",
+        "timestamp": 1791396379965
+      },
+      {
+        "executionId": "b5c33f98-97c1-4759-9915-17209647a1aa",
+        "chatSessionId": "sess_3f135e07-c055-4b43-8b5d-95607a6ad86f",
+        "timestamp": 1791396454298
+      }
+    ],
+    "17. Playground example and recompile": [
+      {
+        "executionId": "b5c33f98-97c1-4759-9915-17209647a1aa",
+        "chatSessionId": "sess_3f135e07-c055-4b43-8b5d-95607a6ad86f",
+        "timestamp": 1791396454427
+      }
     ]
   }
 }

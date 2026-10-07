@@ -8,7 +8,7 @@
     "urls": [
       "https://facka.github.io/tomation"
     ],
-    "compilerVersion": "2.2.0"
+    "compilerVersion": "2.2.1"
   },
   "pageElements": {
     "Login__usernameInput": {
@@ -588,6 +588,107 @@
     }
   },
   "tests": [
+    {
+      "name": "Add todo items from inline data",
+      "steps": [
+        {
+          "action": "type",
+          "target": "Todo__input",
+          "value": "{{data.task.title}}"
+        },
+        {
+          "action": "click",
+          "target": "Todo__addButton"
+        },
+        {
+          "action": "assertExists",
+          "target": "Todo__firstItem"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Todo__firstItemText",
+          "value": "{{data.task.title}}"
+        },
+        {
+          "action": "task",
+          "name": "Todo__addItem",
+          "params": {
+            "text": "{{data.groceries.text}}"
+          }
+        },
+        {
+          "action": "assertHasText",
+          "target": "Todo__list",
+          "value": "{{data.groceries.text}}"
+        }
+      ],
+      "sourceFile": "inline-data",
+      "data": {
+        "task": {
+          "title": "Write report",
+          "detail": {
+            "priority": "high"
+          },
+          "note": {
+            "type": "fake",
+            "method": "fullName",
+            "options": {}
+          }
+        },
+        "groceries": {
+          "text": "Buy groceries"
+        }
+      }
+    },
+    {
+      "name": "Verify nested and faked inline data",
+      "steps": [
+        {
+          "action": "type",
+          "target": "Todo__input",
+          "value": "{{data.task.detail.priority}}"
+        },
+        {
+          "action": "click",
+          "target": "Todo__addButton"
+        },
+        {
+          "action": "assertExists",
+          "target": "Todo__firstItem"
+        },
+        {
+          "action": "assertHasText",
+          "target": "Todo__firstItemText",
+          "value": "{{data.task.detail.priority}}"
+        },
+        {
+          "action": "task",
+          "name": "Todo__addItem",
+          "params": {
+            "text": "{{data.task.note}}"
+          }
+        },
+        {
+          "action": "assertHasText",
+          "target": "Todo__list",
+          "value": "{{data.task.note}}"
+        }
+      ],
+      "sourceFile": "inline-data",
+      "data": {
+        "task": {
+          "title": "Write report",
+          "detail": {
+            "priority": "high"
+          },
+          "note": {
+            "type": "fake",
+            "method": "fullName",
+            "options": {}
+          }
+        }
+      }
+    },
     {
       "name": "Login with valid credentials",
       "steps": [

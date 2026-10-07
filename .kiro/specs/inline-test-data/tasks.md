@@ -179,11 +179,11 @@ Ordering: compiler core (parse `.as` + `dataVars` + nested token emission + scop
 - [ ] 16. Checkpoint — all property tests created
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 17. Playground example and recompile
-  - [ ] 17.1 Add an inline-data example under `examples/playground-tests`
+- [x] 17. Playground example and recompile
+  - [x] 17.1 Add an inline-data example under `examples/playground-tests`
     - Add a `.test.ts` that declares inline `Data()` both with and without `.as()`, uses nested properties (e.g. `user.task.type`), and references the data in `Type`/assertion steps; wire it into the existing playground spec/config so it compiles with the suite
     - _Requirements: 1.1, 2.2, 3.1, 3.4, 4.1, 6.1_
-  - [ ] 17.2 Recompile the playground spec
+  - [x] 17.2 Recompile the playground spec
     - Run `npm run compile:playground` (single-shot) and confirm the inline-data example compiles into the spec with the expected `{{data.*}}` tokens and attached `data`
     - _Requirements: 4.1, 4.2, 4.3_
 
