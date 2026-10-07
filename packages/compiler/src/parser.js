@@ -4207,6 +4207,96 @@ function parseSource(source, filePath, rawSource, options) {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Data_Name conflict detection and resolution (E2 / E3) — Warn_And_Skip.
+  // Requirements: 11.1, 11.2, 11.5, 11.6
+  //
+  // Two variables may resolve to the SAME Data_Name:
+  //   E2: two inline Data() declarations resolve to the same Data_Name
+  //       (e.g. `const a = Data({...}).as('user')` and
+  //        `const b = Data({...}).as('user')`).
+  //   E3: an inline Data() declaration collides with an imported `.data`
+  //       Data_Name (e.g. inline `.as('user')` vs `import user from
+  //       '~/data/user.data'`).
+  //
+  // Precedence rule (deterministic + stable per input):
+  //   For each Data_Name, the WINNING Data_Template is chosen in a fixed
+  //   candidate order:
+  //     1. Inline Data() declarations, in source order (top-to-bottom; the
+  //        order they appear in `result.dataTemplates`).
+  //     2. Imported `.data` variables, in source order.
+  //   The FIRST candidate in that order wins. Because `result.dataTemplates`
+  //   and `result.imports` are both built by a top-down AST walk, this ordering
+  //   is a pure function of the source text, so repeated compilation of the
+  //   same input always picks the same winner.
+  //
+  // On conflict: push exactly one `{ message, filePath, line }` warning naming
+  // the conflicting Data_Name and the file, keep the winning template, and
+  // remap EVERY variable that resolves to that Data_Name onto the winning
+  // `{ dataName, template }` entry so all references resolve identically.
+  // Output is still emitted for every affected test/automation; nothing throws.
+  (function resolveDataNameConflicts() {
+    // Build the ordered candidate list: inline declarations first (source order),
+    // then imported `.data` variables (source order). Each candidate records the
+    // owning variable name, the resolved Data_Name, and the winning entry value.
+    var candidates = [];
+    for (var di = 0; di < result.dataTemplates.length; di++) {
+      var dt = result.dataTemplates[di];
+      var inlineKey = dt.varName || dt.name;
+      candidates.push({
+        varName: inlineKey,
+        dataName: dt.name,
+        entry: { dataName: dt.name, template: dt.template },
+      });
+    }
+    for (var ii = 0; ii < result.imports.length; ii++) {
+      var imp = result.imports[ii];
+      if (imp.importPath && imp.importPath.endsWith('.data')) {
+        candidates.push({
+          varName: imp.localName,
+          dataName: imp.localName,
+          entry: { dataName: imp.localName, template: null },
+        });
+      }
+    }
+
+    // Group candidate variable names by Data_Name, preserving candidate order.
+    var byDataName = {};
+    var order = [];
+    for (var ci = 0; ci < candidates.length; ci++) {
+      var cand = candidates[ci];
+      if (!Object.prototype.hasOwnProperty.call(byDataName, cand.dataName)) {
+        byDataName[cand.dataName] = [];
+        order.push(cand.dataName);
+      }
+      byDataName[cand.dataName].push(cand);
+    }
+
+    for (var oi = 0; oi < order.length; oi++) {
+      var dataName = order[oi];
+      var group = byDataName[dataName];
+      if (group.length < 2) continue; // no conflict for this Data_Name
+
+      // The first candidate in deterministic order wins.
+      var winner = group[0];
+
+      result.warnings.push({
+        message:
+          'Duplicate Data name "' + dataName + '" in ' + filePath + '; ' +
+          'keeping the first declaration and ignoring ' + (group.length - 1) +
+          ' later definition(s)',
+        filePath: filePath,
+        line: 0,
+      });
+
+      // Remap EVERY conflicting variable to the winning entry so all references
+      // resolve to the same Data_Name and template.
+      for (var gi = 0; gi < group.length; gi++) {
+        dataVars.set(group[gi].varName, winner.entry);
+      }
+    }
+  })();
+
   // Pre-collect declared task names so bare local task calls (e.g., login())
   // can be recognized during step extraction, including forward references.
   var declaredTaskNames = new Set();

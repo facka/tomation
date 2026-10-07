@@ -112,6 +112,25 @@
         "chatSessionId": "sess_4995fa0b-228e-4702-84ad-ed7e8af8e154",
         "timestamp": 1791386842476
       }
+    ],
+    "5.1 Detect and resolve Data_Name conflicts in `parseSource`": [
+      {
+        "executionId": "3e7890f3-6520-4ddd-b962-93f30b599f77",
+        "chatSessionId": "sess_d471e801-7af6-4697-b616-88a698386acb",
+        "timestamp": 1791387089029
+      },
+      {
+        "executionId": "3e7890f3-6520-4ddd-b962-93f30b599f77",
+        "chatSessionId": "sess_d471e801-7af6-4697-b616-88a698386acb",
+        "timestamp": 1791387193216
+      }
+    ],
+    "5. Compiler parse: Data_Name conflict detection": [
+      {
+        "executionId": "3e7890f3-6520-4ddd-b962-93f30b599f77",
+        "chatSessionId": "sess_d471e801-7af6-4697-b616-88a698386acb",
+        "timestamp": 1791387193394
+      }
     ]
   }
 }

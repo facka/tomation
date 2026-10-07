@@ -70,8 +70,8 @@ Ordering: compiler core (parse `.as` + `dataVars` + nested token emission + scop
     - Data var inside a task body → `{{param}}` not `{{data...}}`; same ref in test/automation body → data token; invocation arg data-var member → `{{data.N.path}}` param; unknown path warns once and still emits the token; descend into `Fake.*` leaf warns
     - _Requirements: 9.1, 9.2, 9.3, 11.4_
 
-- [ ] 5. Compiler parse: Data_Name conflict detection
-  - [ ] 5.1 Detect and resolve Data_Name conflicts in `parseSource`
+- [x] 5. Compiler parse: Data_Name conflict detection
+  - [x] 5.1 Detect and resolve Data_Name conflicts in `parseSource`
     - After building `dataVars`, detect two inline declarations resolving to the same Data_Name (E2) and an inline declaration colliding with an imported `.data` Data_Name (E3)
     - Push a warning naming the conflicting Data_Name and the file; deterministically pick one Data_Template (stable by source order / declaration line, documented precedence) and map all conflicting variables to it
     - Still emit output for every affected test and automation; continue compiling the rest (Warn_And_Skip)
