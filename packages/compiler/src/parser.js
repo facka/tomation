@@ -631,21 +631,74 @@ function parseDataTemplate(objNode, constBindings, filePath, warnings) {
  * @param {Array} [warnings] - mutable warnings array
  * @returns {{ name: string, template: object }|null} parsed data declaration, or null if not a match
  */
+
+/**
+ * Unwrap a Data declaration init node into its underlying `Data(...)` CallExpression
+ * and the optional `.as(...)` argument.
+ *
+ * Handles two shapes:
+ *   1. Plain `Data({...})` — a CallExpression whose callee is the Identifier `Data`.
+ *      Returns `{ dataCall: initNode, asArg: null }`.
+ *   2. Chained `Data({...}).as(name)` — a CallExpression whose callee is a
+ *      MemberExpression with `property.name === 'as'` and whose `callee.object`
+ *      is itself a `Data(...)` CallExpression. Returns `{ dataCall: <inner Data call>,
+ *      asArg: <first arg of .as(), or null> }`.
+ *
+ * Returns `null` for anything that is not a `Data(...)` call or a `.as(...)` chain
+ * on a `Data(...)` call.
+ *
+ * @param {object} initNode - VariableDeclarator init AST node
+ * @returns {{ dataCall: object, asArg: object|null }|null}
+ */
+function unwrapDataCall(initNode) {
+  if (!initNode || initNode.type !== 'CallExpression') return null;
+  if (!initNode.callee) return null;
+
+  // Shape 1: plain Data(...) call
+  if (initNode.callee.type === 'Identifier' && initNode.callee.name === 'Data') {
+    return { dataCall: initNode, asArg: null };
+  }
+
+  // Shape 2: .as(...) chain on a Data(...) call
+  if (
+    initNode.callee.type === 'MemberExpression' &&
+    initNode.callee.property &&
+    initNode.callee.property.name === 'as'
+  ) {
+    var innerCall = initNode.callee.object;
+    if (
+      innerCall &&
+      innerCall.type === 'CallExpression' &&
+      innerCall.callee &&
+      innerCall.callee.type === 'Identifier' &&
+      innerCall.callee.name === 'Data'
+    ) {
+      var asArgs = initNode.arguments || [];
+      var asArg = asArgs.length >= 1 ? asArgs[0] : null;
+      return { dataCall: innerCall, asArg: asArg };
+    }
+  }
+
+  return null;
+}
+
 function parseDataDeclaration(declarator, constBindings, filePath, warnings) {
   if (!declarator || declarator.type !== 'VariableDeclarator') return null;
   if (!declarator.init) return null;
 
-  // Check if init is a CallExpression with callee.name === 'Data'
-  if (declarator.init.type !== 'CallExpression') return null;
-  if (!declarator.init.callee || declarator.init.callee.type !== 'Identifier') return null;
-  if (declarator.init.callee.name !== 'Data') return null;
+  // Accept both the plain `Data(...)` shape and the `.as(...)`-chained shape.
+  var unwrapped = unwrapDataCall(declarator.init);
+  if (!unwrapped) return null;
 
-  // Extract the variable name
+  var dataCall = unwrapped.dataCall;
+  var asArg = unwrapped.asArg;
+
+  // Extract the variable name (the declarator identifier)
   const varName = declarator.id && declarator.id.type === 'Identifier' ? declarator.id.name : null;
   if (!varName) return null;
 
-  // Extract the first argument as an ObjectExpression
-  const args = declarator.init.arguments || [];
+  // Extract the first argument as an ObjectExpression (the data template)
+  const args = dataCall.arguments || [];
   if (args.length < 1) return null;
 
   const objArg = args[0];
@@ -669,7 +722,36 @@ function parseDataDeclaration(declarator, constBindings, filePath, warnings) {
     }
   }
 
-  var result = { name: varName, template: template };
+  // Determine whether a `.as()` chain was actually written in the source.
+  // `unwrapDataCall` returns `asArg: null` both for a plain `Data(...)` call
+  // and for a `.as()` chain with a missing argument, so inspect the init node
+  // directly to tell those two cases apart.
+  var hasAsChain =
+    declarator.init.type === 'CallExpression' &&
+    declarator.init.callee &&
+    declarator.init.callee.type === 'MemberExpression' &&
+    declarator.init.callee.property &&
+    declarator.init.callee.property.name === 'as';
+
+  // Derive the Data_Name.
+  var name = varName;
+  if (asArg && asArg.type === 'Literal' && typeof asArg.value === 'string' && asArg.value.length > 0) {
+    // Valid, non-empty string literal from `.as(...)` overrides the Data_Name.
+    name = asArg.value;
+  } else if (hasAsChain) {
+    // A `.as()` chain was written but its argument is missing, non-string,
+    // not a literal, or an empty string: warn once and fall back to varName.
+    warnings.push({
+      message:
+        'Inline Data `.as()` requires a non-empty string literal name; ' +
+        'falling back to variable name "' + varName + '"',
+      filePath: filePath,
+      line: lineOf(asArg || declarator.init || declarator),
+    });
+    name = varName;
+  }
+
+  var result = { name: name, varName: varName, template: template };
   if (seed !== undefined) result.seed = seed;
   return result;
 }
@@ -4201,4 +4283,4 @@ function parseSource(source, filePath, rawSource, options) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractTableAccessor, normalizeCellSelector, resolveTarget, extractAssertRequestStep, extractLiteralValue, extractRegexLiteral, extractIfStep, extractWhenStep, extractCondition, extractParamPath, resolveRhsReference, usesNewConditionConstruct, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, parseDataTemplate, buildConstBindings, buildEnumBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };
+module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractTableAccessor, normalizeCellSelector, resolveTarget, extractAssertRequestStep, extractLiteralValue, extractRegexLiteral, extractIfStep, extractWhenStep, extractCondition, extractParamPath, resolveRhsReference, usesNewConditionConstruct, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, unwrapDataCall, parseDataTemplate, buildConstBindings, buildEnumBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };

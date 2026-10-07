@@ -1,0 +1,36 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Add `unwrapDataCall(initNode)` helper": [
+      {
+        "executionId": "6a0eeb0c-e0b2-45f5-9b6f-6cd61bdbe93f",
+        "chatSessionId": "sess_ee39d260-fb87-405d-a33c-8a58fcd83386",
+        "timestamp": 1791384843193
+      },
+      {
+        "executionId": "6a0eeb0c-e0b2-45f5-9b6f-6cd61bdbe93f",
+        "chatSessionId": "sess_ee39d260-fb87-405d-a33c-8a58fcd83386",
+        "timestamp": 1791384923462
+      }
+    ],
+    "1.2 Extend `parseDataDeclaration(declarator, constBindings, filePath, warnings)` to derive `varName` and Data_Name": [
+      {
+        "executionId": "6a0eeb0c-e0b2-45f5-9b6f-6cd61bdbe93f",
+        "chatSessionId": "sess_ee39d260-fb87-405d-a33c-8a58fcd83386",
+        "timestamp": 1791384942026
+      },
+      {
+        "executionId": "6a0eeb0c-e0b2-45f5-9b6f-6cd61bdbe93f",
+        "chatSessionId": "sess_ee39d260-fb87-405d-a33c-8a58fcd83386",
+        "timestamp": 1791385027301
+      }
+    ],
+    "1. Compiler parse: `.as()` handling and Data_Name derivation in `packages/compiler/src/parser.js`": [
+      {
+        "executionId": "6a0eeb0c-e0b2-45f5-9b6f-6cd61bdbe93f",
+        "chatSessionId": "sess_ee39d260-fb87-405d-a33c-8a58fcd83386",
+        "timestamp": 1791385027449
+      }
+    ]
+  }
+}

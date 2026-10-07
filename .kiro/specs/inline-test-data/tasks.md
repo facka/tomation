@@ -10,14 +10,14 @@ Ordering: compiler core (parse `.as` + `dataVars` + nested token emission + scop
 
 ## Tasks
 
-- [ ] 1. Compiler parse: `.as()` handling and Data_Name derivation in `packages/compiler/src/parser.js`
-  - [ ] 1.1 Add `unwrapDataCall(initNode)` helper
+- [x] 1. Compiler parse: `.as()` handling and Data_Name derivation in `packages/compiler/src/parser.js`
+  - [x] 1.1 Add `unwrapDataCall(initNode)` helper
     - Return `{ dataCall, asArg }` for both a plain `Data(...)` `CallExpression` (callee Identifier `Data`) and a `.as(...)`-chained `CallExpression` (callee `MemberExpression` with `property.name === 'as'` whose `object` is the `Data(...)` call); return `null` otherwise
     - `asArg` is the first argument node of `.as(...)` when present, else `null`
     - ES5 only (`var`, `function`, no arrow functions)
     - _Requirements: 2.2, 2.4_
 
-  - [ ] 1.2 Extend `parseDataDeclaration(declarator, constBindings, filePath, warnings)` to derive `varName` and Data_Name
+  - [x] 1.2 Extend `parseDataDeclaration(declarator, constBindings, filePath, warnings)` to derive `varName` and Data_Name
     - Use `unwrapDataCall` to accept the plain and `.as()`-chained init shapes
     - Set `varName` = declarator identifier name; set `name` (Data_Name) from a valid `.as()` argument (a non-empty string literal), else fall back to `varName`
     - When `.as()` has no argument, a non-string/non-literal argument, or an empty string, push one `{ message, filePath, line }` warning and fall back to `varName` (E1 / Warn_And_Skip)
