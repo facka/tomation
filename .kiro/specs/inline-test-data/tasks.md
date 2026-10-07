@@ -84,8 +84,8 @@ Ordering: compiler core (parse `.as` + `dataVars` + nested token emission + scop
 - [ ] 6. Checkpoint — compiler parse layer
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 7. Compiler flatten: attach data to automations in `packages/compiler/src/flattener.js`
-  - [ ] 7.1 Add token-driven data attachment to the automation branch of `flattenSpec`
+- [x] 7. Compiler flatten: attach data to automations in `packages/compiler/src/flattener.js`
+  - [x] 7.1 Add token-driven data attachment to the automation branch of `flattenSpec`
     - Mirror the existing test branch: when templates exist and `automationOut.steps` is present, use `extractReferencedTemplateNames(steps)` to collect referenced Data_Names, pull them from `allDataTemplates` (keyed by Data_Name), and set `automationOut.data` when non-empty
     - Leave the test branch verbatim; keep attachment keyed by Data_Name so inline and shared templates attach identically (also benefits imported shared data used by automations)
     - _Requirements: 4.1, 4.2, 4.3, 7.2, 7.3_

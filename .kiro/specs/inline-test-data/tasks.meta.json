@@ -131,6 +131,25 @@
         "chatSessionId": "sess_d471e801-7af6-4697-b616-88a698386acb",
         "timestamp": 1791387193394
       }
+    ],
+    "7.1 Add token-driven data attachment to the automation branch of `flattenSpec`": [
+      {
+        "executionId": "7672c13c-ab29-497d-99f5-d90de22b7626",
+        "chatSessionId": "sess_684d89f2-db14-49a3-88c7-29e3cc699881",
+        "timestamp": 1791390214803
+      },
+      {
+        "executionId": "7672c13c-ab29-497d-99f5-d90de22b7626",
+        "chatSessionId": "sess_684d89f2-db14-49a3-88c7-29e3cc699881",
+        "timestamp": 1791390260461
+      }
+    ],
+    "7. Compiler flatten: attach data to automations in `packages/compiler/src/flattener.js`": [
+      {
+        "executionId": "7672c13c-ab29-497d-99f5-d90de22b7626",
+        "chatSessionId": "sess_684d89f2-db14-49a3-88c7-29e3cc699881",
+        "timestamp": 1791390260676
+      }
     ]
   }
 }
