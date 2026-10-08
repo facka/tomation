@@ -63,21 +63,28 @@ const testDataDisplay = computed((): Record<string, unknown> => {
   const testEntry = runnable.value?.data as any;
   if (!testEntry || !testEntry.data) return {};
   const display: Record<string, string> = {};
-  const templates = testEntry.data;
-  for (const tmplName of Object.keys(templates)) {
-    const tmpl = templates[tmplName];
-    for (const field of Object.keys(tmpl)) {
+  // Flatten a template into dot-path keys, mirroring the runtime resolver so
+  // nested objects become their own fields instead of "[object Object]".
+  const flatten = (prefix: string, obj: Record<string, any>) => {
+    for (const field of Object.keys(obj)) {
       if (field === '__seed') continue;
-      const value = tmpl[field];
+      const value = obj[field];
+      const path = prefix ? prefix + '.' + field : field;
       if (value && typeof value === 'object' && value.type === 'fake') {
         const opts = value.options && Object.keys(value.options).length > 0
           ? '(' + JSON.stringify(value.options) + ')'
           : '';
-        display[tmplName + '.' + field] = 'Fake.' + value.method + opts;
+        display[path] = 'Fake.' + value.method + opts;
+      } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+        flatten(path, value);
       } else {
-        display[tmplName + '.' + field] = String(value);
+        display[path] = String(value);
       }
     }
+  };
+  const templates = testEntry.data;
+  for (const tmplName of Object.keys(templates)) {
+    flatten(tmplName, templates[tmplName]);
   }
   return display;
 });
