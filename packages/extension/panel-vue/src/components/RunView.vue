@@ -56,7 +56,7 @@ const hasTestData = computed(() => {
   return false;
 });
 
-const testDataDisplay = computed((): Record<string, string | number> => {
+const testDataDisplay = computed((): Record<string, unknown> => {
   if (resolvedTestData.value !== null && Object.keys(resolvedTestData.value).length > 0) {
     return resolvedTestData.value;
   }
