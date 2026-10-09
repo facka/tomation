@@ -190,10 +190,12 @@
               <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
               <span class="ml-2 text-xs font-medium text-slate-400">todo.test.ts</span>
             </div>
-<pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">Test('Add a todo item and verify it exists', () => {
-  Todo.addItem({ text: 'Buy groceries' })
+<pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">const todo = Data({ item: 'Buy groceries' })
+
+Test('Add a todo item and verify it exists', () => {
+  Todo.addItem({ text: todo.item })
   AssertExists(Todo.firstItem)
-  AssertHasText(Todo.firstItemText, 'Buy groceries')
+  AssertHasText(Todo.firstItemText, todo.item)
 })</code></pre>
           </div>
           <h3 class="text-lg font-semibold text-white">Todo List</h3>
