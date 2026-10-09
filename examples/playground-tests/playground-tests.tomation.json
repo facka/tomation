@@ -8,7 +8,7 @@
     "urls": [
       "https://facka.github.io/tomation"
     ],
-    "compilerVersion": "2.2.0"
+    "compilerVersion": "2.2.1"
   },
   "pageElements": {
     "Login__usernameInput": {
@@ -1095,7 +1095,7 @@
           "action": "task",
           "name": "Todo__addItem",
           "params": {
-            "text": "Buy groceries"
+            "text": "{{data.todo.item}}"
           }
         },
         {
@@ -1105,10 +1105,23 @@
         {
           "action": "assertHasText",
           "target": "Todo__firstItemText",
-          "value": "Buy groceries"
+          "value": "{{data.todo.item}}"
         }
       ],
-      "sourceFile": "todo"
+      "sourceFile": "todo",
+      "data": {
+        "todo": {
+          "item": "Buy groceries",
+          "details": {
+            "followUp": "Pick up dry cleaning"
+          },
+          "owner": {
+            "type": "fake",
+            "method": "fullName",
+            "options": {}
+          }
+        }
+      }
     },
     {
       "name": "Delete a todo item and verify it is removed",
@@ -1116,7 +1129,7 @@
         {
           "action": "type",
           "target": "Todo__input",
-          "value": "Walk the dog"
+          "value": "{{data.chore.item}}"
         },
         {
           "action": "click",
@@ -1135,7 +1148,12 @@
           "target": "Todo__firstItem"
         }
       ],
-      "sourceFile": "todo"
+      "sourceFile": "todo",
+      "data": {
+        "chore": {
+          "item": "Walk the dog"
+        }
+      }
     },
     {
       "name": "Add multiple items and verify text content",
@@ -1144,14 +1162,14 @@
           "action": "task",
           "name": "Todo__addItem",
           "params": {
-            "text": "Read a book"
+            "text": "{{data.todo.details.followUp}}"
           }
         },
         {
           "action": "task",
           "name": "Todo__addItem",
           "params": {
-            "text": "Write code"
+            "text": "{{data.todo.owner}}"
           }
         },
         {
@@ -1161,15 +1179,28 @@
         {
           "action": "assertHasText",
           "target": "Todo__list",
-          "value": "Read a book"
+          "value": "{{data.todo.details.followUp}}"
         },
         {
           "action": "assertHasText",
           "target": "Todo__list",
-          "value": "Write code"
+          "value": "{{data.todo.owner}}"
         }
       ],
-      "sourceFile": "todo"
+      "sourceFile": "todo",
+      "data": {
+        "todo": {
+          "item": "Buy groceries",
+          "details": {
+            "followUp": "Pick up dry cleaning"
+          },
+          "owner": {
+            "type": "fake",
+            "method": "fullName",
+            "options": {}
+          }
+        }
+      }
     },
     {
       "name": "Register user with generated data",

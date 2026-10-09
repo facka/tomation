@@ -1,0 +1,236 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Add `unwrapDataCall(initNode)` helper": [
+      {
+        "executionId": "6a0eeb0c-e0b2-45f5-9b6f-6cd61bdbe93f",
+        "chatSessionId": "sess_ee39d260-fb87-405d-a33c-8a58fcd83386",
+        "timestamp": 1791384843193
+      },
+      {
+        "executionId": "6a0eeb0c-e0b2-45f5-9b6f-6cd61bdbe93f",
+        "chatSessionId": "sess_ee39d260-fb87-405d-a33c-8a58fcd83386",
+        "timestamp": 1791384923462
+      }
+    ],
+    "1.2 Extend `parseDataDeclaration(declarator, constBindings, filePath, warnings)` to derive `varName` and Data_Name": [
+      {
+        "executionId": "6a0eeb0c-e0b2-45f5-9b6f-6cd61bdbe93f",
+        "chatSessionId": "sess_ee39d260-fb87-405d-a33c-8a58fcd83386",
+        "timestamp": 1791384942026
+      },
+      {
+        "executionId": "6a0eeb0c-e0b2-45f5-9b6f-6cd61bdbe93f",
+        "chatSessionId": "sess_ee39d260-fb87-405d-a33c-8a58fcd83386",
+        "timestamp": 1791385027301
+      }
+    ],
+    "1. Compiler parse: `.as()` handling and Data_Name derivation in `packages/compiler/src/parser.js`": [
+      {
+        "executionId": "6a0eeb0c-e0b2-45f5-9b6f-6cd61bdbe93f",
+        "chatSessionId": "sess_ee39d260-fb87-405d-a33c-8a58fcd83386",
+        "timestamp": 1791385027449
+      }
+    ],
+    "2.1 Build the `dataVars` map in `parseSource` and thread it through step/value helpers": [
+      {
+        "executionId": "6f07ab6e-a4f7-4c47-8b4e-279780578d9a",
+        "chatSessionId": "sess_0fdcbb8c-2cc5-4faf-a7fe-5249e2412d0d",
+        "timestamp": 1791385540311
+      },
+      {
+        "executionId": "6f07ab6e-a4f7-4c47-8b4e-279780578d9a",
+        "chatSessionId": "sess_0fdcbb8c-2cc5-4faf-a7fe-5249e2412d0d",
+        "timestamp": 1791385760946
+      }
+    ],
+    "2. Compiler parse: file-wide data-variable tracking (`dataVars`)": [
+      {
+        "executionId": "6f07ab6e-a4f7-4c47-8b4e-279780578d9a",
+        "chatSessionId": "sess_0fdcbb8c-2cc5-4faf-a7fe-5249e2412d0d",
+        "timestamp": 1791385761079
+      }
+    ],
+    "3.1 Add `extractDataMemberPath(node, dataVars)` helper": [
+      {
+        "executionId": "34e95657-fbeb-49f7-b3e6-3bcaf000aa8a",
+        "chatSessionId": "sess_4f174d1c-7ac4-46b6-be8d-a8c9133404b0",
+        "timestamp": 1791386320673
+      },
+      {
+        "executionId": "34e95657-fbeb-49f7-b3e6-3bcaf000aa8a",
+        "chatSessionId": "sess_4f174d1c-7ac4-46b6-be8d-a8c9133404b0",
+        "timestamp": 1791386464024
+      }
+    ],
+    "3.2 Emit nested data tokens in `extractValueExpression` and `extractStringOrTemplate`": [
+      {
+        "executionId": "34e95657-fbeb-49f7-b3e6-3bcaf000aa8a",
+        "chatSessionId": "sess_4f174d1c-7ac4-46b6-be8d-a8c9133404b0",
+        "timestamp": 1791386322472
+      },
+      {
+        "executionId": "34e95657-fbeb-49f7-b3e6-3bcaf000aa8a",
+        "chatSessionId": "sess_4f174d1c-7ac4-46b6-be8d-a8c9133404b0",
+        "timestamp": 1791386465109
+      }
+    ],
+    "3. Compiler parse: nested-path token emission": [
+      {
+        "executionId": "34e95657-fbeb-49f7-b3e6-3bcaf000aa8a",
+        "chatSessionId": "sess_4f174d1c-7ac4-46b6-be8d-a8c9133404b0",
+        "timestamp": 1791386465220
+      }
+    ],
+    "4.1 Scope data resolution to test/automation bodies (empty data-var map for tasks)": [
+      {
+        "executionId": "4aacc359-c12d-4891-8a7f-298f2c7d8621",
+        "chatSessionId": "sess_4995fa0b-228e-4702-84ad-ed7e8af8e154",
+        "timestamp": 1791386653452
+      },
+      {
+        "executionId": "4aacc359-c12d-4891-8a7f-298f2c7d8621",
+        "chatSessionId": "sess_4995fa0b-228e-4702-84ad-ed7e8af8e154",
+        "timestamp": 1791386841248
+      }
+    ],
+    "4.2 Add `validateDataPath(entry, path, filePath, line, warnings)` (warn-only) and call it on emission": [
+      {
+        "executionId": "4aacc359-c12d-4891-8a7f-298f2c7d8621",
+        "chatSessionId": "sess_4995fa0b-228e-4702-84ad-ed7e8af8e154",
+        "timestamp": 1791386654509
+      },
+      {
+        "executionId": "4aacc359-c12d-4891-8a7f-298f2c7d8621",
+        "chatSessionId": "sess_4995fa0b-228e-4702-84ad-ed7e8af8e154",
+        "timestamp": 1791386842307
+      }
+    ],
+    "4. Compiler parse: lexical scope and warn-only path validation": [
+      {
+        "executionId": "4aacc359-c12d-4891-8a7f-298f2c7d8621",
+        "chatSessionId": "sess_4995fa0b-228e-4702-84ad-ed7e8af8e154",
+        "timestamp": 1791386842476
+      }
+    ],
+    "5.1 Detect and resolve Data_Name conflicts in `parseSource`": [
+      {
+        "executionId": "3e7890f3-6520-4ddd-b962-93f30b599f77",
+        "chatSessionId": "sess_d471e801-7af6-4697-b616-88a698386acb",
+        "timestamp": 1791387089029
+      },
+      {
+        "executionId": "3e7890f3-6520-4ddd-b962-93f30b599f77",
+        "chatSessionId": "sess_d471e801-7af6-4697-b616-88a698386acb",
+        "timestamp": 1791387193216
+      }
+    ],
+    "5. Compiler parse: Data_Name conflict detection": [
+      {
+        "executionId": "3e7890f3-6520-4ddd-b962-93f30b599f77",
+        "chatSessionId": "sess_d471e801-7af6-4697-b616-88a698386acb",
+        "timestamp": 1791387193394
+      }
+    ],
+    "7.1 Add token-driven data attachment to the automation branch of `flattenSpec`": [
+      {
+        "executionId": "7672c13c-ab29-497d-99f5-d90de22b7626",
+        "chatSessionId": "sess_684d89f2-db14-49a3-88c7-29e3cc699881",
+        "timestamp": 1791390214803
+      },
+      {
+        "executionId": "7672c13c-ab29-497d-99f5-d90de22b7626",
+        "chatSessionId": "sess_684d89f2-db14-49a3-88c7-29e3cc699881",
+        "timestamp": 1791390260461
+      }
+    ],
+    "7. Compiler flatten: attach data to automations in `packages/compiler/src/flattener.js`": [
+      {
+        "executionId": "7672c13c-ab29-497d-99f5-d90de22b7626",
+        "chatSessionId": "sess_684d89f2-db14-49a3-88c7-29e3cc699881",
+        "timestamp": 1791390260676
+      }
+    ],
+    "8.1 Add `.as(name: string)` to the `Data()` return type": [
+      {
+        "executionId": "14ee5058-f3e2-45c0-a5cf-12c03980e8bb",
+        "chatSessionId": "sess_6d9058b0-bb68-42b1-97a4-734158bb24ee",
+        "timestamp": 1791396089703
+      },
+      {
+        "executionId": "14ee5058-f3e2-45c0-a5cf-12c03980e8bb",
+        "chatSessionId": "sess_6d9058b0-bb68-42b1-97a4-734158bb24ee",
+        "timestamp": 1791396131776
+      }
+    ],
+    "8. DSL types: optional `.as(name)` in `packages/dsl/index.d.ts`": [
+      {
+        "executionId": "14ee5058-f3e2-45c0-a5cf-12c03980e8bb",
+        "chatSessionId": "sess_6d9058b0-bb68-42b1-97a4-734158bb24ee",
+        "timestamp": 1791396131943
+      }
+    ],
+    "17.1 Add an inline-data example under `examples/playground-tests`": [
+      {
+        "executionId": "b5c33f98-97c1-4759-9915-17209647a1aa",
+        "chatSessionId": "sess_3f135e07-c055-4b43-8b5d-95607a6ad86f",
+        "timestamp": 1791396287107
+      },
+      {
+        "executionId": "b5c33f98-97c1-4759-9915-17209647a1aa",
+        "chatSessionId": "sess_3f135e07-c055-4b43-8b5d-95607a6ad86f",
+        "timestamp": 1791396375658
+      }
+    ],
+    "17.2 Recompile the playground spec": [
+      {
+        "executionId": "b5c33f98-97c1-4759-9915-17209647a1aa",
+        "chatSessionId": "sess_3f135e07-c055-4b43-8b5d-95607a6ad86f",
+        "timestamp": 1791396379965
+      },
+      {
+        "executionId": "b5c33f98-97c1-4759-9915-17209647a1aa",
+        "chatSessionId": "sess_3f135e07-c055-4b43-8b5d-95607a6ad86f",
+        "timestamp": 1791396454298
+      }
+    ],
+    "17. Playground example and recompile": [
+      {
+        "executionId": "b5c33f98-97c1-4759-9915-17209647a1aa",
+        "chatSessionId": "sess_3f135e07-c055-4b43-8b5d-95607a6ad86f",
+        "timestamp": 1791396454427
+      }
+    ],
+    "18.1 Document inline `Data()` in `examples/playground/docs.html`": [
+      {
+        "executionId": "582669e6-389b-46c9-92fa-777a1b450924",
+        "chatSessionId": "sess_1c1d6c91-8c8c-4ca0-bec4-e5425ad90ec5",
+        "timestamp": 1791397153410
+      },
+      {
+        "executionId": "582669e6-389b-46c9-92fa-777a1b450924",
+        "chatSessionId": "sess_1c1d6c91-8c8c-4ca0-bec4-e5425ad90ec5",
+        "timestamp": 1791397227600
+      }
+    ],
+    "18.2 Document inline `Data()` in `tomation-ai.md`": [
+      {
+        "executionId": "582669e6-389b-46c9-92fa-777a1b450924",
+        "chatSessionId": "sess_1c1d6c91-8c8c-4ca0-bec4-e5425ad90ec5",
+        "timestamp": 1791397228708
+      },
+      {
+        "executionId": "582669e6-389b-46c9-92fa-777a1b450924",
+        "chatSessionId": "sess_1c1d6c91-8c8c-4ca0-bec4-e5425ad90ec5",
+        "timestamp": 1791397293272
+      }
+    ],
+    "18. Documentation": [
+      {
+        "executionId": "582669e6-389b-46c9-92fa-777a1b450924",
+        "chatSessionId": "sess_1c1d6c91-8c8c-4ca0-bec4-e5425ad90ec5",
+        "timestamp": 1791397293451
+      }
+    ]
+  }
+}

@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue';
 
 const props = defineProps<{
-  data: Record<string, string | number>;
+  data: Record<string, unknown>;
   seeds?: Record<string, number | undefined>;
   readonly?: boolean;
 }>();
@@ -18,7 +18,7 @@ const copiedGroup = ref(false);
 
 // Group keys by the prefix before the first dot
 const groups = computed(() => {
-  const map: Record<string, { key: string; shortKey: string; value: string | number }[]> = {};
+  const map: Record<string, { key: string; shortKey: string; value: unknown }[]> = {};
   for (const fullKey of Object.keys(props.data)) {
     const dotIdx = fullKey.indexOf('.');
     const group = dotIdx !== -1 ? fullKey.slice(0, dotIdx) : fullKey;
@@ -49,12 +49,26 @@ const selectedFields = computed(() => {
 
 const selectedGroupJson = computed(() => {
   if (!selectedGroup.value) return '{}';
-  const obj: Record<string, string | number> = {};
+  const obj: Record<string, unknown> = {};
   for (const field of selectedFields.value) {
     obj[field.shortKey] = field.value;
   }
   return JSON.stringify(obj, null, 2);
 });
+
+// Render a field value for display. Objects/arrays are shown as pretty JSON
+// instead of the default "[object Object]" string coercion.
+function formatValue(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+}
 
 function getSeed(groupName: string): number | undefined {
   return props.seeds?.[groupName];
@@ -72,8 +86,8 @@ function selectGroup(name: string) {
   selectedGroup.value = name;
 }
 
-function copyValue(field: { key: string; value: string | number }) {
-  navigator.clipboard.writeText(String(field.value)).then(() => {
+function copyValue(field: { key: string; value: unknown }) {
+  navigator.clipboard.writeText(formatValue(field.value)).then(() => {
     copiedField.value = field.key;
     setTimeout(() => { copiedField.value = null; }, 1200);
   });
@@ -146,7 +160,7 @@ function clearSeed() {
       <div v-if="selectedFields.length > 0" class="test-data-fields">
         <div v-for="field in selectedFields" :key="field.key" class="test-data-field-row">
           <span class="test-data-field-key">{{ field.shortKey }}</span>
-          <span class="test-data-field-value">{{ field.value }}</span>
+          <span class="test-data-field-value">{{ formatValue(field.value) }}</span>
           <button
             class="test-data-copy-btn"
             title="Copy value"
@@ -342,8 +356,11 @@ function clearSeed() {
   font-size: 11px;
   color: var(--text-primary);
   word-break: break-all;
+  white-space: pre-wrap;
   line-height: 1.4;
   flex: 1;
+  max-height: 140px;
+  overflow-y: auto;
 }
 
 .test-data-copy-btn {

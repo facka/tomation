@@ -398,6 +398,11 @@ export declare function lastDateOfMonth(offset: number, format?: string): string
 export interface DataTemplate<T> {
   __data: true;
   template: T;
+  /**
+   * Override the reference name used in compiled data tokens.
+   * Returns the same typed template so property access still type-checks.
+   */
+  as(name: string): DataTemplate<T> & T;
 }
 
 /**

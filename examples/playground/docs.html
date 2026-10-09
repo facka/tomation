@@ -761,6 +761,59 @@ Test('Register with generated data', () => {
   AssertHasText(Form.message, 'Registration successful')
 })</code></pre></div>
 
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Inline Data</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      You don't have to keep every template in a separate <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.data.ts</code> file. For data that only one file needs, declare <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Data()</code> inline at the top level of a <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.test.ts</code> or <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.automation.ts</code> file, right next to the tests that use it. The data name defaults to the variable name:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">// tests/todo.test.ts
+import { Test, Type, Click, AssertExists, AssertHasText, Data, Fake } from '@tomationjs/dsl'
+import Todo from '~/pom/todo.pom'
+
+// Inline template — the data name defaults to the variable name `task`.
+const task = Data({
+  title: 'Write report',
+  detail: { priority: 'high' },
+  note: Fake.fullName(),
+})
+
+Test('Add todo items from inline data', () => {
+  // Compiles to {{data.task.title}}
+  Type(task.title).in(Todo.input)
+  Click(Todo.addButton)
+  AssertExists(Todo.firstItem)
+  // Assertion expected value also compiles to {{data.task.title}}
+  AssertHasText(Todo.firstItemText, task.title)
+})</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Renaming Inline Data with <code class="text-emerald-300">.as()</code></h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Chain <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.as(name)</code> onto an inline <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Data()</code> to override the data name independently of the variable name. The override becomes the first segment of the emitted token:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">// Variable is `label`, but the data name is overridden to `groceries`.
+const label = Data({ text: 'Buy groceries' }).as('groceries')
+
+Test('Add a labelled item', () => {
+  // Referenced as label.text, compiles to {{data.groceries.text}}
+  Todo.addItem({ text: label.text })
+  AssertHasText(Todo.list, label.text)
+})</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Nested Property Access</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Reference nested properties with regular dot access. The compiler walks the full path and emits a matching <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">{{data.&lt;name&gt;.&lt;path&gt;}}</code> token — any depth is supported. <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Fake.*</code> leaves are emitted as tokens too (never inlined), so each run gets fresh values:
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">// Given: const task = Data({ detail: { priority: 'high' }, note: Fake.fullName() })
+
+// Nested path → {{data.task.detail.priority}}
+Type(task.detail.priority).in(Todo.input)
+
+// Fake.* leaf → {{data.task.note}} (resolved to a fresh value at run time)
+Todo.addItem({ text: task.note })</code></pre></div>
+
+    <div class="rounded-xl border border-purple-500/30 bg-gradient-to-br from-slate-900/90 to-purple-950/30 p-4 mb-4">
+      <p class="text-sm text-slate-300"><span class="text-purple-300 font-medium">Note:</span> Inline <code class="text-purple-200 bg-purple-500/10 px-1 rounded">Data()</code> is purely additive — it compiles to the same <code class="text-purple-200 bg-purple-500/10 px-1 rounded">{{data.*}}</code> tokens and resolved <code class="text-purple-200 bg-purple-500/10 px-1 rounded">data</code> object as the shared <code class="text-purple-200 bg-purple-500/10 px-1 rounded">.data.ts</code> + import flow. The existing shared-file approach is unchanged, and you can mix inline and imported data freely in the same file.</p>
+    </div>
+
     <h4 class="text-lg font-medium text-white mt-6 mb-2">Fake Generator Reference</h4>
     <div class="overflow-x-auto mb-4"><table class="w-full text-sm text-left border border-slate-700 rounded-lg overflow-hidden">
       <thead class="bg-slate-800/80"><tr><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Method</th><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Description</th><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Options</th></tr></thead>

@@ -414,6 +414,59 @@ Test('Register with generated data', () => {
 })
 ```
 
+### Inline Data
+
+You don't have to keep every template in a separate `.data.ts` file. For data that only one file needs, declare `Data()` inline at the top level of a `.test.ts` or `.automation.ts` file, right next to the tests that use it. The data name defaults to the variable name:
+
+```ts
+// tests/todo.test.ts
+import { Test, Type, Click, AssertExists, AssertHasText, Data, Fake } from '@tomationjs/dsl'
+import Todo from '~/pom/todo.pom'
+
+// Inline template — the data name defaults to the variable name `task`.
+const task = Data({
+  title: 'Write report',
+  detail: { priority: 'high' },
+  note: Fake.fullName(),
+})
+
+Test('Add todo items from inline data', () => {
+  Type(task.title).in(Todo.input)      // compiles to {{data.task.title}}
+  Click(Todo.addButton)
+  AssertExists(Todo.firstItem)
+  AssertHasText(Todo.firstItemText, task.title)  // assertion value → {{data.task.title}}
+})
+```
+
+### Renaming Inline Data with `.as()`
+
+Chain `.as(name)` onto an inline `Data()` to override the data name independently of the variable name. The override becomes the first segment of the emitted token:
+
+```ts
+// Variable is `label`, but the data name is overridden to `groceries`.
+const label = Data({ text: 'Buy groceries' }).as('groceries')
+
+Test('Add a labelled item', () => {
+  Todo.addItem({ text: label.text })   // label.text → {{data.groceries.text}}
+  AssertHasText(Todo.list, label.text)
+})
+```
+
+Called with no argument, an empty string, or a non-string literal, `.as()` records a warning and falls back to the variable name.
+
+### Nested Property Access
+
+Reference nested properties with regular dot access. The compiler walks the full path and emits a matching `{{data.<name>.<path>}}` token of any depth. `Fake.*` leaves are emitted as tokens too (never inlined), so each run gets fresh values:
+
+```ts
+// Given: const task = Data({ detail: { priority: 'high' }, note: Fake.fullName() })
+
+Type(task.detail.priority).in(Todo.input)  // nested path → {{data.task.detail.priority}}
+Todo.addItem({ text: task.note })          // Fake.* leaf → {{data.task.note}}
+```
+
+> **Note:** Inline `Data()` is purely additive — it compiles to the same `{{data.*}}` tokens and resolved `data` object as the shared `.data.ts` + import flow. The existing shared-file approach is unchanged, and you can mix inline and imported data freely in the same file.
+
 ### Fake Generator Reference
 
 | Method | Description | Options |

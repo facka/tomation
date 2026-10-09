@@ -365,6 +365,27 @@ function flattenSpec(pomResults, parsedTestFiles, meta, options) {
           automationOut.sourceFile = computeSourcePath(automationFile.filePath, cwd);
         }
 
+        // Attach data templates to the automation if it references them.
+        // Mirror of the test branch: keyed by Data_Name so inline and shared
+        // templates attach identically (also benefits imported shared data).
+        if (hasAnyTemplates && automationOut.steps) {
+          var autoReferencedNames = extractReferencedTemplateNames(automationOut.steps);
+          var autoReferencedKeys = Object.keys(autoReferencedNames);
+
+          if (autoReferencedKeys.length > 0) {
+            var autoData = {};
+            for (var ark = 0; ark < autoReferencedKeys.length; ark++) {
+              var autoTmplName = autoReferencedKeys[ark];
+              if (allDataTemplates[autoTmplName]) {
+                autoData[autoTmplName] = allDataTemplates[autoTmplName];
+              }
+            }
+            if (Object.keys(autoData).length > 0) {
+              automationOut.data = autoData;
+            }
+          }
+        }
+
         // Preserve param declaration order, include relevant fields only
         if (Array.isArray(automationDef.params)) {
           for (var api = 0; api < automationDef.params.length; api++) {
