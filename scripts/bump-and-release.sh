@@ -49,6 +49,11 @@ PACKAGES=(
   "$ROOT_DIR/packages/vscode-extension/package.json"
 )
 
+# Compiled example specs that embed the compiler version
+EXAMPLE_SPECS=(
+  "$ROOT_DIR/examples/playground-tests/playground-tests.tomation.json"
+)
+
 # --- Check for in-progress release (resume support) ---
 if [ -f "$LOCK_FILE" ]; then
   NEW_VERSION=$(cat "$LOCK_FILE")
@@ -84,15 +89,27 @@ else
 
   # --- Step 1: Bump versions ---
   echo "1. Bumping versions..."
-  node - "$NEW_VERSION" "$ROOT_DIR" "${PACKAGES[@]}" <<'NODE'
+  node - "$NEW_VERSION" "$ROOT_DIR" "${#PACKAGES[@]}" "${PACKAGES[@]}" "${EXAMPLE_SPECS[@]}" <<'NODE'
 const fs = require('fs');
 const path = require('path');
 
 const version = process.argv[2];
 const rootDir = process.argv[3];
-const packageFiles = process.argv.slice(4);
+const packageCount = Number(process.argv[4]);
+const packageFiles = process.argv.slice(5, 5 + packageCount);
+const specFiles = process.argv.slice(5 + packageCount);
 const lockFile = path.join(rootDir, 'package-lock.json');
 const lock = fs.existsSync(lockFile) ? JSON.parse(fs.readFileSync(lockFile, 'utf8')) : null;
+const depFields = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
+
+// Point every @tomationjs/* dependency at the new release.
+function updateTomationDeps(manifest) {
+  for (const field of depFields) {
+    for (const name of Object.keys(manifest[field] || {})) {
+      if (name.startsWith('@tomationjs/')) manifest[field][name] = `^${version}`;
+    }
+  }
+}
 
 for (const file of packageFiles) {
   if (!fs.existsSync(file)) {
@@ -101,13 +118,15 @@ for (const file of packageFiles) {
 
   const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
   manifest.version = version;
+  updateTomationDeps(manifest);
   fs.writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`);
 
   if (lock) {
-    const relativePath = path.relative(rootDir, path.dirname(file)).split(path.sep).join('/');
-    const lockKey = relativePath === '' ? '' : relativePath;
-    if (lock.packages && lock.packages[lockKey]) {
-      lock.packages[lockKey].version = version;
+    const lockKey = path.relative(rootDir, path.dirname(file)).split(path.sep).join('/');
+    const entry = lock.packages && lock.packages[lockKey];
+    if (entry) {
+      entry.version = version;
+      updateTomationDeps(entry);
     }
   }
 
@@ -117,6 +136,17 @@ for (const file of packageFiles) {
 if (lock) {
   fs.writeFileSync(lockFile, `${JSON.stringify(lock, null, 2)}\n`);
   console.log('   ✓ package-lock.json workspace metadata');
+}
+
+for (const file of specFiles) {
+  if (!fs.existsSync(file)) {
+    throw new Error(`Example spec not found: ${file}`);
+  }
+  const spec = JSON.parse(fs.readFileSync(file, 'utf8'));
+  spec.meta = spec.meta || {};
+  spec.meta.compilerVersion = version;
+  fs.writeFileSync(file, `${JSON.stringify(spec, null, 2)}\n`);
+  console.log(`   ✓ ${path.relative(rootDir, file)}`);
 }
 NODE
   echo ""
