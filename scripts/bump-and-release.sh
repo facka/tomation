@@ -84,15 +84,41 @@ else
 
   # --- Step 1: Bump versions ---
   echo "1. Bumping versions..."
-  for PKG in "${PACKAGES[@]}"; do
-    if [ -f "$PKG" ]; then
-      sed -i '' "1,/\"version\":/ s/\"version\": *\"[0-9][^\"]*\"/\"version\": \"$NEW_VERSION\"/" "$PKG"
-      RELATIVE=$(echo "$PKG" | sed "s|$ROOT_DIR/||")
-      echo "   ✓ $RELATIVE"
-    else
-      echo "   ✗ $PKG (not found, skipping)"
-    fi
-  done
+  node - "$NEW_VERSION" "$ROOT_DIR" "${PACKAGES[@]}" <<'NODE'
+const fs = require('fs');
+const path = require('path');
+
+const version = process.argv[2];
+const rootDir = process.argv[3];
+const packageFiles = process.argv.slice(4);
+const lockFile = path.join(rootDir, 'package-lock.json');
+const lock = fs.existsSync(lockFile) ? JSON.parse(fs.readFileSync(lockFile, 'utf8')) : null;
+
+for (const file of packageFiles) {
+  if (!fs.existsSync(file)) {
+    throw new Error(`Package manifest not found: ${file}`);
+  }
+
+  const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+  manifest.version = version;
+  fs.writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  if (lock) {
+    const relativePath = path.relative(rootDir, path.dirname(file)).split(path.sep).join('/');
+    const lockKey = relativePath === '' ? '' : relativePath;
+    if (lock.packages && lock.packages[lockKey]) {
+      lock.packages[lockKey].version = version;
+    }
+  }
+
+  console.log(`   ✓ ${path.relative(rootDir, file)}`);
+}
+
+if (lock) {
+  fs.writeFileSync(lockFile, `${JSON.stringify(lock, null, 2)}\n`);
+  console.log('   ✓ package-lock.json workspace metadata');
+}
+NODE
   echo ""
 
   # --- Step 2: Git commit and tag ---
