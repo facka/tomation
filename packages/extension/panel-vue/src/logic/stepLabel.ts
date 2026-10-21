@@ -176,15 +176,17 @@ export function buildCellTargetLabel(
 /**
  * Build a human-readable description of a conditional (if / When).
  * Examples:
- *   ctx.status === 'Active'  → "ctx.status equals \"Active\""
- *   param unreviewed truthy  → "unreviewed is set"
- *   ctx.role !== 'viewer'    → "ctx.role does not equal \"viewer\""
+ *   path ['status'] equals 'Active'       → "status equals \"Active\""
+ *   path ['unreviewed'] truthy            → "unreviewed is set"
+ *   path ['encounter','type'] equals 'x'  → "encounter.type equals \"x\""
+ *   ctx.status === 'Active'               → "ctx.status equals \"Active\""
+ *   ctx.role !== 'viewer'                 → "ctx.role does not equal \"viewer\""
  */
 export function describeCondition(condition: StepCondition | undefined): string {
   if (!condition) return '';
   const subject = condition.source === 'ctx'
     ? 'ctx.' + (condition.key ?? '')
-    : (condition.param ?? '');
+    : (condition.path?.join('.') ?? condition.param ?? '');
   switch (condition.op) {
     case 'truthy':    return subject + ' is set';
     case 'falsy':     return subject + ' is not set';

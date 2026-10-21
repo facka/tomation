@@ -12,6 +12,10 @@ export type StepStatus = 'queued' | 'in-progress' | 'pass' | 'fail' | 'skipped';
  */
 export interface StepCondition {
   source?: 'ctx';
+  // Param-based conditions: the parameter path (e.g. ["filterMode"] or
+  // ["encounter","type"] for nested access). Newly compiled specs emit this.
+  path?: string[];
+  // Legacy flat param name (older specs); kept for backward compatibility.
   param?: string;
   key?: string;
   op: 'truthy' | 'falsy' | 'equals' | 'notEquals';
