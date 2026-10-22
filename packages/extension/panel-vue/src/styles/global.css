@@ -423,6 +423,10 @@ h3 {
   background: var(--bg-surface);
   box-shadow: var(--shadow-sm);
   overflow: auto;
+  /* Mirror the run log: claim the remaining space and keep at least half the
+     view height for the steps section. */
+  flex: 1;
+  min-height: 50vh;
 }
 
 .step-checklist li {
@@ -611,7 +615,10 @@ h3 {
    -------------------------------------------------------------------------- */
 .log-container {
   flex: 1;
-  min-height: 200px;
+  /* Reserve at least half the available height for the steps/log section so
+     the data and parameters sections (each capped above) can never cover more
+     than the other half. */
+  min-height: 50vh;
   overflow-y: auto;
   overflow-x: auto;
   border: 1px solid var(--border);
@@ -984,6 +991,12 @@ h3 {
   background: var(--bg-surface);
   box-shadow: var(--shadow-sm);
   padding: 12px;
+  /* Cap the parameters section so it never dominates the view; scroll inside
+     when there are many params. Works with the data cap and the steps
+     min-height (50vh) to keep at least half the height for steps. */
+  max-height: 28vh;
+  overflow-y: auto;
+  flex-shrink: 0;
 }
 
 .param-form h3 { margin-bottom: 10px; }

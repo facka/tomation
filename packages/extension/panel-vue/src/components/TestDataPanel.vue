@@ -206,6 +206,8 @@ function clearSeed() {
   background: var(--bg-surface);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
+  /* Keep the capped height stable inside the flex-column view. */
+  flex-shrink: 0;
 }
 
 .test-data-header {
@@ -234,7 +236,10 @@ function clearSeed() {
 }
 
 .test-data-body {
-  max-height: 250px;
+  /* Cap the data section so it never dominates the view. Combined with the
+     params cap and the steps min-height (50vh), this guarantees the steps
+     section always keeps at least half of the available height. */
+  max-height: min(250px, 28vh);
   overflow: hidden;
   display: flex;
   flex-direction: column;
