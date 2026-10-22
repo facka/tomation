@@ -264,7 +264,7 @@ function onRun() {
       <button class="btn btn-ghost btn-sm" @click="goBack"><font-awesome-icon :icon="['fas', 'arrow-left']" aria-hidden="true" /> Back</button>
       <h2>
         <span v-if="sourceFile" class="runnable-path">{{ sourceFile }}</span>
-        <span class="runnable-name">{{ displayName }}</span>
+        <span class="runnable-name" :title="displayName">{{ displayName }}</span>
       </h2>
     </div>
 

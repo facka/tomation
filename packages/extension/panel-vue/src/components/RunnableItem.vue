@@ -34,7 +34,7 @@ function onDelete(event: Event) {
   <li @click="emit('select')">
     <span class="row-label">
       <span v-if="item.sourceFile" class="runnable-path">{{ item.sourceFile }}</span>
-      <span class="runnable-name">{{ item.name }}</span>
+      <span class="runnable-name" :title="item.name">{{ item.name }}</span>
     </span>
     <button
       v-if="type === 'automation'"

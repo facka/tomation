@@ -311,13 +311,18 @@ h3 {
 }
 
 .runnable-name {
-  display: block;
   font-size: 13px;
   color: var(--text-primary);
   line-height: 1.4;
+  /* Wrap long names across up to 5 lines, then ellipsize.
+     Pair with a title attribute to expose the full name on hover. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  line-clamp: 5;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 /* --------------------------------------------------------------------------
