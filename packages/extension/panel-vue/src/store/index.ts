@@ -70,6 +70,7 @@ const state = reactive<StoreState>({
   networkRequests: {},
   networkCapturePending: false,
   runSummary: null,
+  runStartedAt: null,
   contextStore: {},
   automationParams: null,
   resolvedTestData: null,
@@ -281,6 +282,7 @@ function startRun(config: RunConfig, params?: Record<string, unknown>): void {
   // completion. While true, per-step counts render a loading placeholder.
   state.networkCapturePending = true;
   state.runSummary = null;
+  state.runStartedAt = Date.now();
   state.contextStore = {};
   state.automationParams = params ?? null;
   state.currentView = 'run';
@@ -367,7 +369,8 @@ function setRunComplete(summary: { total: number; passed: number; failed: number
   state.isRunning = false;
   state.isPaused = false;
   state.networkCapturePending = false;
-  state.runSummary = summary;
+  const durationMs = state.runStartedAt !== null ? Date.now() - state.runStartedAt : undefined;
+  state.runSummary = { ...summary, durationMs };
 }
 
 /**
@@ -389,6 +392,7 @@ function markManuallyStopped(): void {
     failed,
     stopped: true,
     reason: 'manually stopped',
+    durationMs: state.runStartedAt !== null ? Date.now() - state.runStartedAt : undefined,
   };
 }
 

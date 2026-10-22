@@ -163,7 +163,10 @@ export interface StoreState {
   // True while capture is attached and the run is in progress with no
   // completion yet known; used to drive the per-step count loading placeholder.
   networkCapturePending: boolean;
-  runSummary: { total: number; passed: number; failed: number; stopped?: boolean; reason?: string } | null;
+  runSummary: { total: number; passed: number; failed: number; stopped?: boolean; reason?: string; durationMs?: number } | null;
+  // Wall-clock timestamp (ms) when the current run started; used to compute
+  // the total execution time shown in the run summary.
+  runStartedAt: number | null;
   contextStore: Record<string, unknown>;
   automationParams: Record<string, unknown> | null;
   resolvedTestData: Record<string, string | number> | null;
@@ -202,7 +205,7 @@ export interface StoreActions {
   startRun(config: RunConfig, params?: Record<string, unknown>): void;
   setStepPlan(steps: StepPlanEntry[]): void;
   setStepStatus(stepIndex: number, status: StepStatus, meta?: Partial<LogEntry>): void;
-  setRunComplete(summary: { total: number; passed: number; failed: number }): void;
+  setRunComplete(summary: { total: number; passed: number; failed: number; stopped?: boolean; reason?: string }): void;
   addNetworkRequest(request: CapturedRequest): void;
   networkRequestCount(stepIndex: number): number;
   setPaused(paused: boolean): void;
