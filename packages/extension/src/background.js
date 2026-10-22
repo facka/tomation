@@ -386,6 +386,22 @@ function resolveValue(value, params, contextStore) {
 
   if (typeof value !== 'string') return value;
 
+  // Type-preserving fast path: when the whole value is EXACTLY a single
+  // {{paramName}} token (no surrounding text, not a ctx/data token), return the
+  // param's raw value WITHOUT string coercion. This keeps forwarded booleans and
+  // numbers as their real type so conditionals (truthy/falsy) evaluate correctly
+  // — e.g. a forwarded boolean false must stay false, not become the truthy
+  // string "false". Interpolated tokens (text around the token, or multiple tokens) still
+  // fall through to the string-coercing replacement below.
+  var singleToken = value.match(/^\{\{([^}]+)\}\}$/);
+  if (singleToken) {
+    var tokenName = singleToken[1];
+    if (tokenName.indexOf('ctx.') !== 0 && tokenName.indexOf('data.') !== 0 &&
+        params && params.hasOwnProperty(tokenName)) {
+      return params[tokenName];
+    }
+  }
+
   // Resolve $random
   if (value === '$random') {
     return generateRandom(8);
