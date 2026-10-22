@@ -7,7 +7,6 @@ import LogContainer from './LogContainer.vue';
 import ContextPopup from './ContextPopup.vue';
 import RunSummary from './RunSummary.vue';
 import TestDataPanel from './TestDataPanel.vue';
-import SpeedSelector from './SpeedSelector.vue';
 
 const props = defineProps<{
   manualPauseDescription?: string | null;
@@ -200,13 +199,12 @@ onUnmounted(() => {
       ><font-awesome-icon :icon="['fas', 'xmark']" /></button>
     </div>
 
-    <!-- Controller bar (during execution) + live speed selector -->
-    <div v-if="isRunning || runComplete" class="controller-row">
-      <ControllerBar @toggle-context="toggleContext" />
-      <div class="controller-row-speed">
-        <SpeedSelector v-model="liveSpeed" />
-      </div>
-    </div>
+    <!-- Controller bar (during execution) with embedded live speed selector -->
+    <ControllerBar
+      v-if="isRunning || runComplete"
+      v-model:speed="liveSpeed"
+      @toggle-context="toggleContext"
+    />
 
     <!-- Test Data panel (shown when resolved data exists) -->
     <TestDataPanel
@@ -260,16 +258,6 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.controller-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.controller-row-speed {
-  margin-left: auto;
-}
-
 .manual-pause-banner {
   display: flex;
   align-items: center;
