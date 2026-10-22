@@ -7,6 +7,7 @@ import LogContainer from './LogContainer.vue';
 import ContextPopup from './ContextPopup.vue';
 import RunSummary from './RunSummary.vue';
 import TestDataPanel from './TestDataPanel.vue';
+import SpeedSelector from './SpeedSelector.vue';
 
 const props = defineProps<{
   manualPauseDescription?: string | null;
@@ -17,7 +18,19 @@ const emit = defineEmits<{
 }>();
 
 const store = useStore();
-const { resume, stop } = useRunExecution();
+const { resume, stop, setSpeed } = useRunExecution();
+
+// Live execution speed: initialized from the active run config and applied
+// on the fly via SET_SPEED so the user can change speed mid-run.
+const liveSpeed = computed<'FAST' | 'NORMAL' | 'SLOW'>({
+  get: () => store.state.runConfig?.executionSpeed ?? 'NORMAL',
+  set: (value) => {
+    if (store.state.runConfig) {
+      store.state.runConfig.executionSpeed = value;
+    }
+    setSpeed(value);
+  },
+});
 
 function continueManualStep() {
   resume();
@@ -187,11 +200,13 @@ onUnmounted(() => {
       ><font-awesome-icon :icon="['fas', 'xmark']" /></button>
     </div>
 
-    <!-- Controller bar (during execution) -->
-    <ControllerBar
-      v-if="isRunning || runComplete"
-      @toggle-context="toggleContext"
-    />
+    <!-- Controller bar (during execution) + live speed selector -->
+    <div v-if="isRunning || runComplete" class="controller-row">
+      <ControllerBar @toggle-context="toggleContext" />
+      <div class="controller-row-speed">
+        <SpeedSelector v-model="liveSpeed" />
+      </div>
+    </div>
 
     <!-- Test Data panel (shown when resolved data exists) -->
     <TestDataPanel
@@ -245,6 +260,16 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.controller-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.controller-row-speed {
+  margin-left: auto;
+}
+
 .manual-pause-banner {
   display: flex;
   align-items: center;

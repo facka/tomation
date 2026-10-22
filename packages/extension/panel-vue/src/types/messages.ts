@@ -13,6 +13,7 @@ export type PanelMessage =
   | { type: 'STOP' }
   | { type: 'PAUSE' }
   | { type: 'CONTINUE' }
+  | { type: 'SET_SPEED'; speed: 'FAST' | 'NORMAL' | 'SLOW' }
   | { type: 'LOAD_BUNDLED_SPEC' }
   | { type: 'GET_CONTEXT' }
   | { type: 'INJECT_INSPECTOR' }

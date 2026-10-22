@@ -532,8 +532,17 @@ h3 {
    -------------------------------------------------------------------------- */
 .action-bar {
   display: flex;
+  align-items: center;
   gap: 8px;
   padding-top: 4px;
+}
+
+/* Config controls (debug toggle + speed selector) pushed to the end. */
+.action-bar-config {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* --------------------------------------------------------------------------

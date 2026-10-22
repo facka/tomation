@@ -4,7 +4,8 @@ import { useStore } from '@/store';
 import { useMessaging } from '@/composables/useMessaging';
 import StepChecklist from './StepChecklist.vue';
 import ParamForm from './ParamForm.vue';
-import ConfigSection from './ConfigSection.vue';
+import DebugToggle from './DebugToggle.vue';
+import SpeedSelector from './SpeedSelector.vue';
 import TestDataPanel from './TestDataPanel.vue';
 import type { AutomationEntry } from '@/types/spec';
 import type { RunConfig } from '@/types/store';
@@ -15,7 +16,8 @@ const { send } = useMessaging();
 // --- Refs ---
 
 const paramFormRef = ref<InstanceType<typeof ParamForm> | null>(null);
-const configSectionRef = ref<InstanceType<typeof ConfigSection> | null>(null);
+const debugMode = ref(false);
+const executionSpeed = ref<'FAST' | 'NORMAL' | 'SLOW'>('NORMAL');
 const checkedSteps = ref<Array<number | string>>([]);
 const paramValues = ref<Record<string, unknown>>({});
 const persistedConfig = ref<Partial<RunConfig> | undefined>(undefined);
@@ -219,10 +221,12 @@ function onRun() {
     if (!isValid) return;
   }
 
-  // Get config
-  const config: RunConfig = configSectionRef.value
-    ? configSectionRef.value.getConfig()
-    : { allowContinueOnFailure: false, allowRetryOnFailure: false, executionSpeed: 'NORMAL' };
+  // Build config from the inline debug toggle + speed selector
+  const config: RunConfig = {
+    allowContinueOnFailure: debugMode.value,
+    allowRetryOnFailure: debugMode.value,
+    executionSpeed: executionSpeed.value,
+  };
 
   // Attach data seeds if any are set
   if (Object.keys(dataSeeds.value).length > 0) {
@@ -268,15 +272,16 @@ function onRun() {
       </h2>
     </div>
 
-    <!-- Config section -->
-    <ConfigSection ref="configSectionRef" :initial-config="persistedConfig" @update:config="() => {}" />
-
-    <!-- Action bar -->
+    <!-- Action bar: run/duplicate on the left, config controls at the end -->
     <div class="action-bar">
       <button class="btn btn-primary" @click="onRun"><font-awesome-icon :icon="['fas', 'play']" aria-hidden="true" /> Run</button>
       <button v-if="isAutomation" class="btn btn-ghost btn-sm" @click="openDuplicateDialog">
         <font-awesome-icon :icon="['fas', 'copy']" aria-hidden="true" /> Duplicate
       </button>
+      <div class="action-bar-config">
+        <DebugToggle v-model="debugMode" />
+        <SpeedSelector v-model="executionSpeed" />
+      </div>
     </div>
 
     <p v-if="duplicateMessage" class="duplicate-success-message">{{ duplicateMessage }}</p>

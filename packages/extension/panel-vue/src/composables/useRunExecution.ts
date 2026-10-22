@@ -39,6 +39,13 @@ export function useRunExecution() {
   }
 
   /**
+   * Change the execution speed of the current run on the fly.
+   */
+  function setSpeed(speed: 'FAST' | 'NORMAL' | 'SLOW'): void {
+    send({ type: 'SET_SPEED', speed });
+  }
+
+  /**
    * Retry a failed step (debug mode).
    */
   function retry(stepIndex: number): void {
@@ -66,5 +73,5 @@ export function useRunExecution() {
     }
   }
 
-  return { isRunning, isPaused, logEntries, summary, pause, resume, stop, retry, skip };
+  return { isRunning, isPaused, logEntries, summary, pause, resume, stop, setSpeed, retry, skip };
 }

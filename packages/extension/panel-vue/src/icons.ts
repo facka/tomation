@@ -29,6 +29,10 @@ import {
   faPlug,
   faEyeSlash,
   faArrowRightArrowLeft,
+  faGauge,
+  faStopwatch,
+  faBug,
+  faBugSlash,
 } from '@fortawesome/free-solid-svg-icons';
 
 // Regular icons
@@ -63,4 +67,8 @@ library.add(
   faPlug,
   faEyeSlash,
   faArrowRightArrowLeft,
+  faGauge,
+  faStopwatch,
+  faBug,
+  faBugSlash,
 );

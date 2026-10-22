@@ -2866,6 +2866,19 @@ function stopRun() {
   }
 }
 
+/**
+ * Change the execution speed of the current run on the fly. The step loop reads
+ * runState.config.executionSpeed before each step, so a change here takes effect
+ * from the next step onward. Valid values: FAST, NORMAL, SLOW; others are ignored.
+ *
+ * @param {string} speed - One of FAST, NORMAL, SLOW
+ */
+function setSpeed(speed) {
+  if (SPEED_DELAYS.hasOwnProperty(speed) && runState.config) {
+    runState.config.executionSpeed = speed;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Bundled Spec Loader
 // ---------------------------------------------------------------------------
@@ -3483,6 +3496,9 @@ function handleMessage(message, sender, sendResponse) {
     case 'STOP':
       stopRun();
       break;
+    case 'SET_SPEED':
+      setSpeed(message.speed);
+      break;
     case 'RETRY_STEP':
       handleRetryStep(message);
       break;
@@ -3775,6 +3791,7 @@ if (typeof module !== 'undefined' && module.exports) {
     finishRun: finishRun,
     buildRunResultsRecord: buildRunResultsRecord,
     stopRun: stopRun,
+    setSpeed: setSpeed,
     pauseRun: pauseRun,
     continueRun: continueRun,
     handleNavigateStep: handleNavigateStep,
