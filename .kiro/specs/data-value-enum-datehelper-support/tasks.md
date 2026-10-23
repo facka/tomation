@@ -80,7 +80,7 @@ manually. The only agent-run verification is a single-shot compile
     - Write the tests only; the user will run them manually.
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 4.4_
 
-- [ ] 2. Add Case 5 — three-level namespaced-enum `MemberExpression` support
+- [x] 2. Add Case 5 — three-level namespaced-enum `MemberExpression` support
   - In `parseDataTemplate`, after Case 4, add a case: when
     `value.type === 'MemberExpression'` AND `value.object.type === 'MemberExpression'`,
     resolve `constBindings[nsName][enumName][memberKey]` using the same logic as

@@ -628,6 +628,59 @@ function parseDataTemplate(objNode, constBindings, filePath, warnings) {
         continue;
       }
     }
+
+    // Case 5: Three-level namespaced-enum MemberExpression — Namespace.Enum.KEY
+    // (value.object is itself a MemberExpression). Resolve via the nested
+    // namespace in constBindings[nsName][enumName][memberKey] using the same
+    // logic as the extractValueExpression three-level branch (dot access or a
+    // string-literal computed key). On a match, store String(resolved) (the
+    // three-level form is intentionally string-coerced). On no match / a
+    // non-string or numeric/computed key, Warn_And_Skip: emit one warning and
+    // drop the property. extractValueExpression is not called wholesale here so
+    // no {{...}} param/data token is ever emitted (Req 5).
+    if (
+      value.type === 'MemberExpression' &&
+      value.object && value.object.type === 'MemberExpression'
+    ) {
+      let resolved = null;
+      let matched = false;
+      if (
+        value.object.object && value.object.object.type === 'Identifier' &&
+        value.object.property && value.object.property.type === 'Identifier'
+      ) {
+        const nsName = value.object.object.name;    // NewTaskPage
+        const enumName = value.object.property.name; // TaskTypes
+        // Member key: dot access (.KEY) or computed string-literal (["KEY"]).
+        let memberKey = null;
+        if (!value.computed && value.property && value.property.type === 'Identifier') {
+          memberKey = value.property.name;
+        } else if (value.computed && value.property && value.property.type === 'Literal' &&
+                   typeof value.property.value === 'string') {
+          memberKey = value.property.value;
+        }
+        if (
+          memberKey !== null && constBindings &&
+          constBindings[nsName] && typeof constBindings[nsName] === 'object' &&
+          constBindings[nsName][enumName] && typeof constBindings[nsName][enumName] === 'object' &&
+          Object.prototype.hasOwnProperty.call(constBindings[nsName][enumName], memberKey)
+        ) {
+          resolved = constBindings[nsName][enumName][memberKey];
+          matched = true;
+        }
+      }
+      if (matched) {
+        template[key] = String(resolved);
+        continue;
+      }
+      // Unresolvable three-level reference — Warn_And_Skip (drop the property).
+      const line = lineOf(value);
+      warnings.push({
+        message: `Unknown namespaced enum reference for data property "${key}" at ${filePath || ''}:${line}`,
+        filePath: filePath || '',
+        line,
+      });
+      continue;
+    }
   }
 
   return template;
