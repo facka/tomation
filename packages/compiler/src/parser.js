@@ -617,6 +617,17 @@ function parseDataTemplate(objNode, constBindings, filePath, warnings) {
       }
       continue;
     }
+
+    // Case 4: Date-helper call — CallExpression with a plain Identifier callee
+    // (Case 1's Fake.* has a MemberExpression callee and matches earlier, so the
+    // two never collide). extractDateHelperCall pushes its own argument warnings.
+    if (value.type === 'CallExpression') {
+      const descriptor = extractDateHelperCall(value, filePath || '', warnings);
+      if (descriptor !== null) {
+        template[key] = descriptor;
+        continue;
+      }
+    }
   }
 
   return template;

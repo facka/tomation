@@ -33,7 +33,7 @@ manually. The only agent-run verification is a single-shot compile
 
 ## Tasks
 
-- [ ] 1. Add Case 4 — date-helper `CallExpression` support to `parseDataTemplate`
+- [x] 1. Add Case 4 — date-helper `CallExpression` support to `parseDataTemplate`
   - In `packages/compiler/src/parser.js`, inside `parseDataTemplate` (~L527),
     after the existing Case 3 and before any fall-through, add a case: when
     `value.type === 'CallExpression'`, call
