@@ -109,7 +109,7 @@ manually. The only agent-run verification is a single-shot compile
     - Write the tests only; the user will run them manually.
     - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-- [ ] 3. Add Case 6 — two-level const/enum `MemberExpression` support
+- [x] 3. Add Case 6 — two-level const/enum `MemberExpression` support
   - In `parseDataTemplate`, after Case 5, add a case: when
     `value.type === 'MemberExpression'` AND `value.object.type === 'Identifier'`,
     call `resolveConstMemberExpression(value, constBindings, filePath, warnings)`

@@ -681,6 +681,33 @@ function parseDataTemplate(objNode, constBindings, filePath, warnings) {
       });
       continue;
     }
+
+    // Case 6: Two-level const/enum MemberExpression — Const.MEMBER / Enum.KEY
+    // (value.object is a plain Identifier). Resolve via
+    // resolveConstMemberExpression, which also covers a named-import POM enum
+    // (TaskTypes.KEY) since constBindings already holds its members (Req 2.4).
+    // The resolved value is stored with its ORIGINAL primitive type preserved
+    // (number stays number, boolean stays boolean) — intentionally NOT
+    // String()-coerced, unlike the three-level Case 5 above (Req 2.1).
+    // resolveConstMemberExpression owns the warning behavior: it pushes exactly
+    // one "Unknown property" warning when the object is a known binding but the
+    // member is missing (Req 2.2), and returns null WITHOUT a warning when the
+    // object identifier is not a known binding (Req 2.3). In both null cases the
+    // property is dropped (Warn_And_Skip). No {{...}} param/data token is ever
+    // emitted here (Req 5).
+    if (
+      value.type === 'MemberExpression' &&
+      value.object && value.object.type === 'Identifier'
+    ) {
+      const resolved = resolveConstMemberExpression(value, constBindings, filePath || '', warnings);
+      if (resolved !== null) {
+        template[key] = resolved;
+        continue;
+      }
+      // Null result — property already handled by resolveConstMemberExpression
+      // (warning pushed or silently unresolved). Drop the property.
+      continue;
+    }
   }
 
   return template;

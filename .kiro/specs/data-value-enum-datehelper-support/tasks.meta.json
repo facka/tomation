@@ -24,6 +24,18 @@
         "chatSessionId": "sess_cc620cb1-1b51-4d2e-968f-bfc0c8395dbb",
         "timestamp": 1792764381539
       }
+    ],
+    "3. Add Case 6 — two-level const/enum `MemberExpression` support": [
+      {
+        "executionId": "84644a31-b480-4690-9092-23e7e12a30ff",
+        "chatSessionId": "sess_0d5c040b-475a-48de-a3b8-258243dd406d",
+        "timestamp": 1792764604291
+      },
+      {
+        "executionId": "84644a31-b480-4690-9092-23e7e12a30ff",
+        "chatSessionId": "sess_0d5c040b-475a-48de-a3b8-258243dd406d",
+        "timestamp": 1792764672685
+      }
     ]
   }
 }
