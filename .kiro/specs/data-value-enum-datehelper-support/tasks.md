@@ -154,7 +154,7 @@ manually. The only agent-run verification is a single-shot compile
     - Write the tests only; the user will run them manually.
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 4. Enforce Req 5 no-tokenization restriction and verify fall-through
+- [x] 4. Enforce Req 5 no-tokenization restriction and verify fall-through
   - Confirm in `parseDataTemplate` that no new case calls `extractValueExpression`
     wholesale and that a bare `Identifier` value and any `MemberExpression` whose
     shape is neither 2-level nor 3-level (and any shape-matching ref that does not

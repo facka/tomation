@@ -36,6 +36,18 @@
         "chatSessionId": "sess_0d5c040b-475a-48de-a3b8-258243dd406d",
         "timestamp": 1792764672685
       }
+    ],
+    "4. Enforce Req 5 no-tokenization restriction and verify fall-through": [
+      {
+        "executionId": "fce6f588-b239-44f5-b3c9-3ac05b003c05",
+        "chatSessionId": "sess_6be3055d-941a-4bac-b934-3ff765a62a8e",
+        "timestamp": 1792765698412
+      },
+      {
+        "executionId": "fce6f588-b239-44f5-b3c9-3ac05b003c05",
+        "chatSessionId": "sess_6be3055d-941a-4bac-b934-3ff765a62a8e",
+        "timestamp": 1792765776199
+      }
     ]
   }
 }
