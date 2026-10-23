@@ -60,6 +60,37 @@
         "chatSessionId": "sess_10dba5ec-3add-43e1-9f01-d196f331709d",
         "timestamp": 1792765947532
       }
+    ],
+    "8.1 Create the reproduction fixture under `examples/playground-tests`": [
+      {
+        "executionId": "4ad8245f-aa23-4a06-8662-f7b5ffed6ed0",
+        "chatSessionId": "sess_6cc5fe4a-133d-41ec-be75-d0568e62eb9e",
+        "timestamp": 1792766430449
+      },
+      {
+        "executionId": "4ad8245f-aa23-4a06-8662-f7b5ffed6ed0",
+        "chatSessionId": "sess_6cc5fe4a-133d-41ec-be75-d0568e62eb9e",
+        "timestamp": 1792766523236
+      }
+    ],
+    "8.2 Run the single-shot compile and confirm the fix end-to-end": [
+      {
+        "executionId": "4ad8245f-aa23-4a06-8662-f7b5ffed6ed0",
+        "chatSessionId": "sess_6cc5fe4a-133d-41ec-be75-d0568e62eb9e",
+        "timestamp": 1792766536355
+      },
+      {
+        "executionId": "4ad8245f-aa23-4a06-8662-f7b5ffed6ed0",
+        "chatSessionId": "sess_6cc5fe4a-133d-41ec-be75-d0568e62eb9e",
+        "timestamp": 1792770398422
+      }
+    ],
+    "8. Add the single-shot compile fixture and verify": [
+      {
+        "executionId": "4ad8245f-aa23-4a06-8662-f7b5ffed6ed0",
+        "chatSessionId": "sess_6cc5fe4a-133d-41ec-be75-d0568e62eb9e",
+        "timestamp": 1792770398567
+      }
     ]
   }
 }

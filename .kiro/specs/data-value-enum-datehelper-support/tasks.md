@@ -227,8 +227,8 @@ manually. The only agent-run verification is a single-shot compile
     - Write the tests only; the user will run them manually.
     - _Requirements: 7.1, 7.2, 7.3_
 
-- [ ] 8. Add the single-shot compile fixture and verify
-  - [ ] 8.1 Create the reproduction fixture under `examples/playground-tests`
+- [x] 8. Add the single-shot compile fixture and verify
+  - [x] 8.1 Create the reproduction fixture under `examples/playground-tests`
     - Add a POM that exports an enum (e.g. `TaskTypes` with
       `AUTHORIZATION_REQUEST`), imported two ways across two `Data` templates:
       default import → three-level `NewTaskPage.TaskTypes.AUTHORIZATION_REQUEST`;
@@ -239,7 +239,7 @@ manually. The only agent-run verification is a single-shot compile
       with the existing `examples/playground-tests` structure (`pom/`, `data/`).
     - _Requirements: 1.1, 2.1, 2.4, 3.2, 7.1_
 
-  - [ ] 8.2 Run the single-shot compile and confirm the fix end-to-end
+  - [x] 8.2 Run the single-shot compile and confirm the fix end-to-end
     - Run `npm run compile:playground` (i.e. `npx tomation compile` in
       `examples/playground-tests`) exactly once — no watch/dev process. Confirm
       the compiled spec includes `taskType` (both import styles) and `dueDate`
