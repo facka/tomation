@@ -183,7 +183,7 @@ manually. The only agent-run verification is a single-shot compile
     tests manually; confirm Cases 4–6 ordering, type-preservation asymmetry, and
     Warn_And_Skip behavior are in place before continuing.)
 
-- [ ] 6. Make date-helper descriptors terminal leaves in `validateDataPath`
+- [x] 6. Make date-helper descriptors terminal leaves in `validateDataPath`
   - In `packages/compiler/src/parser.js`, in `validateDataPath` (~L1327), extend
     the `isPlainObject` predicate to also exclude `current.type === 'dateHelper'`
     (alongside the existing `current.type !== 'fake'` exclusion) so a date-helper

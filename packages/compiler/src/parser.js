@@ -1433,7 +1433,8 @@ function validateDataPath(entry, path, filePath, line, warnings) {
     var isPlainObject =
       current !== null &&
       typeof current === 'object' &&
-      !(current.type === 'fake');
+      !(current.type === 'fake') &&
+      current.type !== 'dateHelper';
 
     if (!isPlainObject || !Object.prototype.hasOwnProperty.call(current, segment)) {
       warnings.push({

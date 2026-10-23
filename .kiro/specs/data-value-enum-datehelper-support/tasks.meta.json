@@ -48,6 +48,18 @@
         "chatSessionId": "sess_6be3055d-941a-4bac-b934-3ff765a62a8e",
         "timestamp": 1792765776199
       }
+    ],
+    "6. Make date-helper descriptors terminal leaves in `validateDataPath`": [
+      {
+        "executionId": "e227422f-2839-4cbe-8d66-053dbc4d4894",
+        "chatSessionId": "sess_10dba5ec-3add-43e1-9f01-d196f331709d",
+        "timestamp": 1792765902101
+      },
+      {
+        "executionId": "e227422f-2839-4cbe-8d66-053dbc4d4894",
+        "chatSessionId": "sess_10dba5ec-3add-43e1-9f01-d196f331709d",
+        "timestamp": 1792765947532
+      }
     ]
   }
 }
