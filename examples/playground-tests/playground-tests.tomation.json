@@ -8,7 +8,7 @@
     "urls": [
       "https://facka.github.io/tomation"
     ],
-    "compilerVersion": "2.2.1"
+    "compilerVersion": "2.4.0"
   },
   "pageElements": {
     "Login__usernameInput": {
@@ -93,6 +93,13 @@
       "label": "Status",
       "where": {
         "id": "status"
+      }
+    },
+    "NewTask__taskTypeInput": {
+      "tag": "input",
+      "label": "Task Type Input",
+      "where": {
+        "id": "task-type"
       }
     },
     "Tables__table": {
@@ -830,6 +837,92 @@
         }
       ],
       "sourceFile": "network"
+    },
+    {
+      "name": "Create a task using the default-import (three-level enum) template",
+      "steps": [
+        {
+          "action": "type",
+          "target": "NewTask__taskTypeInput",
+          "value": "{{data.newTaskDefault.taskType}}"
+        },
+        {
+          "action": "type",
+          "target": "UserForm__nameInput",
+          "value": "{{data.newTaskDefault.provider}}"
+        },
+        {
+          "action": "type",
+          "target": "UserForm__dobInput",
+          "value": "{{data.newTaskDefault.dueDate}}"
+        },
+        {
+          "action": "assertHasText",
+          "target": "UserForm__message",
+          "value": "{{data.newTaskDefault.provider}}"
+        }
+      ],
+      "sourceFile": "new-task",
+      "data": {
+        "newTaskDefault": {
+          "taskType": "Type1",
+          "provider": "Provider1",
+          "dueDate": {
+            "type": "dateHelper",
+            "kind": "dayOffset",
+            "offset": 7,
+            "format": "MM/DD/YYYY"
+          }
+        }
+      }
+    },
+    {
+      "name": "Create a task using a local-const Data() value source",
+      "steps": [
+        {
+          "action": "type",
+          "target": "UserForm__nameInput",
+          "value": "{{data.localSourced.x}}"
+        },
+        {
+          "action": "assertHasText",
+          "target": "UserForm__message",
+          "value": "{{data.localSourced.label}}"
+        }
+      ],
+      "sourceFile": "new-task",
+      "data": {
+        "localSourced": {
+          "x": "a",
+          "label": "local"
+        }
+      }
+    },
+    {
+      "name": "Create a task using a dual-role Data() template",
+      "steps": [
+        {
+          "action": "type",
+          "target": "UserForm__nameInput",
+          "value": "{{data.DualTypes.P}}"
+        },
+        {
+          "action": "assertHasText",
+          "target": "UserForm__message",
+          "value": "{{data.dualSourced.picked}}"
+        }
+      ],
+      "sourceFile": "new-task",
+      "data": {
+        "DualTypes": {
+          "P": "p-value",
+          "Q": "q-value"
+        },
+        "dualSourced": {
+          "picked": "p-value",
+          "note": "dual"
+        }
+      }
     },
     {
       "name": "Register a new patient with generated data",

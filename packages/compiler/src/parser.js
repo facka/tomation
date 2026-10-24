@@ -228,15 +228,33 @@ function buildConstBindings(ast) {
         }
       }
 
-      // Handle `as const` assertion: the init might be a TSAsExpression wrapping ObjectExpression
-      // After type stripping, `as const` is removed, so init should be plain ObjectExpression
-      if (initNode.type !== 'ObjectExpression') continue;
+      // Determine the candidate ObjectExpression to extract primitive members from.
+      // Handle `as const` assertion: the init might be a TSAsExpression wrapping ObjectExpression.
+      // After type stripping, `as const` is removed, so init should be plain ObjectExpression.
+      // Additionally, a `const X = Data({...})` (or `Data({...}).as(name)`) init is a
+      // CallExpression; unwrap it via the existing helper so its template object is
+      // registered as a const binding too (enum-like value source). Only primitive-literal
+      // leaf members are extracted below, so Fake.*/nested-object/date-helper leaves are
+      // naturally skipped.
+      let objExpr = null;
+      if (initNode.type === 'ObjectExpression') {
+        objExpr = initNode;
+      } else {
+        const unwrapped = unwrapDataCall(initNode);
+        if (unwrapped && unwrapped.dataCall) {
+          const dataArgs = unwrapped.dataCall.arguments || [];
+          if (dataArgs.length >= 1 && dataArgs[0] && dataArgs[0].type === 'ObjectExpression') {
+            objExpr = dataArgs[0];
+          }
+        }
+      }
+      if (!objExpr) continue;
 
       const varName = declarator.id.name;
       const obj = {};
       let hasLiterals = false;
 
-      for (const prop of initNode.properties) {
+      for (const prop of objExpr.properties) {
         if (prop.type !== 'Property') continue;
         const key = prop.key.type === 'Identifier' ? prop.key.name
                    : prop.key.type === 'Literal' ? String(prop.key.value)
@@ -615,6 +633,97 @@ function parseDataTemplate(objNode, constBindings, filePath, warnings) {
       if (nested !== null) {
         template[key] = nested;
       }
+      continue;
+    }
+
+    // Case 4: Date-helper call — CallExpression with a plain Identifier callee
+    // (Case 1's Fake.* has a MemberExpression callee and matches earlier, so the
+    // two never collide). extractDateHelperCall pushes its own argument warnings.
+    if (value.type === 'CallExpression') {
+      const descriptor = extractDateHelperCall(value, filePath || '', warnings);
+      if (descriptor !== null) {
+        template[key] = descriptor;
+        continue;
+      }
+    }
+
+    // Case 5: Three-level namespaced-enum MemberExpression — Namespace.Enum.KEY
+    // (value.object is itself a MemberExpression). Resolve via the nested
+    // namespace in constBindings[nsName][enumName][memberKey] using the same
+    // logic as the extractValueExpression three-level branch (dot access or a
+    // string-literal computed key). On a match, store String(resolved) (the
+    // three-level form is intentionally string-coerced). On no match / a
+    // non-string or numeric/computed key, Warn_And_Skip: emit one warning and
+    // drop the property. extractValueExpression is not called wholesale here so
+    // no {{...}} param/data token is ever emitted (Req 5).
+    if (
+      value.type === 'MemberExpression' &&
+      value.object && value.object.type === 'MemberExpression'
+    ) {
+      let resolved = null;
+      let matched = false;
+      if (
+        value.object.object && value.object.object.type === 'Identifier' &&
+        value.object.property && value.object.property.type === 'Identifier'
+      ) {
+        const nsName = value.object.object.name;    // NewTaskPage
+        const enumName = value.object.property.name; // TaskTypes
+        // Member key: dot access (.KEY) or computed string-literal (["KEY"]).
+        let memberKey = null;
+        if (!value.computed && value.property && value.property.type === 'Identifier') {
+          memberKey = value.property.name;
+        } else if (value.computed && value.property && value.property.type === 'Literal' &&
+                   typeof value.property.value === 'string') {
+          memberKey = value.property.value;
+        }
+        if (
+          memberKey !== null && constBindings &&
+          constBindings[nsName] && typeof constBindings[nsName] === 'object' &&
+          constBindings[nsName][enumName] && typeof constBindings[nsName][enumName] === 'object' &&
+          Object.prototype.hasOwnProperty.call(constBindings[nsName][enumName], memberKey)
+        ) {
+          resolved = constBindings[nsName][enumName][memberKey];
+          matched = true;
+        }
+      }
+      if (matched) {
+        template[key] = String(resolved);
+        continue;
+      }
+      // Unresolvable three-level reference — Warn_And_Skip (drop the property).
+      const line = lineOf(value);
+      warnings.push({
+        message: `Unknown namespaced enum reference for data property "${key}" at ${filePath || ''}:${line}`,
+        filePath: filePath || '',
+        line,
+      });
+      continue;
+    }
+
+    // Case 6: Two-level const/enum MemberExpression — Const.MEMBER / Enum.KEY
+    // (value.object is a plain Identifier). Resolve via
+    // resolveConstMemberExpression, which also covers a named-import POM enum
+    // (TaskTypes.KEY) since constBindings already holds its members (Req 2.4).
+    // The resolved value is stored with its ORIGINAL primitive type preserved
+    // (number stays number, boolean stays boolean) — intentionally NOT
+    // String()-coerced, unlike the three-level Case 5 above (Req 2.1).
+    // resolveConstMemberExpression owns the warning behavior: it pushes exactly
+    // one "Unknown property" warning when the object is a known binding but the
+    // member is missing (Req 2.2), and returns null WITHOUT a warning when the
+    // object identifier is not a known binding (Req 2.3). In both null cases the
+    // property is dropped (Warn_And_Skip). No {{...}} param/data token is ever
+    // emitted here (Req 5).
+    if (
+      value.type === 'MemberExpression' &&
+      value.object && value.object.type === 'Identifier'
+    ) {
+      const resolved = resolveConstMemberExpression(value, constBindings, filePath || '', warnings);
+      if (resolved !== null) {
+        template[key] = resolved;
+        continue;
+      }
+      // Null result — property already handled by resolveConstMemberExpression
+      // (warning pushed or silently unresolved). Drop the property.
       continue;
     }
   }
@@ -1342,7 +1451,8 @@ function validateDataPath(entry, path, filePath, line, warnings) {
     var isPlainObject =
       current !== null &&
       typeof current === 'object' &&
-      !(current.type === 'fake');
+      !(current.type === 'fake') &&
+      current.type !== 'dateHelper';
 
     if (!isPlainObject || !Object.prototype.hasOwnProperty.call(current, segment)) {
       warnings.push({

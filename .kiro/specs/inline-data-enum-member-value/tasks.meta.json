@@ -1,0 +1,82 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Author the Bug Condition exploration property test P1 (BEFORE the fix)": [
+      {
+        "executionId": "22dbcaab-160f-49d8-88ff-8a1699cb9894",
+        "chatSessionId": "sess_d218905a-e5c2-44c4-9341-f2bd6b11460c",
+        "timestamp": 1792809496650
+      },
+      {
+        "executionId": "22dbcaab-160f-49d8-88ff-8a1699cb9894",
+        "chatSessionId": "sess_d218905a-e5c2-44c4-9341-f2bd6b11460c",
+        "timestamp": 1792809904107
+      },
+      {
+        "executionId": "e6d8f8c3-aef0-492a-8260-83e3960bbd50",
+        "chatSessionId": "sess_8bc213f5-18e7-408f-846c-77489eb89d15",
+        "timestamp": 1792810023680
+      }
+    ],
+    "2. Author the Preservation property test P2 (BEFORE the fix)": [
+      {
+        "executionId": "e451b8e4-ceeb-4bb9-a6f3-e4e01f274e8c",
+        "chatSessionId": "sess_bdd3757d-4dba-4cf0-a908-ad1d68fe7b12",
+        "timestamp": 1792810179355
+      },
+      {
+        "executionId": "e451b8e4-ceeb-4bb9-a6f3-e4e01f274e8c",
+        "chatSessionId": "sess_bdd3757d-4dba-4cf0-a908-ad1d68fe7b12",
+        "timestamp": 1792810398651
+      }
+    ],
+    "3. Fix: register `Data({...})` template primitive members in `buildConstBindings`": [
+      {
+        "executionId": "63da4c3b-7e79-407e-81e8-be2a28501153",
+        "chatSessionId": "sess_54996c80-ea09-47ba-9a55-7400591ba44d",
+        "timestamp": 1792810499319
+      },
+      {
+        "executionId": "63da4c3b-7e79-407e-81e8-be2a28501153",
+        "chatSessionId": "sess_54996c80-ea09-47ba-9a55-7400591ba44d",
+        "timestamp": 1792810586378
+      }
+    ],
+    "4. Extend the existing fixture to cover the local-const and dual-role cases": [
+      {
+        "executionId": "84cd5cc7-0452-4025-990c-8292a78a0bab",
+        "chatSessionId": "sess_043f06d3-d5ab-47c0-b826-53514105fee2",
+        "timestamp": 1792810681649
+      },
+      {
+        "executionId": "84cd5cc7-0452-4025-990c-8292a78a0bab",
+        "chatSessionId": "sess_043f06d3-d5ab-47c0-b826-53514105fee2",
+        "timestamp": 1792810746547
+      }
+    ],
+    "5. Checkpoint — review the fix and authored tests": [
+      {
+        "executionId": "c7482f9f-d042-4bf6-91a3-0f298d6d158b",
+        "chatSessionId": "sess_4ccc0287-0165-4165-8f27-f64037617749",
+        "timestamp": 1792810955676
+      },
+      {
+        "executionId": "c7482f9f-d042-4bf6-91a3-0f298d6d158b",
+        "chatSessionId": "sess_4ccc0287-0165-4165-8f27-f64037617749",
+        "timestamp": 1792811041466
+      }
+    ],
+    "6. Final verification — single-shot compile (the only agent-run verification)": [
+      {
+        "executionId": "40786494-754b-4009-a8a2-df976f6415dd",
+        "chatSessionId": "sess_12375574-5eed-4cac-8592-68efecfa51d7",
+        "timestamp": 1792811186093
+      },
+      {
+        "executionId": "40786494-754b-4009-a8a2-df976f6415dd",
+        "chatSessionId": "sess_12375574-5eed-4cac-8592-68efecfa51d7",
+        "timestamp": 1792811244651
+      }
+    ]
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Add Case 4 — date-helper `CallExpression` support to `parseDataTemplate`": [
+      {
+        "executionId": "2afdb71d-8464-40ea-967b-99e45abd9048",
+        "chatSessionId": "sess_21113952-e2dc-4e5d-96f1-54543b6ccbbb",
+        "timestamp": 1792764098224
+      },
+      {
+        "executionId": "2afdb71d-8464-40ea-967b-99e45abd9048",
+        "chatSessionId": "sess_21113952-e2dc-4e5d-96f1-54543b6ccbbb",
+        "timestamp": 1792764152874
+      }
+    ],
+    "2. Add Case 5 — three-level namespaced-enum `MemberExpression` support": [
+      {
+        "executionId": "fb90c29d-c5ad-4f52-ae43-4650674a3dcb",
+        "chatSessionId": "sess_cc620cb1-1b51-4d2e-968f-bfc0c8395dbb",
+        "timestamp": 1792764305957
+      },
+      {
+        "executionId": "fb90c29d-c5ad-4f52-ae43-4650674a3dcb",
+        "chatSessionId": "sess_cc620cb1-1b51-4d2e-968f-bfc0c8395dbb",
+        "timestamp": 1792764381539
+      }
+    ],
+    "3. Add Case 6 — two-level const/enum `MemberExpression` support": [
+      {
+        "executionId": "84644a31-b480-4690-9092-23e7e12a30ff",
+        "chatSessionId": "sess_0d5c040b-475a-48de-a3b8-258243dd406d",
+        "timestamp": 1792764604291
+      },
+      {
+        "executionId": "84644a31-b480-4690-9092-23e7e12a30ff",
+        "chatSessionId": "sess_0d5c040b-475a-48de-a3b8-258243dd406d",
+        "timestamp": 1792764672685
+      }
+    ],
+    "4. Enforce Req 5 no-tokenization restriction and verify fall-through": [
+      {
+        "executionId": "fce6f588-b239-44f5-b3c9-3ac05b003c05",
+        "chatSessionId": "sess_6be3055d-941a-4bac-b934-3ff765a62a8e",
+        "timestamp": 1792765698412
+      },
+      {
+        "executionId": "fce6f588-b239-44f5-b3c9-3ac05b003c05",
+        "chatSessionId": "sess_6be3055d-941a-4bac-b934-3ff765a62a8e",
+        "timestamp": 1792765776199
+      }
+    ],
+    "6. Make date-helper descriptors terminal leaves in `validateDataPath`": [
+      {
+        "executionId": "e227422f-2839-4cbe-8d66-053dbc4d4894",
+        "chatSessionId": "sess_10dba5ec-3add-43e1-9f01-d196f331709d",
+        "timestamp": 1792765902101
+      },
+      {
+        "executionId": "e227422f-2839-4cbe-8d66-053dbc4d4894",
+        "chatSessionId": "sess_10dba5ec-3add-43e1-9f01-d196f331709d",
+        "timestamp": 1792765947532
+      }
+    ],
+    "8.1 Create the reproduction fixture under `examples/playground-tests`": [
+      {
+        "executionId": "4ad8245f-aa23-4a06-8662-f7b5ffed6ed0",
+        "chatSessionId": "sess_6cc5fe4a-133d-41ec-be75-d0568e62eb9e",
+        "timestamp": 1792766430449
+      },
+      {
+        "executionId": "4ad8245f-aa23-4a06-8662-f7b5ffed6ed0",
+        "chatSessionId": "sess_6cc5fe4a-133d-41ec-be75-d0568e62eb9e",
+        "timestamp": 1792766523236
+      }
+    ],
+    "8.2 Run the single-shot compile and confirm the fix end-to-end": [
+      {
+        "executionId": "4ad8245f-aa23-4a06-8662-f7b5ffed6ed0",
+        "chatSessionId": "sess_6cc5fe4a-133d-41ec-be75-d0568e62eb9e",
+        "timestamp": 1792766536355
+      },
+      {
+        "executionId": "4ad8245f-aa23-4a06-8662-f7b5ffed6ed0",
+        "chatSessionId": "sess_6cc5fe4a-133d-41ec-be75-d0568e62eb9e",
+        "timestamp": 1792770398422
+      }
+    ],
+    "8. Add the single-shot compile fixture and verify": [
+      {
+        "executionId": "4ad8245f-aa23-4a06-8662-f7b5ffed6ed0",
+        "chatSessionId": "sess_6cc5fe4a-133d-41ec-be75-d0568e62eb9e",
+        "timestamp": 1792770398567
+      }
+    ]
+  }
+}
