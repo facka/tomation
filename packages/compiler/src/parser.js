@@ -228,15 +228,33 @@ function buildConstBindings(ast) {
         }
       }
 
-      // Handle `as const` assertion: the init might be a TSAsExpression wrapping ObjectExpression
-      // After type stripping, `as const` is removed, so init should be plain ObjectExpression
-      if (initNode.type !== 'ObjectExpression') continue;
+      // Determine the candidate ObjectExpression to extract primitive members from.
+      // Handle `as const` assertion: the init might be a TSAsExpression wrapping ObjectExpression.
+      // After type stripping, `as const` is removed, so init should be plain ObjectExpression.
+      // Additionally, a `const X = Data({...})` (or `Data({...}).as(name)`) init is a
+      // CallExpression; unwrap it via the existing helper so its template object is
+      // registered as a const binding too (enum-like value source). Only primitive-literal
+      // leaf members are extracted below, so Fake.*/nested-object/date-helper leaves are
+      // naturally skipped.
+      let objExpr = null;
+      if (initNode.type === 'ObjectExpression') {
+        objExpr = initNode;
+      } else {
+        const unwrapped = unwrapDataCall(initNode);
+        if (unwrapped && unwrapped.dataCall) {
+          const dataArgs = unwrapped.dataCall.arguments || [];
+          if (dataArgs.length >= 1 && dataArgs[0] && dataArgs[0].type === 'ObjectExpression') {
+            objExpr = dataArgs[0];
+          }
+        }
+      }
+      if (!objExpr) continue;
 
       const varName = declarator.id.name;
       const obj = {};
       let hasLiterals = false;
 
-      for (const prop of initNode.properties) {
+      for (const prop of objExpr.properties) {
         if (prop.type !== 'Property') continue;
         const key = prop.key.type === 'Identifier' ? prop.key.name
                    : prop.key.type === 'Literal' ? String(prop.key.value)
