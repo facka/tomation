@@ -169,7 +169,7 @@ export interface StoreState {
   runStartedAt: number | null;
   contextStore: Record<string, unknown>;
   automationParams: Record<string, unknown> | null;
-  resolvedTestData: Record<string, string | number> | null;
+  resolvedTestData: Record<string, unknown> | null;
   resolvedDataSeeds: Record<string, number> | null;
 
   // UI state

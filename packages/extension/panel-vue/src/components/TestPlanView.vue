@@ -7,6 +7,7 @@ import ParamForm from './ParamForm.vue';
 import DebugToggle from './DebugToggle.vue';
 import SpeedSelector from './SpeedSelector.vue';
 import TestDataPanel from './TestDataPanel.vue';
+import { isDateHelperDescriptor } from '@/logic/dateHelperDisplay';
 import type { AutomationEntry } from '@/types/spec';
 import type { RunConfig } from '@/types/store';
 
@@ -104,7 +105,7 @@ const testDataDisplay = computed((): Record<string, unknown> => {
   }
   const testEntry = runnable.value?.data as any;
   if (!testEntry || !testEntry.data) return {};
-  const display: Record<string, string> = {};
+  const display: Record<string, unknown> = {};
   // Flatten a template into dot-path keys, mirroring the runtime resolver so
   // nested objects become their own fields instead of "[object Object]".
   const flatten = (prefix: string, obj: Record<string, any>) => {
@@ -117,6 +118,11 @@ const testDataDisplay = computed((): Record<string, unknown> => {
           ? '(' + JSON.stringify(value.options) + ')'
           : '';
         display[path] = 'Fake.' + value.method + opts;
+      } else if (isDateHelperDescriptor(value)) {
+        // Keep the descriptor intact so TestDataPanel renders it as its source
+        // expression (e.g. nextWeek('MM/DD/YYYY')) on a single row, instead of
+        // recursing and exploding it into dueDate.type / .kind / .offset rows.
+        display[path] = value;
       } else if (value && typeof value === 'object' && !Array.isArray(value)) {
         flatten(path, value);
       } else {

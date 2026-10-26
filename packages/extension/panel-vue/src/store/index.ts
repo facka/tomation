@@ -413,7 +413,7 @@ function setContextStore(store: Record<string, unknown>): void {
   state.contextStore = store;
 }
 
-function setResolvedTestData(data: Record<string, string | number> | null, seeds?: Record<string, number>): void {
+function setResolvedTestData(data: Record<string, unknown> | null, seeds?: Record<string, number>): void {
   state.resolvedTestData = data;
   state.resolvedDataSeeds = seeds || null;
 }

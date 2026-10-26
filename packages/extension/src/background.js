@@ -424,7 +424,12 @@ function resolveValue(value, params, contextStore) {
   // Resolve {{data.templateName.property}} tokens using the dataStore
   resolved = resolved.replace(/\{\{data\.([^}]+)\}\}/g, function (match, dataPath) {
     if (runState.dataStore && runState.dataStore.hasOwnProperty(dataPath)) {
-      return String(runState.dataStore[dataPath]);
+      var dataVal = runState.dataStore[dataPath];
+      // A stored date-helper descriptor resolves to its concrete date string.
+      if (dataVal && typeof dataVal === 'object' && dataVal.type === 'dateHelper') {
+        return String(resolveDateHelper(dataVal));
+      }
+      return String(dataVal);
     }
     console.warn('[tomation] Unknown data path "' + dataPath + '"');
     return match;
@@ -2016,6 +2021,12 @@ function resolveTemplateRecursive(prefix, obj, dataStore) {
     if (value && typeof value === 'object' && value.type === 'fake') {
       // Fake descriptor → resolve to concrete value
       dataStore[path] = resolveFake(value);
+    } else if (value && typeof value === 'object' && value.type === 'dateHelper') {
+      // Date-helper descriptor → store the descriptor itself as a single leaf
+      // (do NOT recurse/explode it into .type/.kind/.offset/.format). The panel
+      // renders it as its source expression (e.g. nextWeek('MM/DD/YYYY')), and
+      // the step-substitution path resolves it to a concrete date on demand.
+      dataStore[path] = value;
     } else if (value && typeof value === 'object' && !Array.isArray(value)) {
       // Nested object → recurse
       resolveTemplateRecursive(path, value, dataStore);
