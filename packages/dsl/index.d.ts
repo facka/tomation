@@ -76,6 +76,21 @@ export interface ElementDescriptor {
   lastRow(column: CellSelector): ElementDescriptor;
 }
 
+// --- Component Root Placeholder ---
+
+/**
+ * The deferred root token (`el`) passed into a Component factory
+ * (`Component(({ el }) => { ... })`). It is a tagged stand-in for the
+ * Root_Element, resolved per Component_Instance when `.in(root)` is called.
+ *
+ * An internal locator opts into per-instance root-scoping by chaining
+ * `.childOf(el)` against this token; the resulting descriptor compiles to a
+ * `scopeRoot` reference rather than a static same-file `childOf`.
+ */
+export interface RootPlaceholder {
+  __rootPlaceholder: true;
+}
+
 // --- Element Builders ---
 
 /**
@@ -84,7 +99,13 @@ export interface ElementDescriptor {
  */
 export interface ElementBuilder {
   where(matcher: WhereMatcher): ElementBuilder;
-  childOf(parent: ElementDescriptor): ElementBuilder;
+  /**
+   * Scope this locator beneath a parent. A static same-file element descriptor
+   * targets a concrete parent (compiled to `childOf`); the Component factory's
+   * `RootPlaceholder` (`el`) opts into deferred per-instance root-scoping
+   * (compiled to `scopeRoot` and resolved at `.in(root)` time).
+   */
+  childOf(parent: ElementDescriptor | RootPlaceholder): ElementBuilder;
   navigate(path: string): ElementBuilder;
   as(label: string): ElementDescriptor;
 }
@@ -253,6 +274,77 @@ export declare function Automation<P extends Record<string, AutomationParamValue
   name: string,
   fn: (params: P) => void
 ): AutomationDescriptor<P>;
+
+// --- Component (Component Object Model) ---
+
+/**
+ * The context object passed into a Component factory. It carries the deferred
+ * Root_Placeholder `el`, which internal locators chain `.childOf(el)` against to
+ * opt into per-instance root-scoping.
+ */
+export interface ComponentContext {
+  el: RootPlaceholder;
+}
+
+/**
+ * Maps a Component's returned members to a Component_Instance.
+ *
+ * Each `Task`-like Component_Action (a callable `TaskBuilder` / `TaskDescriptor`)
+ * is exposed as an invokable preserving its callable signature; the invocation
+ * emits a component-tagged, task-shaped step. All other members (internal element
+ * locators and anything else returned by the factory) are exposed as-is.
+ */
+export type ComponentInstance<T> = {
+  [K in keyof T]: T[K] extends TaskBuilder<infer P>
+    ? (params: P) => any
+    : T[K] extends TaskDescriptor<infer P>
+      ? (params: P) => any
+      : T[K] extends (...args: infer A) => any
+        ? (...args: A) => any
+        : T[K];
+};
+
+/**
+ * A Component definition returned by `Component(factory)`.
+ *
+ * Instantiate it with `.in(root)`, passing an explicit Root_Element descriptor,
+ * to obtain a Component_Instance whose actions are invokable and whose
+ * `.childOf(el)` locators resolve relative to that root.
+ */
+export interface ComponentDefinition<T> {
+  __component: true;
+  rootPlaceholder: RootPlaceholder;
+  members: T;
+  /**
+   * Bind the Component to an explicit Root_Element, resolving the
+   * Root_Placeholder for this instance and returning an invokable instance.
+   */
+  in(root: ElementDescriptor): ComponentInstance<T>;
+}
+
+/**
+ * Defines a reusable Component (Component Object Model).
+ *
+ * The factory receives a `{ el }` Root_Placeholder; it declares internal locators
+ * with the ordinary element DSL (optionally chaining `.childOf(el)` to opt into
+ * per-instance root-scoping) and exposes `Task`-like Component_Actions over them.
+ * The returned object's members become the Component_Instance surface after
+ * `.in(root)`.
+ *
+ * @param factory - `({ el }) => ({ ...locators, ...actions })`
+ *
+ * @example
+ * const SearchSelect = Component(({ el }) => {
+ *   const trigger = is.BUTTON.where(classIncludes('select-trigger')).childOf(el).as('Open Select')
+ *   const choose = Task((params: { query: string }) => {
+ *     Click(trigger)
+ *   }).as('Choose Option')
+ *   return { trigger, choose }
+ * })
+ * const country = SearchSelect.in(countryField)
+ * country.choose({ query: 'Argentina' })
+ */
+export declare function Component<T>(factory: (ctx: ComponentContext) => T): ComponentDefinition<T>;
 
 // --- Action Stubs ---
 

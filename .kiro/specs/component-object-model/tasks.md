@@ -16,15 +16,15 @@ The marker is the shared thread, so the ordering is: DSL primitive → compiler 
 
 ## Tasks
 
-- [ ] 1. DSL primitive: `Component` factory, deferred `.childOf(el)`, and `.in(root)`
-  - [ ] 1.1 Add the `Component(({ el }) => ...)` factory and `.in(root)` to `packages/dsl/index.js`
+- [x] 1. DSL primitive: `Component` factory, deferred `.childOf(el)`, and `.in(root)`
+  - [x] 1.1 Add the `Component(({ el }) => ...)` factory and `.in(root)` to `packages/dsl/index.js`
     - Add a `Component(factoryFn)` export that invokes the factory with a destructurable `{ el }` Root_Placeholder (a tagged deferred token distinguishable from a concrete element descriptor), captures the returned internal locators and `Task`-like actions, and returns a component value exposing `.in(root)`
     - `.in(root)` returns a Component_Instance that binds the Root_Placeholder to the passed `root` element descriptor and exposes each Component_Action as an invokable that emits a task-shaped invocation tagged component-originated (so the compiler can stamp `isComponent` + `componentName`)
     - Extend the element DSL `.childOf()` so that when its argument is the Root_Placeholder `el`, the resulting descriptor is marked as deferred-root-scoped (to compile to `scopeRoot`) rather than a static same-file `childOf`; a locator that never chains `.childOf(el)` is left unchanged (document-scoped)
     - ES5 only (`var`, function declarations, no arrow functions)
     - _Requirements: 1.2, 2.1, 2.2, 2.3, 3.1, 3.2_
 
-  - [ ] 1.2 Add `Component`, `.in(root)`, and deferred `.childOf(el)` types to `packages/dsl/index.d.ts` and `packages/dsl/globals.d.ts`
+  - [x] 1.2 Add `Component`, `.in(root)`, and deferred `.childOf(el)` types to `packages/dsl/index.d.ts` and `packages/dsl/globals.d.ts`
     - Type `Component<T>(factory: (ctx: { el: RootPlaceholder }) => T): ComponentDefinition<T>` with `ComponentDefinition<T>.in(root: ElementDescriptor): ComponentInstance<T>` preserving the actions' callable signatures
     - Overload `.childOf()` to additionally accept the `RootPlaceholder` token; expose `Component` as a global in `globals.d.ts` alongside the existing primitives
     - _Requirements: 1.2, 2.1, 3.1_
@@ -170,8 +170,8 @@ The marker is the shared thread, so the ordering is: DSL primitive → compiler 
 
 - [ ] 14. Config + playground example
   - [ ] 14.1 Add the `components` directory field to the config and resolver
-    - Add a `components` field to `tomation.config.ts` resolution alongside `pom`, `tests`, `automations`, `data`; have the compiler resolve `*.com.ts` Component_Files from it; when `components` is absent or empty, compile exactly as today with no component definitions
-    - _Requirements: 1.1, 1.4, 8.1_
+    - Add a `components` field to `tomation.config.ts` resolution alongside `pom`, `tests`, `automations`, `data`; have the compiler resolve `*.com.ts` Component_Files from it; when `components` is absent or empty, compile exactly as today with no component definitions, leaving existing POM `Task` definitions, tests, automations, and the inline/shared data flow unchanged
+    - _Requirements: 1.1, 1.4, 8.1, 8.2_
   - [ ] 14.2 Add a searchable-select component and reuse it across multiple fields in `examples/playground-tests`
     - Add a `*.com.ts` Component (searchable select: open, type query, click first result) with `.childOf(el)` on the in-root locators and a document-scoped locator for the portal list; instantiate it with `.in(root)` on two or more form fields and invoke its action from a test (including a `{{data.*}}` arg), wiring files into the existing playground spec/config (`examples/playground-tests/tomation.config.ts`, `pom`, `tests`)
     - _Requirements: 1.1, 2.1, 2.4, 3.1, 3.3, 10.2_

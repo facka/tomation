@@ -10,6 +10,8 @@ import {
   ElementBuilder,
   XPathElementBuilder,
   WhereMatcher,
+  ComponentContext,
+  ComponentDefinition,
 } from "./index";
 
 declare global {
@@ -126,4 +128,13 @@ declare global {
     name: string,
     fn: () => void
   ): { __test: true; name: string; fn: () => void };
+
+  // --- Component (Component Object Model) ---
+
+  /**
+   * Defines a reusable Component. The factory receives a `{ el }` Root_Placeholder;
+   * internal locators opt into per-instance root-scoping by chaining `.childOf(el)`.
+   * Instantiate with `.in(root)` and invoke the exposed `Task`-like actions.
+   */
+  function Component<T>(factory: (ctx: ComponentContext) => T): ComponentDefinition<T>;
 }

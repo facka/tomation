@@ -1,0 +1,36 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Add the `Component(({ el }) => ...)` factory and `.in(root)` to `packages/dsl/index.js`": [
+      {
+        "executionId": "52b06053-d004-4092-8278-4f84412f02d0",
+        "chatSessionId": "sess_e4eede95-aa42-41ae-a0df-bfb916ba6dc9",
+        "timestamp": 1793022981551
+      },
+      {
+        "executionId": "52b06053-d004-4092-8278-4f84412f02d0",
+        "chatSessionId": "sess_e4eede95-aa42-41ae-a0df-bfb916ba6dc9",
+        "timestamp": 1793023101982
+      }
+    ],
+    "1.2 Add `Component`, `.in(root)`, and deferred `.childOf(el)` types to `packages/dsl/index.d.ts` and `packages/dsl/globals.d.ts`": [
+      {
+        "executionId": "52b06053-d004-4092-8278-4f84412f02d0",
+        "chatSessionId": "sess_e4eede95-aa42-41ae-a0df-bfb916ba6dc9",
+        "timestamp": 1793023114931
+      },
+      {
+        "executionId": "52b06053-d004-4092-8278-4f84412f02d0",
+        "chatSessionId": "sess_e4eede95-aa42-41ae-a0df-bfb916ba6dc9",
+        "timestamp": 1793023203346
+      }
+    ],
+    "1. DSL primitive: `Component` factory, deferred `.childOf(el)`, and `.in(root)`": [
+      {
+        "executionId": "52b06053-d004-4092-8278-4f84412f02d0",
+        "chatSessionId": "sess_e4eede95-aa42-41ae-a0df-bfb916ba6dc9",
+        "timestamp": 1793023203525
+      }
+    ]
+  }
+}
