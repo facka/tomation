@@ -48,13 +48,13 @@ The marker is the shared thread, so the ordering is: DSL primitive → compiler 
     - Factory yields a definition with internal locators (opted-in vs document-scoped) and actions; `.in(root)` binds the root; `inst.action(arg)` parses to a component invocation; two instances bind distinct roots; a `{{data.*}}` arg survives into the invocation params
     - _Requirements: 1.2, 1.3, 2.1, 2.2, 2.3, 2.4, 3.1, 3.3_
 
-- [ ] 3. Compiler flatten: emit `scopeRoot` and the component marker in `packages/compiler/src/flattener.js`
-  - [ ] 3.1 Emit `scopeRoot` only on opted-in internal locators
+- [x] 3. Compiler flatten: emit `scopeRoot` and the component marker in `packages/compiler/src/flattener.js`
+  - [x] 3.1 Emit `scopeRoot` only on opted-in internal locators
     - When flattening a Component_Instance's internal locators into `pageElements`, emit a per-instance `scopeRoot` reference (resolved to that instance's Root_Element) ONLY on descriptors that chained `.childOf(el)`; emit locators that did not chain `.childOf(el)` unchanged and document-scoped (no `scopeRoot`)
     - Keep `scopeRoot` distinct from a static same-file `childOf` so existing static `childOf` emission is unaffected; emit independent `scopeRoot` references for multiple instances of the same component
     - _Requirements: 2.2, 2.3, 2.4, 4.1, 4.4_
 
-  - [ ] 3.2 Flatten a Component_Action into a task-shaped step carrying the marker
+  - [x] 3.2 Flatten a Component_Action into a task-shaped step carrying the marker
     - Represent each invoked Component_Action as a `{ action: 'task', name, params }` entry annotated with `isComponent: true` and `componentName`; attach `{{data.*}}` templates to the action's params by reusing `extractReferencedTemplateNames` exactly as for ordinary tasks
     - _Requirements: 3.1, 3.2, 3.3, 5.1_
 

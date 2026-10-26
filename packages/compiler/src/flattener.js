@@ -184,16 +184,213 @@ function extractReferencedTemplateNames(steps) {
 }
 
 /**
+ * Transform component-action invocation steps into their public, marker-bearing
+ * form, recursively (including `if.then` branches).
+ *
+ * Component-action invocations are emitted by the parser (parser.js, extractStep)
+ * as task-shaped steps carrying an INTERNAL marker:
+ *   { action: 'task', name, __componentInvocation: true, componentName, instanceName, params? }
+ *
+ * Task 3.2 turns that internal marker into the PUBLIC data-model marker the
+ * runtime/panel consume: the internal `__componentInvocation` and `instanceName`
+ * fields are stripped and the step is annotated with `isComponent: true` and
+ * `componentName`. `name` and `params` are preserved verbatim, so the existing
+ * `{{data.*}}` template attachment (extractReferencedTemplateNames) keeps working
+ * on the step's `params` exactly as for an ordinary task invocation.
+ *
+ * Purely additive and non-destructive: a step without `__componentInvocation` is
+ * returned unchanged (same reference), so component-free input is a no-op and the
+ * output is byte-identical to before. ES5 only.
+ *
+ * @param {Array} steps - step array (test/automation body)
+ * @returns {Array} a new step array with component invocations marked; or the
+ *                  same array reference when there was nothing to transform
+ */
+function markComponentSteps(steps) {
+  if (!Array.isArray(steps)) return steps;
+
+  var changed = false;
+  var out = [];
+
+  for (var i = 0; i < steps.length; i++) {
+    var step = steps[i];
+    if (!step || typeof step !== 'object') {
+      out.push(step);
+      continue;
+    }
+
+    // Recurse into conditional branches first so nested component invocations
+    // (inside an `if.then`) are marked too.
+    var nestedThen = null;
+    if (step.action === 'if' && Array.isArray(step.then)) {
+      nestedThen = markComponentSteps(step.then);
+    }
+
+    if (step.__componentInvocation === true) {
+      changed = true;
+      // Rebuild the step, stripping the internal fields and adding the public
+      // marker. Preserve field order: keep action/name first, then params, then
+      // the marker fields.
+      var marked = {};
+      var keys = Object.keys(step);
+      for (var k = 0; k < keys.length; k++) {
+        var key = keys[k];
+        if (key === '__componentInvocation' || key === 'instanceName' || key === 'componentName') {
+          continue;
+        }
+        marked[key] = step[key];
+      }
+      marked.isComponent = true;
+      if (typeof step.componentName === 'string') {
+        marked.componentName = step.componentName;
+      }
+      if (nestedThen !== null) {
+        marked.then = nestedThen;
+      }
+      out.push(marked);
+      continue;
+    }
+
+    // Non-component step: only clone if a nested branch changed.
+    if (nestedThen !== null && nestedThen !== step.then) {
+      changed = true;
+      var copy = {};
+      var ck = Object.keys(step);
+      for (var ci = 0; ci < ck.length; ci++) {
+        copy[ck[ci]] = step[ck[ci]];
+      }
+      copy.then = nestedThen;
+      out.push(copy);
+      continue;
+    }
+
+    out.push(step);
+  }
+
+  return changed ? out : steps;
+}
+
+/**
+ * Emit a Component_Instance's internal locators into a flat pageElements map,
+ * applying per-instance root scoping (task 3.1).
+ *
+ * For each instance, its component definition's internal locators are emitted as
+ * page-element entries keyed PER INSTANCE so that multiple instances of the same
+ * component never collide. The key scheme is:
+ *
+ *   Component__<componentName>__<instanceName>__<locatorVariableName>
+ *
+ * The `Component__` prefix keeps these keys in a namespace that cannot collide
+ * with POM element keys (POM keys are `<FileNamespace>__<var>`, and a POM file
+ * namespace is a PascalCase file name that never equals the literal `Component`
+ * followed by another `__` segment pattern used here). Incorporating both the
+ * component name AND the instance name guarantees N instances of one component
+ * produce N independent entries.
+ *
+ * Scoping per locator (mutually exclusive):
+ *   - `rootScoped: true` (opted in via `.childOf(el)`): emit a per-instance
+ *     `scopeRoot` resolved to THIS instance's Root_Element (`instance.root`,
+ *     the element reference produced by extractElementRef). Each instance gets
+ *     its own independent `scopeRoot` — no cross-instance sharing. `scopeRoot`
+ *     is emitted as its own field, distinct from `childOf`, so static same-file
+ *     `childOf` emission is unaffected.
+ *   - static `childOf: <name>`: emitted unchanged (preserve `childOf`).
+ *   - document-scoped (neither flag): emitted unchanged with no `scopeRoot`.
+ *
+ * `scopeRoot` is emitted as the raw instance root element reference (a string key
+ * such as `countryField` or `Form__countryField`, exactly the shape a test step
+ * `target` carries before namespacing). Runtime `scopeRoot` resolution (task 6.2)
+ * and any namespacing live outside the flattener's task-3 scope; here we emit the
+ * raw shape, consistent with how test steps reference elements pre-namespacing.
+ *
+ * Purely additive: called only when component/instance data is present, so a
+ * component-free project never enters this path and its output is byte-identical.
+ * ES5 only.
+ *
+ * @param {object} pageElements - mutable target map to merge entries into
+ * @param {Array}  componentFiles - array of ParsedFile objects carrying
+ *                 `.components` (ComponentDef[]) and `.instances` (InstanceDef[])
+ */
+function emitComponentPageElements(pageElements, componentFiles) {
+  if (!pageElements || !Array.isArray(componentFiles)) return;
+
+  for (var fi = 0; fi < componentFiles.length; fi++) {
+    var file = componentFiles[fi];
+    if (!file || !Array.isArray(file.components) || !Array.isArray(file.instances)) {
+      continue;
+    }
+    if (file.components.length === 0 || file.instances.length === 0) {
+      continue;
+    }
+
+    // Build a component-name -> definition lookup for this file.
+    var byName = {};
+    for (var ci = 0; ci < file.components.length; ci++) {
+      var comp = file.components[ci];
+      if (comp && comp.name) {
+        byName[comp.name] = comp;
+      }
+    }
+
+    for (var ii = 0; ii < file.instances.length; ii++) {
+      var instance = file.instances[ii];
+      if (!instance || !instance.name || !instance.component) continue;
+
+      var definition = byName[instance.component];
+      if (!definition || !Array.isArray(definition.locators)) continue;
+
+      for (var li = 0; li < definition.locators.length; li++) {
+        var locator = definition.locators[li];
+        if (!locator || !locator.variableName) continue;
+
+        var key =
+          'Component__' + instance.component + '__' + instance.name + '__' + locator.variableName;
+
+        var entry = { tag: locator.tag };
+        if (locator.label !== undefined) {
+          entry.label = locator.label;
+        }
+        entry.where = locator.where || {};
+        if (locator.xpath !== undefined) {
+          entry.xpath = locator.xpath;
+        }
+        if (locator.navigate !== undefined) {
+          entry.navigate = locator.navigate;
+        }
+
+        if (locator.rootScoped === true) {
+          // Opted-in: per-instance scopeRoot resolved to THIS instance's root.
+          // Keep it distinct from `childOf` (do not emit as childOf).
+          entry.scopeRoot = instance.root;
+        } else if (locator.childOf !== undefined) {
+          // Static same-file childOf: emit unchanged.
+          entry.childOf = locator.childOf;
+        }
+        // Document-scoped: neither branch — no scopeRoot, no childOf.
+
+        pageElements[key] = entry;
+      }
+    }
+  }
+}
+
+/**
  * Merge all POM results and test files into a flat spec-shaped object.
  *
  * @param {Array<object>} pomResults       - Array of PomResult from extractPom()
  * @param {Array<object>} parsedTestFiles  - Array of ParsedFile (type 'test') from parseFile()
  * @param {object}        [meta]           - Optional metadata; defaults to { name: "Untitled", url: "", description: "" }. Supports meta.urls as an array of URL strings.
- * @param {object}        [options]        - Optional options { cwd: string }
+ * @param {object}        [options]        - Optional options { cwd: string, componentFiles: Array }
  * @returns {object} Spec-shaped object
  */
 function flattenSpec(pomResults, parsedTestFiles, meta, options) {
   var cwd = (options && options.cwd) || '';
+  // Task 3.1: raw ParsedFiles for component (*.com.ts) files, carrying
+  // `.components` / `.instances`. Optional and defaults to empty, so a
+  // component-free project (and any caller that does not pass it) behaves
+  // exactly as before. See the wiring note in bin/tomation.js — these are the
+  // pom-type ParsedFiles whose component/instance data extractPom drops.
+  var componentFiles = (options && Array.isArray(options.componentFiles)) ? options.componentFiles : [];
   // Resolve meta: use provided value, falling back to defaults field-by-field
   var resolvedMeta = {
     name:        (meta && typeof meta.name        === 'string') ? meta.name        : DEFAULT_META.name,
@@ -244,6 +441,12 @@ function flattenSpec(pomResults, parsedTestFiles, meta, options) {
       }
     }
   }
+
+  // --- Task 3.1: emit component instances' internal locators ---
+  // Additive: a no-op unless component/instance data is supplied. Each instance
+  // contributes per-instance page-element entries, with a `scopeRoot` only on
+  // locators that opted in via `.childOf(el)`.
+  emitComponentPageElements(pageElements, componentFiles);
 
   // --- Merge tasks from all POM results ---
   var tasks = {};
@@ -311,6 +514,15 @@ function flattenSpec(pomResults, parsedTestFiles, meta, options) {
           testOut.sourceFile = computeSourcePath(testFile.filePath, cwd);
         }
 
+        // Task 3.2: convert any component-action invocation steps from their
+        // internal (__componentInvocation) form into the public isComponent /
+        // componentName marker. No-op (same reference) when there are none, so
+        // component-free tests are unaffected. Done BEFORE data attachment so
+        // extractReferencedTemplateNames still sees the (unchanged) params.
+        if (Array.isArray(testOut.steps)) {
+          testOut.steps = markComponentSteps(testOut.steps);
+        }
+
         // Attach data templates to the test if it references them
         if (hasAnyTemplates && testOut.steps) {
           var referencedNames = extractReferencedTemplateNames(testOut.steps);
@@ -363,6 +575,12 @@ function flattenSpec(pomResults, parsedTestFiles, meta, options) {
         // Include source file path for display labeling (path/filename: automationName)
         if (automationFile.filePath) {
           automationOut.sourceFile = computeSourcePath(automationFile.filePath, cwd);
+        }
+
+        // Task 3.2: mark component-action invocations in automation bodies, same
+        // as for tests. No-op for component-free automations.
+        if (Array.isArray(automationOut.steps)) {
+          automationOut.steps = markComponentSteps(automationOut.steps);
         }
 
         // Attach data templates to the automation if it references them.
@@ -424,4 +642,11 @@ function flattenSpec(pomResults, parsedTestFiles, meta, options) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { flattenSpec, collectDataTemplates, stepsReferenceData, extractReferencedTemplateNames };
+module.exports = {
+  flattenSpec,
+  collectDataTemplates,
+  stepsReferenceData,
+  extractReferencedTemplateNames,
+  markComponentSteps,
+  emitComponentPageElements,
+};

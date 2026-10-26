@@ -62,6 +62,37 @@
         "chatSessionId": "sess_78128172-138b-4da7-b64e-cf59dc41ac22",
         "timestamp": 1793025108360
       }
+    ],
+    "3.1 Emit `scopeRoot` only on opted-in internal locators": [
+      {
+        "executionId": "6a56aa68-5883-4e17-be14-6b4640dc8013",
+        "chatSessionId": "sess_c8dbba8d-b18c-46de-b36f-8f2802b529b9",
+        "timestamp": 1793026472735
+      },
+      {
+        "executionId": "6a56aa68-5883-4e17-be14-6b4640dc8013",
+        "chatSessionId": "sess_c8dbba8d-b18c-46de-b36f-8f2802b529b9",
+        "timestamp": 1793026738852
+      }
+    ],
+    "3.2 Flatten a Component_Action into a task-shaped step carrying the marker": [
+      {
+        "executionId": "6a56aa68-5883-4e17-be14-6b4640dc8013",
+        "chatSessionId": "sess_c8dbba8d-b18c-46de-b36f-8f2802b529b9",
+        "timestamp": 1793026476533
+      },
+      {
+        "executionId": "6a56aa68-5883-4e17-be14-6b4640dc8013",
+        "chatSessionId": "sess_c8dbba8d-b18c-46de-b36f-8f2802b529b9",
+        "timestamp": 1793026739751
+      }
+    ],
+    "3. Compiler flatten: emit `scopeRoot` and the component marker in `packages/compiler/src/flattener.js`": [
+      {
+        "executionId": "6a56aa68-5883-4e17-be14-6b4640dc8013",
+        "chatSessionId": "sess_c8dbba8d-b18c-46de-b36f-8f2802b529b9",
+        "timestamp": 1793026739920
+      }
     ]
   }
 }
