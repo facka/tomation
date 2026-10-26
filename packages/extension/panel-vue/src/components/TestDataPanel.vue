@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { isDateHelperDescriptor, formatDateHelper } from '@/logic/dateHelperDisplay';
+import { isDateHelperDescriptor, formatDateHelperWithResolved } from '@/logic/dateHelperDisplay';
 
 const props = defineProps<{
   data: Record<string, unknown>;
@@ -62,9 +62,10 @@ const selectedGroupJson = computed(() => {
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) return '';
   // A date-helper descriptor renders as its readable source expression
-  // (e.g. nextWeek('MM/DD/YYYY')) instead of its exploded internal properties.
+  // followed by the resolved date it produces today, e.g.
+  // nextWeek('MM/DD/YYYY') → 11/02/2026 — instead of its exploded properties.
   if (isDateHelperDescriptor(value)) {
-    return formatDateHelper(value);
+    return formatDateHelperWithResolved(value);
   }
   if (typeof value === 'object') {
     try {

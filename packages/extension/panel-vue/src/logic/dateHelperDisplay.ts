@@ -91,3 +91,79 @@ export function formatDateHelper(descriptor: DateHelperDescriptor): string {
 
   return 'dateHelper(...)';
 }
+
+/**
+ * Apply a tomation date format string to a Date. Mirrors the runtime
+ * `formatDate` in the extension background script (same token set and
+ * longest-first matching) so the panel preview matches the value used at run
+ * time. Defaults to `YYYY-MM-DD` when no format is given.
+ */
+function formatDate(date: Date, formatStr?: string): string {
+  const fmt = formatStr === undefined ? 'YYYY-MM-DD' : formatStr;
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+
+  const tokens: Record<string, string> = {
+    YYYY: String(year),
+    MM: (month < 10 ? '0' : '') + month,
+    DD: (day < 10 ? '0' : '') + day,
+    M: String(month),
+    D: String(day),
+  };
+  const tokenNames = ['YYYY', 'MM', 'DD', 'M', 'D'];
+
+  let result = '';
+  let i = 0;
+  while (i < fmt.length) {
+    let matched = false;
+    for (const token of tokenNames) {
+      if (fmt.substr(i, token.length) === token) {
+        result += tokens[token];
+        i += token.length;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      // Pass through separators and any unrecognized alphabetic run verbatim.
+      result += fmt.charAt(i);
+      i += 1;
+    }
+  }
+  return result;
+}
+
+/**
+ * Resolve a date-helper descriptor to its concrete formatted date string,
+ * evaluated against the current date. Mirrors the runtime `resolveDateHelper`
+ * so the panel preview matches what a run would produce today.
+ */
+export function resolveDateHelperPreview(descriptor: DateHelperDescriptor): string {
+  const now = new Date();
+  let resolved: Date;
+
+  if (descriptor.kind === 'dayOffset') {
+    resolved = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (descriptor.offset ?? 0));
+  } else if (descriptor.kind === 'monthBoundary') {
+    let targetMonth = now.getMonth() + (descriptor.monthOffset ?? 0);
+    let targetYear = now.getFullYear();
+    targetYear += Math.floor(targetMonth / 12);
+    targetMonth = ((targetMonth % 12) + 12) % 12;
+    resolved = descriptor.boundary === 'first'
+      ? new Date(targetYear, targetMonth, 1)
+      : new Date(targetYear, targetMonth + 1, 0);
+  } else {
+    resolved = now;
+  }
+
+  return formatDate(resolved, descriptor.format);
+}
+
+/**
+ * Format a date-helper descriptor as its source expression followed by the
+ * resolved date it produces today, e.g. `nextWeek('MM/DD/YYYY') → 11/02/2026`.
+ */
+export function formatDateHelperWithResolved(descriptor: DateHelperDescriptor): string {
+  return formatDateHelper(descriptor) + ' → ' + resolveDateHelperPreview(descriptor);
+}
