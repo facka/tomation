@@ -33,13 +33,13 @@ The marker is the shared thread, so the ordering is: DSL primitive → compiler 
     - `Component(({ el }) => ...)` returns a definition with `.in(root)`; `.in(root)` exposes the actions; a locator chaining `.childOf(el)` is marked deferred-root-scoped while a locator without it is unchanged; an action invocation produces a component-tagged task-shaped value
     - _Requirements: 1.2, 2.1, 2.2, 2.3, 3.1, 3.2_
 
-- [ ] 2. Compiler parse: component factory, instances, and action invocations in `packages/compiler/src/parser.js`
-  - [ ] 2.1 Parse the `Component(({ el }) => { ... })` factory into a component definition
+- [x] 2. Compiler parse: component factory, instances, and action invocations in `packages/compiler/src/parser.js`
+  - [x] 2.1 Parse the `Component(({ el }) => { ... })` factory into a component definition
     - Detect the `Component(...)` call, read the destructured `{ el }` Root_Placeholder name, and walk the factory body to collect internal locators (via the existing element-chain walk) and `Task`-like Component_Actions (reusing the existing task step-extraction path so actions allow the same step kinds as `Task` — `Click`, `Type`, `Select`, assertions)
     - For each internal locator, distinguish a `.childOf(<el>)` chain that targets the Root_Placeholder (mark it deferred-root-scoped) from a static same-file `childOf` (by `where.id` or element key, left untouched) and from no `childOf` (document-scoped); ES5 only
     - _Requirements: 1.2, 1.3, 2.2, 2.3_
 
-  - [ ] 2.2 Parse `.in(root)` instantiation and component-action invocations
+  - [x] 2.2 Parse `.in(root)` instantiation and component-action invocations
     - Parse `const <inst> = <Component>.in(<rootElement>)` into a Component_Instance binding the Root_Placeholder to the `<rootElement>` descriptor; parse `<inst>.<action>(<args>)` in test/automation bodies into an invocation carrying the component name, action name, and resolved args (reuse `extractTaskInvocationParams` so `{{data.*}}`/`{{ctx.*}}` tokens pass through unchanged)
     - When two or more instances of the same component bind different roots in one file, keep each instance's root binding independent so per-instance `scopeRoot` references do not collide
     - _Requirements: 2.1, 2.4, 3.1, 3.3_

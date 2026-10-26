@@ -31,6 +31,37 @@
         "chatSessionId": "sess_e4eede95-aa42-41ae-a0df-bfb916ba6dc9",
         "timestamp": 1793023203525
       }
+    ],
+    "2.1 Parse the `Component(({ el }) => { ... })` factory into a component definition": [
+      {
+        "executionId": "c07bd6ed-cc4e-4032-85c6-c5d7271acb52",
+        "chatSessionId": "sess_78128172-138b-4da7-b64e-cf59dc41ac22",
+        "timestamp": 1793024209010
+      },
+      {
+        "executionId": "c07bd6ed-cc4e-4032-85c6-c5d7271acb52",
+        "chatSessionId": "sess_78128172-138b-4da7-b64e-cf59dc41ac22",
+        "timestamp": 1793024738026
+      }
+    ],
+    "2.2 Parse `.in(root)` instantiation and component-action invocations": [
+      {
+        "executionId": "c07bd6ed-cc4e-4032-85c6-c5d7271acb52",
+        "chatSessionId": "sess_78128172-138b-4da7-b64e-cf59dc41ac22",
+        "timestamp": 1793024741965
+      },
+      {
+        "executionId": "c07bd6ed-cc4e-4032-85c6-c5d7271acb52",
+        "chatSessionId": "sess_78128172-138b-4da7-b64e-cf59dc41ac22",
+        "timestamp": 1793025108241
+      }
+    ],
+    "2. Compiler parse: component factory, instances, and action invocations in `packages/compiler/src/parser.js`": [
+      {
+        "executionId": "c07bd6ed-cc4e-4032-85c6-c5d7271acb52",
+        "chatSessionId": "sess_78128172-138b-4da7-b64e-cf59dc41ac22",
+        "timestamp": 1793025108360
+      }
     ]
   }
 }

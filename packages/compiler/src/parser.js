@@ -21,6 +21,7 @@
  *   tasks: TaskDef[],        // task declarations
  *   tests: TestDef[],        // test declarations
  *   automations: AutomationDef[], // automation declarations
+ *   components: ComponentDef[], // Component(({ el }) => ...) definitions (COM)
  *   error: null | { message: string, line: number }
  *   warnings: Array<{ message: string, filePath: string, line: number }>
  * }
@@ -2371,7 +2372,7 @@ function extractAssertRequestStep(exprNode, filePath, warnings, constBindings) {
   return { action: 'assertRequest', matcher: matcher, expectation: expectation };
 }
 
-function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindings, dataVars) {
+function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindings, dataVars, componentInstances) {
   if (!exprNode) return null;
   if (!warnings) warnings = [];
   if (!constBindings) constBindings = {};
@@ -2554,6 +2555,45 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
         obj && obj.type === 'Identifier' &&
         prop && prop.type === 'Identifier'
       ) {
+        // Component-action invocation: `<inst>.<action>(<args>)` where `<inst>`
+        // is a known Component_Instance (e.g. `country.choose('Argentina')`).
+        // Emit a task-shaped step carrying the originating component name, action
+        // name, and instance name so the flattener (task 3.2) can stamp
+        // `isComponent: true` + `componentName`. Reuses `extractTaskInvocationParams`
+        // so `{{data.*}}`/`{{ctx.*}}` tokens pass through unchanged, exactly as for
+        // ordinary Task invocations. A `foo.bar()` whose object is NOT a known
+        // instance falls through to the existing `PageName.taskName(...)` handling
+        // below, so non-component calls behave exactly as before.
+        if (componentInstances && componentInstances.has && componentInstances.has(obj.name)) {
+          const instance = componentInstances.get(obj.name);
+          const actionName = prop.name;
+          const compStep = {
+            action: 'task',
+            name: actionName,
+            __componentInvocation: true,
+            componentName: instance.component,
+            instanceName: obj.name,
+          };
+          // Resolve arguments. The canonical form is a single ObjectExpression
+          // (`choose({ query: 'x' })`); reuse the shared param extractor so data
+          // and context tokens survive. A single positional arg
+          // (`choose('Argentina')` / `choose(user.country)`) is normalized to a
+          // `{ value }` param using the same value-resolution path so tokens are
+          // preserved identically to Task params.
+          const compArgs = exprNode.arguments || [];
+          const firstArg = compArgs.length >= 1 ? compArgs[0] : null;
+          if (firstArg && firstArg.type === 'ObjectExpression') {
+            const params = extractTaskInvocationParams(firstArg, dataVars, constBindings, filePath, warnings);
+            if (params && Object.keys(params).length > 0) compStep.params = params;
+          } else if (firstArg) {
+            const value = extractStringOrTemplate(firstArg, dataVars, constBindings, filePath, warnings);
+            if (value !== null) {
+              compStep.params = { value: value };
+            }
+          }
+          return compStep;
+        }
+
         const taskName = obj.name + '__' + prop.name;
         const step = { action: 'task', name: taskName };
         // Optional params object
@@ -3233,7 +3273,7 @@ function extractCondition(testNode, trackedParams, constBindings, filePath) {
  * @param {object} [constBindings] - const object bindings map for member expression resolution
  * @returns {object|null} conditional step or null if condition is unsupported
  */
-function extractIfStep(stmt, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars) {
+function extractIfStep(stmt, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars, componentInstances) {
   if (!stmt || stmt.type !== 'IfStatement') return null;
 
   // Warn about else blocks (not supported)
@@ -3263,7 +3303,7 @@ function extractIfStep(stmt, filePath, trackedParams, warnings, source, declared
   // Recursively extract steps from the if-block body
   const consequent = stmt.consequent;
   const body = consequent && consequent.type === 'BlockStatement' ? consequent : null;
-  const thenSteps = body ? extractSteps(body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars) : [];
+  const thenSteps = body ? extractSteps(body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars, componentInstances) : [];
 
   if (thenSteps.length === 0) return null;
 
@@ -3285,7 +3325,7 @@ function extractIfStep(stmt, filePath, trackedParams, warnings, source, declared
  * @param {Map<string, { dataName: string, template: object|null }>} [dataVars] - data variable map
  * @returns {object|null} conditional step or null if the pattern is invalid
  */
-function extractWhenStep(exprNode, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars) {
+function extractWhenStep(exprNode, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars, componentInstances) {
   if (!exprNode || exprNode.type !== 'CallExpression') return null;
   if (!exprNode.callee || exprNode.callee.type !== 'Identifier' || exprNode.callee.name !== 'When') return null;
 
@@ -3324,10 +3364,10 @@ function extractWhenStep(exprNode, filePath, trackedParams, warnings, source, de
   // Function body may be a BlockStatement (() => { ... }) or a single expression (() => Click(x))
   let thenSteps = [];
   if (bodyNode.body && bodyNode.body.type === 'BlockStatement') {
-    thenSteps = extractSteps(bodyNode.body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars);
+    thenSteps = extractSteps(bodyNode.body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars, componentInstances);
   } else if (bodyNode.body) {
     // Concise arrow body: () => Click(x) — wrap the single expression as a step
-    const singleStep = extractStep(bodyNode.body, filePath, declaredTaskNames, warnings, constBindings, dataVars);
+    const singleStep = extractStep(bodyNode.body, filePath, declaredTaskNames, warnings, constBindings, dataVars, componentInstances);
     if (singleStep) thenSteps = [singleStep];
   }
 
@@ -3351,7 +3391,7 @@ function extractWhenStep(exprNode, filePath, trackedParams, warnings, source, de
  * @param {object} [constBindings] - const object bindings map for member expression resolution
  * @returns {Array} array of step objects
  */
-function extractSteps(body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars) {
+function extractSteps(body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars, componentInstances) {
   if (!body || body.type !== 'BlockStatement') return [];
   if (!trackedParams) trackedParams = new Set();
   if (!warnings) warnings = [];
@@ -3380,7 +3420,7 @@ function extractSteps(body, filePath, trackedParams, warnings, source, declaredT
 
     // Handle if-statements → conditional steps
     if (stmt.type === 'IfStatement') {
-      const ifStep = extractIfStep(stmt, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars);
+      const ifStep = extractIfStep(stmt, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars, componentInstances);
       if (ifStep) {
         steps.push(ifStep);
       }
@@ -3396,7 +3436,7 @@ function extractSteps(body, filePath, trackedParams, warnings, source, declaredT
       stmt.expression.callee.type === 'Identifier' &&
       stmt.expression.callee.name === 'When'
     ) {
-      const whenStep = extractWhenStep(stmt.expression, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars);
+      const whenStep = extractWhenStep(stmt.expression, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars, componentInstances);
       if (whenStep) {
         steps.push(whenStep);
       }
@@ -3405,7 +3445,7 @@ function extractSteps(body, filePath, trackedParams, warnings, source, declaredT
 
     // Process expression statements
     if (stmt.type === 'ExpressionStatement') {
-      const step = extractStep(stmt.expression, filePath, declaredTaskNames, warnings, constBindings, dataVars);
+      const step = extractStep(stmt.expression, filePath, declaredTaskNames, warnings, constBindings, dataVars, componentInstances);
       if (step) {
         steps.push(step);
       } else {
@@ -3715,7 +3755,7 @@ function mapTypeNode(typeNode, paramName, filePath, sourceFile, warnings) {
  * @param {Set<string>} [declaredTaskNames] - task names declared in this file
  * @returns {{ task: object|null, error: object|null, warnings: Array }}
  */
-function extractTask(declarator, filePath, source, declaredTaskNames, constBindings, dataVars) {
+function extractTask(declarator, filePath, source, declaredTaskNames, constBindings, dataVars, componentInstances) {
   if (!declarator || declarator.type !== 'VariableDeclarator') return { task: null, error: null };
   if (!declarator.init) return { task: null, error: null };
 
@@ -3822,7 +3862,7 @@ function extractTask(declarator, filePath, source, declaredTaskNames, constBindi
   // Extract steps from the function body
   const warnings = [];
   const steps = fn.body && fn.body.type === 'BlockStatement'
-    ? extractSteps(fn.body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars)
+    ? extractSteps(fn.body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars, componentInstances)
     : [];
 
   return {
@@ -3848,7 +3888,7 @@ function extractTask(declarator, filePath, source, declaredTaskNames, constBindi
  * @param {Set<string>} [declaredTaskNames] - task names declared in this file
  * @returns {{ test: object|null, error: object|null }}
  */
-function extractTest(node, filePath, source, declaredTaskNames, constBindings, dataVars) {
+function extractTest(node, filePath, source, declaredTaskNames, constBindings, dataVars, componentInstances) {
   if (!node || node.type !== 'CallExpression') return { test: null, error: null };
 
   const callee = node.callee;
@@ -3907,7 +3947,7 @@ function extractTest(node, filePath, source, declaredTaskNames, constBindings, d
   // Extract steps from the function body
   const warnings = [];
   const steps = fn.body && fn.body.type === 'BlockStatement'
-    ? extractSteps(fn.body, filePath, new Set(), warnings, source, declaredTaskNames, constBindings, dataVars)
+    ? extractSteps(fn.body, filePath, new Set(), warnings, source, declaredTaskNames, constBindings, dataVars, componentInstances)
     : [];
 
   return {
@@ -3937,7 +3977,7 @@ function extractTest(node, filePath, source, declaredTaskNames, constBindings, d
  * @param {Set<string>} [declaredTaskNames] - task names declared in this file
  * @returns {{ automation: object|null, error: object|null, warnings: Array }}
  */
-function extractAutomation(declarator, filePath, source, rawSource, declaredTaskNames, constBindings, dataVars) {
+function extractAutomation(declarator, filePath, source, rawSource, declaredTaskNames, constBindings, dataVars, componentInstances) {
   if (!declarator || declarator.type !== 'VariableDeclarator') return { automation: null, error: null, warnings: [] };
   if (!declarator.init) return { automation: null, error: null, warnings: [] };
 
@@ -4017,7 +4057,7 @@ function extractAutomation(declarator, filePath, source, rawSource, declaredTask
 
   // Extract steps from the function body
   var steps = fn.body && fn.body.type === 'BlockStatement'
-    ? extractSteps(fn.body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars)
+    ? extractSteps(fn.body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars, componentInstances)
     : [];
 
   // --- Validation warnings ---
@@ -4063,6 +4103,243 @@ function extractAutomation(declarator, filePath, source, rawSource, declaredTask
 }
 
 // ---------------------------------------------------------------------------
+// Component (Component Object Model) extraction
+// Requirements: 1.2, 1.3, 2.2, 2.3
+// ---------------------------------------------------------------------------
+
+/**
+ * Read the Root_Placeholder parameter name from a Component factory function's
+ * first parameter. The authored factory is `Component(({ el }) => { ... })`; after
+ * type stripping and acorn parsing the `({ el })` destructuring surfaces as an
+ * ObjectPattern param. This returns the first destructured property name (e.g.
+ * `el`) so `.childOf(<name>)` chains that target the Root_Placeholder can be
+ * distinguished from a static same-file `.childOf(parent)`.
+ *
+ * @param {object} fn - ArrowFunctionExpression / FunctionExpression node
+ * @returns {string|null} the Root_Placeholder param name, or null if absent
+ */
+function extractRootPlaceholderName(fn) {
+  if (!fn || !fn.params || fn.params.length === 0) return null;
+  var first = fn.params[0];
+  if (!first || first.type !== 'ObjectPattern') return null;
+  for (var i = 0; i < first.properties.length; i++) {
+    var prop = first.properties[i];
+    if (prop.type === 'Property' && prop.key && prop.key.type === 'Identifier') {
+      return prop.key.name;
+    }
+  }
+  return null;
+}
+
+/**
+ * Extract a Component definition from a VariableDeclarator node matching:
+ *   const SearchSelect = Component(({ el }) => { ...; return { trigger, choose } })
+ *
+ * In authored form a Component factory is usually bound to a const and re-exported
+ * (e.g. `export default { SearchSelect }`); the binding/declarator name is used as
+ * the Component_Name. The factory body holds internal locators declared with the
+ * ordinary element DSL (reusing `extractElement`) and `Task`-like Component_Actions
+ * (reusing `extractTask`, so actions allow the same step kinds a `Task` allows).
+ *
+ * Each internal locator is classified into exactly one scoping kind so the flattener
+ * can emit a per-instance `scopeRoot` only for the opted-in locators:
+ *   - deferred-root-scoped (`rootScoped: true`): the locator chained `.childOf(<el>)`
+ *     against the Root_Placeholder (`extractElement` recorded `childOf === <rootName>`).
+ *     The static `childOf` is stripped and replaced with the `rootScoped` flag.
+ *   - static same-file childOf (`childOf: <name>`): left untouched for the existing
+ *     `where.id`/element-key validation path.
+ *   - document-scoped: neither `rootScoped` nor `childOf`.
+ *
+ * This is purely additive — it does not change element/task/test/automation
+ * extraction behavior. ES5 only.
+ *
+ * @param {object} declarator - VariableDeclarator AST node
+ * @param {string} filePath - current file path for error reporting
+ * @param {string} source - original source for snippet extraction (task steps)
+ * @param {object} [constBindings] - const/enum bindings map
+ * @returns {{ component: object|null, error: object|null, warnings: Array }}
+ */
+function extractComponent(declarator, filePath, source, constBindings) {
+  if (!declarator || declarator.type !== 'VariableDeclarator') {
+    return { component: null, error: null, warnings: [] };
+  }
+  if (!declarator.init || declarator.init.type !== 'CallExpression') {
+    return { component: null, error: null, warnings: [] };
+  }
+
+  // Detect the `Component(...)` call. Only the bare-identifier form is a Component
+  // factory; anything else is not a Component definition.
+  var callNode = declarator.init;
+  if (
+    !callNode.callee ||
+    callNode.callee.type !== 'Identifier' ||
+    callNode.callee.name !== 'Component'
+  ) {
+    return { component: null, error: null, warnings: [] };
+  }
+
+  var variableName = declarator.id && declarator.id.type === 'Identifier' ? declarator.id.name : null;
+  if (!variableName) return { component: null, error: null, warnings: [] };
+
+  var warnings = [];
+  var args = callNode.arguments || [];
+
+  // The factory argument must be a function.
+  var fn = args.length >= 1 ? args[0] : null;
+  if (!fn || (fn.type !== 'ArrowFunctionExpression' && fn.type !== 'FunctionExpression')) {
+    return {
+      component: null,
+      error: {
+        message: 'Component() at ' + filePath + ':' + lineOf(callNode) + ' requires a factory function argument',
+        filePath: filePath,
+        line: lineOf(callNode),
+      },
+      warnings: warnings,
+    };
+  }
+
+  // Read the destructured `{ el }` Root_Placeholder param name.
+  var rootName = extractRootPlaceholderName(fn);
+
+  // Walk the factory body's const declarations to collect internal locators
+  // (via the existing element-chain walk) and `Task`-like Component_Actions
+  // (via the existing task step-extraction path).
+  var locators = [];
+  var actions = [];
+
+  if (fn.body && fn.body.type === 'BlockStatement') {
+    for (var s = 0; s < fn.body.body.length; s++) {
+      var stmt = fn.body.body[s];
+      if (stmt.type !== 'VariableDeclaration') continue;
+
+      for (var d = 0; d < stmt.declarations.length; d++) {
+        var decl = stmt.declarations[d];
+
+        // Try an internal locator first: is.TAG.where(...).childOf(el?).as('...').
+        var elemResult = extractElement(decl, filePath, warnings, constBindings);
+        if (elemResult.error) {
+          warnings.push(elemResult.error);
+        }
+        if (elemResult.element) {
+          var locator = elemResult.element;
+          // Classify the scoping. `extractElement` recorded a `.childOf(<Ident>)`
+          // as `locator.childOf = <Ident name>`. When that identifier is the
+          // Root_Placeholder, this locator opted into deferred root-scoping:
+          // strip the static `childOf` and mark it `rootScoped` so the flattener
+          // emits a per-instance `scopeRoot`. Otherwise leave `childOf` untouched
+          // (static same-file childOf) or leave it document-scoped (no childOf).
+          if (rootName && locator.childOf === rootName) {
+            delete locator.childOf;
+            locator.rootScoped = true;
+          }
+          locators.push(locator);
+          continue;
+        }
+
+        // Otherwise try a `Task`-like Component_Action. Actions are keyed by their
+        // const name and reuse the full Task step-extraction path so they allow
+        // the same step kinds a Task allows (Click, Type, Select, assertions, ...).
+        // Local action names are passed as declared task names so action-to-action
+        // invocations resolve as task steps, mirroring the POM Task behavior.
+        var actionNames = new Set();
+        for (var ai = 0; ai < actions.length; ai++) {
+          actionNames.add(actions[ai].name);
+        }
+        var taskResult = extractTask(decl, filePath, source, actionNames, constBindings, new Map());
+        if (taskResult.error) {
+          warnings.push(taskResult.error);
+        }
+        if (taskResult.warnings && taskResult.warnings.length > 0) {
+          warnings.push.apply(warnings, taskResult.warnings);
+        }
+        if (taskResult.task) {
+          actions.push(taskResult.task);
+          continue;
+        }
+      }
+    }
+  }
+
+  var component = {
+    name: variableName,
+    rootPlaceholder: rootName,
+    locators: locators,
+    actions: actions,
+    line: lineOf(declarator),
+  };
+
+  return { component: component, error: null, warnings: warnings };
+}
+
+/**
+ * Extract a Component_Instance from a VariableDeclarator node matching:
+ *   const country = SearchSelect.in(countryField)
+ *
+ * Detects a VariableDeclarator whose init is a CallExpression whose callee is a
+ * MemberExpression `<Component>.in` (property name `in`, with a bare-identifier
+ * object naming the referenced Component) and whose single argument is the root
+ * element reference. The `<rootElement>` is resolved the same way the step
+ * extractor resolves element identifiers (via `extractElementRef`), so both a
+ * bare identifier (`countryField`) and a cross-file member (`Form.countryField`)
+ * are supported.
+ *
+ * Each returned instance carries an INDEPENDENT root binding keyed by the
+ * instance variable name. Two instances of the same Component bound to different
+ * roots produce two separate entries that never share a `root` reference, so the
+ * flattener (task 3) can emit a per-instance `scopeRoot` with no collision.
+ *
+ * Purely additive and ES5 only — a declarator that is not a `<Component>.in(...)`
+ * call returns `{ instance: null }` and the caller falls through unchanged.
+ *
+ * @param {object} declarator - VariableDeclarator AST node
+ * @param {string} filePath - current file path (for line reporting)
+ * @returns {{ instance: object|null }}
+ */
+function extractComponentInstance(declarator) {
+  if (!declarator || declarator.type !== 'VariableDeclarator') {
+    return { instance: null };
+  }
+  if (!declarator.id || declarator.id.type !== 'Identifier') {
+    return { instance: null };
+  }
+  var initNode = declarator.init;
+  if (!initNode || initNode.type !== 'CallExpression') {
+    return { instance: null };
+  }
+  var callee = initNode.callee;
+  if (
+    !callee ||
+    callee.type !== 'MemberExpression' ||
+    callee.computed ||
+    !callee.object || callee.object.type !== 'Identifier' ||
+    !callee.property || callee.property.type !== 'Identifier' ||
+    callee.property.name !== 'in'
+  ) {
+    return { instance: null };
+  }
+
+  var instanceName = declarator.id.name;
+  var componentName = callee.object.name;
+
+  // Resolve the root element reference exactly as the step extractor resolves
+  // element identifiers. A missing argument leaves `root` null (diagnostics for
+  // the missing/non-element root are task 4's Warn_And_Skip concern — here we
+  // just keep the binding best-effort so it does not crash).
+  var args = initNode.arguments || [];
+  var rootArg = args.length >= 1 ? args[0] : null;
+  var root = rootArg ? extractElementRef(rootArg) : null;
+
+  return {
+    instance: {
+      name: instanceName,
+      component: componentName,
+      root: root,
+      line: lineOf(declarator),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // File type detection
 // ---------------------------------------------------------------------------
 
@@ -4077,6 +4354,9 @@ function detectFileType(filePath) {
   if (filePath.endsWith('.pom.js') || filePath.endsWith('.pom.ts')) return 'pom';
   if (filePath.endsWith('.test.js') || filePath.endsWith('.test.ts')) return 'test';
   if (filePath.endsWith('.page.js') || filePath.endsWith('.page.ts')) return 'pom';
+  // Component_Files (`*.com.ts`) hold static Component definitions like a POM —
+  // they declare internal locators and Task-like actions, not runnable tests.
+  if (filePath.endsWith('.com.js') || filePath.endsWith('.com.ts')) return 'pom';
   if (filePath.endsWith('.automation.ts')) return 'automation';
   // Fallback: treat as unknown but default to 'test'
   return 'test';
@@ -4100,6 +4380,7 @@ function detectFileType(filePath) {
  *   tasks: TaskDef[],
  *   tests: TestDef[],
  *   automations: AutomationDef[],
+ *   components: ComponentDef[],
  *   error: null | { message: string, line: number }
  *   warnings: Array<{ message: string, filePath: string, line: number }>
  * }
@@ -4117,6 +4398,8 @@ function parseFile(filePath) {
       elements: [],
       tasks: [],
       automations: [],
+      components: [],
+      instances: [],
       error: {
         message: 'Parse error in ' + filePath + ':0: ' + e.message,
         line: 0,
@@ -4166,6 +4449,8 @@ function parseSource(source, filePath, rawSource, options) {
     elements: [],
     tasks: [],
     automations: [],
+    components: [],  // Component(({ el }) => ...) definitions (Component Object Model)
+    instances: [],  // Component_Instance bindings: const x = Component.in(root) (COM)
     dataTemplates: [],  // Data() template declarations
     imports: [],   // track import declarations for namespace resolution
     error: null,
@@ -4408,6 +4693,35 @@ function parseSource(source, filePath, rawSource, options) {
   })();
 
   // Pre-collect declared task names so bare local task calls (e.g., login())
+  // Pre-collect the declarators that live inside a Component factory body. A
+  // Component's internal locators and `Task`-like actions are its own const
+  // declarations nested in the factory arrow; the generic `walk` recurses into
+  // that body, so without this set they would leak into the file-level
+  // `declaredTaskNames` pre-scan and the element/task walks below. Collecting
+  // them once here keeps Component internals out of the file's top-level
+  // elements/tasks and task namespace (additive — no existing behavior changes
+  // for component-free files, where this set stays empty).
+  var componentInnerDeclarators = new Set();
+  walk(ast, node => {
+    if (node.type !== 'VariableDeclaration') return;
+    for (var di = 0; di < node.declarations.length; di++) {
+      var cd = node.declarations[di];
+      if (!cd || cd.type !== 'VariableDeclarator') continue;
+      if (!cd.init || cd.init.type !== 'CallExpression') continue;
+      if (!cd.init.callee || cd.init.callee.type !== 'Identifier' || cd.init.callee.name !== 'Component') continue;
+      var cFactory = cd.init.arguments && cd.init.arguments[0];
+      if (!cFactory || (cFactory.type !== 'ArrowFunctionExpression' && cFactory.type !== 'FunctionExpression')) continue;
+      if (!cFactory.body || cFactory.body.type !== 'BlockStatement') continue;
+      for (var cb = 0; cb < cFactory.body.body.length; cb++) {
+        var cInner = cFactory.body.body[cb];
+        if (cInner.type !== 'VariableDeclaration') continue;
+        for (var cid = 0; cid < cInner.declarations.length; cid++) {
+          componentInnerDeclarators.add(cInner.declarations[cid]);
+        }
+      }
+    }
+  });
+
   // can be recognized during step extraction, including forward references.
   var declaredTaskNames = new Set();
   walk(ast, node => {
@@ -4416,6 +4730,9 @@ function parseSource(source, filePath, rawSource, options) {
       if (!declarator || declarator.type !== 'VariableDeclarator') continue;
       if (!declarator.id || declarator.id.type !== 'Identifier') continue;
       if (!declarator.init || declarator.init.type !== 'CallExpression') continue;
+      // A Component's `Task`-like actions must NOT enter the file-level task
+      // namespace (they are the Component's actions, resolved per instance).
+      if (componentInnerDeclarators.has(declarator)) continue;
 
       var isTaskDeclaration = false;
 
@@ -4447,11 +4764,67 @@ function parseSource(source, filePath, rawSource, options) {
     }
   });
 
+  // Walk the AST for Component declarations: const X = Component(({ el }) => { ... }).
+  // The factory body's inner locators/actions were pre-collected into
+  // `componentInnerDeclarators` above so they are kept out of the top-level
+  // element/task walks; `extractComponent` collects them as the Component's own
+  // internal locators (classified root-scoped / static-childOf / document-scoped)
+  // and `Task`-like actions.
+  walk(ast, node => {
+    if (node.type !== 'VariableDeclaration') return;
+    for (var ci = 0; ci < node.declarations.length; ci++) {
+      var cDeclarator = node.declarations[ci];
+      const { component, error, warnings } = extractComponent(cDeclarator, filePath, source, constBindings);
+      if (error) {
+        result.warnings.push(error);
+      }
+      if (warnings && warnings.length > 0) {
+        result.warnings.push.apply(result.warnings, warnings);
+      }
+      if (component) {
+        result.components.push(component);
+        result.type = 'pom';
+      }
+    }
+  });
+
+  // Walk the AST for Component_Instance declarations: const x = Component.in(root).
+  // Collect each `.in(root)` binding into `result.instances` and build a lookup
+  // map (instance variable name -> { component, root }) so component-action
+  // invocations in test/automation bodies can be recognized and resolved during
+  // step extraction. Each instance keeps its OWN root binding keyed by the
+  // instance variable name, so two instances of the same Component bound to
+  // different roots never collide (the flattener emits an independent per-instance
+  // `scopeRoot` for each). Declarators inside a Component factory body are skipped
+  // — `.in(root)` composition happens in tests/automations, not inside a factory.
+  // Additive: for a component-free file this walk finds nothing and the lookup
+  // map stays empty, so step extraction behaves exactly as before.
+  var componentInstances = new Map();
+  walk(ast, node => {
+    if (node.type !== 'VariableDeclaration') return;
+    for (var ii = 0; ii < node.declarations.length; ii++) {
+      var iDeclarator = node.declarations[ii];
+      if (componentInnerDeclarators.has(iDeclarator)) continue;
+      var instResult = extractComponentInstance(iDeclarator);
+      if (instResult.instance) {
+        result.instances.push(instResult.instance);
+        // Key by instance variable name; keep each binding independent.
+        componentInstances.set(instResult.instance.name, {
+          component: instResult.instance.component,
+          root: instResult.instance.root,
+        });
+      }
+    }
+  });
+
   // Walk the AST for element declarations: const X = is.TAG.where(...).as('Label')
   // and XPath element declarations: const X = Element(xpath).as('Label') / is.ELEMENT(xpath).as('Label')
   walk(ast, node => {
     if (node.type !== 'VariableDeclaration') return;
     for (const declarator of node.declarations) {
+      // Skip declarators that live inside a Component factory body — they belong
+      // to the Component definition, not the file's top-level elements.
+      if (componentInnerDeclarators.has(declarator)) continue;
       // Try tag-based element pattern first
       const { element, error } = extractElement(declarator, filePath, result.warnings, constBindings);
       if (error) {
@@ -4497,7 +4870,11 @@ function parseSource(source, filePath, rawSource, options) {
   walk(ast, node => {
     if (node.type !== 'VariableDeclaration') return;
     for (const declarator of node.declarations) {
-      const { task, error, warnings } = extractTask(declarator, filePath, source, declaredTaskNames, constBindings, taskDataVars);
+      // Skip declarators inside a Component factory body — a Component's
+      // `Task`-like actions are collected as the Component's actions, not as
+      // the file's top-level tasks.
+      if (componentInnerDeclarators.has(declarator)) continue;
+      const { task, error, warnings } = extractTask(declarator, filePath, source, declaredTaskNames, constBindings, taskDataVars, componentInstances);
       if (error) {
         result.warnings.push(error);
       }
@@ -4518,7 +4895,7 @@ function parseSource(source, filePath, rawSource, options) {
     if (!callee || callee.type !== 'Identifier') return;
 
     if (callee.name === 'Test') {
-      const { test, error, warnings } = extractTest(node, filePath, source, declaredTaskNames, constBindings, dataVars);
+      const { test, error, warnings } = extractTest(node, filePath, source, declaredTaskNames, constBindings, dataVars, componentInstances);
       if (error) {
         result.warnings.push(error);
       }
@@ -4575,7 +4952,7 @@ function parseSource(source, filePath, rawSource, options) {
 
         // Extract steps
         var steps = fn.body && fn.body.type === 'BlockStatement'
-          ? extractSteps(fn.body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars)
+          ? extractSteps(fn.body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars, componentInstances)
           : [];
 
         // Validation warnings
@@ -4620,7 +4997,7 @@ function parseSource(source, filePath, rawSource, options) {
     // Pattern 2: Variable declaration — const X = Automation('name', fn)
     if (node.type === 'VariableDeclaration') {
       for (const declarator of node.declarations) {
-        const { automation, error, warnings } = extractAutomation(declarator, filePath, source, rawSource || null, declaredTaskNames, constBindings, dataVars);
+        const { automation, error, warnings } = extractAutomation(declarator, filePath, source, rawSource || null, declaredTaskNames, constBindings, dataVars, componentInstances);
         if (error) {
           result.warnings.push(error);
         }
@@ -4641,4 +5018,4 @@ function parseSource(source, filePath, rawSource, options) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractStep, extractElementRef, extractTableAccessor, normalizeCellSelector, resolveTarget, extractAssertRequestStep, extractLiteralValue, extractRegexLiteral, extractIfStep, extractWhenStep, extractCondition, extractParamPath, resolveRhsReference, usesNewConditionConstruct, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, unwrapDataCall, parseDataTemplate, buildConstBindings, buildEnumBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };
+module.exports = { parseFile, parseSource, extractElement, extractXPathElement, extractTask, extractTest, extractAutomation, extractComponent, extractComponentInstance, extractStep, extractElementRef, extractTableAccessor, normalizeCellSelector, resolveTarget, extractAssertRequestStep, extractLiteralValue, extractRegexLiteral, extractIfStep, extractWhenStep, extractCondition, extractParamPath, resolveRhsReference, usesNewConditionConstruct, extractValueExpression, extractDateHelperCall, extractRuntimeTemplate, extractMatcherCall, extractAutomationParamTypes, parseDataDeclaration, unwrapDataCall, parseDataTemplate, buildConstBindings, buildEnumBindings, resolveConstMemberExpression, DAY_OFFSET_HELPERS, MONTH_BOUNDARY_HELPERS };
