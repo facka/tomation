@@ -1208,6 +1208,65 @@ function applyNavigateSteps(anchor, steps) {
 }
 
 /**
+ * Component Object Model (task 6.2): resolve a Component_Instance's Root_Element
+ * IMMEDIATELY (no polling / no wait-for-element), so a `scopeRoot` locator can be
+ * bounded to that root's subtree by reusing the existing childOf-bounded search.
+ *
+ * `stepMessage.scopeRoot` carries the root descriptor the background resolved from
+ * the per-instance `scopeRoot` reference. This performs a single synchronous pass
+ * over the current DOM using the SAME matching semantics as the finder
+ * (`matchesWhere` for tag+where, `document.evaluate` for xpath, 1-based
+ * `isNthElement` position among the Filtered_List), mirroring the instantaneous
+ * hover-descriptor query — it does NOT reuse the 5s polling finder, because the
+ * requirement is that an unresolvable root fails immediately with no retry.
+ *
+ * @param {{tag?: string, where?: object, xpath?: string}} descriptor - root descriptor
+ * @returns {Element|null} the resolved Root_Element, or null when none matches now
+ */
+function resolveScopeRootElement(descriptor) {
+  if (!descriptor) return null;
+
+  if (descriptor.xpath) {
+    try {
+      var result = document.evaluate(
+        descriptor.xpath,
+        document,
+        null,
+        XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+        null
+      );
+      for (var i = 0; i < result.snapshotLength; i++) {
+        var node = result.snapshotItem(i);
+        if (node && node.nodeType === 1) {
+          return node;
+        }
+      }
+    } catch (e) {
+      return null;
+    }
+    return null;
+  }
+
+  if (descriptor.tag) {
+    var candidates = document.querySelectorAll(descriptor.tag);
+    var where = descriptor.where || {};
+    var nthTarget = (typeof where.isNthElement === 'number') ? where.isNthElement : null;
+    var matchIndex = 0;
+    for (var k = 0; k < candidates.length; k++) {
+      if (matchesWhere(candidates[k], where, null)) {
+        matchIndex++;
+        if (nthTarget === null || matchIndex === nthTarget) {
+          return candidates[k];
+        }
+      }
+    }
+    return null;
+  }
+
+  return null;
+}
+
+/**
  * Find an element, optionally scoped to a parent element.
  * If stepMessage.parentDescriptor is present, first locates the parent,
  * then searches for the child within the parent's subtree.
@@ -1257,6 +1316,82 @@ function findElementWithParent(stepMessage) {
       current = cellResult.element;
     }
     return { ok: true, element: current };
+  }
+
+  // --------------------------------------------------------------------------
+  // scopeRoot path (Component Object Model, Req 4.1–4.5, 5.4).
+  //
+  // When the compiled step carries a `scopeRoot` (the per-instance Root_Element
+  // descriptor the background resolved from a `.childOf(el)` chain), restrict the
+  // search to that root's subtree by reusing the EXISTING childOf-bounded
+  // candidate collection — `findElement(elementDescriptor, rootElement)` runs the
+  // same `root.querySelectorAll(tag)` + matchesWhere loop the parent-scoped path
+  // uses, so nothing outside the root subtree is ever matched (Req 4.1, 4.2, 4.3)
+  // and no new matching code is introduced.
+  //
+  // The Root_Element is resolved IMMEDIATELY (resolveScopeRootElement, no polling):
+  // if it cannot be resolved right now the step fails immediately through the
+  // existing locator-not-found path with NO retry / wait-for-element (Req 4.5).
+  // A locator without a scopeRoot falls through to the ordinary paths below and
+  // resolves against the document root exactly as today (Req 4.4). Highlighting is
+  // untouched: this only changes which element the finder resolves.
+  if (stepMessage.scopeRoot && stepMessage.scopeRoot.descriptor) {
+    var rootElement = resolveScopeRootElement(stepMessage.scopeRoot.descriptor);
+    if (!rootElement) {
+      // Root unresolvable now: surface immediately via the locator-not-found path
+      // (no retry). Mirror the parent-resolution-failure trace shape.
+      var rootPreservedError = 'Component root element not found: ' + stepMessage.target;
+      var rootTrace = emptyTrace();
+      rootTrace.scope = 'scope-root';
+      rootTrace.action = action;
+      rootTrace.error = rootPreservedError;
+      rootTrace.parent = {
+        resolved: false,
+        key: stepMessage.scopeRoot.key
+      };
+      return Promise.resolve({ ok: false, error: rootPreservedError, findTrace: rootTrace });
+    }
+
+    // Tag the resolved root with its instance key so the panel can hover-highlight
+    // the exact root the finder scoped to (no-ops on a missing key). Mirrors the
+    // parent-scoped path; highlighting of the target itself is unchanged.
+    tagElementKey(rootElement, stepMessage.scopeRoot.key);
+
+    return findElement(elementDescriptor, rootElement, finderOptions)
+      .then(function (element) {
+        return applyNavigation(element);
+      })
+      .then(function (result) {
+        if (result && result.ok === false) {
+          var navTrace = emptyTrace();
+          navTrace.scope = 'scope-root';
+          navTrace.action = action;
+          navTrace.error = 'Element not found: ' + stepMessage.target;
+          navTrace.navigate = {
+            anchorResolved: result.anchorResolved === true,
+            failedHopIndex: result.failedHopIndex,
+            failedHopType: result.failedHopType,
+            hopCount: navigateSteps ? navigateSteps.length : 0
+          };
+          return { ok: false, error: navTrace.error, findTrace: navTrace };
+        }
+        return result;
+      })
+      .catch(function (error) {
+        // Root resolved, but the target was not found within its subtree.
+        var preservedError = 'Element with parent ' + getElementXPath(rootElement) + ' not found: ' + stepMessage.target + error.message;
+        var trace = (error && error.findTrace) || emptyTrace();
+        trace.scope = 'scope-root';
+        trace.action = action;
+        trace.error = preservedError;
+        trace.parent = {
+          resolved: true,
+          identifier: getElementXPath(rootElement),
+          key: stepMessage.scopeRoot.key,
+          scopedToParent: true
+        };
+        return { ok: false, error: preservedError, findTrace: trace };
+      });
   }
 
   if (!parentDescriptor && !(stepMessage.parentChain && stepMessage.parentChain.length >= 1)) {

@@ -76,13 +76,13 @@ The marker is the shared thread, so the ordering is: DSL primitive → compiler 
 - [ ] 5. Checkpoint — DSL + compiler layer
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. Runtime: carry the marker on `taskPath` and resolve `scopeRoot` locators
-  - [ ] 6.1 Propagate the component marker onto each child `taskPath` node in `expandTaskStep` (`packages/extension/src/background.js`)
+- [x] 6. Runtime: carry the marker on `taskPath` and resolve `scopeRoot` locators
+  - [x] 6.1 Propagate the component marker onto each child `taskPath` node in `expandTaskStep` (`packages/extension/src/background.js`)
     - When `expandTaskStep` builds the `childPath` node (`{ name, label, params }`), also copy `isComponent` and `componentName` from the task-shaped step onto that node so every expanded child step's `taskPath` node carries the marker; it then rides through STEP_PLAN / STEP_STARTING unchanged
     - Preserve the existing step execution order and `resolveValue`-based param resolution (data/context tokens unchanged); ES5 only
     - _Requirements: 5.1, 5.2, 5.3, 5.4_
 
-  - [ ] 6.2 Resolve `scopeRoot` locators via the existing `childOf`-bounded subtree search in `packages/extension/src/runtime.js`
+  - [x] 6.2 Resolve `scopeRoot` locators via the existing `childOf`-bounded subtree search in `packages/extension/src/runtime.js`
     - When a locator carries `scopeRoot`, resolve the instance Root_Element and reuse the existing `childOf`-bounded candidate collection to restrict matches to that root's subtree (never match outside it); a locator with no `scopeRoot` resolves against the document root via the existing ordinary-locator path
     - If the Root_Element cannot be resolved, surface the failure immediately through the existing locator-not-found path for that step, with NO retry or wait-for-element; keep in-page highlighting unchanged; ES5 only
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 5.4_

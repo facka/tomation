@@ -112,6 +112,37 @@
         "chatSessionId": "sess_b85356b2-f0e3-47a8-9c68-7992570bc45e",
         "timestamp": 1793038152911
       }
+    ],
+    "6.1 Propagate the component marker onto each child `taskPath` node in `expandTaskStep` (`packages/extension/src/background.js`)": [
+      {
+        "executionId": "2ee5c5f8-8299-4086-8163-c5caf4d9c551",
+        "chatSessionId": "sess_a4f4a10a-07d5-4ab4-ba80-526f14479c6f",
+        "timestamp": 1793068050421
+      },
+      {
+        "executionId": "2ee5c5f8-8299-4086-8163-c5caf4d9c551",
+        "chatSessionId": "sess_a4f4a10a-07d5-4ab4-ba80-526f14479c6f",
+        "timestamp": 1793068098466
+      }
+    ],
+    "6.2 Resolve `scopeRoot` locators via the existing `childOf`-bounded subtree search in `packages/extension/src/runtime.js`": [
+      {
+        "executionId": "2ee5c5f8-8299-4086-8163-c5caf4d9c551",
+        "chatSessionId": "sess_a4f4a10a-07d5-4ab4-ba80-526f14479c6f",
+        "timestamp": 1793068103742
+      },
+      {
+        "executionId": "2ee5c5f8-8299-4086-8163-c5caf4d9c551",
+        "chatSessionId": "sess_a4f4a10a-07d5-4ab4-ba80-526f14479c6f",
+        "timestamp": 1793068355601
+      }
+    ],
+    "6. Runtime: carry the marker on `taskPath` and resolve `scopeRoot` locators": [
+      {
+        "executionId": "2ee5c5f8-8299-4086-8163-c5caf4d9c551",
+        "chatSessionId": "sess_a4f4a10a-07d5-4ab4-ba80-526f14479c6f",
+        "timestamp": 1793068355831
+      }
     ]
   }
 }

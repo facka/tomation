@@ -681,11 +681,22 @@ function expandTaskStep(step, tasksMap, pageElements, parentParams, parentPath, 
   }
 
   // Extend the path with this task so child steps render nested under its header.
-  var childPath = parentPath.concat([{
+  var childPathNode = {
     name: step.name,
     label: taskDef.label || null,
     params: displayParams
-  }]);
+  };
+  // Carry the component marker (emitted by the compiler flattener as
+  // isComponent/componentName on the task-shaped step) onto this taskPath node
+  // so every expanded child step's path identifies its component group. Only
+  // added when present, so plain POM task nodes stay marker-free.
+  if (step.isComponent === true) {
+    childPathNode.isComponent = true;
+    if (typeof step.componentName === 'string') {
+      childPathNode.componentName = step.componentName;
+    }
+  }
+  var childPath = parentPath.concat([childPathNode]);
 
   for (var i = 0; i < taskSteps.length; i++) {
     var childStep = taskSteps[i];
@@ -801,6 +812,31 @@ function buildStepMessage(step, pageElements, params) {
           var immediate = parentChain[parentChain.length - 1];
           msg.parentDescriptor = immediate.descriptor;
           msg.parentKey = immediate.key;
+        }
+      }
+
+      // Component Object Model (task 6.2): a `scopeRoot` on the descriptor is the
+      // compiled form of a `.childOf(el)` chain (flattener emits it as the raw
+      // per-instance Root_Element reference — a string key such as `countryField`
+      // or `Form__countryField`). It is kept DISTINCT from a static `childOf`
+      // reference so existing static `childOf` resolution above is unaffected.
+      //
+      // The runtime (runtime.js, findElementWithParent) does the subtree-bounded
+      // search, but it has no access to the pageElements map, so resolve the
+      // string reference to the Root_Element descriptor here (the only place with
+      // pageElements) and pass the resolved root along on the message. The runtime
+      // then restricts the search to that root's subtree by reusing the existing
+      // childOf-bounded candidate collection. Resolution mirrors the childOf path
+      // (direct key, else by where.id) via findParentKey / findParentDescriptor.
+      //
+      // When the reference does not resolve to a known element the field is
+      // simply omitted; the runtime then resolves document-wide exactly as the
+      // flattener's document-scoped fallback intends (Req 2.5 / 9.3).
+      if (descriptor.scopeRoot) {
+        var scopeRootKey = findParentKey(descriptor.scopeRoot, pageElements);
+        var scopeRootDescriptor = findParentDescriptor(descriptor.scopeRoot, pageElements);
+        if (scopeRootKey && scopeRootDescriptor) {
+          msg.scopeRoot = { key: scopeRootKey, descriptor: scopeRootDescriptor };
         }
       }
     }
