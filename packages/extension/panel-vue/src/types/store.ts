@@ -96,7 +96,7 @@ export interface LogEntry {
   value?: string;
   error?: string;
   retryAttempt?: number;
-  taskPath?: Array<{ name: string; label?: string; params?: Record<string, unknown> }>;
+  taskPath?: Array<{ name: string; label?: string; params?: Record<string, unknown>; isComponent?: boolean; componentName?: string }>;
   taskDepth?: number;
   resolvedContext?: Array<{ key: string; value: unknown }>;
   // Present on conditional (if / When) rows

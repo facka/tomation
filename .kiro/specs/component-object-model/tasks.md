@@ -94,12 +94,12 @@ The marker is the shared thread, so the ordering is: DSL primitive → compiler 
 - [ ] 7. Checkpoint — runtime layer
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Panel types + store: carry the marker through to render items
-  - [ ] 8.1 Extend the `taskPath` node type with the marker in `panel-vue/src/types/messages.ts` and `panel-vue/src/types/store.ts`
+- [x] 8. Panel types + store: carry the marker through to render items
+  - [x] 8.1 Extend the `taskPath` node type with the marker in `panel-vue/src/types/messages.ts` and `panel-vue/src/types/store.ts`
     - Extend the `taskPath` node shape from `{ name, label, params }` to `{ name, label, params, isComponent?: boolean, componentName?: string }` in both the message type (STEP_PLAN / STEP_STARTING) and the store `LogEntry.taskPath` type
     - _Requirements: 5.2, 6.1_
 
-  - [ ] 8.2 Preserve the marker when ingesting STEP messages in `panel-vue/src/store/index.ts`
+  - [x] 8.2 Preserve the marker when ingesting STEP messages in `panel-vue/src/store/index.ts`
     - Ensure the store action that records STEP_PLAN / STEP_STARTING into `LogEntry.taskPath` preserves `isComponent` / `componentName` on each node; no behavior change when the marker is absent
     - _Requirements: 5.2, 6.1, 8.3_
 

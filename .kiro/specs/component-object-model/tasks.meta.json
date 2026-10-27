@@ -143,6 +143,37 @@
         "chatSessionId": "sess_a4f4a10a-07d5-4ab4-ba80-526f14479c6f",
         "timestamp": 1793068355831
       }
+    ],
+    "8.1 Extend the `taskPath` node type with the marker in `panel-vue/src/types/messages.ts` and `panel-vue/src/types/store.ts`": [
+      {
+        "executionId": "39a6f963-f1a7-4d78-9c4b-b57583b517dd",
+        "chatSessionId": "sess_9f3b5c2e-6ff5-488c-9787-735d25e8c636",
+        "timestamp": 1793068529954
+      },
+      {
+        "executionId": "39a6f963-f1a7-4d78-9c4b-b57583b517dd",
+        "chatSessionId": "sess_9f3b5c2e-6ff5-488c-9787-735d25e8c636",
+        "timestamp": 1793068627810
+      }
+    ],
+    "8.2 Preserve the marker when ingesting STEP messages in `panel-vue/src/store/index.ts`": [
+      {
+        "executionId": "39a6f963-f1a7-4d78-9c4b-b57583b517dd",
+        "chatSessionId": "sess_9f3b5c2e-6ff5-488c-9787-735d25e8c636",
+        "timestamp": 1793068533794
+      },
+      {
+        "executionId": "39a6f963-f1a7-4d78-9c4b-b57583b517dd",
+        "chatSessionId": "sess_9f3b5c2e-6ff5-488c-9787-735d25e8c636",
+        "timestamp": 1793068631752
+      }
+    ],
+    "8. Panel types + store: carry the marker through to render items": [
+      {
+        "executionId": "39a6f963-f1a7-4d78-9c4b-b57583b517dd",
+        "chatSessionId": "sess_9f3b5c2e-6ff5-488c-9787-735d25e8c636",
+        "timestamp": 1793068631921
+      }
     ]
   }
 }
