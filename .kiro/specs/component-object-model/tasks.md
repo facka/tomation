@@ -107,18 +107,18 @@ The marker is the shared thread, so the ordering is: DSL primitive → compiler 
     - A STEP message whose `taskPath` carries the marker produces a `LogEntry` whose `taskPath` node retains `isComponent`/`componentName`; a marker-free message yields marker-free nodes
     - _Requirements: 5.2, 6.1, 8.3_
 
-- [ ] 9. Panel UI: collapsible component groups in the Run Log and Test Plan
-  - [ ] 9.1 Mark component headers when building render items in `panel-vue/src/components/LogContainer.vue` (and `logic/stepLabel.ts` if header labels are built there)
+- [x] 9. Panel UI: collapsible component groups in the Run Log and Test Plan
+  - [x] 9.1 Mark component headers when building render items in `panel-vue/src/components/LogContainer.vue` (and `logic/stepLabel.ts` if header labels are built there)
     - In `renderItems`, tag a `task-header` whose `taskPath` node is `isComponent` with `isComponent` / `componentName`; leave non-component task headers unchanged (always expanded); carry collapse/expand state locally keyed by `pathKey`, initialized collapsed for component headers
     - _Requirements: 6.1, 6.2, 8.4_
 
-  - [ ] 9.2 Render collapse/expand with run-state behavior in `LogContainer.vue` and `panel-vue/src/components/TaskHeader.vue` / `LogEntry.vue`
+  - [x] 9.2 Render collapse/expand with run-state behavior in `LogContainer.vue` and `panel-vue/src/components/TaskHeader.vue` / `LogEntry.vue`
     - Collapsed component header: clicking toggles expand/collapse (expand reveals child steps; collapse hides them, header only); while running + collapsed, show exactly one current-step line (the active child under that header's `pathKey`); on success + collapsed, show header only with pass status and no leftover current-step line
     - On any child failure, force-expand down to the failing child and keep expanded; for nested component groups, auto-expand the chain of enclosing component groups down to the failing step; keep in-page highlighting behavior unchanged regardless of collapse state
     - Plain (non-component) task headers render exactly as today
     - _Requirements: 6.3, 6.4, 7.1, 7.2, 7.3, 7.4, 7.5, 8.4_
 
-  - [ ] 9.3 Wire the marker-aware render through both views in `panel-vue/src/components/RunView.vue`, `TestPlanView.vue`, and `App.vue`
+  - [x] 9.3 Wire the marker-aware render through both views in `panel-vue/src/components/RunView.vue`, `TestPlanView.vue`, and `App.vue`
     - Ensure the Test Plan preview collapses component groups to a header (child steps hidden until expanded; no running state before a run) and the Run Log uses the live-current-step behavior; ensure `App.vue` passes the marker-bearing `taskPath` through to both; a run/plan with no markers renders exactly as today
     - _Requirements: 6.1, 6.2, 7.1, 7.2, 8.3, 8.4_
 

@@ -21,6 +21,12 @@ interface ChecklistItem {
   depth: number;
   isTask: boolean;
   isCondition?: boolean;
+  // Component marker (COM): a task-step flattened from a Component_Action. When
+  // true the header renders as a collapsible group that is collapsed by default
+  // (child steps hidden until expanded). Plain task headers are never
+  // collapsible.
+  isComponent?: boolean;
+  componentName?: string;
   step: Step;
   taskLabel?: string;
   conditionLabel?: string;
@@ -50,6 +56,8 @@ const flatItems = computed(() => {
           path,
           depth,
           isTask: true,
+          isComponent: step.isComponent === true,
+          componentName: step.componentName,
           step,
           taskLabel,
         });
@@ -86,6 +94,53 @@ const flatItems = computed(() => {
 
   flattenSteps(props.steps, null, 0, '');
   return items;
+});
+
+// --- Component-group collapse state (COM) ---
+//
+// Local expand/collapse state keyed by the item `path`. Records only EXPLICIT
+// user toggles (`true` = expanded, `false` = collapsed); an absent entry means
+// "use the default". Component items default to COLLAPSED (child steps hidden);
+// plain task items are never collapsed. There is no running state in the Test
+// Plan preview — collapse is purely a static disclosure.
+const userToggled = ref<Record<string, boolean>>({});
+
+/** True when the item at `path` is a component group that is currently collapsed. */
+function isCollapsed(path: string): boolean {
+  const toggled = userToggled.value[path];
+  if (toggled !== undefined) return !toggled;
+  return true; // component default: collapsed
+}
+
+/** Toggle a component group's collapse state, keyed by item `path`. */
+function toggleCollapse(path: string) {
+  const expandedNow = userToggled.value[path] !== undefined ? userToggled.value[path] : false;
+  userToggled.value = { ...userToggled.value, [path]: !expandedNow };
+}
+
+/**
+ * Whether a checklist item is hidden because it lives under a collapsed
+ * component ancestor. An item is a descendant of a component header when its
+ * `path` starts with that header's `path + '.'`; if any such ancestor is
+ * collapsed the item is hidden. Plain (non-component) tasks never hide
+ * children, so only component headers are considered.
+ */
+function isHidden(item: ChecklistItem): boolean {
+  for (const other of flatItems.value) {
+    if (!other.isComponent) continue;
+    if (other.path === item.path) continue;
+    if (item.path.startsWith(other.path + '.') && isCollapsed(other.path)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** The visible items after applying component collapse state. */
+const visibleItems = computed(() => {
+  return flatItems.value
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => !isHidden(item));
 });
 
 // --- Checkbox state ---
@@ -262,7 +317,7 @@ function capitalize(str: string): string {
 <template>
   <ul class="step-checklist">
     <li
-      v-for="(item, index) in flatItems"
+      v-for="{ item, index } in visibleItems"
       :key="index"
       :style="item.depth > 0 ? { paddingLeft: (item.depth * 16 + 12) + 'px' } : undefined"
     >
@@ -273,8 +328,25 @@ function capitalize(str: string): string {
           @change="checkedState[index] = ($event.target as HTMLInputElement).checked; onCheckboxChange(index)"
         />
         <label>
-          <!-- Task header -->
-          <template v-if="item.isTask">
+          <!-- Component task header: collapsible disclosure (collapsed by
+               default). Clicking the chevron toggles its child steps. -->
+          <template v-if="item.isTask && item.isComponent">
+            <button
+              type="button"
+              class="component-disclosure"
+              :aria-expanded="!isCollapsed(item.path)"
+              @click.prevent.stop="toggleCollapse(item.path)"
+            >
+              <font-awesome-icon
+                class="component-chevron"
+                :icon="['fas', isCollapsed(item.path) ? 'chevron-right' : 'chevron-down']"
+              />
+              {{ item.taskLabel }}
+            </button>
+          </template>
+
+          <!-- Plain task header -->
+          <template v-else-if="item.isTask">
             {{ item.taskLabel }}
           </template>
 
@@ -338,3 +410,28 @@ function capitalize(str: string): string {
     </li>
   </ul>
 </template>
+
+<style scoped>
+/* Component task header disclosure: a plain-text button (matching the label)
+   with a leading chevron that toggles the group's collapse state. */
+.component-disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.component-disclosure:hover {
+  filter: brightness(1.1);
+}
+
+.component-chevron {
+  font-size: 10px;
+  opacity: 0.75;
+}
+</style>

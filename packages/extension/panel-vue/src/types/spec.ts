@@ -22,6 +22,11 @@ export interface Step {
   description?: string;
   name?: string; // for task action
   params?: Record<string, unknown>;
+  // Component marker (COM): a task-step flattened from a Component_Action carries
+  // `isComponent: true` and its `componentName`, so the Test Plan preview can
+  // render it as a collapsible component group. Absent on plain POM tasks.
+  isComponent?: boolean;
+  componentName?: string;
   gone?: boolean;
   contextKey?: string;
   // Conditional (if / When) steps

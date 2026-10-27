@@ -8,7 +8,23 @@ const props = defineProps<{
   depth: number;
   params?: Record<string, unknown>;
   status: TaskHeaderStatus;
+  // Component marker (COM). When `isComponent` is true the header renders as a
+  // clickable disclosure (chevron + button) that toggles its group's collapse
+  // state; plain task headers leave these undefined and render as a plain div.
+  isComponent?: boolean;
+  componentName?: string;
+  // Whether the component group is currently collapsed (drives the chevron
+  // direction). Only meaningful when `isComponent` is true.
+  collapsed?: boolean;
 }>();
+
+const emit = defineEmits<{
+  (e: 'toggle'): void;
+}>();
+
+function onToggle() {
+  if (props.isComponent) emit('toggle');
+}
 
 // --- Computed ---
 
@@ -48,7 +64,38 @@ const paramsEntries = computed(() => {
 </script>
 
 <template>
-  <div class="log-entry task-header" :class="statusClass" :style="indentStyle">
+  <!-- Component header: a clickable disclosure that toggles its group's collapse
+       state. Rendered as a button so it is keyboard-accessible. -->
+  <button
+    v-if="isComponent"
+    type="button"
+    class="log-entry task-header task-header-component"
+    :class="statusClass"
+    :style="indentStyle"
+    :aria-expanded="!collapsed"
+    @click="onToggle"
+  >
+    <font-awesome-icon
+      class="task-header-chevron"
+      :icon="['fas', collapsed ? 'chevron-right' : 'chevron-down']"
+    />
+    {{ displayLabel }}
+    <div v-if="paramsEntries.length" class="params-row">
+      <div class="params-table-wrap">
+        <table class="params-table">
+          <tbody>
+            <tr v-for="p in paramsEntries" :key="p.key">
+              <td class="param-key">{{ p.key }}</td>
+              <td class="param-val">{{ p.value }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </button>
+
+  <!-- Plain (non-component) task header: unchanged markup, no chevron, no click. -->
+  <div v-else class="log-entry task-header" :class="statusClass" :style="indentStyle">
     {{ displayLabel }}
     <div v-if="paramsEntries.length" class="params-row">
       <div class="params-table-wrap">
@@ -64,3 +111,28 @@ const paramsEntries = computed(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Component header disclosure: reset the native button so it matches the plain
+   `.task-header` div visually, then add the clickable affordance + chevron. */
+.task-header-component {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.task-header-component:hover {
+  filter: brightness(1.1);
+}
+
+.task-header-chevron {
+  margin-right: 6px;
+  font-size: 10px;
+  opacity: 0.75;
+}
+</style>
