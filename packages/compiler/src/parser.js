@@ -2567,6 +2567,32 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
         if (componentInstances && componentInstances.has && componentInstances.has(obj.name)) {
           const instance = componentInstances.get(obj.name);
           const actionName = prop.name;
+
+          // Requirement 3.4 / 9.1-9.3 — Warn_And_Skip for an unknown action.
+          // `instance.actions` is the set of action names declared on the bound
+          // Component definition. When the component defines a known set of
+          // actions but the invoked action is not one of them, record a single
+          // `{ message, filePath, line }` warning and SKIP the action (return
+          // null) so compilation continues and the action is omitted. A missing
+          // action set (component definition not found / no actions) is left
+          // best-effort: the step is still emitted so authors can see it.
+          if (
+            instance.actions && instance.actions.size > 0 &&
+            !instance.actions.has(actionName)
+          ) {
+            if (warnings) {
+              warnings.push({
+                message:
+                  'Unknown action "' + actionName + '" on component "' +
+                  instance.component + '" (instance "' + obj.name + '") at ' +
+                  filePath + ':' + lineOf(exprNode) + '; skipping the action',
+                filePath: filePath,
+                line: lineOf(exprNode),
+              });
+            }
+            return null;
+          }
+
           const compStep = {
             action: 'task',
             name: actionName,
@@ -4293,9 +4319,11 @@ function extractComponent(declarator, filePath, source, constBindings) {
  *
  * @param {object} declarator - VariableDeclarator AST node
  * @param {string} filePath - current file path (for line reporting)
+ * @param {string} [filePath] - current file path (for warning reporting)
+ * @param {Array} [warnings] - mutable warnings array for Warn_And_Skip diagnostics
  * @returns {{ instance: object|null }}
  */
-function extractComponentInstance(declarator) {
+function extractComponentInstance(declarator, filePath, warnings) {
   if (!declarator || declarator.type !== 'VariableDeclarator') {
     return { instance: null };
   }
@@ -4318,23 +4346,54 @@ function extractComponentInstance(declarator) {
     return { instance: null };
   }
 
+  if (!warnings) warnings = [];
+
   var instanceName = declarator.id.name;
   var componentName = callee.object.name;
 
   // Resolve the root element reference exactly as the step extractor resolves
-  // element identifiers. A missing argument leaves `root` null (diagnostics for
-  // the missing/non-element root are task 4's Warn_And_Skip concern — here we
-  // just keep the binding best-effort so it does not crash).
+  // element identifiers. `extractElementRef` returns a reference string only for
+  // a real element descriptor reference — a bare identifier (`countryField`) or a
+  // cross-file member (`Form.countryField`). A missing argument or a non-element
+  // argument (e.g. a static HTML id string literal like `.in('country-field')`,
+  // or a numeric literal) does NOT resolve, so `root` stays null.
+  //
+  // Requirement 2.5 / 9.1-9.3 — Warn_And_Skip: when `.in()` is called with no
+  // argument or with an argument that is not an element descriptor, record a
+  // single `{ message, filePath, line }` warning and fall back to document-scoped
+  // resolution (leave `root` null so the flattener emits the instance's internal
+  // locators document-scoped, with no `scopeRoot`). Never fatal.
   var args = initNode.arguments || [];
   var rootArg = args.length >= 1 ? args[0] : null;
   var root = rootArg ? extractElementRef(rootArg) : null;
+  var line = lineOf(declarator);
+
+  if (!rootArg) {
+    warnings.push({
+      message:
+        'Component instance "' + instanceName + '" from "' + componentName +
+        '.in()" is missing a root element argument at ' + (filePath || '') + ':' + line +
+        '; falling back to document-scoped resolution',
+      filePath: filePath || '',
+      line: line,
+    });
+  } else if (root === null) {
+    warnings.push({
+      message:
+        'Component instance "' + instanceName + '" from "' + componentName +
+        '.in(...)" root must be an element descriptor, not a static id or literal, at ' +
+        (filePath || '') + ':' + line + '; falling back to document-scoped resolution',
+      filePath: filePath || '',
+      line: line,
+    });
+  }
 
   return {
     instance: {
       name: instanceName,
       component: componentName,
       root: root,
-      line: lineOf(declarator),
+      line: line,
     },
   };
 }
@@ -4799,19 +4858,42 @@ function parseSource(source, filePath, rawSource, options) {
   // — `.in(root)` composition happens in tests/automations, not inside a factory.
   // Additive: for a component-free file this walk finds nothing and the lookup
   // map stays empty, so step extraction behaves exactly as before.
+  // Build a lookup of locally-defined component action-name sets so a
+  // component-action invocation can be validated against the actions the
+  // Component actually declares (Requirement 3.4 Warn_And_Skip for unknown
+  // actions). Components may be defined in another (imported) `*.com.ts` file, in
+  // which case this file has no definition and the set is absent — the invocation
+  // branch then stays best-effort (no skip) rather than falsely skipping.
+  var componentActionNames = {};
+  for (var cmi = 0; cmi < result.components.length; cmi++) {
+    var cmComp = result.components[cmi];
+    if (!cmComp || !cmComp.name) continue;
+    var actionSet = new Set();
+    if (Array.isArray(cmComp.actions)) {
+      for (var cai = 0; cai < cmComp.actions.length; cai++) {
+        var cmAction = cmComp.actions[cai];
+        if (cmAction && typeof cmAction.name === 'string') {
+          actionSet.add(cmAction.name);
+        }
+      }
+    }
+    componentActionNames[cmComp.name] = actionSet;
+  }
+
   var componentInstances = new Map();
   walk(ast, node => {
     if (node.type !== 'VariableDeclaration') return;
     for (var ii = 0; ii < node.declarations.length; ii++) {
       var iDeclarator = node.declarations[ii];
       if (componentInnerDeclarators.has(iDeclarator)) continue;
-      var instResult = extractComponentInstance(iDeclarator);
+      var instResult = extractComponentInstance(iDeclarator, filePath, result.warnings);
       if (instResult.instance) {
         result.instances.push(instResult.instance);
         // Key by instance variable name; keep each binding independent.
         componentInstances.set(instResult.instance.name, {
           component: instResult.instance.component,
           root: instResult.instance.root,
+          actions: componentActionNames[instResult.instance.component],
         });
       }
     }

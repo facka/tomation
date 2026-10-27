@@ -62,8 +62,8 @@ The marker is the shared thread, so the ordering is: DSL primitive → compiler 
     - Opted-in locator carries `scopeRoot`, non-opted does not; two instances get independent `scopeRoot`s; the flattened action is task-shaped with `isComponent`/`componentName`; a data-token arg attaches its template keyed by Data_Name
     - _Requirements: 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 4.1, 4.4, 5.1_
 
-- [ ] 4. Compiler validate + Warn_And_Skip diagnostics in `packages/compiler/src/validator.js` and `packages/compiler/src/parser.js`
-  - [ ] 4.1 Validate component constructs with Warn_And_Skip, leaving static `childOf` validation unaffected
+- [x] 4. Compiler validate + Warn_And_Skip diagnostics in `packages/compiler/src/validator.js` and `packages/compiler/src/parser.js`
+  - [x] 4.1 Validate component constructs with Warn_And_Skip, leaving static `childOf` validation unaffected
     - Validate that a `.childOf(el)` chain references the factory's Root_Placeholder and that `.in(root)` receives a real element descriptor (not a static HTML id); leave existing static same-file `childOf` target validation (by `where.id` or key) unchanged
     - On a component problem (missing root, non-element root, unknown internal locator, unknown component or action), apply Warn_And_Skip: push a single `{ message, filePath, line }` warning, apply the best-effort fallback (missing/non-element root → document-scoped resolution; unknown locator → emit the step anyway; unknown component/action → skip the action), continue, and NEVER fail compilation
     - Emit best-effort output ONLY as part of Warn_And_Skip handling (not for component problems outside that path)

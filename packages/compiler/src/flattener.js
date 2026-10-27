@@ -358,10 +358,17 @@ function emitComponentPageElements(pageElements, componentFiles) {
           entry.navigate = locator.navigate;
         }
 
-        if (locator.rootScoped === true) {
-          // Opted-in: per-instance scopeRoot resolved to THIS instance's root.
-          // Keep it distinct from `childOf` (do not emit as childOf).
+        if (locator.rootScoped === true && typeof instance.root === 'string' && instance.root !== '') {
+          // Opted-in AND the instance bound a real element descriptor: emit a
+          // per-instance scopeRoot resolved to THIS instance's root. Keep it
+          // distinct from `childOf` (do not emit as childOf).
           entry.scopeRoot = instance.root;
+        } else if (locator.rootScoped === true) {
+          // Opted-in via `.childOf(el)` but the instance has NO valid root
+          // (missing or non-element `.in(...)` argument — the parser already
+          // recorded a Warn_And_Skip warning). Requirement 2.5 / 9.3: fall back
+          // to document-scoped resolution — emit the locator with no `scopeRoot`
+          // (and no `childOf`), exactly as an ordinary document-scoped locator.
         } else if (locator.childOf !== undefined) {
           // Static same-file childOf: emit unchanged.
           entry.childOf = locator.childOf;

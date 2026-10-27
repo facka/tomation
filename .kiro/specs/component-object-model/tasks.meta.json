@@ -93,6 +93,25 @@
         "chatSessionId": "sess_c8dbba8d-b18c-46de-b36f-8f2802b529b9",
         "timestamp": 1793026739920
       }
+    ],
+    "4.1 Validate component constructs with Warn_And_Skip, leaving static `childOf` validation unaffected": [
+      {
+        "executionId": "0ba89c12-8ec8-496f-9f42-1505fd33b12d",
+        "chatSessionId": "sess_b85356b2-f0e3-47a8-9c68-7992570bc45e",
+        "timestamp": 1793037881732
+      },
+      {
+        "executionId": "0ba89c12-8ec8-496f-9f42-1505fd33b12d",
+        "chatSessionId": "sess_b85356b2-f0e3-47a8-9c68-7992570bc45e",
+        "timestamp": 1793038152768
+      }
+    ],
+    "4. Compiler validate + Warn_And_Skip diagnostics in `packages/compiler/src/validator.js` and `packages/compiler/src/parser.js`": [
+      {
+        "executionId": "0ba89c12-8ec8-496f-9f42-1505fd33b12d",
+        "chatSessionId": "sess_b85356b2-f0e3-47a8-9c68-7992570bc45e",
+        "timestamp": 1793038152911
+      }
     ]
   }
 }
