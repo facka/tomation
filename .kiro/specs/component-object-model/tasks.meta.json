@@ -1,0 +1,296 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Add the `Component(({ el }) => ...)` factory and `.in(root)` to `packages/dsl/index.js`": [
+      {
+        "executionId": "52b06053-d004-4092-8278-4f84412f02d0",
+        "chatSessionId": "sess_e4eede95-aa42-41ae-a0df-bfb916ba6dc9",
+        "timestamp": 1793022981551
+      },
+      {
+        "executionId": "52b06053-d004-4092-8278-4f84412f02d0",
+        "chatSessionId": "sess_e4eede95-aa42-41ae-a0df-bfb916ba6dc9",
+        "timestamp": 1793023101982
+      }
+    ],
+    "1.2 Add `Component`, `.in(root)`, and deferred `.childOf(el)` types to `packages/dsl/index.d.ts` and `packages/dsl/globals.d.ts`": [
+      {
+        "executionId": "52b06053-d004-4092-8278-4f84412f02d0",
+        "chatSessionId": "sess_e4eede95-aa42-41ae-a0df-bfb916ba6dc9",
+        "timestamp": 1793023114931
+      },
+      {
+        "executionId": "52b06053-d004-4092-8278-4f84412f02d0",
+        "chatSessionId": "sess_e4eede95-aa42-41ae-a0df-bfb916ba6dc9",
+        "timestamp": 1793023203346
+      }
+    ],
+    "1. DSL primitive: `Component` factory, deferred `.childOf(el)`, and `.in(root)`": [
+      {
+        "executionId": "52b06053-d004-4092-8278-4f84412f02d0",
+        "chatSessionId": "sess_e4eede95-aa42-41ae-a0df-bfb916ba6dc9",
+        "timestamp": 1793023203525
+      }
+    ],
+    "2.1 Parse the `Component(({ el }) => { ... })` factory into a component definition": [
+      {
+        "executionId": "c07bd6ed-cc4e-4032-85c6-c5d7271acb52",
+        "chatSessionId": "sess_78128172-138b-4da7-b64e-cf59dc41ac22",
+        "timestamp": 1793024209010
+      },
+      {
+        "executionId": "c07bd6ed-cc4e-4032-85c6-c5d7271acb52",
+        "chatSessionId": "sess_78128172-138b-4da7-b64e-cf59dc41ac22",
+        "timestamp": 1793024738026
+      }
+    ],
+    "2.2 Parse `.in(root)` instantiation and component-action invocations": [
+      {
+        "executionId": "c07bd6ed-cc4e-4032-85c6-c5d7271acb52",
+        "chatSessionId": "sess_78128172-138b-4da7-b64e-cf59dc41ac22",
+        "timestamp": 1793024741965
+      },
+      {
+        "executionId": "c07bd6ed-cc4e-4032-85c6-c5d7271acb52",
+        "chatSessionId": "sess_78128172-138b-4da7-b64e-cf59dc41ac22",
+        "timestamp": 1793025108241
+      }
+    ],
+    "2. Compiler parse: component factory, instances, and action invocations in `packages/compiler/src/parser.js`": [
+      {
+        "executionId": "c07bd6ed-cc4e-4032-85c6-c5d7271acb52",
+        "chatSessionId": "sess_78128172-138b-4da7-b64e-cf59dc41ac22",
+        "timestamp": 1793025108360
+      }
+    ],
+    "3.1 Emit `scopeRoot` only on opted-in internal locators": [
+      {
+        "executionId": "6a56aa68-5883-4e17-be14-6b4640dc8013",
+        "chatSessionId": "sess_c8dbba8d-b18c-46de-b36f-8f2802b529b9",
+        "timestamp": 1793026472735
+      },
+      {
+        "executionId": "6a56aa68-5883-4e17-be14-6b4640dc8013",
+        "chatSessionId": "sess_c8dbba8d-b18c-46de-b36f-8f2802b529b9",
+        "timestamp": 1793026738852
+      }
+    ],
+    "3.2 Flatten a Component_Action into a task-shaped step carrying the marker": [
+      {
+        "executionId": "6a56aa68-5883-4e17-be14-6b4640dc8013",
+        "chatSessionId": "sess_c8dbba8d-b18c-46de-b36f-8f2802b529b9",
+        "timestamp": 1793026476533
+      },
+      {
+        "executionId": "6a56aa68-5883-4e17-be14-6b4640dc8013",
+        "chatSessionId": "sess_c8dbba8d-b18c-46de-b36f-8f2802b529b9",
+        "timestamp": 1793026739751
+      }
+    ],
+    "3. Compiler flatten: emit `scopeRoot` and the component marker in `packages/compiler/src/flattener.js`": [
+      {
+        "executionId": "6a56aa68-5883-4e17-be14-6b4640dc8013",
+        "chatSessionId": "sess_c8dbba8d-b18c-46de-b36f-8f2802b529b9",
+        "timestamp": 1793026739920
+      }
+    ],
+    "4.1 Validate component constructs with Warn_And_Skip, leaving static `childOf` validation unaffected": [
+      {
+        "executionId": "0ba89c12-8ec8-496f-9f42-1505fd33b12d",
+        "chatSessionId": "sess_b85356b2-f0e3-47a8-9c68-7992570bc45e",
+        "timestamp": 1793037881732
+      },
+      {
+        "executionId": "0ba89c12-8ec8-496f-9f42-1505fd33b12d",
+        "chatSessionId": "sess_b85356b2-f0e3-47a8-9c68-7992570bc45e",
+        "timestamp": 1793038152768
+      }
+    ],
+    "4. Compiler validate + Warn_And_Skip diagnostics in `packages/compiler/src/validator.js` and `packages/compiler/src/parser.js`": [
+      {
+        "executionId": "0ba89c12-8ec8-496f-9f42-1505fd33b12d",
+        "chatSessionId": "sess_b85356b2-f0e3-47a8-9c68-7992570bc45e",
+        "timestamp": 1793038152911
+      }
+    ],
+    "6.1 Propagate the component marker onto each child `taskPath` node in `expandTaskStep` (`packages/extension/src/background.js`)": [
+      {
+        "executionId": "2ee5c5f8-8299-4086-8163-c5caf4d9c551",
+        "chatSessionId": "sess_a4f4a10a-07d5-4ab4-ba80-526f14479c6f",
+        "timestamp": 1793068050421
+      },
+      {
+        "executionId": "2ee5c5f8-8299-4086-8163-c5caf4d9c551",
+        "chatSessionId": "sess_a4f4a10a-07d5-4ab4-ba80-526f14479c6f",
+        "timestamp": 1793068098466
+      }
+    ],
+    "6.2 Resolve `scopeRoot` locators via the existing `childOf`-bounded subtree search in `packages/extension/src/runtime.js`": [
+      {
+        "executionId": "2ee5c5f8-8299-4086-8163-c5caf4d9c551",
+        "chatSessionId": "sess_a4f4a10a-07d5-4ab4-ba80-526f14479c6f",
+        "timestamp": 1793068103742
+      },
+      {
+        "executionId": "2ee5c5f8-8299-4086-8163-c5caf4d9c551",
+        "chatSessionId": "sess_a4f4a10a-07d5-4ab4-ba80-526f14479c6f",
+        "timestamp": 1793068355601
+      }
+    ],
+    "6. Runtime: carry the marker on `taskPath` and resolve `scopeRoot` locators": [
+      {
+        "executionId": "2ee5c5f8-8299-4086-8163-c5caf4d9c551",
+        "chatSessionId": "sess_a4f4a10a-07d5-4ab4-ba80-526f14479c6f",
+        "timestamp": 1793068355831
+      }
+    ],
+    "8.1 Extend the `taskPath` node type with the marker in `panel-vue/src/types/messages.ts` and `panel-vue/src/types/store.ts`": [
+      {
+        "executionId": "39a6f963-f1a7-4d78-9c4b-b57583b517dd",
+        "chatSessionId": "sess_9f3b5c2e-6ff5-488c-9787-735d25e8c636",
+        "timestamp": 1793068529954
+      },
+      {
+        "executionId": "39a6f963-f1a7-4d78-9c4b-b57583b517dd",
+        "chatSessionId": "sess_9f3b5c2e-6ff5-488c-9787-735d25e8c636",
+        "timestamp": 1793068627810
+      }
+    ],
+    "8.2 Preserve the marker when ingesting STEP messages in `panel-vue/src/store/index.ts`": [
+      {
+        "executionId": "39a6f963-f1a7-4d78-9c4b-b57583b517dd",
+        "chatSessionId": "sess_9f3b5c2e-6ff5-488c-9787-735d25e8c636",
+        "timestamp": 1793068533794
+      },
+      {
+        "executionId": "39a6f963-f1a7-4d78-9c4b-b57583b517dd",
+        "chatSessionId": "sess_9f3b5c2e-6ff5-488c-9787-735d25e8c636",
+        "timestamp": 1793068631752
+      }
+    ],
+    "8. Panel types + store: carry the marker through to render items": [
+      {
+        "executionId": "39a6f963-f1a7-4d78-9c4b-b57583b517dd",
+        "chatSessionId": "sess_9f3b5c2e-6ff5-488c-9787-735d25e8c636",
+        "timestamp": 1793068631921
+      }
+    ],
+    "9.1 Mark component headers when building render items in `panel-vue/src/components/LogContainer.vue` (and `logic/stepLabel.ts` if header labels are built there)": [
+      {
+        "executionId": "fea441f5-8c4b-44d3-b5d4-6995309591d9",
+        "chatSessionId": "sess_cd656178-8800-4c25-8b8c-cb91b72c93fb",
+        "timestamp": 1793105270987
+      },
+      {
+        "executionId": "fea441f5-8c4b-44d3-b5d4-6995309591d9",
+        "chatSessionId": "sess_cd656178-8800-4c25-8b8c-cb91b72c93fb",
+        "timestamp": 1793105585899
+      }
+    ],
+    "9.2 Render collapse/expand with run-state behavior in `LogContainer.vue` and `panel-vue/src/components/TaskHeader.vue` / `LogEntry.vue`": [
+      {
+        "executionId": "fea441f5-8c4b-44d3-b5d4-6995309591d9",
+        "chatSessionId": "sess_cd656178-8800-4c25-8b8c-cb91b72c93fb",
+        "timestamp": 1793105275869
+      },
+      {
+        "executionId": "fea441f5-8c4b-44d3-b5d4-6995309591d9",
+        "chatSessionId": "sess_cd656178-8800-4c25-8b8c-cb91b72c93fb",
+        "timestamp": 1793105587590
+      }
+    ],
+    "9.3 Wire the marker-aware render through both views in `panel-vue/src/components/RunView.vue`, `TestPlanView.vue`, and `App.vue`": [
+      {
+        "executionId": "fea441f5-8c4b-44d3-b5d4-6995309591d9",
+        "chatSessionId": "sess_cd656178-8800-4c25-8b8c-cb91b72c93fb",
+        "timestamp": 1793105276860
+      },
+      {
+        "executionId": "fea441f5-8c4b-44d3-b5d4-6995309591d9",
+        "chatSessionId": "sess_cd656178-8800-4c25-8b8c-cb91b72c93fb",
+        "timestamp": 1793105588655
+      }
+    ],
+    "9. Panel UI: collapsible component groups in the Run Log and Test Plan": [
+      {
+        "executionId": "fea441f5-8c4b-44d3-b5d4-6995309591d9",
+        "chatSessionId": "sess_cd656178-8800-4c25-8b8c-cb91b72c93fb",
+        "timestamp": 1793105588774
+      }
+    ],
+    "14.1 Add the `components` directory field to the config and resolver": [
+      {
+        "executionId": "3893db62-01f9-483c-9851-2f87fd283c8f",
+        "chatSessionId": "sess_b433c4fe-7d8e-47b2-ab57-36e6bbcb226a",
+        "timestamp": 1793154485686
+      },
+      {
+        "executionId": "3893db62-01f9-483c-9851-2f87fd283c8f",
+        "chatSessionId": "sess_b433c4fe-7d8e-47b2-ab57-36e6bbcb226a",
+        "timestamp": 1793154605028
+      }
+    ],
+    "14.2 Add a searchable-select component and reuse it across multiple fields in `examples/playground-tests`": [
+      {
+        "executionId": "3893db62-01f9-483c-9851-2f87fd283c8f",
+        "chatSessionId": "sess_b433c4fe-7d8e-47b2-ab57-36e6bbcb226a",
+        "timestamp": 1793154678079
+      },
+      {
+        "executionId": "3893db62-01f9-483c-9851-2f87fd283c8f",
+        "chatSessionId": "sess_b433c4fe-7d8e-47b2-ab57-36e6bbcb226a",
+        "timestamp": 1793154967173
+      }
+    ],
+    "14.3 Recompile the playground spec (single-shot)": [
+      {
+        "executionId": "3893db62-01f9-483c-9851-2f87fd283c8f",
+        "chatSessionId": "sess_b433c4fe-7d8e-47b2-ab57-36e6bbcb226a",
+        "timestamp": 1793155008277
+      },
+      {
+        "executionId": "3893db62-01f9-483c-9851-2f87fd283c8f",
+        "chatSessionId": "sess_b433c4fe-7d8e-47b2-ab57-36e6bbcb226a",
+        "timestamp": 1793155290830
+      }
+    ],
+    "14. Config + playground example": [
+      {
+        "executionId": "3893db62-01f9-483c-9851-2f87fd283c8f",
+        "chatSessionId": "sess_b433c4fe-7d8e-47b2-ab57-36e6bbcb226a",
+        "timestamp": 1793155290976
+      }
+    ],
+    "15.1 Document the Component Object Model in `examples/playground/docs.html`": [
+      {
+        "executionId": "8e312a61-ed1e-44a7-b723-320a4f133913",
+        "chatSessionId": "sess_b14275f7-9b39-4522-bf94-bfea9bd8af1f",
+        "timestamp": 1793158596101
+      },
+      {
+        "executionId": "8e312a61-ed1e-44a7-b723-320a4f133913",
+        "chatSessionId": "sess_b14275f7-9b39-4522-bf94-bfea9bd8af1f",
+        "timestamp": 1793158745826
+      }
+    ],
+    "15.2 Document the Component Object Model in `tomation-ai.md`": [
+      {
+        "executionId": "8e312a61-ed1e-44a7-b723-320a4f133913",
+        "chatSessionId": "sess_b14275f7-9b39-4522-bf94-bfea9bd8af1f",
+        "timestamp": 1793158746735
+      },
+      {
+        "executionId": "8e312a61-ed1e-44a7-b723-320a4f133913",
+        "chatSessionId": "sess_b14275f7-9b39-4522-bf94-bfea9bd8af1f",
+        "timestamp": 1793158835746
+      }
+    ],
+    "15. Documentation": [
+      {
+        "executionId": "8e312a61-ed1e-44a7-b723-320a4f133913",
+        "chatSessionId": "sess_b14275f7-9b39-4522-bf94-bfea9bd8af1f",
+        "timestamp": 1793158835980
+      }
+    ]
+  }
+}

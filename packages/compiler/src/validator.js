@@ -270,8 +270,15 @@ function validateSteps(steps, pageElementKeySet, taskKeySet) {
     }
     }
 
-    // Requirement 1.4 — task action name must reference a key in tasks
-    if (step.action === 'task') {
+    // Requirement 1.4 — task action name must reference a key in tasks.
+    // COM Requirement 9.1-9.3 (Warn_And_Skip): a component-action invocation is
+    // emitted as a task-shaped step annotated `isComponent: true`. Its `name` is
+    // the Component_Action name, which is NOT a key in the shared `tasks` map, so
+    // the ordinary unknown-task check does not apply to it. Component problems are
+    // never fatal to compilation; any diagnostic for an unknown component/action
+    // is surfaced as a Warn_And_Skip warning during parsing, not here. So skip the
+    // unknown-task check for component-marked steps.
+    if (step.action === 'task' && step.isComponent !== true) {
       var name = step.name;
       if (!(name in taskKeySet)) {
         return 'Step references unknown task: ' + name;

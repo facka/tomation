@@ -285,6 +285,106 @@ Supported parameter types:
 
 ---
 
+## Component Object Model
+
+A **Component** models a reusable UI widget that appears many times on a page — a searchable select, a date picker, a row of action buttons. Where a POM describes a fixed page or section, a Component is defined once and then *instantiated* against a different root element each time it appears. Its locators resolve relative to that root, so two instances on the same page never collide.
+
+### Defining a Component
+
+Declare a Component in a dedicated `*.com.ts` file with the `Component(({ el }) => { ... })` factory. The factory receives a single destructured `el` — a **root placeholder** that stands in for the concrete root element each instance will bind at runtime. Inside, you declare the component's locators and expose `Task`-like actions, then return them as a single object.
+
+```ts
+// components/search-select.com.ts
+import {
+  Component, Task, Type, Click, AssertExists, is,
+  classIncludes, placeholderIs, isNthElement,
+} from '@tomationjs/dsl'
+
+const SearchSelect = Component(({ el }) => {
+  const trigger = is.BUTTON.where(classIncludes('select-trigger')).childOf(el).as('Open Select')
+  const searchBox = is.INPUT.where(placeholderIs('Search...')).childOf(el).as('Search Field')
+  // Portal-rendered dropdown list: document-scoped (no .childOf(el)).
+  const firstResult = is.LI.where(isNthElement(1)).as('First Result')
+
+  const choose = Task((params: { query: string }) => {
+    Click(trigger)
+    Type(params.query).in(searchBox)
+    Click(firstResult)
+    AssertExists(trigger)
+  }).as('Choose Option')
+
+  return { trigger, searchBox, firstResult, choose }
+})
+
+export default SearchSelect
+```
+
+### Per-Locator Root Scoping with childOf(el)
+
+Each locator decides for itself whether it is root-scoped. Chain `.childOf(el)` against the placeholder to restrict the search to the instance's root subtree — this is what lets the same Component appear many times without its locators matching another instance's elements. A locator that does *not* chain `.childOf(el)` stays **document-scoped**, which is exactly what you want for a portal or overlay that the widget renders outside its own subtree (a dropdown list appended to `<body>`, for example).
+
+- `trigger` and `searchBox` chain `.childOf(el)` — each resolves only inside its own instance's root.
+- `firstResult` has no `.childOf(el)` — it resolves against the whole document, matching the portal-rendered dropdown list.
+
+### Component Actions
+
+Actions are declared with the same `Task(...)` builder used in POM files, so they support the same steps — `Click`, `Type`, `Select`, assertions, and so on. An action operates over the component's own locators, so it automatically respects each locator's scoping. In the example above, `choose` opens the select, types a query, picks the first result, and asserts the trigger is still present.
+
+### Instantiating with .in(root)
+
+Bind a Component to a concrete root element with `.in(root)`, where `root` is any element locator. Each call returns an independent instance, so the same Component can be placed on several fields of one page and its root-scoped locators will never collide. Invoke an action on the instance just like a POM task, passing `{{data.*}}` tokens (or `{{ctx.*}}`) exactly as you would for a task.
+
+```ts
+// tests/search-select.test.ts
+import { Test } from '@tomationjs/dsl'
+import user from '~/data/user.data'
+import SearchForm from '~/pom/search-form.pom'
+import SearchSelect from '~/components/search-select.com'
+
+const country = SearchSelect.in(SearchForm.countryField)
+const city = SearchSelect.in(SearchForm.cityField)
+
+Test('Pick country and city via the searchable select', () => {
+  country.choose({ query: user.address })
+  city.choose({ query: 'Springfield' })
+})
+```
+
+Here `country` and `city` are two instances of the same Component bound to two different form fields. Each `choose` call resolves its root-scoped locators within its own field, and the `{{data.*}}` token (`user.address`) passes through just like a task parameter.
+
+### Configuration
+
+Component files live in the directory named by the `components` field of your `tomation.config.ts`, alongside `pom`, `tests`, `automations`, and `data`. The field is optional — when it is absent, projects compile exactly as before.
+
+```ts
+// tomation.config.ts
+export default {
+  meta: { name: 'My App', urls: ['http://localhost:3000'] },
+  pom: './pom',
+  tests: './tests',
+  automations: './automations',
+  data: './data',
+  components: './components',
+  baseUrl: './',
+}
+```
+
+### Component Groups in the Run Log
+
+To keep the log readable when a component action expands into several steps, each component action renders as a **collapsed group** by default — in both the Test Plan preview and the live Run Log. You can expand any group to see its individual steps, and collapse it again. Plain POM tasks are unaffected and render exactly as they do today.
+
+While a collapsed group is running, its header shows the current step underneath so you can follow progress without expanding it. The behavior is keyed off run state:
+
+| State | Collapsed group display |
+|-------|-------------------------|
+| Running | Header plus the current step line |
+| Success | Header only, marked passed |
+| Failure | Auto-expands down to the failing step |
+
+On failure the group opens automatically to the step that failed (for nested components, the whole enclosing chain expands), so you always land on the problem without hunting for it.
+
+---
+
 ## Scoping with childOf
 
 When multiple elements match the same criteria, scope with `.childOf(parent)`:

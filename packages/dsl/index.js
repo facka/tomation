@@ -10,6 +10,7 @@ function ElementBuilder(tag) {
   this._tag = tag;
   this._where = {};
   this._childOf = undefined;
+  this._scopeRoot = undefined;
   this._navigate = undefined;
 }
 
@@ -19,7 +20,15 @@ ElementBuilder.prototype.where = function (matcher) {
 };
 
 ElementBuilder.prototype.childOf = function (parent) {
-  this._childOf = parent;
+  // When the argument is the Component Root_Placeholder `el`, this locator opts
+  // into deferred root-scoping: it compiles to a per-instance `scopeRoot` rather
+  // than a static same-file `childOf`. A locator that never chains `.childOf(el)`
+  // is left document-scoped (untouched).
+  if (parent && parent.__rootPlaceholder === true) {
+    this._scopeRoot = parent;
+  } else {
+    this._childOf = parent;
+  }
   return this;
 };
 
@@ -47,6 +56,12 @@ ElementBuilder.prototype.as = function (label) {
   var descriptor = { tag: this._tag, label: label, where: this._where, __el: true };
   if (this._childOf !== undefined) {
     descriptor.childOf = this._childOf;
+  }
+  if (this._scopeRoot !== undefined) {
+    // Deferred-root-scoped: this locator chained `.childOf(el)` against the
+    // Component Root_Placeholder. The compiler turns this into a per-instance
+    // `scopeRoot` reference; the placeholder is resolved at `.in(root)` time.
+    descriptor.scopeRoot = this._scopeRoot;
   }
   if (this._navigate !== undefined) {
     descriptor.navigate = this._navigate;
@@ -183,6 +198,116 @@ function Test(name, fn) {
 
 function Automation(name, fn) {
   return { __automation: true, name: name, fn: fn };
+}
+
+// --- Component (Component Object Model) ---
+
+/**
+ * Create a fresh Root_Placeholder token — the deferred `el` passed into a
+ * Component factory. It is a tagged token, distinguishable from a concrete
+ * element descriptor (`__el: true`), so `.childOf(el)` can detect it and mark a
+ * locator as deferred-root-scoped. Its value is resolved per Component_Instance
+ * when `.in(root)` is called.
+ * @returns {{ __rootPlaceholder: true }}
+ */
+function makeRootPlaceholder() {
+  return { __rootPlaceholder: true };
+}
+
+/**
+ * Determine whether a value returned from a Component factory is a `Task`-like
+ * Component_Action (produced by `Task(fn)` / `Task(fn).as(label)`).
+ * @param {*} value - a value exported from the factory's return object
+ * @returns {boolean}
+ */
+function isComponentAction(value) {
+  return !!(value && value.__task === true && typeof value.fn === 'function');
+}
+
+/**
+ * Build the invokable action set for a Component_Instance. Each Component_Action
+ * becomes a function that, when called, emits a task-shaped invocation tagged as
+ * component-originated (`isComponent`) so the compiler can stamp `isComponent` +
+ * `componentName`.
+ * @param {object} members - the raw object returned by the factory
+ * @param {object} root - the Root_Element descriptor passed to `.in(root)`
+ * @returns {object} an instance exposing each action as an invokable
+ */
+function makeComponentInstance(members, root) {
+  var instance = {
+    __componentInstance: true,
+    root: root
+  };
+
+  var key;
+  for (key in members) {
+    if (!Object.prototype.hasOwnProperty.call(members, key)) continue;
+    var member = members[key];
+    if (isComponentAction(member)) {
+      instance[key] = makeActionInvoker(member, key, root);
+    } else {
+      // Internal locators (and any other members) are exposed as-is so they
+      // remain referenceable; only actions become invokables.
+      instance[key] = member;
+    }
+  }
+
+  return instance;
+}
+
+/**
+ * Create a single action invoker bound to a Component_Instance root.
+ * @param {object} action - the `Task`-like action descriptor ({ __task, fn, label? })
+ * @param {string} actionName - the member key the action was exported under
+ * @param {object} root - the Root_Element descriptor for this instance
+ * @returns {function} an invokable emitting a component-tagged task-shaped value
+ */
+function makeActionInvoker(action, actionName, root) {
+  var name = action.label !== undefined ? action.label : actionName;
+  return function () {
+    var params = Array.prototype.slice.call(arguments);
+    // Emit a task-shaped invocation tagged component-originated. The DSL marks it
+    // with `isComponent` so the compiler can stamp `isComponent` + the real
+    // `componentName` (derived from the component's binding/export name, which the
+    // DSL runtime does not know). `name` is the Component_Action's name.
+    return {
+      __step: true,
+      __componentAction: true,
+      action: 'task',
+      name: name,
+      params: params,
+      fn: action.fn,
+      isComponent: true,
+      root: root
+    };
+  };
+}
+
+/**
+ * Component(factory) — the Component Object Model factory.
+ *
+ * Invokes `factory` with a destructurable `{ el }` Root_Placeholder, captures the
+ * returned internal locators and `Task`-like Component_Actions, and returns a
+ * Component definition exposing `.in(root)`. `.in(root)` binds the Root_Placeholder
+ * to the passed `root` element descriptor and returns a Component_Instance whose
+ * actions are invokable (emitting component-tagged task-shaped invocations) and
+ * whose `.childOf(el)` locators resolve relative to that root.
+ *
+ * @param {function} factory - `({ el }) => ({ ...locators, ...actions })`
+ * @returns {object} a Component definition with `.in(root)`
+ */
+function Component(factory) {
+  var el = makeRootPlaceholder();
+  var members = factory({ el: el });
+
+  return {
+    __component: true,
+    rootPlaceholder: el,
+    members: members,
+    in: function (root) {
+      return makeComponentInstance(members, root);
+    }
+  };
 }
 
 // --- Action stubs ---
@@ -560,6 +685,8 @@ module.exports = {
   Task: Task,
   Test: Test,
   Automation: Automation,
+  // Component Object Model
+  Component: Component,
   // Action stubs
   Click: Click,
   Type: Type,

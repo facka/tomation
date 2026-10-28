@@ -332,6 +332,24 @@ function runPipeline(cwd, options) {
     if (Object.keys(importMap).length > 0) {
       rewriteStepTargets(rpf, importMap);
 
+      // Also rewrite each Component_Instance's `.root` reference using the same
+      // import → namespace map, so the emitted `scopeRoot` references the real
+      // namespaced page-element key (e.g. "SearchForm__countryField"). Additive:
+      // files without instances are unaffected.
+      if (Array.isArray(rpf.instances)) {
+        for (var inri = 0; inri < rpf.instances.length; inri++) {
+          var instRoot = rpf.instances[inri].root;
+          if (typeof instRoot === 'string' && instRoot.indexOf('__') !== -1) {
+            var ipParts = instRoot.split('__');
+            var ipVar = ipParts[0];
+            var ipProp = ipParts.slice(1).join('__');
+            if (importMap[ipVar]) {
+              rpf.instances[inri].root = importMap[ipVar] + '__' + ipProp;
+            }
+          }
+        }
+      }
+
       // Also rewrite targets in already-extracted pomResult tasks (since extractPom
       // copied the steps before rewriting happened)
       if (rpf.type === 'pom') {
@@ -402,7 +420,20 @@ function runPipeline(cwd, options) {
 
   // Step 5: flatten
   log('Step 5/6: Flattening spec');
-  var spec = flattenSpec(pomResults, parsedTestFiles.concat(parsedAutomationFiles), meta, { cwd: cwd });
+  // Collect ParsedFiles that carry component data (definitions and/or instances)
+  // so component scopeRoot page-elements can be emitted. Component definitions
+  // (`.components`) and their `.in(root)` instances (`.instances`) may live in
+  // SEPARATE files, so include any file carrying either. When no component data
+  // is present, componentFiles is [] and emitComponentPageElements is a no-op,
+  // keeping output byte-identical for component-free projects (Property 5).
+  var componentFiles = [];
+  for (var cfi = 0; cfi < parsedFiles.length; cfi++) {
+    var cfPf = parsedFiles[cfi];
+    if (cfPf && ((Array.isArray(cfPf.components) && cfPf.components.length > 0) || (Array.isArray(cfPf.instances) && cfPf.instances.length > 0))) {
+      componentFiles.push(cfPf);
+    }
+  }
+  var spec = flattenSpec(pomResults, parsedTestFiles.concat(parsedAutomationFiles), meta, { cwd: cwd, componentFiles: componentFiles });
   var specElemCount = Object.keys(spec.pageElements || {}).length;
   var specTaskCount = Object.keys(spec.tasks || {}).length;
   var specTestCount = (spec.tests || []).length;

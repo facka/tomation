@@ -190,7 +190,7 @@
               <option value="Node.js">Node.js</option>
             </select>
           </div>
-          <fieldset>
+          <fieldset id="seniority">
             <legend class="mb-1.5 block text-sm font-medium text-slate-200">Seniority</legend>
             <div class="flex flex-wrap gap-4">
               <label class="flex items-center gap-2 text-sm text-slate-200">
@@ -227,6 +227,7 @@
             <button type="button" data-file="data" class="source-file-tab rounded-md px-3 py-2 text-xs font-medium">data/user.data.ts</button>
             <button type="button" data-file="enums" class="source-file-tab rounded-md px-3 py-2 text-xs font-medium">data/skills.enum.ts</button>
             <button type="button" data-file="pom" class="source-file-tab rounded-md px-3 py-2 text-xs font-medium">pom/user-form.pom.ts</button>
+            <button type="button" data-file="component" class="source-file-tab rounded-md px-3 py-2 text-xs font-medium">components/seniority-radio.com.ts</button>
           </div>
         </div>
         <pre class="code-scroll overflow-x-auto p-4 text-slate-200"><code id="source-code-view" class="language-typescript"></code></pre>
@@ -326,10 +327,15 @@ Test('Register user with generated data', () => {
     role: user.role,
     skills: TechSkill.TypeScript,
     address: user.address,
-    isSenior: true,
+    seniority: 'Senior',
   })
   UserForm.submit()
   AssertHasText(UserForm.message, 'User registered successfully')
+})
+
+Test('Register user shows error on empty submit', () => {
+  UserForm.submit()
+  AssertHasText(UserForm.message, 'All fields are required')
 })`
         },
         data: {
@@ -361,7 +367,8 @@ export default TechSkill`
         },
         pom: {
           name: 'pom/user-form.pom.ts',
-          code: `import { is, idIs, Task, Type, Select, Click, When } from '@tomationjs/dsl'
+          code: `import { is, idIs, Task, Type, Select, Click } from '@tomationjs/dsl'
+import SeniorityRadio from '~/components/seniority-radio.com'
 
 const nameInput = is.INPUT.where(idIs('full-name')).as('Full Name')
 const emailInput = is.INPUT.where(idIs('email')).as('Email')
@@ -370,16 +377,21 @@ const dobInput = is.INPUT.where(idIs('dob')).as('Date of Birth')
 const roleSelect = is.SELECT.where(idIs('role')).as('Role')
 const skillsSelect = is.SELECT.where(idIs('skills')).as('Tech Skills')
 const addressInput = is.INPUT.where(idIs('address')).as('Address')
-const juniorRadio = is.INPUT.where(idIs('seniority-junior')).as('Junior Seniority')
-const semiseniorRadio = is.INPUT.where(idIs('seniority-semisenior')).as('Semisenior Seniority')
-const seniorRadio = is.INPUT.where(idIs('seniority-senior')).as('Senior Seniority')
+// Root element for the SeniorityRadio Component instance. Passing this to
+// \`SeniorityRadio.in(root)\` scopes that instance's \`.childOf(el)\` radio
+// locators to this fieldset's subtree.
+const seniorityField = is.FIELDSET.where(idIs('seniority')).as('Seniority Field')
 const registerButton = is.BUTTON.where(idIs('register-btn')).as('Register')
 const message = is.DIV.where(idIs('message')).as('Message')
+
+// The Seniority radio group is modeled as a reusable Component, bound to the
+// fieldset root. Its \`.childOf(el)\` locators resolve within that root.
+const seniority = SeniorityRadio.in(seniorityField)
 
 const fillForm = Task((params: {
   name: string; email: string; phone: string;
   dob: string; role: string; skills: string; address: string;
-  isJunior?: boolean; isSemisenior?: boolean; isSenior?: boolean;
+  seniority: 'Junior' | 'Semisenior' | 'Senior';
 }) => {
   Type(params.name).in(nameInput)
   Type(params.email).in(emailInput)
@@ -388,11 +400,7 @@ const fillForm = Task((params: {
   Select(params.role).in(roleSelect)
   Select(params.skills).in(skillsSelect)
   Type(params.address).in(addressInput)
-
-  // Only one seniority radio can be selected — pick the one that matches
-  When(params.isJunior, () => Click(juniorRadio))
-  When(params.isSemisenior, () => Click(semiseniorRadio))
-  When(params.isSenior, () => Click(seniorRadio))
+  seniority.select({ option: params.seniority })
 }).as('Fill Registration Form')
 
 const submit = Task(() => {
@@ -402,10 +410,34 @@ const submit = Task(() => {
 export default {
   nameInput, emailInput, phoneInput, dobInput,
   roleSelect, skillsSelect, addressInput,
-  juniorRadio, semiseniorRadio, seniorRadio,
+  seniorityField,
   registerButton, message,
   fillForm, submit
 }`
+        },
+        component: {
+          name: 'components/seniority-radio.com.ts',
+          code: `import { Component, Task, Click, is, idIs, When } from '@tomationjs/dsl'
+
+// SeniorityRadio — a reusable radio-group Component for the Seniority field.
+// Each radio locator chains \`.childOf(el)\`, so an instance resolves only
+// within the root it is bound to via \`.in(root)\`. The exposed \`select\`
+// action takes the chosen option as a string and clicks the matching radio.
+const SeniorityRadio = Component(({ el }) => {
+  const juniorRadio = is.INPUT.where(idIs('seniority-junior')).childOf(el).as('Junior')
+  const semiseniorRadio = is.INPUT.where(idIs('seniority-semisenior')).childOf(el).as('Semisenior')
+  const seniorRadio = is.INPUT.where(idIs('seniority-senior')).childOf(el).as('Senior')
+
+  const select = Task((params: { option: string }) => {
+    When(params.option === 'Junior', () => Click(juniorRadio))
+    When(params.option === 'Semisenior', () => Click(semiseniorRadio))
+    When(params.option === 'Senior', () => Click(seniorRadio))
+  }).as('Select Seniority')
+
+  return { juniorRadio, semiseniorRadio, seniorRadio, select }
+})
+
+export default SeniorityRadio`
         }
       };
 

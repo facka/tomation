@@ -84,7 +84,7 @@
     [id="get-started"], [id="cli"], [id="configuration"],
     [id="element-locators"], [id="where-matchers"], [id="user-functions"],
     [id="save-to-context"], [id="date-helpers"], [id="keyboard-actions"],
-    [id="assertions"], [id="network-assertions"], [id="test-data"], [id="enums-and-consts"], [id="conditionals"], [id="network-log"], [id="tests"], [id="automations"], [id="pom-files"] {
+    [id="assertions"], [id="network-assertions"], [id="test-data"], [id="enums-and-consts"], [id="conditionals"], [id="network-log"], [id="tests"], [id="automations"], [id="pom-files"], [id="components"] {
       scroll-margin-top: 70px;
     }
 
@@ -92,7 +92,7 @@
       [id="get-started"], [id="cli"], [id="configuration"],
       [id="element-locators"], [id="where-matchers"], [id="user-functions"],
       [id="save-to-context"], [id="date-helpers"], [id="keyboard-actions"],
-      [id="assertions"], [id="network-assertions"], [id="test-data"], [id="enums-and-consts"], [id="conditionals"], [id="network-log"], [id="tests"], [id="automations"], [id="pom-files"] {
+      [id="assertions"], [id="network-assertions"], [id="test-data"], [id="enums-and-consts"], [id="conditionals"], [id="network-log"], [id="tests"], [id="automations"], [id="pom-files"], [id="components"] {
         scroll-margin-top: 110px;
       }
     }
@@ -270,6 +270,11 @@
       <!-- POM Files -->
       <a href="#pom-files" class="sidebar-link block rounded-md px-3 py-2 text-sm font-medium text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
         POM Files
+      </a>
+
+      <!-- Component Object Model -->
+      <a href="#components" class="sidebar-link block rounded-md px-3 py-2 text-sm font-medium text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 transition">
+        Component Object Model
       </a>
 
     </div>
@@ -1283,6 +1288,108 @@ Login.submit()</code></pre></div>
     <div class="rounded-xl border border-purple-500/30 bg-gradient-to-br from-slate-900/90 to-purple-950/30 p-4 mb-4">
       <p class="text-sm text-slate-300"><span class="text-purple-300 font-medium">Tip:</span> The Lab generates production-ready POM files using the same DSL functions documented above (<code class="text-purple-200 bg-purple-500/10 px-1 rounded">is</code>, <code class="text-purple-200 bg-purple-500/10 px-1 rounded">Task</code>, <code class="text-purple-200 bg-purple-500/10 px-1 rounded">where matchers</code>). You can use the generated output as-is or refine it to match your project's naming conventions.</p>
     </div>
+
+    <h2 id="components" class="text-2xl font-bold tracking-tight text-white mt-16 mb-4">Component Object Model <a href="#components" class="heading-anchor">#</a></h2>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      A <strong class="text-white">Component</strong> models a reusable UI widget that appears many times on a page — a searchable select, a date picker, a row of action buttons. Where a <a href="#pom-files" class="text-emerald-300 hover:text-emerald-200 underline">POM</a> describes a fixed page or section, a Component is defined once and then <em>instantiated</em> against a different root element each time it appears. Its locators resolve relative to that root, so two instances on the same page never collide.
+    </p>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Defining a Component</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Declare a Component in a dedicated <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">*.com.ts</code> file with the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Component(({ el }) => { ... })</code> factory. The factory receives a single destructured <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">el</code> — a <strong class="text-white">root placeholder</strong> that stands in for the concrete root element each instance will bind at runtime. Inside, you declare the component's locators and expose <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Task</code>-like actions, then return them as a single object.
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">// components/search-select.com.ts
+import {
+  Component, Task, Type, Click, AssertExists, is,
+  classIncludes, placeholderIs, isNthElement,
+} from '@tomationjs/dsl'
+
+const SearchSelect = Component(({ el }) => {
+  const trigger = is.BUTTON.where(classIncludes('select-trigger')).childOf(el).as('Open Select')
+  const searchBox = is.INPUT.where(placeholderIs('Search...')).childOf(el).as('Search Field')
+  // Portal-rendered dropdown list: document-scoped (no .childOf(el)).
+  const firstResult = is.LI.where(isNthElement(1)).as('First Result')
+
+  const choose = Task((params: { query: string }) => {
+    Click(trigger)
+    Type(params.query).in(searchBox)
+    Click(firstResult)
+    AssertExists(trigger)
+  }).as('Choose Option')
+
+  return { trigger, searchBox, firstResult, choose }
+})
+
+export default SearchSelect</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Per-Locator Root Scoping with childOf(el)</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Each locator decides for itself whether it is root-scoped. Chain <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.childOf(el)</code> against the placeholder to restrict the search to the instance's root subtree — this is what lets the same Component appear many times without its locators matching another instance's elements. A locator that does <em>not</em> chain <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.childOf(el)</code> stays <strong class="text-white">document-scoped</strong>, which is exactly what you want for a portal or overlay that the widget renders outside its own subtree (a dropdown list appended to <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">&lt;body&gt;</code>, for example).
+    </p>
+    <ul class="list-disc list-inside text-slate-300 text-sm leading-relaxed mb-4 space-y-1">
+      <li><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">trigger</code> and <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">searchBox</code> chain <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.childOf(el)</code> — each resolves only inside its own instance's root.</li>
+      <li><code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">firstResult</code> has no <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.childOf(el)</code> — it resolves against the whole document, matching the portal-rendered dropdown list.</li>
+    </ul>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Component Actions</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Actions are declared with the same <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Task(...)</code> builder used in POM files, so they support the same steps — <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Click</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Type</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">Select</code>, assertions, and so on. An action operates over the component's own locators, so it automatically respects each locator's scoping. In the example above, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">choose</code> opens the select, types a query, picks the first result, and asserts the trigger is still present.
+    </p>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Instantiating with .in(root)</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Bind a Component to a concrete root element with <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">.in(root)</code>, where <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">root</code> is any element locator. Each call returns an independent instance, so the same Component can be placed on several fields of one page and its root-scoped locators will never collide. Invoke an action on the instance just like a POM task, passing <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">{{data.*}}</code> tokens (or <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">{{ctx.*}}</code>) exactly as you would for a task.
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">// tests/search-select.test.ts
+import { Test } from '@tomationjs/dsl'
+import user from '~/data/user.data'
+import SearchForm from '~/pom/search-form.pom'
+import SearchSelect from '~/components/search-select.com'
+
+const country = SearchSelect.in(SearchForm.countryField)
+const city = SearchSelect.in(SearchForm.cityField)
+
+Test('Pick country and city via the searchable select', () => {
+  country.choose({ query: user.address })
+  city.choose({ query: 'Springfield' })
+})</code></pre></div>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Here <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">country</code> and <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">city</code> are two instances of the same Component bound to two different form fields. Each <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">choose</code> call resolves its root-scoped locators within its own field, and the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">{{data.*}}</code> token (<code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">user.address</code>) passes through just like a task parameter.
+    </p>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Configuration</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      Component files live in the directory named by the <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">components</code> field of your <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">tomation.config.ts</code>, alongside <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">pom</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">tests</code>, <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">automations</code>, and <code class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 text-xs font-mono">data</code>. The field is optional — when it is absent, projects compile exactly as before.
+    </p>
+    <div class="rounded-xl border border-slate-700 bg-slate-950 mb-4"><pre class="code-scroll overflow-x-auto p-3"><code class="language-typescript">// tomation.config.ts
+export default {
+  meta: { name: 'My App', urls: ['http://localhost:3000'] },
+  pom: './pom',
+  tests: './tests',
+  automations: './automations',
+  data: './data',
+  components: './components',
+  baseUrl: './',
+}</code></pre></div>
+
+    <h4 class="text-lg font-medium text-white mt-6 mb-2">Component Groups in the Run Log</h4>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      To keep the log readable when a component action expands into several steps, each component action renders as a <strong class="text-white">collapsed group</strong> by default — in both the Test Plan preview and the live Run Log. You can expand any group to see its individual steps, and collapse it again. Plain POM tasks are unaffected and render exactly as they do today.
+    </p>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      While a collapsed group is running, its header shows the current step underneath so you can follow progress without expanding it. The behavior keyed off run state:
+    </p>
+    <div class="overflow-x-auto mb-4"><table class="w-full text-sm text-left border border-slate-700 rounded-lg overflow-hidden">
+      <thead class="bg-slate-800/80"><tr><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">State</th><th class="px-4 py-3 font-medium text-slate-200 border-b border-slate-700">Collapsed group display</th></tr></thead>
+      <tbody>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300">Running</td><td class="px-4 py-2.5 text-slate-300">Header plus the current step line</td></tr>
+        <tr class="border-b border-slate-700/50"><td class="px-4 py-2.5 text-slate-300">Success</td><td class="px-4 py-2.5 text-slate-300">Header only, marked passed</td></tr>
+        <tr><td class="px-4 py-2.5 text-slate-300">Failure</td><td class="px-4 py-2.5 text-slate-300">Auto-expands down to the failing step</td></tr>
+      </tbody>
+    </table></div>
+    <p class="text-slate-300 text-sm leading-relaxed mb-4">
+      On failure the group opens automatically to the step that failed (for nested components, the whole enclosing chain expands), so you always land on the problem without hunting for it.
+    </p>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
@@ -1342,7 +1449,7 @@ Login.submit()</code></pre></div>
       var sectionIds = [
         'get-started', 'cli', 'configuration',
         'element-locators', 'where-matchers', 'user-functions', 'assertions',
-        'tests', 'automations', 'pom-files'
+        'tests', 'automations', 'pom-files', 'components'
       ];
 
       var sections = [];

@@ -42,14 +42,20 @@ const AUTOMATION_EXTENSIONS = ['.automation.ts'];
 const DATA_EXTENSIONS = ['.data.ts'];
 
 /**
+ * File extensions for Component_File discovery (matched in order).
+ * Component files (`*.com.ts`) hold static Component definitions like a POM.
+ */
+const COM_EXTENSIONS = ['.com.js', '.com.ts'];
+
+/**
  * All source file extensions recognized for discovery.
  */
-const ALL_SOURCE_EXTENSIONS = ['.ts', '.tsx', '.pom.ts', '.test.ts', '.js', '.pom.js', '.test.js'];
+const ALL_SOURCE_EXTENSIONS = ['.ts', '.tsx', '.pom.ts', '.test.ts', '.js', '.pom.js', '.test.js', '.com.ts', '.com.js'];
 
 /**
  * Extensions to try when resolving an import specifier (in priority order).
  */
-const RESOLVE_EXTENSIONS = ['.ts', '.tsx', '.js', '.pom.ts', '.test.ts', '.data.ts', '.pom.js', '.test.js'];
+const RESOLVE_EXTENSIONS = ['.ts', '.tsx', '.js', '.pom.ts', '.test.ts', '.data.ts', '.pom.js', '.test.js', '.com.ts', '.com.js'];
 
 /**
  * Index file names to try when resolving a directory import.
@@ -210,9 +216,11 @@ function resolveSpecifier(specifier, fromFile, baseUrl) {
  * @param {string} [baseUrl] - absolute path for ~/ alias resolution
  * @param {string[]} [automationFiles] - automation file paths
  * @param {string[]} [dataFiles] - data file paths
+ * @param {string[]} [componentFiles] - Component_File paths (`*.com.ts`); mapped to
+ *   type 'pom' so they flow through the existing POM extraction path (extractPom)
  * @returns {{ graph: Map<string, object>, errors: string[] }} filePath → node, plus any alias resolution errors
  */
-function buildGraph(pomFiles, testFiles, baseUrl, automationFiles, dataFiles) {
+function buildGraph(pomFiles, testFiles, baseUrl, automationFiles, dataFiles, componentFiles) {
   const graph = new Map();
   const errors = [];
 
@@ -220,7 +228,10 @@ function buildGraph(pomFiles, testFiles, baseUrl, automationFiles, dataFiles) {
     ...pomFiles.map(f => ({ filePath: f, type: 'pom' })),
     ...testFiles.map(f => ({ filePath: f, type: 'test' })),
     ...(automationFiles || []).map(f => ({ filePath: f, type: 'automation' })),
-    ...(dataFiles || []).map(f => ({ filePath: f, type: 'data' }))
+    ...(dataFiles || []).map(f => ({ filePath: f, type: 'data' })),
+    // Component files are classified as 'pom' (see parser detectFileType) so they
+    // route through extractPom in the bin orchestration like ordinary POM files.
+    ...(componentFiles || []).map(f => ({ filePath: f, type: 'pom' }))
   ];
 
   for (const { filePath, type } of allFiles) {
@@ -412,8 +423,13 @@ function findCycleError(graph, inDegree) {
  * resolve(cwd)
  *
  * Reads tomation.config.js or tomation.config.ts from cwd, discovers all
- * POM and test files (.ts/.tsx/.js), builds a dependency graph, topologically
- * sorts them, and returns an ordered list of file paths ready for sequential processing.
+ * POM, test, automation, data, and Component files (.ts/.tsx/.js), builds a
+ * dependency graph, topologically sorts them, and returns an ordered list of
+ * file paths ready for sequential processing.
+ *
+ * The optional `components` config field names a directory of `*.com.ts`
+ * Component_Files. When absent, no component directory is scanned and output is
+ * byte-identical to a component-free compile.
  *
  * @param {string} cwd - working directory (absolute path)
  * @returns {{ ok: true, files: string[] } | { ok: false, error: string }}
@@ -487,19 +503,26 @@ function resolve(cwd) {
     ? path.resolve(cwd, config.data)
     : null;
 
+  // Resolve optional components directory (no default — when absent, no component
+  // directory is scanned and compilation is byte-identical to pre-feature output)
+  const componentsDir = config.components
+    ? path.resolve(cwd, config.components)
+    : null;
+
   // Resolve baseUrl for ~/ alias resolution (defaults to config file directory)
   const baseUrl = config.baseUrl
     ? path.resolve(cwd, config.baseUrl)
     : cwd;
 
-  // Discover all POM, test, automation, and data files
+  // Discover all POM, test, automation, data, and Component files
   const pomFiles = discoverFiles(pomDir, POM_EXTENSIONS);
   const testFiles = discoverFiles(testsDir, TEST_EXTENSIONS);
   const automationFiles = discoverFiles(automationsDir, AUTOMATION_EXTENSIONS);
   const dataFiles = dataDir ? discoverFiles(dataDir, DATA_EXTENSIONS) : [];
+  const componentFiles = componentsDir ? discoverFiles(componentsDir, COM_EXTENSIONS) : [];
 
   // Build dependency graph (with ~/ alias resolution)
-  const { graph, errors } = buildGraph(pomFiles, testFiles, baseUrl, automationFiles, dataFiles);
+  const { graph, errors } = buildGraph(pomFiles, testFiles, baseUrl, automationFiles, dataFiles, componentFiles);
 
   // Report unresolvable ~/ imports as errors
   if (errors.length > 0) {
@@ -540,7 +563,7 @@ function resolve(cwd) {
     meta.testFiles = config.testFiles;
   }
 
-  return { ok: true, files: sortResult.sorted, meta: meta, pomDir: pomDir, baseUrl: baseUrl, automationsDir: automationsDir, dataDir: dataDir };
+  return { ok: true, files: sortResult.sorted, meta: meta, pomDir: pomDir, baseUrl: baseUrl, automationsDir: automationsDir, dataDir: dataDir, componentsDir: componentsDir };
 }
 
 module.exports = { resolve, discoverFiles, parseImports, buildGraph, topologicalSort, resolveSpecifier, resolveAlias, resolveWithExtensions };

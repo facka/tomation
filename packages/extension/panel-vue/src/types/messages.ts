@@ -24,8 +24,8 @@ export type PanelMessage =
 // Messages sent FROM background TO panel
 export type BackgroundMessage =
   | { type: 'STEP_PLAN'; steps: StepPlanEntry[] }
-  | { type: 'STEP_STARTING'; stepIndex: number; action: string; target?: string; value?: string; url?: string; ms?: number; description?: string; name?: string; params?: Record<string, unknown>; taskDepth?: number; taskPath?: Array<{ name: string; label?: string; params?: Record<string, unknown> }>; accessor?: TableCellAccessor }
-  | { type: 'LOG'; stepIndex: number; action: string; target?: string; value?: string; ok: boolean; error?: string; retryAttempt?: number; contextKey?: string; savedValue?: unknown; resolvedContext?: Array<{ key: string; value: unknown }>; condition?: StepCondition; taken?: boolean; taskDepth?: number; taskPath?: Array<{ name: string; label?: string; params?: Record<string, unknown> }>; findTrace?: FindTrace; ms?: number; accessor?: TableCellAccessor; matcher?: RequestMatcher; expectation?: RequestExpectation; matchCount?: number }
+  | { type: 'STEP_STARTING'; stepIndex: number; action: string; target?: string; value?: string; url?: string; ms?: number; description?: string; name?: string; params?: Record<string, unknown>; taskDepth?: number; taskPath?: Array<{ name: string; label?: string; params?: Record<string, unknown>; isComponent?: boolean; componentName?: string }>; accessor?: TableCellAccessor }
+  | { type: 'LOG'; stepIndex: number; action: string; target?: string; value?: string; ok: boolean; error?: string; retryAttempt?: number; contextKey?: string; savedValue?: unknown; resolvedContext?: Array<{ key: string; value: unknown }>; condition?: StepCondition; taken?: boolean; taskDepth?: number; taskPath?: Array<{ name: string; label?: string; params?: Record<string, unknown>; isComponent?: boolean; componentName?: string }>; findTrace?: FindTrace; ms?: number; accessor?: TableCellAccessor; matcher?: RequestMatcher; expectation?: RequestExpectation; matchCount?: number }
   | { type: 'UPDATE_LOG_ENTRY'; stepIndex: number; ok: boolean; retryAttempt?: number; error?: string }
   | { type: 'STEP_FAILED_AWAITING_ACTION'; stepIndex: number; action: string; target?: string; value?: string; error?: string; retryAttempt?: number }
   | { type: 'RUN_COMPLETE'; total: number; passed: number; failed: number }
@@ -55,7 +55,7 @@ export interface StepPlanEntry {
   description?: string;
   name?: string;
   params?: Record<string, unknown>;
-  taskPath?: Array<{ name: string; label?: string; params?: Record<string, unknown> }>;
+  taskPath?: Array<{ name: string; label?: string; params?: Record<string, unknown>; isComponent?: boolean; componentName?: string }>;
   taskDepth?: number;
   condition?: StepCondition;
   taken?: boolean;
