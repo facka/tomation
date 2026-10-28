@@ -543,10 +543,11 @@ function resolveConstMemberExpression(node, constBindings, filePath, warnings) {
  * @param {Array} [warnings] - mutable warnings array
  * @returns {object|null} parsed template object, or null if not an ObjectExpression
  */
-function parseDataTemplate(objNode, constBindings, filePath, warnings) {
+function parseDataTemplate(objNode, constBindings, filePath, warnings, dataVars) {
   if (!objNode || objNode.type !== 'ObjectExpression') return null;
   if (!constBindings) constBindings = {};
   if (!warnings) warnings = [];
+  if (!dataVars) dataVars = new Map();
 
   const template = {};
 
@@ -630,7 +631,7 @@ function parseDataTemplate(objNode, constBindings, filePath, warnings) {
 
     // Case 3: Nested ObjectExpression — recurse
     if (value.type === 'ObjectExpression') {
-      const nested = parseDataTemplate(value, constBindings, filePath, warnings);
+      const nested = parseDataTemplate(value, constBindings, filePath, warnings, dataVars);
       if (nested !== null) {
         template[key] = nested;
       }
@@ -644,6 +645,27 @@ function parseDataTemplate(objNode, constBindings, filePath, warnings) {
       const descriptor = extractDateHelperCall(value, filePath || '', warnings);
       if (descriptor !== null) {
         template[key] = descriptor;
+        continue;
+      }
+    }
+
+    // Case 4.5: Cross-Data reference — a member access rooted at a Data variable
+    // declared EARLIER in this file (e.g. `driver: personData.lastName`). Emit a
+    // `{{data.<DataName>.<path>}}` token so the value resolves at run time to the
+    // SAME generated value as the referenced Data leaf. This lets one Data reuse
+    // another's values. Only fires when the root identifier is a known data var;
+    // a non-data member access falls through to the const/enum cases below, so
+    // existing enum references are unaffected.
+    if (
+      value.type === 'MemberExpression' &&
+      dataVars && dataVars.size > 0
+    ) {
+      var crossRef = extractDataMemberPath(value, dataVars);
+      if (crossRef) {
+        var refEntry = dataVars.get(crossRef.rootVar);
+        // Warn-only path validation against the referenced template (if known).
+        validateDataPath(refEntry, crossRef.path, filePath || '', lineOf(value), warnings);
+        template[key] = '{{data.' + refEntry.dataName + '.' + crossRef.path.join('.') + '}}';
         continue;
       }
     }
@@ -792,7 +814,7 @@ function unwrapDataCall(initNode) {
   return null;
 }
 
-function parseDataDeclaration(declarator, constBindings, filePath, warnings) {
+function parseDataDeclaration(declarator, constBindings, filePath, warnings, dataVars) {
   if (!declarator || declarator.type !== 'VariableDeclarator') return null;
   if (!declarator.init) return null;
 
@@ -814,8 +836,9 @@ function parseDataDeclaration(declarator, constBindings, filePath, warnings) {
   const objArg = args[0];
   if (objArg.type !== 'ObjectExpression') return null;
 
-  // Parse the template structure
-  const template = parseDataTemplate(objArg, constBindings, filePath, warnings);
+  // Parse the template structure. Pass the incremental dataVars map so a value
+  // can reference an EARLIER-declared Data (cross-Data reference).
+  const template = parseDataTemplate(objArg, constBindings, filePath, warnings, dataVars);
   if (!template) return null;
 
   // Extract optional second argument for options (e.g., { seed: 42 })
@@ -4633,12 +4656,27 @@ function parseSource(source, filePath, rawSource, options) {
 
   // Walk the AST for Data() declarations: const X = Data({...})
   // Detects Data template declarations in any file type (.data.ts or .test.ts)
+  // Incremental map of data variables seen SO FAR during the top-down walk, so a
+  // later Data() can reference an earlier one's leaves (cross-Data reference).
+  // Keyed by the declared variable name → { dataName, template }. Imported
+  // `.data` vars are also seeded below so a Data() can reference them too.
+  var walkDataVars = new Map();
+  for (const imp of result.imports) {
+    if (imp.importPath && imp.importPath.endsWith('.data')) {
+      walkDataVars.set(imp.localName, { dataName: imp.localName, template: null });
+    }
+  }
   walk(ast, node => {
     if (node.type !== 'VariableDeclaration') return;
     for (const declarator of node.declarations) {
-      const dataDecl = parseDataDeclaration(declarator, constBindings, filePath, result.warnings);
+      const dataDecl = parseDataDeclaration(declarator, constBindings, filePath, result.warnings, walkDataVars);
       if (dataDecl) {
         result.dataTemplates.push(dataDecl);
+        // Register this Data so subsequent Data() declarations can reference it.
+        walkDataVars.set(dataDecl.varName || dataDecl.name, {
+          dataName: dataDecl.name,
+          template: dataDecl.template,
+        });
       }
     }
   });

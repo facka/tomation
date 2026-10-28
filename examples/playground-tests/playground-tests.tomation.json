@@ -996,7 +996,7 @@
       "sourceFile": "new-task",
       "data": {
         "newTaskDefault": {
-          "taskType": "Type1",
+          "taskType": "{{data.TaskTypes.Type1}}",
           "provider": "Provider1",
           "dueDate": {
             "type": "dateHelper",
@@ -1004,6 +1004,10 @@
             "offset": 7,
             "format": "MM/DD/YYYY"
           }
+        },
+        "TaskTypes": {
+          "Type1": "Type1",
+          "Type2": "Type2"
         }
       }
     },
@@ -1024,8 +1028,12 @@
       "sourceFile": "new-task",
       "data": {
         "localSourced": {
-          "x": "a",
+          "x": "{{data.LocalTypes.A}}",
           "label": "local"
+        },
+        "LocalTypes": {
+          "A": "a",
+          "B": "b"
         }
       }
     },
@@ -1050,7 +1058,7 @@
           "Q": "q-value"
         },
         "dualSourced": {
-          "picked": "p-value",
+          "picked": "{{data.DualTypes.P}}",
           "note": "dual"
         }
       }

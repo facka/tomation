@@ -2032,7 +2032,80 @@ function resolveTestData(testData, dataSeeds) {
       setSeededRandom(null);
     }
   }
+
+  // Resolve cross-Data references. A Data value that references another Data's
+  // leaf (e.g. `driver: personData.lastName`) was compiled to a
+  // `{{data.<name>.<path>}}` token and stored verbatim above. Replace each such
+  // token with the already-resolved value of the referenced path so the two
+  // share the SAME generated value. A fixpoint loop handles reference chains and
+  // forward references (a ref to a Data resolved later in the map); a bounded
+  // iteration count guards against reference cycles.
+  resolveCrossDataReferences(dataStore);
+
   return dataStore;
+}
+
+/**
+ * In-place resolution of `{{data.X.Y}}` tokens that appear as values in the flat
+ * dataStore (cross-Data references). Each token is replaced with the stored
+ * value at the referenced path. Runs to a fixpoint so chains (A→B→C) and forward
+ * references resolve regardless of key order; capped at dataStore-size iterations
+ * so a reference cycle degrades gracefully (leaves the unresolved token in place)
+ * rather than looping forever.
+ *
+ * Only string values are considered. A value that is exactly one token resolves
+ * to the referenced value with its original type preserved (e.g. a number stays
+ * a number); a token embedded in a larger string is substituted as text.
+ *
+ * @param {object} dataStore - flat map of dotPath → value (mutated in place)
+ */
+function resolveCrossDataReferences(dataStore) {
+  if (!dataStore || typeof dataStore !== 'object') return;
+  var EXACT = /^\{\{data\.([^}]+)\}\}$/;
+  var EMBEDDED = /\{\{data\.([^}]+)\}\}/g;
+  var keys = Object.keys(dataStore);
+  var maxPasses = keys.length + 1;
+
+  for (var pass = 0; pass < maxPasses; pass++) {
+    var changedAny = false;
+    for (var ki = 0; ki < keys.length; ki++) {
+      var key = keys[ki];
+      var val = dataStore[key];
+      if (typeof val !== 'string') continue;
+      if (val.indexOf('{{data.') === -1) continue;
+
+      var exact = val.match(EXACT);
+      if (exact) {
+        var refPath = exact[1];
+        // Only resolve when the referenced path exists AND is not itself still
+        // an unresolved cross-data token (so chains settle in a later pass).
+        if (dataStore.hasOwnProperty(refPath)) {
+          var refVal = dataStore[refPath];
+          if (!(typeof refVal === 'string' && refVal.indexOf('{{data.') !== -1)) {
+            dataStore[key] = refVal; // preserve original type
+            changedAny = true;
+          }
+        }
+        continue;
+      }
+
+      // Embedded token(s) within a larger string → text substitution.
+      var replaced = val.replace(EMBEDDED, function (match, refPath2) {
+        if (dataStore.hasOwnProperty(refPath2)) {
+          var rv = dataStore[refPath2];
+          if (!(typeof rv === 'string' && rv.indexOf('{{data.') !== -1)) {
+            return String(rv);
+          }
+        }
+        return match; // leave unresolved for a later pass (or cycle)
+      });
+      if (replaced !== val) {
+        dataStore[key] = replaced;
+        changedAny = true;
+      }
+    }
+    if (!changedAny) break;
+  }
 }
 
 /**
@@ -3796,6 +3869,8 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     generateRandom: generateRandom,
     resolveValue: resolveValue,
+    resolveTestData: resolveTestData,
+    resolveCrossDataReferences: resolveCrossDataReferences,
     evaluateCondition: evaluateCondition,
     flattenSteps: flattenSteps,
     expandStep: expandStep,

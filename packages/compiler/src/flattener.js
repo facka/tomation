@@ -543,6 +543,63 @@ function emitComponentActionTasks(tasks, componentFiles) {
 }
 
 /**
+ * Walk a Data_Template's values collecting the names of OTHER templates it
+ * references via `{{data.<name>.<path>}}` cross-Data tokens. Recurses into
+ * nested template objects. Fake/date-helper descriptors and plain literals never
+ * contain such tokens, so only string leaves are scanned.
+ *
+ * @param {object} template - a parsed Data template object
+ * @param {object} out - set-like map of referenced template names (mutated)
+ */
+function collectCrossDataNames(template, out) {
+  if (!template || typeof template !== 'object') return;
+  var re = /\{\{data\.([^.}]+)\./g;
+  var keys = Object.keys(template);
+  for (var i = 0; i < keys.length; i++) {
+    var v = template[keys[i]];
+    if (typeof v === 'string') {
+      var m;
+      while ((m = re.exec(v)) !== null) { out[m[1]] = true; }
+      re.lastIndex = 0;
+    } else if (v && typeof v === 'object' && v.type !== 'fake' && v.type !== 'dateHelper' && !Array.isArray(v)) {
+      collectCrossDataNames(v, out);
+    }
+  }
+}
+
+/**
+ * Given a set of directly-referenced template names, transitively expand it to
+ * include every template reachable through cross-Data references, so the runtime
+ * can resolve a `{{data.*}}` token that points at a template the test did not
+ * reference directly. Runs to a fixpoint; only pulls in names that exist in
+ * `allDataTemplates`.
+ *
+ * @param {object} names - set-like map of referenced names (mutated in place)
+ * @param {object} allDataTemplates - map of templateName → parsed template
+ */
+function expandCrossDataReferences(names, allDataTemplates) {
+  if (!names || !allDataTemplates) return;
+  var changed = true;
+  while (changed) {
+    changed = false;
+    var current = Object.keys(names);
+    for (var i = 0; i < current.length; i++) {
+      var tmpl = allDataTemplates[current[i]];
+      if (!tmpl) continue;
+      var refs = {};
+      collectCrossDataNames(tmpl, refs);
+      var refKeys = Object.keys(refs);
+      for (var r = 0; r < refKeys.length; r++) {
+        if (!names[refKeys[r]] && allDataTemplates[refKeys[r]]) {
+          names[refKeys[r]] = true;
+          changed = true;
+        }
+      }
+    }
+  }
+}
+
+/**
  * Merge all POM results and test files into a flat spec-shaped object.
  *
  * @param {Array<object>} pomResults       - Array of PomResult from extractPom()
@@ -714,6 +771,9 @@ function flattenSpec(pomResults, parsedTestFiles, meta, options) {
         // Attach data templates to the test if it references them
         if (hasAnyTemplates && testOut.steps) {
           var referencedNames = extractReferencedTemplateNames(testOut.steps);
+          // Pull in templates reachable via cross-Data references so the runtime
+          // can resolve a token that points at an indirectly-referenced template.
+          expandCrossDataReferences(referencedNames, allDataTemplates);
           var referencedKeys = Object.keys(referencedNames);
 
           if (referencedKeys.length > 0) {
@@ -776,6 +836,7 @@ function flattenSpec(pomResults, parsedTestFiles, meta, options) {
         // templates attach identically (also benefits imported shared data).
         if (hasAnyTemplates && automationOut.steps) {
           var autoReferencedNames = extractReferencedTemplateNames(automationOut.steps);
+          expandCrossDataReferences(autoReferencedNames, allDataTemplates);
           var autoReferencedKeys = Object.keys(autoReferencedNames);
 
           if (autoReferencedKeys.length > 0) {
