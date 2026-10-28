@@ -102,6 +102,20 @@
         "id": "task-type"
       }
     },
+    "SearchForm__countryField": {
+      "tag": "div",
+      "label": "Country Field",
+      "where": {
+        "id": "country-field"
+      }
+    },
+    "SearchForm__cityField": {
+      "tag": "div",
+      "label": "City Field",
+      "where": {
+        "id": "city-field"
+      }
+    },
     "Tables__table": {
       "tag": "table",
       "label": "Orders",
@@ -233,6 +247,52 @@
       "label": "Message",
       "where": {
         "id": "message"
+      }
+    },
+    "Component__SearchSelect__country__trigger": {
+      "tag": "button",
+      "label": "Open Select",
+      "where": {
+        "classIncludes": "select-trigger"
+      },
+      "scopeRoot": "SearchForm__countryField"
+    },
+    "Component__SearchSelect__country__searchBox": {
+      "tag": "input",
+      "label": "Search Field",
+      "where": {
+        "placeholder": "Search..."
+      },
+      "scopeRoot": "SearchForm__countryField"
+    },
+    "Component__SearchSelect__country__firstResult": {
+      "tag": "li",
+      "label": "First Result",
+      "where": {
+        "isNthElement": 1
+      }
+    },
+    "Component__SearchSelect__city__trigger": {
+      "tag": "button",
+      "label": "Open Select",
+      "where": {
+        "classIncludes": "select-trigger"
+      },
+      "scopeRoot": "SearchForm__cityField"
+    },
+    "Component__SearchSelect__city__searchBox": {
+      "tag": "input",
+      "label": "Search Field",
+      "where": {
+        "placeholder": "Search..."
+      },
+      "scopeRoot": "SearchForm__cityField"
+    },
+    "Component__SearchSelect__city__firstResult": {
+      "tag": "li",
+      "label": "First Result",
+      "where": {
+        "isNthElement": 1
       }
     }
   },
@@ -1070,6 +1130,76 @@
             }
           },
           "city": "Springfield"
+        }
+      }
+    },
+    {
+      "name": "Pick country and city via the searchable select",
+      "steps": [
+        {
+          "action": "task",
+          "name": "choose",
+          "params": {
+            "query": "{{data.user.address}}"
+          },
+          "isComponent": true,
+          "componentName": "SearchSelect"
+        },
+        {
+          "action": "task",
+          "name": "choose",
+          "params": {
+            "query": "Springfield"
+          },
+          "isComponent": true,
+          "componentName": "SearchSelect"
+        }
+      ],
+      "sourceFile": "search-select",
+      "data": {
+        "user": {
+          "name": {
+            "type": "fake",
+            "method": "fullName",
+            "options": {}
+          },
+          "email": {
+            "type": "fake",
+            "method": "email",
+            "options": {}
+          },
+          "phone": {
+            "type": "fake",
+            "method": "phone",
+            "options": {
+              "country": "US"
+            }
+          },
+          "dob": {
+            "type": "fake",
+            "method": "dateOfBirth",
+            "options": {
+              "minAge": 18,
+              "maxAge": 65,
+              "format": "MM/DD/YYYY"
+            }
+          },
+          "role": {
+            "type": "fake",
+            "method": "oneOf",
+            "options": {
+              "values": [
+                "Admin",
+                "Editor",
+                "Viewer"
+              ]
+            }
+          },
+          "address": {
+            "type": "fake",
+            "method": "address",
+            "options": {}
+          }
         }
       }
     },

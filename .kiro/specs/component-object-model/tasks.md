@@ -168,14 +168,14 @@ The marker is the shared thread, so the ordering is: DSL primitive → compiler 
 - [ ] 13. Checkpoint — all property tests created
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 14. Config + playground example
-  - [ ] 14.1 Add the `components` directory field to the config and resolver
+- [x] 14. Config + playground example
+  - [x] 14.1 Add the `components` directory field to the config and resolver
     - Add a `components` field to `tomation.config.ts` resolution alongside `pom`, `tests`, `automations`, `data`; have the compiler resolve `*.com.ts` Component_Files from it; when `components` is absent or empty, compile exactly as today with no component definitions, leaving existing POM `Task` definitions, tests, automations, and the inline/shared data flow unchanged
     - _Requirements: 1.1, 1.4, 8.1, 8.2_
-  - [ ] 14.2 Add a searchable-select component and reuse it across multiple fields in `examples/playground-tests`
+  - [x] 14.2 Add a searchable-select component and reuse it across multiple fields in `examples/playground-tests`
     - Add a `*.com.ts` Component (searchable select: open, type query, click first result) with `.childOf(el)` on the in-root locators and a document-scoped locator for the portal list; instantiate it with `.in(root)` on two or more form fields and invoke its action from a test (including a `{{data.*}}` arg), wiring files into the existing playground spec/config (`examples/playground-tests/tomation.config.ts`, `pom`, `tests`)
     - _Requirements: 1.1, 2.1, 2.4, 3.1, 3.3, 10.2_
-  - [ ] 14.3 Recompile the playground spec (single-shot)
+  - [x] 14.3 Recompile the playground spec (single-shot)
     - Run `npm run compile:playground` once and confirm the component example compiles: the action is task-shaped with `isComponent`/`componentName`, opted-in locators carry `scopeRoot`, the portal locator does not, and data tokens attach — do not run tests or watch modes
     - _Requirements: 1.1, 2.2, 2.3, 3.1, 3.2, 10.2_
 

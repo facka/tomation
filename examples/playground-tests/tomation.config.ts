@@ -8,5 +8,6 @@ export default {
   tests: './tests',
   automations: './automations',
   data: './data',
+  components: './components',
   baseUrl: './',
 }

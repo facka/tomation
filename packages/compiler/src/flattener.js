@@ -314,26 +314,36 @@ function markComponentSteps(steps) {
 function emitComponentPageElements(pageElements, componentFiles) {
   if (!pageElements || !Array.isArray(componentFiles)) return;
 
-  for (var fi = 0; fi < componentFiles.length; fi++) {
-    var file = componentFiles[fi];
-    if (!file || !Array.isArray(file.components) || !Array.isArray(file.instances)) {
-      continue;
-    }
-    if (file.components.length === 0 || file.instances.length === 0) {
-      continue;
-    }
+  // Component definitions and their instances may live in SEPARATE ParsedFiles:
+  // a Component is defined in a `*.com.ts` file (ParsedFile with `.components`
+  // populated, `.instances` empty), while its `.in(root)` instances live in a
+  // test/automation file (ParsedFile with `.instances` populated, `.components`
+  // empty). So resolve definitions GLOBALLY across all files rather than
+  // requiring both to appear in the same file.
 
-    // Build a component-name -> definition lookup for this file.
-    var byName = {};
-    for (var ci = 0; ci < file.components.length; ci++) {
-      var comp = file.components[ci];
+  // Pass 1: build a global component-name -> definition map by scanning ALL
+  // files' `.components` arrays. Duplicate component name across files: last one
+  // wins (harmless — component names are expected to be unique project-wide).
+  var byName = {};
+  for (var fi = 0; fi < componentFiles.length; fi++) {
+    var defFile = componentFiles[fi];
+    if (!defFile || !Array.isArray(defFile.components)) continue;
+    for (var ci = 0; ci < defFile.components.length; ci++) {
+      var comp = defFile.components[ci];
       if (comp && comp.name) {
         byName[comp.name] = comp;
       }
     }
+  }
 
-    for (var ii = 0; ii < file.instances.length; ii++) {
-      var instance = file.instances[ii];
+  // Pass 2: iterate ALL files' `.instances` arrays, looking up each instance's
+  // `.component` in the GLOBAL map (not just the same file).
+  for (var ifi = 0; ifi < componentFiles.length; ifi++) {
+    var instFile = componentFiles[ifi];
+    if (!instFile || !Array.isArray(instFile.instances)) continue;
+
+    for (var ii = 0; ii < instFile.instances.length; ii++) {
+      var instance = instFile.instances[ii];
       if (!instance || !instance.name || !instance.component) continue;
 
       var definition = byName[instance.component];

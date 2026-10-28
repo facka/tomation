@@ -217,6 +217,49 @@
         "chatSessionId": "sess_cd656178-8800-4c25-8b8c-cb91b72c93fb",
         "timestamp": 1793105588774
       }
+    ],
+    "14.1 Add the `components` directory field to the config and resolver": [
+      {
+        "executionId": "3893db62-01f9-483c-9851-2f87fd283c8f",
+        "chatSessionId": "sess_b433c4fe-7d8e-47b2-ab57-36e6bbcb226a",
+        "timestamp": 1793154485686
+      },
+      {
+        "executionId": "3893db62-01f9-483c-9851-2f87fd283c8f",
+        "chatSessionId": "sess_b433c4fe-7d8e-47b2-ab57-36e6bbcb226a",
+        "timestamp": 1793154605028
+      }
+    ],
+    "14.2 Add a searchable-select component and reuse it across multiple fields in `examples/playground-tests`": [
+      {
+        "executionId": "3893db62-01f9-483c-9851-2f87fd283c8f",
+        "chatSessionId": "sess_b433c4fe-7d8e-47b2-ab57-36e6bbcb226a",
+        "timestamp": 1793154678079
+      },
+      {
+        "executionId": "3893db62-01f9-483c-9851-2f87fd283c8f",
+        "chatSessionId": "sess_b433c4fe-7d8e-47b2-ab57-36e6bbcb226a",
+        "timestamp": 1793154967173
+      }
+    ],
+    "14.3 Recompile the playground spec (single-shot)": [
+      {
+        "executionId": "3893db62-01f9-483c-9851-2f87fd283c8f",
+        "chatSessionId": "sess_b433c4fe-7d8e-47b2-ab57-36e6bbcb226a",
+        "timestamp": 1793155008277
+      },
+      {
+        "executionId": "3893db62-01f9-483c-9851-2f87fd283c8f",
+        "chatSessionId": "sess_b433c4fe-7d8e-47b2-ab57-36e6bbcb226a",
+        "timestamp": 1793155290830
+      }
+    ],
+    "14. Config + playground example": [
+      {
+        "executionId": "3893db62-01f9-483c-9851-2f87fd283c8f",
+        "chatSessionId": "sess_b433c4fe-7d8e-47b2-ab57-36e6bbcb226a",
+        "timestamp": 1793155290976
+      }
     ]
   }
 }
