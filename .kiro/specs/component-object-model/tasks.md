@@ -179,11 +179,11 @@ The marker is the shared thread, so the ordering is: DSL primitive → compiler 
     - Run `npm run compile:playground` once and confirm the component example compiles: the action is task-shaped with `isComponent`/`componentName`, opted-in locators carry `scopeRoot`, the portal locator does not, and data tokens attach — do not run tests or watch modes
     - _Requirements: 1.1, 2.2, 2.3, 3.1, 3.2, 10.2_
 
-- [ ] 15. Documentation
-  - [ ] 15.1 Document the Component Object Model in `examples/playground/docs.html`
+- [x] 15. Documentation
+  - [x] 15.1 Document the Component Object Model in `examples/playground/docs.html`
     - Describe defining a Component in a `*.com.ts` file, instantiating with `.in(root)`, per-locator root scoping via `.childOf(el)` (and the document-scoped portal case), invoking Component_Actions, and the component log-collapsing behavior
     - _Requirements: 10.1_
-  - [ ] 15.2 Document the Component Object Model in `tomation-ai.md`
+  - [x] 15.2 Document the Component Object Model in `tomation-ai.md`
     - Mirror the docs.html content: `*.com.ts` definition, `.in(root)`, root-relative vs document-scoped locators, action invocation, and log collapsing
     - _Requirements: 10.1_
 
