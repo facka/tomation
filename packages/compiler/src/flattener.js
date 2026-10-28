@@ -240,6 +240,15 @@ function markComponentSteps(steps) {
         }
         marked[key] = step[key];
       }
+      // Rewrite the bare action name to the per-instance task key the flattener
+      // emits in `tasks` (Component__<comp>__<inst>__<action>), so the runtime's
+      // task lookup resolves the action body for THIS instance. The visible
+      // component name is preserved separately in `componentName` for the panel.
+      if (typeof step.componentName === 'string' &&
+          typeof step.instanceName === 'string' &&
+          typeof marked.name === 'string') {
+        marked.name = 'Component__' + step.componentName + '__' + step.instanceName + '__' + marked.name;
+      }
       marked.isComponent = true;
       if (typeof step.componentName === 'string') {
         marked.componentName = step.componentName;
@@ -392,6 +401,148 @@ function emitComponentPageElements(pageElements, componentFiles) {
 }
 
 /**
+ * Remap a component action step's element/task references from raw
+ * component-internal names to per-instance keys.
+ *
+ * A Component_Action body (extracted via the Task path) references its sibling
+ * locators by their raw variable name (e.g. `target: "juniorRadio"`) and sibling
+ * actions by raw name (e.g. a `{ action: 'task', name: 'otherAction' }`). Those
+ * raw names must be rewritten to the per-instance keys the flattener emits:
+ *
+ *   <locator>  ->  Component__<comp>__<inst>__<locator>
+ *   <action>   ->  Component__<comp>__<inst>__<action>
+ *
+ * Only names that belong to THIS component (its locator set / action set) are
+ * rewritten; anything else (an imported POM element target already carrying a
+ * namespace, a literal value, etc.) is left untouched. Recurses into `if.then`
+ * branches. Returns a deep-ish copy so the shared definition is never mutated.
+ *
+ * @param {Array}  steps        - action step array
+ * @param {string} prefix       - 'Component__<comp>__<inst>__'
+ * @param {object} locatorNames - set-like map { locatorVariableName: true }
+ * @param {object} actionNames  - set-like map { actionName: true }
+ * @returns {Array} new step array with references remapped
+ */
+function remapComponentActionSteps(steps, prefix, locatorNames, actionNames) {
+  if (!Array.isArray(steps)) return steps;
+  var out = [];
+  for (var i = 0; i < steps.length; i++) {
+    var step = steps[i];
+    if (!step || typeof step !== 'object') { out.push(step); continue; }
+
+    var copy = {};
+    var keys = Object.keys(step);
+    for (var k = 0; k < keys.length; k++) {
+      copy[keys[k]] = step[keys[k]];
+    }
+
+    // Remap an element target that names one of this component's locators.
+    if (typeof copy.target === 'string' && locatorNames[copy.target] === true) {
+      copy.target = prefix + copy.target;
+    }
+    // Remap a static childOf that names one of this component's locators.
+    if (typeof copy.childOf === 'string' && locatorNames[copy.childOf] === true) {
+      copy.childOf = prefix + copy.childOf;
+    }
+    // Remap a sibling component-action invocation (task step by bare name).
+    if (copy.action === 'task' && typeof copy.name === 'string' && actionNames[copy.name] === true) {
+      copy.name = prefix + copy.name;
+    }
+    // Recurse into conditional branches.
+    if (copy.action === 'if' && Array.isArray(copy.then)) {
+      copy.then = remapComponentActionSteps(copy.then, prefix, locatorNames, actionNames);
+    }
+
+    out.push(copy);
+  }
+  return out;
+}
+
+/**
+ * Emit each Component_Instance's actions into the flat `tasks` map (task 3.x
+ * completion), so a component-action invocation step can be resolved and
+ * expanded by the runtime/panel exactly like an ordinary task.
+ *
+ * For each instance of a component, every Component_Action is emitted as a task
+ * keyed PER INSTANCE:
+ *
+ *   Component__<componentName>__<instanceName>__<actionName>
+ *
+ * The task's `steps` are the action's steps with element/task references
+ * remapped to this instance's per-instance keys (see remapComponentActionSteps),
+ * so each instance's action resolves against its own scoped locators. This
+ * mirrors `emitComponentPageElements`, which emits the matching per-instance
+ * locator page-elements. The invocation step's `name` is rewritten to this same
+ * key by `markComponentSteps`.
+ *
+ * Purely additive: a no-op unless component/instance data is present, so a
+ * component-free project's `tasks` map is byte-identical to before. ES5 only.
+ *
+ * @param {object} tasks          - mutable target tasks map to merge entries into
+ * @param {Array}  componentFiles - ParsedFile objects carrying `.components` / `.instances`
+ */
+function emitComponentActionTasks(tasks, componentFiles) {
+  if (!tasks || !Array.isArray(componentFiles)) return;
+
+  // Pass 1: global component-name -> definition map (same as emitComponentPageElements).
+  var byName = {};
+  for (var fi = 0; fi < componentFiles.length; fi++) {
+    var defFile = componentFiles[fi];
+    if (!defFile || !Array.isArray(defFile.components)) continue;
+    for (var ci = 0; ci < defFile.components.length; ci++) {
+      var comp = defFile.components[ci];
+      if (comp && comp.name) {
+        byName[comp.name] = comp;
+      }
+    }
+  }
+
+  // Pass 2: for each instance, emit each action as a per-instance task.
+  for (var ifi = 0; ifi < componentFiles.length; ifi++) {
+    var instFile = componentFiles[ifi];
+    if (!instFile || !Array.isArray(instFile.instances)) continue;
+
+    for (var ii = 0; ii < instFile.instances.length; ii++) {
+      var instance = instFile.instances[ii];
+      if (!instance || !instance.name || !instance.component) continue;
+
+      var definition = byName[instance.component];
+      if (!definition || !Array.isArray(definition.actions)) continue;
+
+      // Build quick lookup sets for this component's locator and action names.
+      var locatorNames = {};
+      if (Array.isArray(definition.locators)) {
+        for (var dli = 0; dli < definition.locators.length; dli++) {
+          var loc = definition.locators[dli];
+          if (loc && loc.variableName) locatorNames[loc.variableName] = true;
+        }
+      }
+      var actionNames = {};
+      for (var dai = 0; dai < definition.actions.length; dai++) {
+        var act = definition.actions[dai];
+        if (act && act.name) actionNames[act.name] = true;
+      }
+
+      var prefix = 'Component__' + instance.component + '__' + instance.name + '__';
+
+      for (var ai = 0; ai < definition.actions.length; ai++) {
+        var action = definition.actions[ai];
+        if (!action || !action.name) continue;
+
+        var taskKey = prefix + action.name;
+        var taskOut = {
+          steps: remapComponentActionSteps(action.steps || [], prefix, locatorNames, actionNames),
+        };
+        if (action.label !== undefined && action.label !== null) {
+          taskOut.label = action.label;
+        }
+        tasks[taskKey] = taskOut;
+      }
+    }
+  }
+}
+
+/**
  * Merge all POM results and test files into a flat spec-shaped object.
  *
  * @param {Array<object>} pomResults       - Array of PomResult from extractPom()
@@ -486,10 +637,30 @@ function flattenSpec(pomResults, parsedTestFiles, meta, options) {
             taskOut[taskFields[tfi]] = taskEntry[taskFields[tfi]];
           }
         }
+        // Convert any component-action invocation steps inside a POM task body
+        // from their internal (__componentInvocation) form into the public
+        // isComponent / componentName marker — identical to the handling for
+        // tests and automations. Without this, a component action invoked from
+        // within a Task (e.g. `instance.select(...)` inside `fillForm`) keeps its
+        // internal marker, so the unknown-task validator rejects it. No-op (same
+        // reference) when there are no component steps, so component-free tasks
+        // are byte-identical to before.
+        if (Array.isArray(taskOut.steps)) {
+          taskOut.steps = markComponentSteps(taskOut.steps);
+        }
         tasks[taskKey] = taskOut;
       }
     }
   }
+
+  // --- Emit component instances' actions as per-instance tasks ---
+  // Additive: a no-op unless component/instance data is supplied. Each instance
+  // contributes one task per Component_Action, keyed
+  // `Component__<comp>__<inst>__<action>`, with element/task references remapped
+  // to that instance's per-instance locator keys. This makes component-action
+  // invocation steps resolvable by the runtime/panel (whose `name` is rewritten
+  // to the same key by markComponentSteps).
+  emitComponentActionTasks(tasks, componentFiles);
 
   // --- Collect all tests from all parsed test files ---
   var tests = [];

@@ -12,7 +12,7 @@ Test('Register user with generated data', () => {
     role: user.role,
     skills: TechSkill.TypeScript,
     address: user.address,
-    isSenior: true,
+    seniority: 'Senior',
   })
   UserForm.submit()
   AssertHasText(UserForm.message, 'User registered successfully')

@@ -214,25 +214,11 @@
         "id": "address"
       }
     },
-    "UserForm__juniorRadio": {
-      "tag": "input",
-      "label": "Junior Seniority",
+    "UserForm__seniorityField": {
+      "tag": "fieldset",
+      "label": "Seniority Field",
       "where": {
-        "id": "seniority-junior"
-      }
-    },
-    "UserForm__semiseniorRadio": {
-      "tag": "input",
-      "label": "Semisenior Seniority",
-      "where": {
-        "id": "seniority-semisenior"
-      }
-    },
-    "UserForm__seniorRadio": {
-      "tag": "input",
-      "label": "Senior Seniority",
-      "where": {
-        "id": "seniority-senior"
+        "id": "seniority"
       }
     },
     "UserForm__registerButton": {
@@ -248,6 +234,30 @@
       "where": {
         "id": "message"
       }
+    },
+    "Component__SeniorityRadio__seniority__juniorRadio": {
+      "tag": "input",
+      "label": "Junior",
+      "where": {
+        "id": "seniority-junior"
+      },
+      "scopeRoot": "seniorityField"
+    },
+    "Component__SeniorityRadio__seniority__semiseniorRadio": {
+      "tag": "input",
+      "label": "Semisenior",
+      "where": {
+        "id": "seniority-semisenior"
+      },
+      "scopeRoot": "seniorityField"
+    },
+    "Component__SeniorityRadio__seniority__seniorRadio": {
+      "tag": "input",
+      "label": "Senior",
+      "where": {
+        "id": "seniority-senior"
+      },
+      "scopeRoot": "seniorityField"
     },
     "Component__SearchSelect__country__trigger": {
       "tag": "button",
@@ -595,49 +605,13 @@
           "value": "{{address}}"
         },
         {
-          "action": "if",
-          "condition": {
-            "path": [
-              "isJunior"
-            ],
-            "op": "truthy"
+          "action": "task",
+          "name": "Component__SeniorityRadio__seniority__select",
+          "params": {
+            "option": "{{seniority}}"
           },
-          "then": [
-            {
-              "action": "click",
-              "target": "UserForm__juniorRadio"
-            }
-          ]
-        },
-        {
-          "action": "if",
-          "condition": {
-            "path": [
-              "isSemisenior"
-            ],
-            "op": "truthy"
-          },
-          "then": [
-            {
-              "action": "click",
-              "target": "UserForm__semiseniorRadio"
-            }
-          ]
-        },
-        {
-          "action": "if",
-          "condition": {
-            "path": [
-              "isSenior"
-            ],
-            "op": "truthy"
-          },
-          "then": [
-            {
-              "action": "click",
-              "target": "UserForm__seniorRadio"
-            }
-          ]
+          "isComponent": true,
+          "componentName": "SeniorityRadio"
         }
       ],
       "params": [],
@@ -652,6 +626,103 @@
       ],
       "params": [],
       "label": "Submit Registration"
+    },
+    "Component__SeniorityRadio__seniority__select": {
+      "steps": [
+        {
+          "action": "if",
+          "condition": {
+            "path": [
+              "option"
+            ],
+            "op": "equals",
+            "value": "Junior"
+          },
+          "then": [
+            {
+              "action": "click",
+              "target": "Component__SeniorityRadio__seniority__juniorRadio"
+            }
+          ]
+        },
+        {
+          "action": "if",
+          "condition": {
+            "path": [
+              "option"
+            ],
+            "op": "equals",
+            "value": "Semisenior"
+          },
+          "then": [
+            {
+              "action": "click",
+              "target": "Component__SeniorityRadio__seniority__semiseniorRadio"
+            }
+          ]
+        },
+        {
+          "action": "if",
+          "condition": {
+            "path": [
+              "option"
+            ],
+            "op": "equals",
+            "value": "Senior"
+          },
+          "then": [
+            {
+              "action": "click",
+              "target": "Component__SeniorityRadio__seniority__seniorRadio"
+            }
+          ]
+        }
+      ],
+      "label": "Select Seniority"
+    },
+    "Component__SearchSelect__country__choose": {
+      "steps": [
+        {
+          "action": "click",
+          "target": "Component__SearchSelect__country__trigger"
+        },
+        {
+          "action": "type",
+          "target": "Component__SearchSelect__country__searchBox",
+          "value": "{{query}}"
+        },
+        {
+          "action": "click",
+          "target": "Component__SearchSelect__country__firstResult"
+        },
+        {
+          "action": "assertExists",
+          "target": "Component__SearchSelect__country__trigger"
+        }
+      ],
+      "label": "Choose Option"
+    },
+    "Component__SearchSelect__city__choose": {
+      "steps": [
+        {
+          "action": "click",
+          "target": "Component__SearchSelect__city__trigger"
+        },
+        {
+          "action": "type",
+          "target": "Component__SearchSelect__city__searchBox",
+          "value": "{{query}}"
+        },
+        {
+          "action": "click",
+          "target": "Component__SearchSelect__city__firstResult"
+        },
+        {
+          "action": "assertExists",
+          "target": "Component__SearchSelect__city__trigger"
+        }
+      ],
+      "label": "Choose Option"
     }
   },
   "tests": [
@@ -1138,7 +1209,7 @@
       "steps": [
         {
           "action": "task",
-          "name": "choose",
+          "name": "Component__SearchSelect__country__choose",
           "params": {
             "query": "{{data.user.address}}"
           },
@@ -1147,7 +1218,7 @@
         },
         {
           "action": "task",
-          "name": "choose",
+          "name": "Component__SearchSelect__city__choose",
           "params": {
             "query": "Springfield"
           },
@@ -1439,7 +1510,7 @@
             "role": "{{data.user.role}}",
             "skills": "TypeScript",
             "address": "{{data.user.address}}",
-            "isSenior": true
+            "seniority": "Senior"
           }
         },
         {

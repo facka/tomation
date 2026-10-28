@@ -107,6 +107,15 @@ function hasFailingDescendant(pathKey: string): boolean {
   return false;
 }
 
+/** True when any descendant step under `pathKey` is currently in progress. */
+function hasRunningDescendant(pathKey: string): boolean {
+  for (const entry of logEntries.value) {
+    if (entry.status !== 'in-progress') continue;
+    if (entryPathKeyUnder(entry, pathKey)) return true;
+  }
+  return false;
+}
+
 /**
  * True when the entry's taskPath is strictly under `pathKey` (a descendant of
  * the component group), i.e. its full pathKey equals or starts with
@@ -121,16 +130,23 @@ function entryPathKeyUnder(entry: { taskPath?: Array<{ name: string }> }, pathKe
 
 /**
  * Whether a group's children should be shown. A non-component header is always
- * expanded. A component header is expanded when the user toggled it expanded OR
- * any descendant failed (force-expand down to the failure, Req 7.3/7.4);
- * otherwise it defaults to collapsed (Req 6.1).
+ * expanded. For a component group the whole group's steps are shown while the
+ * group is RUNNING (any descendant in progress) and kept shown if it FAILED
+ * (force-expand down to the failing step). Once the group has PASSED — or before
+ * it has started — it collapses to just its header, hiding the internal steps
+ * that don't matter to the test narrative. An explicit user toggle always wins
+ * over this automatic behavior.
  */
 function effectiveExpanded(pathKey: string): boolean {
   if (!isComponentPath(pathKey)) return true;
-  if (hasFailingDescendant(pathKey)) return true;
+  // Explicit user intent overrides the automatic running/pass/fail behavior.
   const toggled = userToggled.value[pathKey];
   if (toggled !== undefined) return toggled;
-  return false; // component default: collapsed
+  // Auto: expanded while running or after a failure; collapsed otherwise
+  // (passed, or not yet started).
+  if (hasRunningDescendant(pathKey)) return true;
+  if (hasFailingDescendant(pathKey)) return true;
+  return false;
 }
 
 /**
@@ -173,17 +189,33 @@ function isSuppressed(fullPathKey: string, stepIndex: number | null): boolean {
   let prefix = '';
   for (let i = 0; i < parts.length; i++) {
     prefix += (i > 0 ? '>' : '') + parts[i];
-    // The row's own header path is not an "enclosing" collapse for itself.
-    if (prefix === fullPathKey) break;
-    if (!isComponentPath(prefix)) continue;
-    if (effectiveExpanded(prefix)) continue;
-    // `prefix` is a collapsed component ancestor. Allow only the single
-    // current-step line (a log entry) to show beneath it while running.
+
+    const isSelfLevel = prefix === fullPathKey;
+    // A HEADER row (stepIndex === null) must not treat its OWN path as an
+    // enclosing collapse — a component header is always rendered (collapsed or
+    // not); only a collapsed ancestor ABOVE it hides it. A LOG-ENTRY row
+    // (stepIndex !== null) is a leaf step that lives INSIDE the task at
+    // `fullPathKey`, so when that deepest task is a collapsed component the step
+    // itself must be hidden. Hence we only stop early at the self level for
+    // headers; for log entries we also evaluate the deepest (self) prefix.
+    if (isSelfLevel && stepIndex === null) break;
+
+    if (!isComponentPath(prefix)) {
+      if (isSelfLevel) break;
+      continue;
+    }
+    if (effectiveExpanded(prefix)) {
+      if (isSelfLevel) break;
+      continue;
+    }
+    // `prefix` is a collapsed component group enclosing this row. Allow only the
+    // single current-step line (a log entry) to show beneath it while running.
     if (
       stepIndex !== null &&
       store.state.isRunning &&
       currentStepIndexUnder(prefix) === stepIndex
     ) {
+      if (isSelfLevel) break;
       continue;
     }
     return true;
