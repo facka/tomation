@@ -358,6 +358,16 @@ function emitComponentPageElements(pageElements, componentFiles) {
       var definition = byName[instance.component];
       if (!definition || !Array.isArray(definition.locators)) continue;
 
+      // Set of this component's internal locator variable names, so a static
+      // `childOf` that names a SIBLING locator (not the root placeholder) can be
+      // remapped to this instance's per-instance key.
+      var localLocatorNames = {};
+      for (var lni = 0; lni < definition.locators.length; lni++) {
+        var lnLoc = definition.locators[lni];
+        if (lnLoc && lnLoc.variableName) localLocatorNames[lnLoc.variableName] = true;
+      }
+      var instancePrefix = 'Component__' + instance.component + '__' + instance.name + '__';
+
       for (var li = 0; li < definition.locators.length; li++) {
         var locator = definition.locators[li];
         if (!locator || !locator.variableName) continue;
@@ -389,8 +399,16 @@ function emitComponentPageElements(pageElements, componentFiles) {
           // to document-scoped resolution — emit the locator with no `scopeRoot`
           // (and no `childOf`), exactly as an ordinary document-scoped locator.
         } else if (locator.childOf !== undefined) {
-          // Static same-file childOf: emit unchanged.
-          entry.childOf = locator.childOf;
+          // Static childOf. Two cases:
+          //   (a) it names a SIBLING internal locator of this component — remap
+          //       to the per-instance key so it resolves to that instance's own
+          //       locator (Component__<comp>__<inst>__<sibling>);
+          //   (b) it names a concrete page element elsewhere — emit unchanged.
+          if (localLocatorNames[locator.childOf] === true) {
+            entry.childOf = instancePrefix + locator.childOf;
+          } else {
+            entry.childOf = locator.childOf;
+          }
         }
         // Document-scoped: neither branch — no scopeRoot, no childOf.
 
