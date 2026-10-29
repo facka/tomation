@@ -2071,6 +2071,59 @@ function resolveCrossDataReferences(dataStore) {
     for (var ki = 0; ki < keys.length; ki++) {
       var key = keys[ki];
       var val = dataStore[key];
+
+      // Runtime-template descriptor: concatenate its parts into a concrete
+      // string. String parts may carry {{data.*}} tokens (cross-Data refs);
+      // dateHelper parts resolve to a formatted date. A referenced data path
+      // that is not yet resolved (still a token or another runtimeTemplate)
+      // defers this descriptor to a later pass.
+      if (val && typeof val === 'object' && val.type === 'runtimeTemplate') {
+        var tmplParts = Array.isArray(val.parts) ? val.parts : [];
+        var out = '';
+        var ready = true;
+        for (var pi = 0; pi < tmplParts.length; pi++) {
+          var part = tmplParts[pi];
+          if (typeof part === 'string') {
+            // Resolve any {{data.X.Y}} tokens embedded in this string part.
+            if (part.indexOf('{{data.') !== -1) {
+              var partResolved = part.replace(/\{\{data\.([^}]+)\}\}/g, function (m, refPath) {
+                if (dataStore.hasOwnProperty(refPath)) {
+                  var rv = dataStore[refPath];
+                  if (rv && typeof rv === 'object') {
+                    // Referenced leaf not yet a concrete scalar (dateHelper /
+                    // runtimeTemplate) — defer.
+                    ready = false;
+                    return m;
+                  }
+                  if (typeof rv === 'string' && rv.indexOf('{{data.') !== -1) {
+                    ready = false; // still an unresolved token — defer
+                    return m;
+                  }
+                  return String(rv);
+                }
+                ready = false; // unknown path (maybe resolved later) — defer
+                return m;
+              });
+              out += partResolved;
+            } else {
+              out += part;
+            }
+          } else if (part && typeof part === 'object' && part.type === 'dateHelper') {
+            out += String(resolveDateHelper(part));
+          } else if (part && typeof part === 'object') {
+            // Unknown descriptor part — contribute empty, do not block.
+            out += '';
+          } else {
+            out += String(part);
+          }
+        }
+        if (ready) {
+          dataStore[key] = out;
+          changedAny = true;
+        }
+        continue;
+      }
+
       if (typeof val !== 'string') continue;
       if (val.indexOf('{{data.') === -1) continue;
 
@@ -2135,6 +2188,13 @@ function resolveTemplateRecursive(prefix, obj, dataStore) {
       // (do NOT recurse/explode it into .type/.kind/.offset/.format). The panel
       // renders it as its source expression (e.g. nextWeek('MM/DD/YYYY')), and
       // the step-substitution path resolves it to a concrete date on demand.
+      dataStore[path] = value;
+    } else if (value && typeof value === 'object' && value.type === 'runtimeTemplate') {
+      // Runtime-template descriptor (a Data value composed from a template
+      // literal, e.g. `${patientData.lastName}, ${patientData.firstName}`) →
+      // store the descriptor as a single leaf. It is concatenated and resolved
+      // (including any embedded {{data.*}} references) by
+      // resolveCrossDataReferences once all plain leaves are in the store.
       dataStore[path] = value;
     } else if (value && typeof value === 'object' && !Array.isArray(value)) {
       // Nested object → recurse

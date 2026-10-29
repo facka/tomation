@@ -572,13 +572,23 @@ function emitComponentActionTasks(tasks, componentFiles) {
 function collectCrossDataNames(template, out) {
   if (!template || typeof template !== 'object') return;
   var re = /\{\{data\.([^.}]+)\./g;
+  var m;
   var keys = Object.keys(template);
   for (var i = 0; i < keys.length; i++) {
     var v = template[keys[i]];
     if (typeof v === 'string') {
-      var m;
       while ((m = re.exec(v)) !== null) { out[m[1]] = true; }
       re.lastIndex = 0;
+    } else if (v && typeof v === 'object' && v.type === 'runtimeTemplate') {
+      // A composed value (template literal) — scan its string parts for the
+      // {{data.*}} tokens that reference other templates.
+      var tparts = Array.isArray(v.parts) ? v.parts : [];
+      for (var pi = 0; pi < tparts.length; pi++) {
+        if (typeof tparts[pi] === 'string') {
+          while ((m = re.exec(tparts[pi])) !== null) { out[m[1]] = true; }
+          re.lastIndex = 0;
+        }
+      }
     } else if (v && typeof v === 'object' && v.type !== 'fake' && v.type !== 'dateHelper' && !Array.isArray(v)) {
       collectCrossDataNames(v, out);
     }

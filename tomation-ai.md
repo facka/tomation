@@ -567,6 +567,46 @@ Todo.addItem({ text: task.note })          // Fake.* leaf → {{data.task.note}}
 
 > **Note:** Inline `Data()` is purely additive — it compiles to the same `{{data.*}}` tokens and resolved `data` object as the shared `.data.ts` + import flow. The existing shared-file approach is unchanged, and you can mix inline and imported data freely in the same file.
 
+### Referencing Other Data
+
+A `Data` value can reference another `Data`'s value by bare member access (no quotes, no `{{ }}`). The referencing value resolves to the **same generated value** at run time, so the two stay in sync:
+
+```ts
+const personData = Data({
+  firstName: Fake.firstName(),
+  lastName: Fake.lastName(),
+})
+
+const carData = Data({
+  model: 'BMW',
+  driver: personData.lastName,   // same generated value as personData.lastName
+})
+```
+
+References may point at another `Data` declared earlier in the file, an imported `.data` template, or (via a template literal, below) a sibling property of the same `Data`. The referenced template is pulled into the test's data automatically, even if the test only references the referencing template.
+
+### Combining Data with Template Literals
+
+To compose a value from several pieces, use a template literal. `${...}` expressions may reference other `Data` values, sibling properties of the same `Data`, or date helpers; literal text between them is kept verbatim. The whole value resolves to a single concatenated string at run time:
+
+```ts
+const patientData = Data({
+  firstName: Fake.firstName(),
+  lastName: Fake.lastName(),
+  // Self-reference: combine two sibling properties into one value.
+  display: `${patientData.lastName}, ${patientData.firstName}`,
+})
+
+const appointmentData = Data({
+  date: nextWeek('MM/DD/YYYY'),
+  // Cross-reference another Data, combined with literal text.
+  patient: `${patientData.lastName}, ${patientData.firstName}`,
+  provider: 'Aberdale',
+})
+```
+
+Only cross-/self-`Data` references, date helpers, and const/enum values are allowed inside `${...}` in a `Data` value; an unsupported expression (e.g. arithmetic or an unknown call) is skipped with a warning and contributes an empty string. A plain concatenation with `+` is NOT supported as a `Data` value — use a template literal.
+
 ### Fake Generator Reference
 
 | Method | Description | Options |

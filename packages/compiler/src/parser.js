@@ -543,6 +543,88 @@ function resolveConstMemberExpression(node, constBindings, filePath, warnings) {
  * @param {Array} [warnings] - mutable warnings array
  * @returns {object|null} parsed template object, or null if not an ObjectExpression
  */
+/**
+ * Build a `runtimeTemplate` descriptor from a Data() value that is a template
+ * literal with one or more `${}` expressions (e.g.
+ * `` `${patientData.lastName}, ${patientData.firstName}` ``).
+ *
+ * Each `${}` expression is resolved as follows:
+ *   - a member access rooted at a known Data variable → a string part carrying a
+ *     `{{data.<DataName>.<path>}}` token (resolved per-run from the data store);
+ *   - a date-helper call (`${nextWeek()}`) → a dateHelper descriptor part;
+ *   - a const/enum member or scalar const identifier → its resolved literal text;
+ *   - anything else → Warn_And_Skip: a warning is recorded and the expression
+ *     contributes an empty string so the rest of the value still composes.
+ *
+ * Static quasi segments are emitted verbatim as string parts. The resulting
+ * descriptor is `{ type: 'runtimeTemplate', parts: [...] }` — the same shape
+ * step-value template literals produce — so the runtime's existing
+ * runtimeTemplate handling resolves it, extended to resolve embedded data tokens.
+ *
+ * @param {object} node - TemplateLiteral AST node (expressions.length >= 1)
+ * @param {Map} dataVars - map of data variable name -> { dataName, template }
+ * @param {object} constBindings - const/enum bindings for scalar resolution
+ * @param {string} filePath - current file path for warnings
+ * @param {Array} warnings - mutable warnings array
+ * @returns {object} runtimeTemplate descriptor
+ */
+function extractDataTemplateLiteral(node, dataVars, constBindings, filePath, warnings) {
+  var parts = [];
+  for (var i = 0; i < node.quasis.length; i++) {
+    parts.push(node.quasis[i].value.cooked);
+
+    if (i < node.expressions.length) {
+      var expr = node.expressions[i];
+
+      // (a) Cross-Data member reference → {{data.<name>.<path>}} string part.
+      if (expr.type === 'MemberExpression' && dataVars && dataVars.size > 0) {
+        var dm = extractDataMemberPath(expr, dataVars);
+        if (dm) {
+          var entry = dataVars.get(dm.rootVar);
+          validateDataPath(entry, dm.path, filePath, lineOf(expr), warnings);
+          parts.push('{{data.' + entry.dataName + '.' + dm.path.join('.') + '}}');
+          continue;
+        }
+      }
+
+      // (b) Date-helper call → dateHelper descriptor part.
+      if (expr.type === 'CallExpression') {
+        var dh = extractDateHelperCall(expr, filePath, warnings);
+        if (dh !== null) {
+          parts.push(dh);
+          continue;
+        }
+      }
+
+      // (c) Const/enum member or scalar const identifier → resolved literal text.
+      if (expr.type === 'MemberExpression') {
+        var resolvedMember = resolveConstMemberExpression(expr, constBindings, filePath, warnings);
+        if (resolvedMember !== null && resolvedMember !== undefined) {
+          parts.push(String(resolvedMember));
+          continue;
+        }
+      }
+      if (expr.type === 'Identifier' && constBindings && (expr.name in constBindings)) {
+        var cb = constBindings[expr.name];
+        if (cb !== null && cb !== undefined && typeof cb !== 'object') {
+          parts.push(String(cb));
+          continue;
+        }
+      }
+
+      // (d) Unsupported expression → Warn_And_Skip (empty contribution).
+      warnings.push({
+        message: 'Unsupported expression in Data template literal at ' + filePath + ':' + lineOf(expr) +
+          '; only cross-Data references, date helpers, and const/enum values are allowed',
+        filePath: filePath,
+        line: lineOf(expr),
+      });
+      parts.push('');
+    }
+  }
+  return { type: 'runtimeTemplate', parts: parts };
+}
+
 function parseDataTemplate(objNode, constBindings, filePath, warnings, dataVars) {
   if (!objNode || objNode.type !== 'ObjectExpression') return null;
   if (!constBindings) constBindings = {};
@@ -625,6 +707,21 @@ function parseDataTemplate(objNode, constBindings, filePath, warnings, dataVars)
     if (value.type === 'Literal') {
       if (typeof value.value === 'string' || typeof value.value === 'number' || typeof value.value === 'boolean') {
         template[key] = value.value;
+        continue;
+      }
+    }
+
+    // Case 2.5: Template literal with expressions — compose a combined value from
+    // literal text, cross-Data references (`${patientData.lastName}`), and date
+    // helpers (`${nextWeek()}`). Compiles to a `runtimeTemplate` descriptor whose
+    // string parts embed `{{data.*}}` tokens for data references; the runtime
+    // concatenates and resolves it at data-store build time. A zero-expression
+    // template literal already resolved as a plain string in Case 2 (via
+    // extractString), so this only fires when there is at least one `${}`.
+    if (value.type === 'TemplateLiteral' && value.expressions && value.expressions.length > 0) {
+      const descriptor = extractDataTemplateLiteral(value, dataVars, constBindings, filePath || '', warnings);
+      if (descriptor !== null) {
+        template[key] = descriptor;
         continue;
       }
     }
@@ -836,8 +933,44 @@ function parseDataDeclaration(declarator, constBindings, filePath, warnings, dat
   const objArg = args[0];
   if (objArg.type !== 'ObjectExpression') return null;
 
+  // Determine whether a `.as()` chain was actually written in the source.
+  var hasAsChain =
+    declarator.init.type === 'CallExpression' &&
+    declarator.init.callee &&
+    declarator.init.callee.type === 'MemberExpression' &&
+    declarator.init.callee.property &&
+    declarator.init.callee.property.name === 'as';
+
+  // Derive the Data_Name up-front (before parsing the template body) so a value
+  // can SELF-reference a sibling property of the SAME Data via a template literal
+  // (e.g. `fullName: `${p.firstName} ${p.lastName}``). We register a self-entry
+  // in the incremental dataVars map keyed by the variable name, pointing at the
+  // resolved Data_Name, before parsing the body; path validation is skipped for
+  // it (template not yet known), and the final entry is registered by the walk.
+  var name = varName;
+  if (asArg && asArg.type === 'Literal' && typeof asArg.value === 'string' && asArg.value.length > 0) {
+    name = asArg.value;
+  } else if (hasAsChain) {
+    warnings.push({
+      message:
+        'Inline Data `.as()` requires a non-empty string literal name; ' +
+        'falling back to variable name "' + varName + '"',
+      filePath: filePath,
+      line: lineOf(asArg || declarator.init || declarator),
+    });
+    name = varName;
+  }
+
+  // Pre-register the self-entry so self-references resolve during the parse.
+  // Do NOT overwrite an existing entry (e.g. a same-named earlier binding is
+  // handled by the walk's conflict logic); only add when absent.
+  if (dataVars && typeof dataVars.has === 'function' && !dataVars.has(varName)) {
+    dataVars.set(varName, { dataName: name, template: null });
+  }
+
   // Parse the template structure. Pass the incremental dataVars map so a value
-  // can reference an EARLIER-declared Data (cross-Data reference).
+  // can reference an EARLIER-declared Data (cross-Data reference) or a sibling
+  // of THIS Data (self-reference, via the pre-registered entry above).
   const template = parseDataTemplate(objArg, constBindings, filePath, warnings, dataVars);
   if (!template) return null;
 
@@ -853,35 +986,6 @@ function parseDataDeclaration(declarator, constBindings, filePath, warnings, dat
         }
       }
     }
-  }
-
-  // Determine whether a `.as()` chain was actually written in the source.
-  // `unwrapDataCall` returns `asArg: null` both for a plain `Data(...)` call
-  // and for a `.as()` chain with a missing argument, so inspect the init node
-  // directly to tell those two cases apart.
-  var hasAsChain =
-    declarator.init.type === 'CallExpression' &&
-    declarator.init.callee &&
-    declarator.init.callee.type === 'MemberExpression' &&
-    declarator.init.callee.property &&
-    declarator.init.callee.property.name === 'as';
-
-  // Derive the Data_Name.
-  var name = varName;
-  if (asArg && asArg.type === 'Literal' && typeof asArg.value === 'string' && asArg.value.length > 0) {
-    // Valid, non-empty string literal from `.as(...)` overrides the Data_Name.
-    name = asArg.value;
-  } else if (hasAsChain) {
-    // A `.as()` chain was written but its argument is missing, non-string,
-    // not a literal, or an empty string: warn once and fall back to varName.
-    warnings.push({
-      message:
-        'Inline Data `.as()` requires a non-empty string literal name; ' +
-        'falling back to variable name "' + varName + '"',
-      filePath: filePath,
-      line: lineOf(asArg || declarator.init || declarator),
-    });
-    name = varName;
   }
 
   var result = { name: name, varName: varName, template: template };
