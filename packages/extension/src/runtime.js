@@ -1226,6 +1226,14 @@ function applyNavigateSteps(anchor, steps) {
 function resolveScopeRootElement(descriptor) {
   if (!descriptor) return null;
 
+  // Resolve the root ANCHOR (by xpath or tag+where), then apply the root
+  // descriptor's own `navigate` hops if present — exactly as the parent-scoped
+  // paths do (findElementWithParent applies a parent's navigate before scoping
+  // the child search into it). A Component Root_Element may be defined with
+  // `.navigate(...)` (e.g. reached by hopping from a nearby anchor), so the
+  // scopeRoot must bind to the NAVIGATED element, not the raw anchor.
+  var anchor = null;
+
   if (descriptor.xpath) {
     try {
       var result = document.evaluate(
@@ -1238,16 +1246,14 @@ function resolveScopeRootElement(descriptor) {
       for (var i = 0; i < result.snapshotLength; i++) {
         var node = result.snapshotItem(i);
         if (node && node.nodeType === 1) {
-          return node;
+          anchor = node;
+          break;
         }
       }
     } catch (e) {
       return null;
     }
-    return null;
-  }
-
-  if (descriptor.tag) {
+  } else if (descriptor.tag) {
     var candidates = document.querySelectorAll(descriptor.tag);
     var where = descriptor.where || {};
     var nthTarget = (typeof where.isNthElement === 'number') ? where.isNthElement : null;
@@ -1256,14 +1262,25 @@ function resolveScopeRootElement(descriptor) {
       if (matchesWhere(candidates[k], where, null)) {
         matchIndex++;
         if (nthTarget === null || matchIndex === nthTarget) {
-          return candidates[k];
+          anchor = candidates[k];
+          break;
         }
       }
     }
-    return null;
   }
 
-  return null;
+  if (!anchor) return null;
+
+  // Apply the root's navigate hops (if any). A failed hop means the root cannot
+  // be resolved right now → null, which the caller surfaces via the existing
+  // locator-not-found path (no retry / wait-for-element).
+  if (descriptor.navigate && descriptor.navigate.length > 0) {
+    var navResult = applyNavigateSteps(anchor, descriptor.navigate);
+    if (navResult.ok === false) return null;
+    return navResult.element;
+  }
+
+  return anchor;
 }
 
 /**
