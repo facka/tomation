@@ -369,6 +369,55 @@ function runPipeline(cwd, options) {
     }
   }
 
+  // Step 3c-2: namespace SAME-FILE local Component_Instance roots.
+  //
+  // A Component_Instance can be bound to a root element declared in the SAME POM
+  // file as the instance, e.g. `const seniority = SeniorityRadio.in(seniorityField)`
+  // where `seniorityField` is a local element of this POM. The parser records the
+  // root as the bare identifier ("seniorityField"), but that local element is
+  // emitted into pageElements under the POM's namespace ("UserForm__seniorityField").
+  // The import-based rewrite above only handles cross-file member roots
+  // (`SearchForm.countryField`), so a bare same-file root would otherwise be
+  // emitted as an unqualified `scopeRoot` that matches no pageElements key.
+  //
+  // Here we prepend the POM file's OWN namespace to any instance root that is a
+  // bare identifier (no `__`) and names a real local element of that POM. This
+  // runs for every file with instances, independent of whether the file has
+  // imports. Additive: files without component instances are unaffected.
+  for (var lri = 0; lri < parsedFiles.length; lri++) {
+    var lrpf = parsedFiles[lri];
+    if (!lrpf || !Array.isArray(lrpf.instances) || lrpf.instances.length === 0) continue;
+
+    var ownNamespace = fileToNamespace[lrpf.filePath];
+    if (!ownNamespace) continue; // not a POM with a derived namespace
+
+    // Collect this POM's local element variable names (the key suffix after the
+    // namespace), so we only rewrite roots that are genuinely local elements.
+    var localElemVars = {};
+    for (var lpri = 0; lpri < pomResults.length; lpri++) {
+      if (pomResults[lpri].filePath !== lrpf.filePath) continue;
+      var peKeys = Object.keys(pomResults[lpri].pageElements || {});
+      for (var pek = 0; pek < peKeys.length; pek++) {
+        var peKey = peKeys[pek];
+        var nsPrefix = ownNamespace + '__';
+        if (peKey.indexOf(nsPrefix) === 0) {
+          localElemVars[peKey.slice(nsPrefix.length)] = true;
+        }
+      }
+      break;
+    }
+
+    for (var lii = 0; lii < lrpf.instances.length; lii++) {
+      var lRoot = lrpf.instances[lii].root;
+      // Only a bare identifier (no `__`) that names a local element gets the
+      // POM's own namespace prepended. A root already carrying `__` was handled
+      // by the import-based rewrite (cross-file member root).
+      if (typeof lRoot === 'string' && lRoot.indexOf('__') === -1 && localElemVars[lRoot] === true) {
+        lrpf.instances[lii].root = ownNamespace + '__' + lRoot;
+      }
+    }
+  }
+
   // Step 3d: derive namespace for automation files and prefix automation labels
   var automationsDir = resolveResult.automationsDir || null;
   for (var ai = 0; ai < parsedAutomationFiles.length; ai++) {

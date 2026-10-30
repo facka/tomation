@@ -241,7 +241,7 @@
       "where": {
         "id": "seniority-junior"
       },
-      "scopeRoot": "seniorityField"
+      "scopeRoot": "UserForm__seniorityField"
     },
     "Component__SeniorityRadio__seniority__semiseniorRadio": {
       "tag": "input",
@@ -249,7 +249,7 @@
       "where": {
         "id": "seniority-semisenior"
       },
-      "scopeRoot": "seniorityField"
+      "scopeRoot": "UserForm__seniorityField"
     },
     "Component__SeniorityRadio__seniority__seniorRadio": {
       "tag": "input",
@@ -257,7 +257,7 @@
       "where": {
         "id": "seniority-senior"
       },
-      "scopeRoot": "seniorityField"
+      "scopeRoot": "UserForm__seniorityField"
     },
     "Component__SearchSelect__country__trigger": {
       "tag": "button",

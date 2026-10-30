@@ -138,6 +138,32 @@ function validateSpec(obj) {
         };
       }
     }
+
+    // Validate scopeRoot references (Component root-scoped locators). A
+    // `scopeRoot` is a per-instance reference to the Component_Instance's root
+    // element and must resolve to a real pageElements entry, exactly like
+    // `childOf`. Catching an unqualified/stale scopeRoot here surfaces the error
+    // at compile time rather than as a silent root-not-found at run time.
+    if ('scopeRoot' in coEntry) {
+      var scopeRootValue = coEntry.scopeRoot;
+      if (typeof scopeRootValue !== 'string' || scopeRootValue === '') {
+        return {
+          ok: false,
+          error: 'pageElements entry "' + coKey + '" scopeRoot must be a non-empty string'
+        };
+      }
+      if (!(scopeRootValue in validChildOfTargets)) {
+        return {
+          ok: false,
+          error:
+            'pageElements entry "' +
+            coKey +
+            '" scopeRoot "' +
+            scopeRootValue +
+            '" does not reference any pageElements entry'
+        };
+      }
+    }
   }
 
   // Requirement 1.7 — validate each tasks entry has a steps array
