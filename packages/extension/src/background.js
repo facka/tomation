@@ -3864,6 +3864,30 @@ function startAutomationRun(tabId, automation, spec, checkedSteps, config, param
     runState.contextStore[paramKeys[i]] = String(params[paramKeys[i]]);
   }
 
+  // Resolve Automation data (Fake descriptors, date helpers, cross-Data refs,
+  // composed runtimeTemplate values) into the flat dataStore BEFORE step
+  // execution — identical to startRun. Without this, an Automation that declares
+  // `Data({ date: nextWeek(...) })` leaves {{data.*}} tokens unresolved at run
+  // time (the step shows the raw/unresolved value). This is separate from the
+  // user-provided automation PARAMS seeded above.
+  if (automation.data) {
+    if (typeof resetSequenceCounters === 'function') resetSequenceCounters();
+    var dataSeeds = (config && config.dataSeeds) || {};
+    runState.dataStore = resolveTestData(automation.data, dataSeeds);
+    // Build effective seeds map to send to the panel (mirrors startRun).
+    var effectiveSeeds = {};
+    var tmplNames = Object.keys(automation.data);
+    for (var si = 0; si < tmplNames.length; si++) {
+      var tn = tmplNames[si];
+      if (dataSeeds.hasOwnProperty(tn) && typeof dataSeeds[tn] === 'number') {
+        effectiveSeeds[tn] = dataSeeds[tn];
+      } else if (automation.data[tn] && automation.data[tn].__seed !== undefined) {
+        effectiveSeeds[tn] = automation.data[tn].__seed;
+      }
+    }
+    safeSendMessage({ type: 'DATA_RESOLVED', data: runState.dataStore, seeds: effectiveSeeds });
+  }
+
   var resolvedSteps = flattenSteps(
     automation.steps,
     spec.tasks || {},
