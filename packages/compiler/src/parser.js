@@ -2281,12 +2281,45 @@ function extractTableAccessor(node, constBindings, warnings, filePath) {
  * @param {string} filePath - current file path for error reporting
  * @returns {{ target: string|null, accessor?: object }}
  */
-function resolveTarget(node, constBindings, warnings, filePath) {
+function resolveTarget(node, constBindings, warnings, filePath, componentInstances) {
   var accessorResult = extractTableAccessor(node, constBindings, warnings, filePath);
   if (accessorResult) {
-    return { target: accessorResult.baseRef, accessor: accessorResult.accessor };
+    return {
+      target: remapComponentInstanceTarget(accessorResult.baseRef, componentInstances),
+      accessor: accessorResult.accessor
+    };
   }
-  return { target: extractElementRef(node) };
+  return { target: remapComponentInstanceTarget(extractElementRef(node), componentInstances) };
+}
+
+/**
+ * Rewrite a step target that references a Component_Instance's internal locator
+ * directly (e.g. `endDatePicker.DatePickerInput` → raw ref
+ * "endDatePicker__DatePickerInput") into the per-instance page-element key the
+ * flattener emits: `Component__<componentName>__<instanceName>__<locatorVar>`.
+ *
+ * This lets a test/task step reference a Component_Instance's exposed element as
+ * an ordinary element target (Click/AssertHasText/Type/etc.), not just invoke an
+ * action on it. A target whose root segment is NOT a known Component_Instance is
+ * returned unchanged, so ordinary POM element targets and cross-file refs are
+ * unaffected.
+ *
+ * @param {string|null} target - raw target ("root__prop" or a plain ref)
+ * @param {Map<string, { component: string }>} [componentInstances]
+ * @returns {string|null} the remapped target, or the original when not an instance ref
+ */
+function remapComponentInstanceTarget(target, componentInstances) {
+  if (typeof target !== 'string') return target;
+  if (!componentInstances || typeof componentInstances.has !== 'function') return target;
+  var sep = target.indexOf('__');
+  if (sep === -1) return target;
+  var rootVar = target.slice(0, sep);
+  var prop = target.slice(sep + 2);
+  if (!prop) return target;
+  if (!componentInstances.has(rootVar)) return target;
+  var inst = componentInstances.get(rootVar);
+  if (!inst || !inst.component) return target;
+  return 'Component__' + inst.component + '__' + rootVar + '__' + prop;
 }
 
 /**
@@ -2558,7 +2591,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
         }
 
         if (fnName === 'SaveText') {
-          const resolved = resolveTarget(innerCall.arguments[0], constBindings, warnings, filePath);
+          const resolved = resolveTarget(innerCall.arguments[0], constBindings, warnings, filePath, componentInstances);
           if (resolved.target === null) return null;
           const step = { action: 'saveText', target: resolved.target, contextKey: keyName };
           if (resolved.accessor) step.accessor = resolved.accessor;
@@ -2566,7 +2599,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
         }
 
         if (fnName === 'SaveAttribute') {
-          const resolved = resolveTarget(innerCall.arguments[0], constBindings, warnings, filePath);
+          const resolved = resolveTarget(innerCall.arguments[0], constBindings, warnings, filePath, componentInstances);
           if (resolved.target === null) return null;
           const attrName = extractString(innerCall.arguments[1]);
           if (attrName === null) return null;
@@ -2576,7 +2609,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
         }
 
         if (fnName === 'SaveValue') {
-          const resolved = resolveTarget(innerCall.arguments[0], constBindings, warnings, filePath);
+          const resolved = resolveTarget(innerCall.arguments[0], constBindings, warnings, filePath, componentInstances);
           if (resolved.target === null) return null;
           const step = { action: 'saveValue', target: resolved.target, contextKey: keyName };
           if (resolved.accessor) step.accessor = resolved.accessor;
@@ -2651,7 +2684,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
         const valueArg = innerCall.arguments[0];
         const value = extractValueExpression(valueArg, filePath, warnings, constBindings, dataVars);
         const targetArg = exprNode.arguments[0];
-        const resolved = resolveTarget(targetArg, constBindings, warnings, filePath);
+        const resolved = resolveTarget(targetArg, constBindings, warnings, filePath, componentInstances);
         if (resolved.target === null) return null;
         const step = { action, target: resolved.target, value: value !== null ? value : '' };
         if (resolved.accessor) step.accessor = resolved.accessor;
@@ -2663,7 +2696,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
         if (key === null) return null;
         const opts = extractSimpleObject(innerCall.arguments[1]) || {};
         const targetArg = exprNode.arguments[0];
-        const resolved = resolveTarget(targetArg, constBindings, warnings, filePath);
+        const resolved = resolveTarget(targetArg, constBindings, warnings, filePath, componentInstances);
         if (resolved.target === null) return null;
         const step = { action: 'pressKey', target: resolved.target, key: key, options: opts };
         if (resolved.accessor) step.accessor = resolved.accessor;
@@ -2770,7 +2803,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
         case 'Click':
         case 'AssertExists':
         case 'AssertNotExists': {
-          const resolved = resolveTarget(args[0], constBindings, warnings, filePath);
+          const resolved = resolveTarget(args[0], constBindings, warnings, filePath, componentInstances);
           if (resolved.target === null) return null;
           const actionNameMap = { Click: 'click', AssertExists: 'assertExists', AssertNotExists: 'assertNotExists' };
           const step = { action: actionNameMap[fnName], target: resolved.target };
@@ -2779,7 +2812,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
         }
 
         case 'WaitFor': {
-          const resolved = resolveTarget(args[0], constBindings, warnings, filePath);
+          const resolved = resolveTarget(args[0], constBindings, warnings, filePath, componentInstances);
           if (resolved.target === null) return null;
           const step = { action: 'waitFor', target: resolved.target, gone: false };
           if (resolved.accessor) step.accessor = resolved.accessor;
@@ -2787,7 +2820,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
         }
 
         case 'WaitForGone': {
-          const resolved = resolveTarget(args[0], constBindings, warnings, filePath);
+          const resolved = resolveTarget(args[0], constBindings, warnings, filePath, componentInstances);
           if (resolved.target === null) return null;
           const step = { action: 'waitFor', target: resolved.target, gone: true };
           if (resolved.accessor) step.accessor = resolved.accessor;
@@ -2796,7 +2829,7 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
 
         // Two-argument target+value: AssertHasText(element, text)
         case 'AssertHasText': {
-          const resolved = resolveTarget(args[0], constBindings, warnings, filePath);
+          const resolved = resolveTarget(args[0], constBindings, warnings, filePath, componentInstances);
           if (resolved.target === null) return null;
           const value = extractValueExpression(args[1], filePath, warnings, constBindings, dataVars);
           const step = { action: 'assertHasText', target: resolved.target, value: value !== null ? value : '' };
