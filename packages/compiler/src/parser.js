@@ -2051,6 +2051,22 @@ function extractElementRef(node) {
   ) {
     return node.object.name + '__' + node.property.name;
   }
+  // Three-level (or deeper) dot chain, e.g.
+  // a <POM>.<ComponentInstance>.<locator> reference. The chain is flattened to
+  // a `__`-joined raw ref ("A__B__C"); the namespacing pass in bin/tomation.js
+  // resolves the POM alias + component instance into the real per-instance key
+  // (Component__<comp>__<instance>__<locator>). Only plain (non-computed)
+  // Identifier properties are accepted; a computed/dynamic segment yields null.
+  if (
+    node.type === 'MemberExpression' &&
+    !node.computed &&
+    node.property && node.property.type === 'Identifier' &&
+    node.object && node.object.type === 'MemberExpression'
+  ) {
+    var innerRef = extractElementRef(node.object);
+    if (innerRef === null) return null;
+    return innerRef + '__' + node.property.name;
+  }
   return null;
 }
 
@@ -2790,6 +2806,37 @@ function extractStep(exprNode, filePath, declaredTaskNames, warnings, constBindi
         }
         return step;
       }
+
+      // Three-level invocation: `<POM>.<ComponentInstance>.<action>(<params>)`
+      // The callee object is itself a MemberExpression (`<POM>.<instance>`), so
+      // the two-level identifier check above does not match. The Component_Instance
+      // lives in ANOTHER file (the imported POM), so it is not in this file's
+      // `componentInstances` map and cannot be resolved here. Emit a task-shaped
+      // step whose name is the flattened raw chain (`POM__instance__action`); the
+      // namespacing pass in bin/tomation.js resolves the instance to the real
+      // per-instance task key `Component__<comp>__<instance>__<action>` and stamps
+      // the `isComponent` / `componentName` markers (it has the GLOBAL instance map).
+      if (
+        obj && obj.type === 'MemberExpression' && !obj.computed &&
+        obj.object && obj.object.type === 'Identifier' &&
+        obj.property && obj.property.type === 'Identifier' &&
+        prop && prop.type === 'Identifier'
+      ) {
+        const chainName = obj.object.name + '__' + obj.property.name + '__' + prop.name;
+        const chainStep = { action: 'task', name: chainName };
+        const chainParamsArg = exprNode.arguments[0];
+        if (chainParamsArg && chainParamsArg.type === 'ObjectExpression') {
+          const chainParams = extractTaskInvocationParams(chainParamsArg, dataVars, constBindings, filePath, warnings);
+          if (chainParams && Object.keys(chainParams).length > 0) chainStep.params = chainParams;
+        } else if (chainParamsArg) {
+          // Single positional arg (e.g. `select('test')`) → { value } param,
+          // mirroring the two-level component-invocation handling above.
+          const chainValue = extractStringOrTemplate(chainParamsArg, dataVars, constBindings, filePath, warnings);
+          if (chainValue !== null) chainStep.params = { value: chainValue };
+        }
+        return chainStep;
+      }
+
       return null;
     }
 

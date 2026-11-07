@@ -87,23 +87,23 @@ var USAGE = [
  * @param {object} parsedFile - parsed file with tests/tasks
  * @param {object} importMap - { localName: namespace }
  */
-function rewriteStepTargets(parsedFile, importMap) {
+function rewriteStepTargets(parsedFile, importMap, instanceToComponent) {
   // Rewrite test steps
   if (parsedFile.tests) {
     for (var ti = 0; ti < parsedFile.tests.length; ti++) {
-      parsedFile.tests[ti].steps = rewriteSteps(parsedFile.tests[ti].steps, importMap);
+      parsedFile.tests[ti].steps = rewriteSteps(parsedFile.tests[ti].steps, importMap, instanceToComponent);
     }
   }
   // Rewrite task steps (for POM files that import other POMs)
   if (parsedFile.tasks) {
     for (var tki = 0; tki < parsedFile.tasks.length; tki++) {
-      parsedFile.tasks[tki].steps = rewriteSteps(parsedFile.tasks[tki].steps, importMap);
+      parsedFile.tasks[tki].steps = rewriteSteps(parsedFile.tasks[tki].steps, importMap, instanceToComponent);
     }
   }
   // Rewrite automation steps
   if (parsedFile.automations) {
     for (var ai = 0; ai < parsedFile.automations.length; ai++) {
-      parsedFile.automations[ai].steps = rewriteSteps(parsedFile.automations[ai].steps, importMap);
+      parsedFile.automations[ai].steps = rewriteSteps(parsedFile.automations[ai].steps, importMap, instanceToComponent);
     }
   }
 }
@@ -114,33 +114,58 @@ function rewriteStepTargets(parsedFile, importMap) {
  * @param {object} importMap - { localName: namespace }
  * @returns {Array}
  */
-function rewriteSteps(steps, importMap) {
+function rewriteSteps(steps, importMap, instanceToComponent) {
   if (!steps) return steps;
+  instanceToComponent = instanceToComponent || {};
   return steps.map(function(step) {
     var rewritten = Object.assign({}, step);
 
     if (rewritten.target && rewritten.target.indexOf('__') !== -1) {
       var parts = rewritten.target.split('__');
-      var varName = parts[0];
-      var prop = parts.slice(1).join('__');
-      if (importMap[varName]) {
-        rewritten.target = importMap[varName] + '__' + prop;
+      // Component-instance element reference:
+      //   <alias>__<instanceName>__<rest...>  (a <POM>.<ComponentInstance>.<locator>
+      //   reference flattened by extractElementRef). When the SECOND segment is a
+      //   known Component_Instance, rewrite to the per-instance page-element key
+      //   `Component__<componentName>__<instanceName>__<rest>`, dropping the POM
+      //   alias (the instance key is namespaced by component+instance, not by the
+      //   referencing POM). Checked BEFORE the plain import rewrite so it wins.
+      if (parts.length >= 3 && instanceToComponent[parts[1]]) {
+        rewritten.target = 'Component__' + instanceToComponent[parts[1]] + '__' +
+          parts[1] + '__' + parts.slice(2).join('__');
+      } else {
+        var varName = parts[0];
+        var prop = parts.slice(1).join('__');
+        if (importMap[varName]) {
+          rewritten.target = importMap[varName] + '__' + prop;
+        }
       }
     }
 
     // Rewrite task invocation names
     if (rewritten.action === 'task' && rewritten.name && rewritten.name.indexOf('__') !== -1) {
       var taskParts = rewritten.name.split('__');
-      var taskVar = taskParts[0];
-      var taskMethod = taskParts.slice(1).join('__');
-      if (importMap[taskVar]) {
-        rewritten.name = importMap[taskVar] + '__' + taskMethod;
+      // Component-instance ACTION invocation referenced cross-file:
+      //   <alias>__<instanceName>__<actionName> → Component__<comp>__<instance>__<action>
+      // Also stamp the component markers so the panel renders it as a collapsible
+      // component group (mirrors the flattener's markComponentSteps for the
+      // same-file case). The step keeps its `params` verbatim.
+      if (taskParts.length >= 3 && instanceToComponent[taskParts[1]]) {
+        rewritten.name = 'Component__' + instanceToComponent[taskParts[1]] + '__' +
+          taskParts[1] + '__' + taskParts.slice(2).join('__');
+        rewritten.isComponent = true;
+        rewritten.componentName = instanceToComponent[taskParts[1]];
+      } else {
+        var taskVar = taskParts[0];
+        var taskMethod = taskParts.slice(1).join('__');
+        if (importMap[taskVar]) {
+          rewritten.name = importMap[taskVar] + '__' + taskMethod;
+        }
       }
     }
 
     // Recurse into if-step then blocks
     if (rewritten.action === 'if' && rewritten.then) {
-      rewritten.then = rewriteSteps(rewritten.then, importMap);
+      rewritten.then = rewriteSteps(rewritten.then, importMap, instanceToComponent);
     }
 
     return rewritten;
@@ -300,6 +325,24 @@ function runPipeline(cwd, options) {
   // Resolve baseUrl for ~/ alias resolution
   var baseUrl = resolveResult.baseUrl || cwd;
 
+  // Build a GLOBAL map of Component_Instance name → component name across ALL
+  // parsed files. A step may reference a component instance declared in another
+  // file via `<POM>.<instanceName>.<locator>` (or `.<action>()`); the rewrite
+  // below uses this map to resolve such a reference to the per-instance key
+  // `Component__<componentName>__<instanceName>__<...>`. Instance names are
+  // effectively project-unique (they namespace the emitted page-element keys).
+  var instanceToComponent = {};
+  for (var itci = 0; itci < parsedFiles.length; itci++) {
+    var itcPf = parsedFiles[itci];
+    if (!itcPf || !Array.isArray(itcPf.instances)) continue;
+    for (var itcj = 0; itcj < itcPf.instances.length; itcj++) {
+      var itcInst = itcPf.instances[itcj];
+      if (itcInst && itcInst.name && itcInst.component) {
+        instanceToComponent[itcInst.name] = itcInst.component;
+      }
+    }
+  }
+
   // For each test file (and POM file with imports), resolve import variable → namespace
   for (var ri = 0; ri < parsedFiles.length; ri++) {
     var rpf = parsedFiles[ri];
@@ -330,7 +373,7 @@ function runPipeline(cwd, options) {
 
     // Rewrite step targets: "VariableName__prop" → "Namespace__prop"
     if (Object.keys(importMap).length > 0) {
-      rewriteStepTargets(rpf, importMap);
+      rewriteStepTargets(rpf, importMap, instanceToComponent);
 
       // Also rewrite each Component_Instance's `.root` reference using the same
       // import → namespace map, so the emitted `scopeRoot` references the real
@@ -359,7 +402,7 @@ function runPipeline(cwd, options) {
             for (var tki = 0; tki < taskKeysToRewrite.length; tki++) {
               var taskEntry = pomResults[pri].tasks[taskKeysToRewrite[tki]];
               if (taskEntry.steps) {
-                taskEntry.steps = rewriteSteps(taskEntry.steps, importMap);
+                taskEntry.steps = rewriteSteps(taskEntry.steps, importMap, instanceToComponent);
               }
             }
             break;
