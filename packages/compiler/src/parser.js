@@ -3533,10 +3533,26 @@ function extractIfStep(stmt, filePath, trackedParams, warnings, source, declared
     return null;
   }
 
-  // Recursively extract steps from the if-block body
+  // Extract steps from the if consequent. Two authored forms are supported:
+  //   (a) block body:      if (cond) { Click(x); Type(y).in(z) }
+  //   (b) one-line body:    if (cond) Click(x)
+  // For (a) the consequent is a BlockStatement → extractSteps. For (b) it is a
+  // single statement (most commonly an ExpressionStatement wrapping an action
+  // call, or a nested IfStatement) → extract that one statement directly.
   const consequent = stmt.consequent;
-  const body = consequent && consequent.type === 'BlockStatement' ? consequent : null;
-  const thenSteps = body ? extractSteps(body, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars, componentInstances) : [];
+  let thenSteps = [];
+  if (consequent && consequent.type === 'BlockStatement') {
+    thenSteps = extractSteps(consequent, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars, componentInstances);
+  } else if (consequent && consequent.type === 'IfStatement') {
+    // Nested one-line if: `if (a) if (b) Click(x)`.
+    const nested = extractIfStep(consequent, filePath, trackedParams, warnings, source, declaredTaskNames, constBindings, dataVars, componentInstances);
+    if (nested) thenSteps = [nested];
+  } else if (consequent && consequent.type === 'ExpressionStatement' && consequent.expression) {
+    // One-line action/task body: `if (cond) Click(x)`. Mirror the concise-arrow
+    // handling used by extractWhenStep so the same single-step path is reused.
+    const singleStep = extractStep(consequent.expression, filePath, declaredTaskNames, warnings, constBindings, dataVars, componentInstances);
+    if (singleStep) thenSteps = [singleStep];
+  }
 
   if (thenSteps.length === 0) return null;
 
