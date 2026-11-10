@@ -2068,19 +2068,48 @@ api.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     return;
   }
 
-  // assertNotExists: attempt to find element, pass if NOT found
+  // assertNotExists: pass if the element is NOT present. The element may still
+  // be mid-removal (a closing modal, a dismissing toast, an element being
+  // animated out), so this is given a GRACE WINDOW: re-run the (scoping-aware)
+  // finder until the element is gone or a 5s timeout elapses, polling ~100ms.
+  // When the element is already absent on the first pass it resolves
+  // immediately (the common case, no added delay). If it is still present after
+  // the timeout the assertion fails via the normal handleAssertNotExists path so
+  // the error message is unchanged. Using findElementWithParent (not a bare
+  // querySelectorAll) keeps childOf / scopeRoot / navigate / nth scoping intact.
   if (action === 'assertNotExists') {
-    findElementWithParent(message).then(function (findResult) {
-      var element = findResult.ok ? findResult.element : null;
-      if (findResult.ok) {
+    var anStart = Date.now();
+    var anPollMs = 100;
+
+    function assertNotExistsPoll() {
+      findElementWithParent(message).then(function (findResult) {
+        var element = findResult.ok ? findResult.element : null;
+
+        // Element gone → assertion passes immediately.
+        if (!element) {
+          executeAction(message, null).then(function (result) {
+            sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: result.ok, error: result.error });
+          });
+          return;
+        }
+
+        // Still present but within the grace window → wait and retry.
+        if (Date.now() - anStart < TIMEOUT_5sec) {
+          setTimeout(assertNotExistsPoll, anPollMs);
+          return;
+        }
+
+        // Still present after the grace window → final (failing) assertion.
         tagElementKey(element, cellKeyFor(message.target, message.accessor));
-      }
-      return executeAction(message, element);
-    }).then(function (result) {
-      sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: result.ok, error: result.error });
-    }).catch(function (err) {
-      sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: false, error: err.message || String(err) });
-    });
+        executeAction(message, element).then(function (result) {
+          sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: result.ok, error: result.error });
+        });
+      }).catch(function (err) {
+        sendResponse({ type: 'STEP_RESULT', stepIndex: stepIndex, ok: false, error: err.message || String(err) });
+      });
+    }
+
+    assertNotExistsPoll();
     return true;
   }
 
