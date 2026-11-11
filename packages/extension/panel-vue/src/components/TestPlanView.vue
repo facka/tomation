@@ -8,6 +8,7 @@ import DebugToggle from './DebugToggle.vue';
 import SpeedSelector from './SpeedSelector.vue';
 import TestDataPanel from './TestDataPanel.vue';
 import { isDateHelperDescriptor } from '@/logic/dateHelperDisplay';
+import { isRuntimeTemplateDescriptor, formatRuntimeTemplate } from '@/logic/runtimeTemplateDisplay';
 import type { AutomationEntry } from '@/types/spec';
 import type { RunConfig } from '@/types/store';
 
@@ -123,6 +124,11 @@ const testDataDisplay = computed((): Record<string, unknown> => {
         // expression (e.g. nextWeek('MM/DD/YYYY')) on a single row, instead of
         // recursing and exploding it into dueDate.type / .kind / .offset rows.
         display[path] = value;
+      } else if (isRuntimeTemplateDescriptor(value)) {
+        // A composed value (template literal): show its source formula, e.g.
+        // `${provider.lastName}, ${provider.firstName}`, as a single row rather
+        // than exploding it into .type / .parts rows.
+        display[path] = formatRuntimeTemplate(value);
       } else if (value && typeof value === 'object' && !Array.isArray(value)) {
         flatten(path, value);
       } else {

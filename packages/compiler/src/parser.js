@@ -570,8 +570,14 @@ function resolveConstMemberExpression(node, constBindings, filePath, warnings) {
  */
 function extractDataTemplateLiteral(node, dataVars, constBindings, filePath, warnings) {
   var parts = [];
+  // Static segments are only emitted when non-empty, so a template that starts or
+  // ends with an expression (or has two adjacent expressions) does not carry
+  // meaningless "" parts.
+  function pushStatic(text) {
+    if (typeof text === 'string' && text.length > 0) parts.push(text);
+  }
   for (var i = 0; i < node.quasis.length; i++) {
-    parts.push(node.quasis[i].value.cooked);
+    pushStatic(node.quasis[i].value.cooked);
 
     if (i < node.expressions.length) {
       var expr = node.expressions[i];
@@ -619,7 +625,7 @@ function extractDataTemplateLiteral(node, dataVars, constBindings, filePath, war
         filePath: filePath,
         line: lineOf(expr),
       });
-      parts.push('');
+      // Unsupported expression contributes nothing (no empty part emitted).
     }
   }
   return { type: 'runtimeTemplate', parts: parts };
