@@ -251,6 +251,10 @@ function setHostname(hostname: string | null): void {
 function selectRunnable(specEntry: SpecEntry, runnable: Runnable): void {
   state.currentSpec = specEntry;
   state.currentRunnable = runnable;
+  // Resolved test data belongs to the run that produced it. Selecting another
+  // runnable must not keep showing the previous run's values.
+  state.resolvedTestData = null;
+  state.resolvedDataSeeds = null;
 }
 
 function clearRunnable(): void {
@@ -285,6 +289,12 @@ function startRun(config: RunConfig, params?: Record<string, unknown>): void {
   state.runStartedAt = Date.now();
   state.contextStore = {};
   state.automationParams = params ?? null;
+  // Clear the previous run's resolved Data. The background only sends
+  // DATA_RESOLVED when the run's test/automation declares Data, so without this
+  // a run with no Data (or one that fails before resolving) would keep showing
+  // the last run's values. A run that does declare Data repopulates it on start.
+  state.resolvedTestData = null;
+  state.resolvedDataSeeds = null;
   state.currentView = 'run';
 }
 
