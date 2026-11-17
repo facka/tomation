@@ -689,6 +689,11 @@ function traceClosestLabel(el, spec, parentNode) {
 function findElement(descriptor, parentNode, options) {
   var root = parentNode || document;
   var requireVisible = options && options.requireVisible === true;
+  // noWait: do a single lookup pass and reject immediately when nothing matches,
+  // instead of polling for up to TIMEOUT_5sec for the element to appear. Used by
+  // assertNotExists, which polls for the element to DISAPPEAR and must not also
+  // wait for it to appear.
+  var noWait = options && options.noWait === true;
 
   function isEligible(node) {
     return !requireVisible || !detectHiddenAncestor(node);
@@ -714,7 +719,7 @@ function findElement(descriptor, parentNode, options) {
             return;
           }
         }
-        if (Date.now() - startTime >= TIMEOUT_5sec) {
+        if (noWait || Date.now() - startTime >= TIMEOUT_5sec) {
           var elapsedMs = Date.now() - startTime;
           var trace = {
             strategy: 'xpath',
@@ -779,7 +784,7 @@ function findElement(descriptor, parentNode, options) {
           }
         }
       }
-      if (Date.now() - startTime >= TIMEOUT_5sec) {
+      if (noWait || Date.now() - startTime >= TIMEOUT_5sec) {
         // One final synchronous breakdown pass over the current snapshot (Req 8.2).
         // Reuse the `candidates` computed at the top of this poll() invocation —
         // do NOT issue an extra querySelectorAll.
@@ -1106,6 +1111,18 @@ function handleHoverHighlightDescriptor(descriptor) {
     return { type: 'HOVER_RESULT', found: 0 };
   }
 
+  // The descriptor may carry `navigate` hops: the element the finder acts on (and
+  // the one a childOf ancestor scopes into) is the NAVIGATED element, so highlight
+  // that rather than the anchor. An anchor whose hops fail contributes nothing.
+  if (descriptor.navigate && descriptor.navigate.length > 0) {
+    var navigated = [];
+    for (var n = 0; n < els.length; n++) {
+      var nav = applyNavigateSteps(els[n], descriptor.navigate);
+      if (nav.ok !== false && nav.element) navigated.push(nav.element);
+    }
+    els = navigated;
+  }
+
   if (els.length === 0) {
     return { type: 'HOVER_RESULT', found: 0 };
   }
@@ -1297,7 +1314,9 @@ function findElementWithParent(stepMessage) {
   var navigateSteps = elementDescriptor && elementDescriptor.navigate;
   var action = stepMessage.action;
   var finderOptions = {
-    requireVisible: ['click', 'type', 'typePassword', 'select', 'pressKey', 'upload'].indexOf(action) !== -1
+    requireVisible: ['click', 'type', 'typePassword', 'select', 'pressKey', 'upload'].indexOf(action) !== -1,
+    // assertNotExists polls for disappearance itself; the finder must not wait.
+    noWait: action === 'assertNotExists'
   };
 
   // Synthesize a trace with an empty ordered step sequence (Req 1.7) for the
@@ -1333,6 +1352,47 @@ function findElementWithParent(stepMessage) {
       current = cellResult.element;
     }
     return { ok: true, element: current };
+  }
+
+  // Find the element's ANCHOR within `scope`. For steps that require a visible
+  // element (click/type/select/...) AND whose descriptor carries `navigate`, the
+  // element the step acts on is the NAVIGATED element, not the anchor. The anchor
+  // is only a reference point (it may legitimately be hidden, e.g. a visually
+  // hidden <input> whose visible label is reached via navigate), so visibility is
+  // checked on the navigated result instead: the anchor is located without the
+  // visibility requirement, the hops are applied, and the lookup is retried
+  // (same 100ms/5s polling as the finder) until the navigated element is visible.
+  // Every other case behaves exactly as before. The returned element is still the
+  // ANCHOR so the existing `.then(applyNavigation)` call sites are unchanged.
+  function findAnchor(scope) {
+    var needsNavigatedVisibility =
+      finderOptions.requireVisible && navigateSteps && navigateSteps.length > 0;
+    if (!needsNavigatedVisibility) {
+      return findElement(elementDescriptor, scope, finderOptions);
+    }
+    var anchorOptions = Object.assign({}, finderOptions, { requireVisible: false });
+    var startedAt = Date.now();
+    return new Promise(function (resolve, reject) {
+      function attempt() {
+        findElement(elementDescriptor, scope, anchorOptions).then(function (anchorEl) {
+          var nav = applyNavigateSteps(anchorEl, navigateSteps);
+          // A failed hop is reported by applyNavigation with the usual navigate trace.
+          if (nav.ok === false) { resolve(anchorEl); return; }
+          if (detectHiddenAncestor(nav.element)) {
+            if (Date.now() - startedAt < TIMEOUT_5sec) {
+              setTimeout(attempt, 100);
+              return;
+            }
+            var hidden = new Error(' (navigated element is not visible)');
+            hidden.findTrace = { steps: [] };
+            reject(hidden);
+            return;
+          }
+          resolve(anchorEl);
+        }, reject);
+      }
+      attempt();
+    });
   }
 
   // --------------------------------------------------------------------------
@@ -1374,7 +1434,7 @@ function findElementWithParent(stepMessage) {
     // parent-scoped path; highlighting of the target itself is unchanged.
     tagElementKey(rootElement, stepMessage.scopeRoot.key);
 
-    return findElement(elementDescriptor, rootElement, finderOptions)
+    return findAnchor(rootElement)
       .then(function (element) {
         return applyNavigation(element);
       })
@@ -1412,7 +1472,7 @@ function findElementWithParent(stepMessage) {
   }
 
   if (!parentDescriptor && !(stepMessage.parentChain && stepMessage.parentChain.length >= 1)) {
-    return findElement(elementDescriptor, document, finderOptions)
+    return findAnchor(document)
       .then(function (element) {
         return applyNavigation(element);
       })
@@ -1571,7 +1631,7 @@ function findElementWithParent(stepMessage) {
       if (!state.ok) return state;
 
       var finalScope = state.scope;
-      return findElement(elementDescriptor, finalScope, finderOptions)
+      return findAnchor(finalScope)
         .then(function (element) {
           return applyNavigation(element);
         })
@@ -1668,7 +1728,7 @@ function findElementWithParent(stepMessage) {
       // the parent key is unknown (Req: parent tomation-key for precise hover).
       tagElementKey(scopeElement, stepMessage.parentKey);
 
-      return findElement(elementDescriptor, scopeElement, finderOptions)
+      return findAnchor(scopeElement)
         .then(function (element) {
           return applyNavigation(element);
         })

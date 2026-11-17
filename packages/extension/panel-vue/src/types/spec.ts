@@ -1,12 +1,18 @@
 import type { StepCondition, TableCellAccessor } from './store';
 
+/** A compiled navigate hop (see the compiler's navigate-parser). */
+export interface NavigateStep {
+  step: string;
+  index?: number;
+}
+
 export interface PageElement {
   tag: string;
   label?: string;
   where?: Record<string, string>;
   xpath?: string;
   childOf?: string;
-  navigate?: string;
+  navigate?: NavigateStep[];
 }
 
 export interface Step {

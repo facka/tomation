@@ -35,6 +35,7 @@ const acorn = require('acorn');
 const ts = require('typescript');
 const { stripTypes } = require('./ts-stripper.js');
 const { resolveSpecifier } = require('./resolver.js');
+const { parseNavigatePath } = require('./navigate-parser');
 
 // ---------------------------------------------------------------------------
 // AST walk helper
@@ -4486,6 +4487,26 @@ function extractComponent(declarator, filePath, source, constBindings) {
           if (rootName && locator.childOf === rootName) {
             delete locator.childOf;
             locator.rootScoped = true;
+          }
+          // `.navigate('parent,child[2]')` is recorded as the raw path string. POM
+          // elements get it parsed into runtime step objects (pom.js); component
+          // locators must too, otherwise the runtime receives a string, every hop
+          // fails and the element is never found (so never tagged/highlighted).
+          // An invalid path is Warn_And_Skip: warn and emit the locator without
+          // `navigate` rather than failing the build.
+          if (typeof locator.navigate === 'string') {
+            var navParsed = parseNavigatePath(locator.navigate);
+            if (navParsed.ok) {
+              locator.navigate = navParsed.steps;
+            } else {
+              warnings.push({
+                message: 'Invalid navigate path for component locator \'' + locator.variableName +
+                  '\' at ' + filePath + ':' + locator.line + ': ' + navParsed.error + '; ignoring navigate',
+                filePath: filePath,
+                line: locator.line,
+              });
+              delete locator.navigate;
+            }
           }
           locators.push(locator);
           continue;

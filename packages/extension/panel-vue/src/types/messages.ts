@@ -90,6 +90,9 @@ export interface HoverHighlightDescriptorMessage {
     tag?: string;
     where?: Record<string, string>;
     xpath?: string;
+    // Navigate hops applied to each matched anchor, so the highlight lands on the
+    // element the finder actually resolves (and scopes into), not the anchor.
+    navigate?: Array<{ step: string; index?: number }>;
   };
 }
 

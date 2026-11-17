@@ -26,6 +26,7 @@ export interface HighlightDescriptor {
   tag?: string;
   where?: Record<string, string>;
   xpath?: string;
+  navigate?: Array<{ step: string; index?: number }>;
 }
 
 /**
@@ -78,7 +79,14 @@ export function toHighlightDescriptor(
   descriptor: PageElement | null,
 ): HighlightDescriptor | null {
   if (!descriptor) return null;
-  if (descriptor.xpath) return { xpath: descriptor.xpath };
-  if (descriptor.tag) return { tag: descriptor.tag, where: descriptor.where };
+  const navigate = descriptor.navigate && descriptor.navigate.length > 0
+    ? descriptor.navigate
+    : undefined;
+  if (descriptor.xpath) return navigate ? { xpath: descriptor.xpath, navigate } : { xpath: descriptor.xpath };
+  if (descriptor.tag) {
+    return navigate
+      ? { tag: descriptor.tag, where: descriptor.where, navigate }
+      : { tag: descriptor.tag, where: descriptor.where };
+  }
   return null;
 }
